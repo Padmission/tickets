@@ -16,4 +16,3 @@ it('lists tickets', function () {
             $ticket->assignee->name,
         ]);
 });
-

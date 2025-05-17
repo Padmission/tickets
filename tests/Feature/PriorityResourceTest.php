@@ -19,7 +19,6 @@ it('lists priorities', function () {
         ]);
 });
 
-
 it('only shows priorities from current panel', function () {
     Priority::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
     Priority::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);

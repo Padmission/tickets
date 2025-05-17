@@ -3,12 +3,7 @@
 namespace Padmission\Tickets\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
-use Padmission\Tickets\Models\Priority;
-use Padmission\Tickets\Models\Status;
-use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Tests\User;
 
 class UserFactory extends Factory
 {

@@ -47,11 +47,10 @@ class PriorityResource extends Resource
 
     public static function getNavigationIcon(): string|Htmlable|null
     {
-        return new HtmlString(<<<HTML
+        return new HtmlString(<<<'HTML'
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flag-icon lucide-flag"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
         HTML);
     }
-
 
     public static function form(Form $form): Form
     {
