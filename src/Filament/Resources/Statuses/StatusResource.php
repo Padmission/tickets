@@ -61,7 +61,7 @@ class StatusResource extends Resource
                     ->required(),
 
                 ColorSelect::make('color')
-                    ->label(__('padmission-tickets::tickets.resources.statuses.display_name'))
+                    ->label(__('padmission-tickets::tickets.resources.statuses.color'))
                     ->required(),
 
             ]);
