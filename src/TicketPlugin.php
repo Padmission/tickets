@@ -5,6 +5,7 @@ namespace Padmission\Tickets;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Filament\Resources;
 
 final class TicketPlugin implements Plugin
@@ -41,6 +42,17 @@ final class TicketPlugin implements Plugin
         assert($plugin instanceof static);
 
         return $plugin;
+    }
+
+    /**
+     * @param  class-string  $class
+     * @return class-string<Model>
+     */
+    public static function resolveModelClass(string $class): string
+    {
+        $classes = config()->array('padmission-tickets.models');
+
+        return (string) ($classes[$class] ?? $class);
     }
 
     /* Configuration options */

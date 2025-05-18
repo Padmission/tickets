@@ -13,6 +13,7 @@ use Filament\Panel;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\Concerns\InteractsWithViews;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\LivewireServiceProvider;
@@ -57,7 +58,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function defineEnvironment($app): void
     {
-        config()->set('padmission-tickets.models.user', \Padmission\Tickets\Tests\User::class);
+        config()->set('padmission-tickets.models.'.Authenticatable::class, \Padmission\Tickets\Tests\User::class);
 
         Filament::registerPanel(fn () => Panel::make()
             ->default()
