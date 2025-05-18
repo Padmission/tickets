@@ -5,7 +5,9 @@ namespace Padmission\Tickets;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
+use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
 {
@@ -13,9 +15,13 @@ final class TicketPlugin implements Plugin
 
     protected string $escalationLevel = 'default';
 
+    protected ?AssignmentStrategy $assignmentStrategy = null;
+
+    protected ?NotificationStrategy $notificationStrategy = null;
+
     public static function make(): static
     {
-        return new self;
+        return new static;
     }
 
     public function getId(): string
@@ -35,9 +41,11 @@ final class TicketPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 
-    public static function get(): static
+    public static function get(?string $panelId = null): static
     {
-        $plugin = Filament::getPlugin(static::$id);
+        $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentPanel();
+        $plugin = $panel->getPlugin(static::$id);
+
         assert($plugin instanceof static);
 
         return $plugin;
@@ -55,5 +63,29 @@ final class TicketPlugin implements Plugin
     public function getEscalationLevel(): string
     {
         return $this->escalationLevel;
+    }
+
+    public function assignmentStrategy(AssignmentStrategy $strategy): static
+    {
+        $this->assignmentStrategy = $strategy;
+
+        return $this;
+    }
+
+    public function getAssignmentStrategy(): ?AssignmentStrategy
+    {
+        return $this->assignmentStrategy;
+    }
+
+    public function notificationStrategy(NotificationStrategy $strategy): static
+    {
+        $this->notificationStrategy = $strategy;
+
+        return $this;
+    }
+
+    public function getNotificationStrategy(): ?NotificationStrategy
+    {
+        return $this->notificationStrategy;
     }
 }

@@ -22,8 +22,12 @@ return [
 
             'display_name' => 'Display Name',
             'turn' => 'Turn',
+            'status' => 'Status',
+            'priority' => 'Priority',
             'subject' => 'Subject',
             'assignee' => 'Assignee',
+            'submitter' => 'Submitter',
+            'last_activity' => 'Last Activity',
         ],
 
         'statuses' => [
