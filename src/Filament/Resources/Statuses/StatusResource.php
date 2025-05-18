@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Fields\ColorSelect;
 use Padmission\Tickets\Models\Status;
+use Padmission\Tickets\TicketPlugin;
 
 class StatusResource extends Resource
 {
@@ -26,7 +27,7 @@ class StatusResource extends Resource
 
     public static function getModel(): string
     {
-        return config('padmission-tickets.models.status');
+        return TicketPlugin::resolveModelClass(Status::class);
     }
 
     public static function getModelLabel(): string

@@ -27,7 +27,7 @@ class TicketResource extends Resource
 
     public static function getModel(): string
     {
-        return config('padmission-tickets.models.ticket');
+        return TicketPlugin::resolveModelClass(Ticket::class);
     }
 
     public static function getModelLabel(): string

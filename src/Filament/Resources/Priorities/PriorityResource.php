@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Fields\ColorSelect;
 use Padmission\Tickets\Models\Priority;
+use Padmission\Tickets\TicketPlugin;
 
 class PriorityResource extends Resource
 {
@@ -27,7 +28,7 @@ class PriorityResource extends Resource
 
     public static function getModel(): string
     {
-        return config('padmission-tickets.models.priority');
+        return TicketPlugin::resolveModelClass(Priority::class);
     }
 
     public static function getModelLabel(): string

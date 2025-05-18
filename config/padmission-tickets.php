@@ -1,23 +1,21 @@
 <?php
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Config;
 
 return [
     /**
-     * Model class mappings
+     * Swap package models (left) with your own model (right).
+     * Your models should extend the package models to ensure type safety.
      *
-     * Maps ticket system components to their respective model classes.
-     * These mappings are used throughout the application to resolve
-     * the correct model classes dynamically.
-     *
-     * @var array<string, class-string>
+     * @var array<class-string, class-string>
      */
     'models' => [
-        'user' => App\Models\User::class,
-        'ticket' => Padmission\Tickets\Models\Ticket::class,
-        'activity' => Padmission\Tickets\Models\Activity::class,
-        'priority' => Padmission\Tickets\Models\Priority::class,
-        'status' => Padmission\Tickets\Models\Status::class,
+        Authenticatable::class => App\Models\User::class,
+        Padmission\Tickets\Models\Ticket::class => Padmission\Tickets\Models\Ticket::class,
+        Padmission\Tickets\Models\Activity::class => Padmission\Tickets\Models\Activity::class,
+        Padmission\Tickets\Models\Priority::class => Padmission\Tickets\Models\Priority::class,
+        Padmission\Tickets\Models\Status::class => Padmission\Tickets\Models\Status::class,
     ],
 
     'levels' => [
