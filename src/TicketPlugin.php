@@ -6,6 +6,7 @@ use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 

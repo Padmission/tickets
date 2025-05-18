@@ -19,6 +19,6 @@ final class AssignUserWithLeastTickets implements AssignmentStrategy
             ->orderBy('assigned_tickets_count', 'ASC')
             ->first();
 
-        $ticket->assignee_id = $user->id;
+        $ticket->assignee_id = $user->getKey();
     }
 }

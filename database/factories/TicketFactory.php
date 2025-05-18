@@ -2,10 +2,14 @@
 
 namespace Padmission\Tickets\Database\Factories;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Priority;
+use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketFactory extends Factory
 {
@@ -17,15 +21,15 @@ class TicketFactory extends Factory
             'subject' => $this->faker->word(),
             'panel' => 'test',
             'escalation_level' => 'default',
-            'submitter_id' => config('padmission-tickets.models.user')::factory(),
+            'submitter_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
             'submitter_email' => $this->faker->unique()->safeEmail(),
             'turn' => Turn::User,
             'data' => [],
             'closed_at' => Carbon::now(),
 
-            'status_id' => config('padmission-tickets.models.status')::factory(),
-            'priority_id' => config('padmission-tickets.models.priority')::factory(),
-            'assignee_id' => config('padmission-tickets.models.user')::factory(),
+            'status_id' => TicketPlugin::resolveModelClass(Status::class)::factory(),
+            'priority_id' => TicketPlugin::resolveModelClass(Priority::class)::factory(),
+            'assignee_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
         ];
     }
 }
