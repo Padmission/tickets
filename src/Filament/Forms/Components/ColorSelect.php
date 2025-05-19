@@ -1,6 +1,6 @@
 <?php
 
-namespace Padmission\Tickets\Filament\Forms\Fields;
+namespace Padmission\Tickets\Filament\Forms\Components;
 
 use Filament\Forms\Components\Select;
 use Filament\Support\Colors\Color;
@@ -15,6 +15,9 @@ class ColorSelect extends Select
             ->allowHtml()
             ->native(false)
             ->options(fn () => collect(Color::all())
+                ->reject(fn ($value, $key) => in_array($key, [
+                    'slate', 'zinc', 'neutral', 'stone',
+                ]))
                 ->mapWithKeys(function ($value, $key) {
                     $key = ucfirst($key);
 
