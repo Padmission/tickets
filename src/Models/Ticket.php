@@ -131,6 +131,9 @@ class Ticket extends Model
 
     /* Attributes */
 
+    /**
+     * @return Attribute<bool, never>
+     */
     protected function isClosed(): Attribute
     {
         return Attribute::get(fn () => $this->closed_at !== null);
