@@ -5,6 +5,7 @@ namespace Padmission\Tickets;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
@@ -22,7 +23,7 @@ final class TicketPlugin implements Plugin
 
     public static function make(): static
     {
-        return new static;
+        return new self;
     }
 
     public function getId(): string
@@ -53,8 +54,10 @@ final class TicketPlugin implements Plugin
     }
 
     /**
-     * @param  class-string  $class
-     * @return class-string<Model>
+     * @template T of Model
+     *
+     * @param  class-string<T|Authenticatable>  $class
+     * @return class-string<T>
      */
     public static function resolveModelClass(string $class): string
     {

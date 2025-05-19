@@ -13,6 +13,13 @@ return [
         'escalated' => 'Escalated',
     ],
 
+    'actions' => [
+        'close' => [
+            'label' => 'Close',
+            'modal_heading' => 'Close Ticket',
+        ],
+    ],
+
     'resources' => [
         'navigation_group' => 'Tickets',
 

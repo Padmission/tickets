@@ -8,6 +8,7 @@ use Filament\Actions\ActionsServiceProvider;
 use Filament\Facades\Filament;
 use Filament\FilamentServiceProvider;
 use Filament\Forms\FormsServiceProvider;
+use Filament\Infolists\InfolistsServiceProvider;
 use Filament\Notifications\NotificationsServiceProvider;
 use Filament\Panel;
 use Filament\Support\SupportServiceProvider;
@@ -42,6 +43,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
             FilamentServiceProvider::class,
             FormsServiceProvider::class,
+            InfolistsServiceProvider::class,
             TablesServiceProvider::class,
             SupportServiceProvider::class,
             ActionsServiceProvider::class,

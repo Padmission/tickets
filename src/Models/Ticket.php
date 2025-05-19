@@ -12,9 +12,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Database\Factories\TicketFactory;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\ValueObjects\SubmitterData;
 
 #[UseFactory(TicketFactory::class)]
 class Ticket extends Model
@@ -26,6 +30,7 @@ class Ticket extends Model
     protected $casts = [
         'data' => 'array',
         'turn' => Turn::class,
+        'submitter_data' => SubmitterData::class,
         'closed_at' => 'datetime',
     ];
 
@@ -60,6 +65,11 @@ class Ticket extends Model
         });
     }
 
+    /* Relations */
+
+    /**
+     * @return BelongsTo<Status, $this>
+     */
     public function status(): BelongsTo
     {
         return $this->belongsTo(
@@ -67,10 +77,21 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * @return BelongsTo<Priority, $this>
+     */
     public function priority(): BelongsTo
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(Priority::class)
+        );
+    }
+
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(
+            TicketPlugin::resolveModelClass(Authenticatable::class),
+            'submitter_id'
         );
     }
 
@@ -94,6 +115,8 @@ class Ticket extends Model
             ->latestOfMany();
     }
 
+    /* Scopes */
+
     #[Scope]
     protected function open(Builder $query): void
     {
@@ -106,8 +129,39 @@ class Ticket extends Model
         $query->whereNotNull('closed_at');
     }
 
+    /* Attributes */
+
     protected function isClosed(): Attribute
     {
         return Attribute::get(fn () => $this->closed_at !== null);
+    }
+
+    /* Business Logic */
+    public function close(?int $closedBy = null): void
+    {
+        if ($this->isClosed) {
+            return;
+        }
+
+        $statusModel = TicketPlugin::resolveModelClass(Status::class);
+        $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
+
+        DB::beginTransaction();
+
+        $this->activities()->create([
+            'type' => ActivityType::Closed,
+            'sender' => ActivitySender::System,
+            'data' => [
+                'closed_by' => $closedBy,
+            ],
+        ]);
+
+        $this->update([
+            'status_id' => $closedStatus->getKey(),
+            'closed_at' => now(),
+            'closed_by' => $closedBy,
+        ]);
+
+        DB::commit();
     }
 }

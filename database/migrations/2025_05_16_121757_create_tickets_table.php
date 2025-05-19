@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('priority_id');
             $table->foreignId('assignee_id')->nullable();
             $table->unsignedInteger('submitter_id')->nullable();
-            $table->string('submitter_email')->nullable();
+            $table->json('submitter_data')->nullable();
             $table->string('turn');
             $table->json('data')->nullable();
             $table->dateTime('closed_at')->nullable();
