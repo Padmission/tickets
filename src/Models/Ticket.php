@@ -3,7 +3,10 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,19 +77,37 @@ class Ticket extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Authenticatable::class), 'assignee_id'
+            TicketPlugin::resolveModelClass(Authenticatable::class),
+            'assignee_id'
         );
     }
 
     public function activities(): HasMany
     {
-        return $this->hasMany(config('padmission-tickets.models.activity'), 'ticket_id');
+        return $this->hasMany(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id');
     }
 
     public function latestActivity(): HasOne
     {
         return $this
-            ->hasOne(config('padmission-tickets.models.activity'), 'ticket_id')
+            ->hasOne(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id')
             ->latestOfMany();
+    }
+
+    #[Scope]
+    protected function open(Builder $query): void
+    {
+        $query->whereNull('closed_at');
+    }
+
+    #[Scope]
+    protected function closed(Builder $query): void
+    {
+        $query->whereNotNull('closed_at');
+    }
+
+    protected function isClosed(): Attribute
+    {
+        return Attribute::get(fn () => $this->closed_at !== null);
     }
 }

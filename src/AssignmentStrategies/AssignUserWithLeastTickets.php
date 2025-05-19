@@ -15,7 +15,9 @@ final class AssignUserWithLeastTickets implements AssignmentStrategy
         // TODO: Check if user can access the ticket/panel
 
         $user = $userModel::query()
-            ->withCount('assignedTickets')
+            ->withCount([
+                'assignedTickets' => fn ($query) => $query->open(),
+            ])
             ->orderBy('assigned_tickets_count', 'ASC')
             ->first();
 

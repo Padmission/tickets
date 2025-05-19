@@ -12,6 +12,7 @@ final class NotifyAllUsers implements NotificationStrategy
 {
     public function notify(Ticket $ticket): void
     {
+        // TODO: Only notify users that can handle the ticket
         $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
 
         Notification::send(

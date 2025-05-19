@@ -58,3 +58,17 @@ it('executes notification strategy while creating', function () {
 
     Notification::assertCount(1);
 });
+
+test('open/close scopes', function () {
+    $ticket = Ticket::factory()->create([
+        'closed_at' => null,
+    ]);
+
+    expect(Ticket::query()->open()->count())->toEqual(1);
+    expect(Ticket::query()->closed()->count())->toEqual(0);
+
+    $ticket->update(['closed_at' => now()]);
+
+    expect(Ticket::query()->open()->count())->toEqual(0);
+    expect(Ticket::query()->closed()->count())->toEqual(1);
+});

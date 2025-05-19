@@ -8,10 +8,23 @@ it('it assigns ticket to user with least tickets', function () {
     [$userA, $userB] = User::factory()->count(2)->create();
 
     Ticket::factory()
+        ->recycle($userA)
         ->for($userA, 'assignee')
-        ->create();
+        ->create([
+            'closed_at' => null,
+        ]);
 
-    $newTicket = Ticket::factory()->make(['assignee_id' => null]);
+    Ticket::factory()
+        ->recycle($userB)
+        ->for($userB, 'assignee')
+        ->count(2)
+        ->create([
+            'closed_at' => now(),
+        ]);
+
+    $newTicket = Ticket::factory()
+        ->recycle($userB)
+        ->make(['assignee_id' => null]);
 
     (new AssignUserWithLeastTickets)->assign($newTicket);
 
