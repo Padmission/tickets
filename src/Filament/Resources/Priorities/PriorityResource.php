@@ -18,7 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
-use Padmission\Tickets\Filament\Forms\Fields\ColorSelect;
+use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
 use Padmission\Tickets\Models\Priority;
 use Padmission\Tickets\TicketPlugin;
 
