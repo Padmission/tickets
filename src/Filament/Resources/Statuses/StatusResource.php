@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Resources\Statuses;
 
-use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -18,6 +17,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\TicketPlugin;
 
@@ -102,6 +102,6 @@ class StatusResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('panel', Filament::getCurrentPanel()->getId());
+            ->tap(new CurrentPanelScope);
     }
 }

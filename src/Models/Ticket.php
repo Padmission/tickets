@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,10 +18,12 @@ use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
 #[UseFactory(TicketFactory::class)]
+#[ObservedBy(TicketObserver::class)]
 class Ticket extends Model
 {
     use HasFactory;
@@ -33,37 +36,6 @@ class Ticket extends Model
         'submitter_data' => SubmitterData::class,
         'closed_at' => 'datetime',
     ];
-
-    protected static function boot(): void
-    {
-        parent::boot();
-
-        static::creating(function (self $ticket) {
-            $panel = $ticket->panel;
-
-            $plugin = TicketPlugin::get($panel);
-            $assignmentStrategy = $plugin->getAssignmentStrategy();
-
-            if ($assignmentStrategy === null) {
-                return;
-            }
-
-            $assignmentStrategy->assign($ticket);
-        });
-
-        static::created(function (self $ticket) {
-            $panel = $ticket->panel;
-
-            $plugin = TicketPlugin::get($panel);
-            $notificationStrategy = $plugin->getNotificationStrategy();
-
-            if ($notificationStrategy === null) {
-                return;
-            }
-
-            $notificationStrategy->notify($ticket);
-        });
-    }
 
     /* Relations */
 

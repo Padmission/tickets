@@ -4,6 +4,8 @@ use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Notification;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Database\Seeders\StatusSeeder;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Models\Activity;
 use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Notifications\TicketCreatedNotification;
@@ -104,4 +106,56 @@ it('cannot be closed twice', function () {
     $ticket->close(closedBy: 99);
 
     expect($ticket->refresh())->closed_by->not->toEqual(99);
+});
+
+it('closes ticket when status is changed to closed', function () {
+    (new StatusSeeder)->run(panel: 'test');
+    $closedStatusId = Status::getClosedStatus()->getKey();
+
+    $ticket = Ticket::factory()->create(['status_id' => 1]);
+    $user = User::factory()->create();
+
+    $this->freezeSecond();
+    $this->actingAs($user);
+
+    $ticket->update(['status_id' => $closedStatusId]);
+
+    expect($ticket->refresh())
+        ->isClosed->toBeTrue()
+        ->status->toEqual(Status::getClosedStatus())
+        ->closed_at->toEqual(now())
+        ->closed_by->toEqual($user->id);
+});
+
+it('logs status change', function () {
+    (new StatusSeeder)->run(panel: 'test');
+
+    $ticket = Ticket::factory()->create(['status_id' => 1]);
+    $user = User::factory()->create();
+
+    $ticket->close(closedBy: $user->id);
+
+    $this->assertDatabaseHas(Activity::class, [
+        'type' => ActivityType::StatusChanged,
+        'data' => json_encode([
+            'from' => 1,
+            'to' => Status::getClosedStatus()->getKey(),
+        ]),
+    ]);
+});
+
+it('logs priority change', function () {
+    (new StatusSeeder)->run(panel: 'test');
+
+    $ticket = Ticket::factory()->create(['priority_id' => 1]);
+
+    $ticket->update(['priority_id' => 2]);
+
+    $this->assertDatabaseHas(Activity::class, [
+        'type' => ActivityType::PriorityChanged,
+        'data' => json_encode([
+            'from' => 1,
+            'to' => 2,
+        ]),
+    ]);
 });

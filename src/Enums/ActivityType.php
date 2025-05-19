@@ -10,6 +10,8 @@ enum ActivityType: string
 
     case InternalMessage = 'internal-message';
 
+    case PriorityChanged = 'priority-changed';
+
     case StatusChanged = 'status-changed';
 
     case TurnChanged = 'turn-changed';
