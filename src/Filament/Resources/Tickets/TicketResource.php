@@ -18,6 +18,8 @@ use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
+use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Activity;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -96,7 +98,25 @@ class TicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('updated_at')
+            ->defaultSort(function (Builder $query): Builder {
+                return $query
+                    ->orderByRaw(
+                        'CASE
+                            WHEN turn = ? THEN 0
+                            WHEN turn = ? THEN 1
+                        END',
+                        [Turn::Supporter->value, Turn::User->value]
+                    )
+                    ->orderBy(
+                        fn ($query) => $query
+                            ->select('created_at')
+                            ->from((new (TicketPlugin::resolveModelClass(Activity::class)))->getTable())
+                            ->whereColumn('ticket_id', 'tickets.id')
+                            ->latest()
+                            ->limit(1),
+                        'desc'
+                    );
+            })
             ->columns([
                 TextColumn::make('status.display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.model_label'))
@@ -153,7 +173,6 @@ class TicketResource extends Resource
     {
         return [
             'index' => Pages\ListTickets::route('/'),
-            'create' => Pages\CreateTicket::route('/create'),
             'view' => Pages\ViewTicket::route('/{record}/view'),
         ];
     }

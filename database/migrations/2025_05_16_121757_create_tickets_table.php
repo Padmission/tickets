@@ -23,6 +23,7 @@ return new class extends Migration
             $table->dateTime('closed_at')->nullable();
             $table->foreignId('closed_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

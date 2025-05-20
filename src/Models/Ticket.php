@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\TicketPlugin;
@@ -20,6 +21,7 @@ use Padmission\Tickets\TicketPlugin;
 class Ticket extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $guarded = [];
 
@@ -64,14 +66,14 @@ class Ticket extends Model
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(Status::class)
-        );
+        )->withTrashed();
     }
 
     public function priority(): BelongsTo
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(Priority::class)
-        );
+        )->withTrashed();
     }
 
     public function assignee(): BelongsTo
