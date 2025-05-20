@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,14 +26,14 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
-    public function status(): Builder
+    public function status(): BelongsTo
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(Status::class)
         )->withTrashed();
     }
 
-    public function priority(): Builder
+    public function priority(): BelongsTo
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(Priority::class)

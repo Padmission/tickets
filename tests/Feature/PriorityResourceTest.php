@@ -35,13 +35,13 @@ it('can reorder priorities', function () {
         ->call('reorderTable', [3, 2, 1])
         ->assertHasNoErrors();
 
-    $this->assertDatabaseHas('ticket_priorities', [
+    $this->assertDatabaseHas(Priority::class, [
         'id' => 1,
         'order' => 3,
     ]);
 });
 
-it('can create status', function () {
+it('can create priority', function () {
     Livewire::test(ListPriorities::class)
         ->callAction('create', [
             'display_name' => '',
@@ -54,25 +54,25 @@ it('can create status', function () {
         ])
         ->assertHasNoActionErrors();
 
-    $this->assertDatabaseHas('ticket_priorities', [
+    $this->assertDatabaseHas(Priority::class, [
         'display_name' => 'New Priority',
         'color' => 'Zinc',
         'order' => 99,
     ]);
 });
 
-it('can edit status', function () {
-    $status = Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+it('can edit priority', function () {
+    $priority = Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
-        ->callTableAction('edit', $status, [
+        ->callTableAction('edit', $priority, [
             'display_name' => 'New Name',
             'color' => 'Red',
         ])
         ->assertHasNoActionErrors();
 
     $this->assertDatabaseHas('ticket_priorities', [
-        'id' => $status->id,
+        'id' => $priority->id,
         'display_name' => 'New Name',
         'color' => 'Red',
         'order' => 1,
@@ -80,13 +80,11 @@ it('can edit status', function () {
 });
 
 it('can delete status', function () {
-    $status = Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    $priority = Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
-        ->callTableAction('delete', $status->id)
+        ->callTableAction('delete', $priority->id)
         ->assertHasNoErrors();
 
-    $this->assertDatabaseMissing('ticket_priorities', [
-        'id' => $status->id,
-    ]);
+    $this->assertSoftDeleted(Priority::class, ['id' => $priority->id]);
 });

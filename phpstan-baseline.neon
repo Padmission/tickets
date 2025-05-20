@@ -1,0 +1,7 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\<Illuminate\\Database\\Eloquent\\Model, \$this\(Padmission\\Tickets\\Models\\Ticket\)\>\:\:withTrashed\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: src/Models/Ticket.php
