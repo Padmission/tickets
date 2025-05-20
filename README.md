@@ -119,6 +119,20 @@ TicketPlugin::make()
     );
 ```
 
+### Notification Channels
+
+By default, notifications are sent per mail, but you can configure this via `->notificationChannels()` which accepts an `array` or a `Closure`:
+
+```php
+
+TicketPlugin::make()
+    ->notificationChannels(
+        fn ($notifiable, $ticket) => $ticket->priority_id === 1
+            ? ['mail']
+            : ['database']
+    );
+```
+
 ## Support
 
 For additional support:

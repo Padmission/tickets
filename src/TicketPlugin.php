@@ -2,12 +2,14 @@
 
 namespace Padmission\Tickets;
 
+use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
@@ -20,9 +22,11 @@ final class TicketPlugin implements Plugin
 
     protected ?NotificationStrategy $notificationStrategy = null;
 
+    protected Closure|array $notificationChannels = ['mail'];
+
     public static function make(): static
     {
-        return new static;
+        return new self;
     }
 
     public function getId(): string
@@ -99,5 +103,24 @@ final class TicketPlugin implements Plugin
     public function getNotificationStrategy(): ?NotificationStrategy
     {
         return $this->notificationStrategy;
+    }
+
+    public function notificationChannels(array|Closure $channels): static
+    {
+        $this->notificationChannels = $channels;
+
+        return $this;
+    }
+
+    public function getNotificationChannels($notifiable, Ticket $ticket): ?array
+    {
+        if ($this->notificationChannels instanceof Closure) {
+            return app()->call($this->notificationChannels, [
+                'notifiable' => $notifiable,
+                'ticket' => $ticket,
+            ]);
+        }
+
+        return $this->notificationChannels;
     }
 }

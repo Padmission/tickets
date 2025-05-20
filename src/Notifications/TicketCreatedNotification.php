@@ -6,6 +6,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketCreatedNotification extends Notification
 {
@@ -15,7 +16,8 @@ class TicketCreatedNotification extends Notification
 
     public function via($notifiable): array
     {
-        return ['mail'];
+        return TicketPlugin::get()
+            ->getNotificationChannels($notifiable, $this->ticket);
     }
 
     public function toMail($notifiable): MailMessage
