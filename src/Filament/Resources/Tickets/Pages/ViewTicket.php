@@ -12,6 +12,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 
@@ -33,6 +34,8 @@ class ViewTicket extends ViewRecord
     {
         return [
             CloseTicketAction::make(),
+
+            EditTicketAction::make(),
         ];
     }
 

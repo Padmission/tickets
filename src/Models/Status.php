@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Database\Factories\StatusFactory;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[UseFactory(StatusFactory::class)]
 class Status extends Model
@@ -42,7 +43,7 @@ class Status extends Model
     public static function getOpenStatuses(): Collection
     {
         return self::query()
-            ->where('panel', Filament::getCurrentPanel()->getId())
+            ->tap(new CurrentPanelScope)
             ->orderBy('order')
             ->get()
             ->tap(fn ($collection) => $collection->pop());
@@ -51,7 +52,7 @@ class Status extends Model
     public static function getClosedStatus(): static
     {
         return self::query()
-            ->where('panel', Filament::getCurrentPanel()->getId())
+            ->tap(new CurrentPanelScope)
             ->orderBy('order', 'DESC')
             ->first();
     }
