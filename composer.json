@@ -1,0 +1,47 @@
+{
+    "name": "padmission/tickets",
+    "description": "A support system built for Filament",
+    "require": {
+        "php": "^8.3",
+        "filament/filament": "^3.0",
+        "spatie/laravel-package-tools": "^1.92"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "nunomaduro/collision": "^8.0",
+        "orchestra/testbench": "^10.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.2",
+        "larastan/larastan": "^3.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Padmission\\Tickets\\": "src/",
+            "Padmission\\Tickets\\Database\\Factories\\": "database/factories",
+            "Padmission\\Tickets\\Database\\Seeders\\": "database/seeders"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Padmission\\Tickets\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=2G",
+        "test": "vendor/bin/pest",
+        "format": "vendor/bin/pint"
+    },
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Padmission\\Tickets\\TicketPluginServiceProvider"
+            ]
+        }
+    }
+}
