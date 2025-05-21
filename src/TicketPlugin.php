@@ -2,17 +2,27 @@
 
 namespace Padmission\Tickets;
 
+use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
     protected string $escalationLevel = 'default';
+
+    protected ?AssignmentStrategy $assignmentStrategy = null;
+
+    protected ?NotificationStrategy $notificationStrategy = null;
+
+    protected Closure|array $notificationChannels = ['mail'];
 
     public static function make(): static
     {
@@ -36,9 +46,11 @@ final class TicketPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 
-    public static function get(): static
+    public static function get(?string $panelId = null): static
     {
-        $plugin = Filament::getPlugin(static::$id);
+        $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentPanel();
+        $plugin = $panel->getPlugin(static::$id);
+
         assert($plugin instanceof static);
 
         return $plugin;
@@ -67,5 +79,48 @@ final class TicketPlugin implements Plugin
     public function getEscalationLevel(): string
     {
         return $this->escalationLevel;
+    }
+
+    public function assignmentStrategy(AssignmentStrategy $strategy): static
+    {
+        $this->assignmentStrategy = $strategy;
+
+        return $this;
+    }
+
+    public function getAssignmentStrategy(): ?AssignmentStrategy
+    {
+        return $this->assignmentStrategy;
+    }
+
+    public function notificationStrategy(NotificationStrategy $strategy): static
+    {
+        $this->notificationStrategy = $strategy;
+
+        return $this;
+    }
+
+    public function getNotificationStrategy(): ?NotificationStrategy
+    {
+        return $this->notificationStrategy;
+    }
+
+    public function notificationChannels(array|Closure $channels): static
+    {
+        $this->notificationChannels = $channels;
+
+        return $this;
+    }
+
+    public function getNotificationChannels($notifiable, Ticket $ticket): ?array
+    {
+        if ($this->notificationChannels instanceof Closure) {
+            return app()->call($this->notificationChannels, [
+                'notifiable' => $notifiable,
+                'ticket' => $ticket,
+            ]);
+        }
+
+        return $this->notificationChannels;
     }
 }

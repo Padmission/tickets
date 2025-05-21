@@ -67,4 +67,11 @@ class TestCase extends \Orchestra\Testbench\TestCase
             ->plugin(TicketPlugin::make()),
         );
     }
+
+    public function replacePlugin(TicketPlugin $plugin): void
+    {
+        Filament::getPanel('test')->plugin(
+            $plugin,
+        );
+    }
 }
