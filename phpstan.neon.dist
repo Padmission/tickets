@@ -14,3 +14,6 @@ parameters:
 
     databaseMigrationsPath:
         - database/migrations
+
+    viewDirectories:
+        - resources/views

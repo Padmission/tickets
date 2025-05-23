@@ -12,6 +12,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         $package
             ->name('padmission-tickets')
             ->hasConfigFile()
+            ->hasViews()
             ->hasTranslations()
             // TODO: Refactor into install command. For now keep this during development.
             ->discoversMigrations()

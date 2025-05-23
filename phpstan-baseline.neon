@@ -1,7 +1,31 @@
 parameters:
-	ignoreErrors:
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\<Illuminate\\Database\\Eloquent\\Model, \$this\(Padmission\\Tickets\\Models\\Ticket\)\>\:\:withTrashed\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: src/Models/Ticket.php
+    ignoreErrors:
+        -
+            message: '#^Property Padmission\\Tickets\\Filament\\Infolists\\Components\\AvatarEntry\:\:\$view \(view\-string\) does not accept default value of type string\.$#'
+            identifier: property.defaultValue
+            count: 1
+            path: src/Filament/Infolists/Components/AvatarEntry.php
+
+        -
+            message: '#^Property Padmission\\Tickets\\Filament\\Infolists\\Components\\SubmitterEntry\:\:\$view \(view\-string\) does not accept default value of type string\.$#'
+            identifier: property.defaultValue
+            count: 1
+            path: src/Filament/Infolists/Components/SubmitterEntry.php
+
+        -
+            message: '#^Parameter \#1 \$view of function view expects view\-string\|null, string given\.$#'
+            identifier: argument.type
+            count: 1
+            path: src/Filament/Livewire/TicketChat.php
+
+        -
+            message: '#^Trait Padmission\\Tickets\\Models\\Concerns\\HasAssignedTickets is used zero times and is not analysed\.$#'
+            identifier: trait.unused
+            count: 1
+            path: src/Models/Concerns/HasAssignedTickets.php
+
+        -
+            message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsTo\<Illuminate\\Database\\Eloquent\\Model, \$this\(Padmission\\Tickets\\Models\\Ticket\)\>\:\:withTrashed\(\)\.$#'
+            identifier: method.notFound
+            count: 2
+            path: src/Models/Ticket.php

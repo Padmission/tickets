@@ -5,14 +5,21 @@ namespace Padmission\Tickets;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
+use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
     protected string $escalationLevel = 'default';
+
+    protected ?AssignmentStrategy $assignmentStrategy = null;
+
+    protected ?NotificationStrategy $notificationStrategy = null;
 
     public static function make(): static
     {
@@ -36,17 +43,21 @@ final class TicketPlugin implements Plugin
 
     public function boot(Panel $panel): void {}
 
-    public static function get(): static
+    public static function get(?string $panelId = null): static
     {
-        $plugin = Filament::getPlugin(static::$id);
+        $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentPanel();
+        $plugin = $panel->getPlugin(static::$id);
+
         assert($plugin instanceof static);
 
         return $plugin;
     }
 
     /**
-     * @param  class-string  $class
-     * @return class-string<Model>
+     * @template T of Model
+     *
+     * @param  class-string<T|Authenticatable>  $class
+     * @return class-string<T>
      */
     public static function resolveModelClass(string $class): string
     {
@@ -67,5 +78,29 @@ final class TicketPlugin implements Plugin
     public function getEscalationLevel(): string
     {
         return $this->escalationLevel;
+    }
+
+    public function assignmentStrategy(AssignmentStrategy $strategy): static
+    {
+        $this->assignmentStrategy = $strategy;
+
+        return $this;
+    }
+
+    public function getAssignmentStrategy(): ?AssignmentStrategy
+    {
+        return $this->assignmentStrategy;
+    }
+
+    public function notificationStrategy(NotificationStrategy $strategy): static
+    {
+        $this->notificationStrategy = $strategy;
+
+        return $this;
+    }
+
+    public function getNotificationStrategy(): ?NotificationStrategy
+    {
+        return $this->notificationStrategy;
     }
 }

@@ -19,9 +19,12 @@ class Activity extends Model
 
     protected $table = 'ticket_activities';
 
+    protected $guarded = [];
+
     protected $casts = [
         'data' => 'array',
         'type' => ActivityType::class,
+        'created_at' => 'immutable_datetime',
     ];
 
     public function ticket(): BelongsTo

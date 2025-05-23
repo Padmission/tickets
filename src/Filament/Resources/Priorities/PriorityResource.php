@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Resources\Priorities;
 
-use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -20,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
 use Padmission\Tickets\Models\Priority;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\TicketPlugin;
 
 class PriorityResource extends Resource
@@ -104,6 +104,6 @@ class PriorityResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('panel', Filament::getCurrentPanel()->getId());
+            ->tap(new CurrentPanelScope);
     }
 }

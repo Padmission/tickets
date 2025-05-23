@@ -77,10 +77,46 @@ You can have multiple panels with different "escalation levels". For example bas
 To set the level for a panel use the `->escalationLevel()` method:
 
 ```php
-use Padmission\Ticket\TicketPlugin;
+use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
     ->escalationLevel('tech');
+```
+
+### Ticket Assignment
+
+The package comes with two default ticket assignment strategies. You can customize the assignment logic by implementing your own `AssignmentStrategy` class. The default strategies are:
+
+- `AssignDefaultUser`: Assigns tickets to a fixed user
+- `AssignUserWithLeastTickets`: Assigns tickets to the user with the least number of open tickets
+
+```php
+use Padmission\Tickets\AssignmentStrategies\AssignDefaultUser;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->assignmentStrategy(
+        new AssignDefaultUser(1)
+    );
+```
+
+### Notification about new tickets
+
+The package comes with three default notification strategies. You can customize this by implementing your own `NotificationStrategy` class. The default strategies are:
+
+- `NotifyEmail`: Notifies one or multiple emails
+- `NotifyAllUsers`: Notifies all users that can access the ticket
+- `NotifyAssignedUser`: Notifies the user assigned to the ticket
+
+```php
+
+use Padmission\Tickets\NotificationStrategies\NotifyEmail;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->notificationStrategy(
+        new NotifyEmail(['info@example.com'])
+    );
 ```
 
 ## Support
