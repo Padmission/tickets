@@ -14,6 +14,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             ->hasConfigFile()
             ->hasViews()
             ->hasTranslations()
+            // TODO: Refactor into install command. For now keep this during development.
             ->discoversMigrations()
             ->runsMigrations();
     }

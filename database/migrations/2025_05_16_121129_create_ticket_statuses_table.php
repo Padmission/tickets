@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('color');
             $table->unsignedInteger('order')->default(99);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

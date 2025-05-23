@@ -36,7 +36,7 @@ it('can reorder statuses', function () {
         ->call('reorderTable', [3, 2, 1])
         ->assertHasNoErrors();
 
-    $this->assertDatabaseHas('ticket_statuses', [
+    $this->assertDatabaseHas(Status::class, [
         'id' => 1,
         'order' => 3,
     ]);
@@ -55,7 +55,7 @@ it('can create status', function () {
         ])
         ->assertHasNoActionErrors();
 
-    $this->assertDatabaseHas('ticket_statuses', [
+    $this->assertDatabaseHas(Status::class, [
         'display_name' => 'New Status',
         'color' => 'Zinc',
         'order' => 99,
@@ -72,7 +72,7 @@ it('can edit status', function () {
         ])
         ->assertHasNoActionErrors();
 
-    $this->assertDatabaseHas('ticket_statuses', [
+    $this->assertDatabaseHas(Status::class, [
         'id' => $status->id,
         'display_name' => 'New Name',
         'color' => 'Red',
@@ -87,7 +87,7 @@ it('can delete status', function () {
         ->callTableAction('delete', $status->id)
         ->assertHasNoErrors();
 
-    $this->assertDatabaseMissing('ticket_statuses', [
+    $this->assertSoftDeleted(Status::class, [
         'id' => $status->id,
     ]);
 });

@@ -58,9 +58,10 @@ class TicketResource extends Resource
                 return $query
                     ->orderByRaw(
                         'CASE
-                            WHEN turn = "'.Turn::Supporter->value.'" THEN 0
-                            WHEN turn = "'.Turn::User->value.'" THEN 1
-                        END'
+                            WHEN turn = ? THEN 0
+                            WHEN turn = ? THEN 1
+                        END',
+                        [Turn::Supporter->value, Turn::User->value]
                     )
                     ->orderBy(
                         fn ($query) => $query
