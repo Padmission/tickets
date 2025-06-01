@@ -108,25 +108,6 @@ it('cannot be closed twice', function () {
     expect($ticket->refresh())->closed_by->not->toEqual(99);
 });
 
-it('closes ticket when status is changed to closed', function () {
-    (new StatusSeeder)->run(panel: 'test');
-    $closedStatusId = Status::getClosedStatus()->getKey();
-
-    $ticket = Ticket::factory()->create(['status_id' => 1]);
-    $user = User::factory()->create();
-
-    $this->freezeSecond();
-    $this->actingAs($user);
-
-    $ticket->update(['status_id' => $closedStatusId]);
-
-    expect($ticket->refresh())
-        ->isClosed->toBeTrue()
-        ->status->toEqual(Status::getClosedStatus())
-        ->closed_at->toEqual(now())
-        ->closed_by->toEqual($user->id);
-});
-
 it('logs status change', function () {
     (new StatusSeeder)->run(panel: 'test');
 

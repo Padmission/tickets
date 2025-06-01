@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -79,12 +78,6 @@ class TicketObserver
                     'to' => $ticket->status_id,
                 ],
             ]);
-
-            $isClosedStatus = (int) $ticket->status_id === TicketPlugin::resolveModelClass(Status::class)::getClosedStatus()->getKey();
-
-            if ($isClosedStatus) {
-                $ticket->close(auth()->id());
-            }
         }
     }
 }

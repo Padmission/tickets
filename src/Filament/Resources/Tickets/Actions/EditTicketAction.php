@@ -11,6 +11,7 @@ use Padmission\Tickets\Models\Priority;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 class EditTicketAction extends EditAction
 {
@@ -38,7 +39,16 @@ class EditTicketAction extends EditAction
                     ->label(__('padmission-tickets::tickets.resources.tickets.status'))
                     ->allowHtml()
                     ->native(false)
-                    ->relationship('status', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
+                    ->relationship('status', 'display_name', fn ($query) => $query
+                        ->tap(new CurrentPanelScope)
+                        ->orderBy('order', 'asc')
+                        ->whereNotIn('id', TicketPlugin::resolveModelClass(Status::class)::query()
+                            ->select('id')
+                            ->tap(new CurrentPanelScope)
+                            ->orderByDesc('order')
+                            ->limit(1)
+                        )
+                    )
                     ->getOptionLabelFromRecordUsing(function (Status $status) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
