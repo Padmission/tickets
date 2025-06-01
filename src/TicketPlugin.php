@@ -23,7 +23,6 @@ final class TicketPlugin implements Plugin
 
     protected ?NotificationStrategy $notificationStrategy = null;
 
-
     protected ?string $dispositionEnum = null;
 
     public static function make(): static
