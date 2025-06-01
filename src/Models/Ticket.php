@@ -114,7 +114,7 @@ class Ticket extends Model
     }
 
     /* Business Logic */
-    public function close(?int $closedBy = null): void
+    public function close(?string $disposition = null, ?int $closedBy = null): void
     {
         if ($this->isClosed) {
             return;
@@ -135,6 +135,7 @@ class Ticket extends Model
 
         $this->update([
             'status_id' => $closedStatus->getKey(),
+            'disposition' => $disposition,
             'closed_at' => now(),
             'closed_by' => $closedBy,
         ]);

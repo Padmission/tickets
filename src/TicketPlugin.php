@@ -2,12 +2,14 @@
 
 namespace Padmission\Tickets;
 
+use BackedEnum;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
+use Padmission\Tickets\Enums\Disposition;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
@@ -20,6 +22,9 @@ final class TicketPlugin implements Plugin
     protected ?AssignmentStrategy $assignmentStrategy = null;
 
     protected ?NotificationStrategy $notificationStrategy = null;
+
+
+    protected ?string $dispositionEnum = null;
 
     public static function make(): static
     {
@@ -102,5 +107,23 @@ final class TicketPlugin implements Plugin
     public function getNotificationStrategy(): ?NotificationStrategy
     {
         return $this->notificationStrategy;
+    }
+
+    /**
+     * @param  class-string<BackedEnum & HasLabel>|null  $dispositionEnum
+     */
+    public function useDisposition(?string $dispositionEnum = null): static
+    {
+        $this->dispositionEnum = $dispositionEnum ?? Disposition::class;
+
+        return $this;
+    }
+
+    /**
+     * @return class-string<BackedEnum & HasLabel>|null
+     */
+    public function getDispositionEnum(): ?string
+    {
+        return $this->dispositionEnum;
     }
 }

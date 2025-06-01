@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Database\Factories;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Padmission\Tickets\Enums\Disposition;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Priority;
 use Padmission\Tickets\Models\Status;
@@ -19,7 +20,6 @@ class TicketFactory extends Factory
     {
         return [
             'subject' => $this->faker->word(),
-            'panel' => 'test',
             'escalation_level' => 'default',
             'submitter_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
             'turn' => Turn::User,
@@ -46,6 +46,7 @@ class TicketFactory extends Factory
     {
         return $this->state([
             'status_id' => TicketPlugin::resolveModelClass(Status::class)::getClosedStatus(),
+            'disposition' => $this->faker->randomElement(Disposition::cases()),
             'closed_at' => now(),
             'closed_by' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
         ]);
