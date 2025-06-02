@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "node bin/build.js --dev",
+    "build": "node bin/build.js",
+    "format": "biome format"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.1.12",
+    "@tiptap/extension-link": "^2.1.12",
+    "@tiptap/extension-placeholder": "^2.12.0",
+    "@tiptap/starter-kit": "^2.1.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "browser-sync": "^2.29.3",
+    "dotenv": "^16.5.0",
+    "esbuild": "^0.19.5"
+  },
+  "type": "module"
+}

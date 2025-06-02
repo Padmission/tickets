@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\ActivityFactory;
+use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\TicketPlugin;
 
@@ -24,6 +25,7 @@ class Activity extends Model
     protected $casts = [
         'data' => 'array',
         'type' => ActivityType::class,
+        'sender' => ActivitySender::class,
         'created_at' => 'immutable_datetime',
     ];
 
