@@ -2,6 +2,11 @@
     use Filament\Facades\Filament;
 
     $user = $getState();
+
+    if (! $user) {
+        return;
+    }
+
     $avatarUrl = Filament::getUserAvatarUrl($user);
     $name = Filament::getUserName($user);
 @endphp
