@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->string('panel');
             $table->string('escalation_level')->default('default');
             $table->string('subject');
             $table->foreignId('status_id');
