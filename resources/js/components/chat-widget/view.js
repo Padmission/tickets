@@ -1,21 +1,23 @@
-import render from "../helpers/render";
 import BaseElement from "../helpers/base-element";
+import render from "../helpers/render";
 
-customElements.define('chat-view-ticket', class extends BaseElement {
-    get stylesheet ()  {
-        return '/css/padmission-tickets/chat-widget.css';
-    }
+customElements.define(
+	"chat-view-ticket",
+	class extends BaseElement {
+		get stylesheet() {
+			return "/css/padmission-tickets/chat-widget.css";
+		}
 
-    closeDialog() {
-        this.dispatch('close-chat-widget');
-    }
+		closeDialog() {
+			this.dispatch("close-chat-widget");
+		}
 
-    back() {
-        this.changeView('chat-list-tickets');
-    }
+		back() {
+			this.changeView("chat-list-tickets");
+		}
 
-    render() {
-        return render(`
+		render() {
+			return render(`
             <div class="chat-view-ticket">
                 <header>
                     <button
@@ -48,5 +50,6 @@ customElements.define('chat-view-ticket', class extends BaseElement {
                 />
             </div>
         `);
-    }
-})
+		}
+	},
+);

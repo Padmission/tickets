@@ -1,21 +1,25 @@
-import render from "../helpers/render";
 import BaseElement from "../helpers/base-element";
+import render from "../helpers/render";
 
-customElements.define('chat-list-tickets', class extends BaseElement {
-    get stylesheet ()  {
-        return '/css/padmission-tickets/chat-widget.css';
-    }
+customElements.define(
+	"chat-list-tickets",
+	class extends BaseElement {
+		get stylesheet() {
+			return "/css/padmission-tickets/chat-widget.css";
+		}
 
-    closeDialog() {
-        this.dispatch('close-chat-widget');
-    }
+		closeDialog() {
+			this.dispatch("close-chat-widget");
+		}
 
-    async renderedCallback() {
-        let tickets = await this.fetchTickets();
+		async renderedCallback() {
+			const tickets = await this.fetchTickets();
 
-        let node = render(`
+			const node = render(`
             <ul class="ticket-list">
-                ${tickets.map(ticket => `
+                ${tickets
+									.map(
+										(ticket) => `
                     <li>
                         <button
                             data-open-ticket="${ticket.id}"
@@ -28,61 +32,65 @@ customElements.define('chat-list-tickets', class extends BaseElement {
                                 <date class="ticket__date">${ticket.updated_at}</date>
                             </span>
                             <span class="ticket__description">
-                                ${ticket.latest_activity ? ticket.latest_activity : 'No messages yet'}
+                                ${ticket.latest_activity ? ticket.latest_activity : "No messages yet"}
                             </span>
                         </button>
                     </li>
-                `).join('')}
+                `,
+									)
+									.join("")}
             </ul>
         `);
 
-        node
-            .querySelectorAll('[data-open-ticket]')
-            .forEach(el => el.addEventListener('click', (event) => {
-                const ticketId = event.currentTarget.dataset.openTicket;
+			node.querySelectorAll("[data-open-ticket]").forEach((el) =>
+				el.addEventListener("click", (event) => {
+					const ticketId = event.currentTarget.dataset.openTicket;
 
-                if (ticketId) {
-                    this.openTicket(ticketId);
-                }
-            }));
+					if (ticketId) {
+						this.openTicket(ticketId);
+					}
+				}),
+			);
 
-        this.shadowRoot.querySelector('[data-ticket-list]').replaceChildren(node);
-    }
+			this.shadowRoot.querySelector("[data-ticket-list]").replaceChildren(node);
+		}
 
-    createTicket() {
-        this.changeView('chat-create-ticket');
-    }
+		createTicket() {
+			this.changeView("chat-create-ticket");
+		}
 
-    openTicket(ticketId) {
-        const ticket = this.tickets.find((ticket) => ticket.id === parseInt(ticketId));
+		openTicket(ticketId) {
+			const ticket = this.tickets.find(
+				(ticket) => ticket.id === Number.parseInt(ticketId),
+			);
 
-        this.changeView('chat-view-ticket', {
-            ticketId: ticket.id,
-            isClosed: ticket.is_closed,
-            subject: ticket.subject
-        });
-    }
+			this.changeView("chat-view-ticket", {
+				ticketId: ticket.id,
+				isClosed: ticket.is_closed,
+				subject: ticket.subject,
+			});
+		}
 
-    async fetchTickets() {
-        try {
-            let response = await fetch('/padmission-tickets/api/tickets');
+		async fetchTickets() {
+			try {
+				const response = await fetch("/padmission-tickets/api/tickets");
 
-            if (! response.ok) {
-                throw new Error('Network response was not ok');
-            }
+				if (!response.ok) {
+					throw new Error("Network response was not ok");
+				}
 
-            let data = await response.json();
-            this.tickets = data.tickets || [];
+				const data = await response.json();
+				this.tickets = data.tickets || [];
 
-            return this.tickets;
-        } catch (error) {
-            console.error('Failed to fetch tickets:', error);
-            return [];
-        }
-    }
+				return this.tickets;
+			} catch (error) {
+				console.error("Failed to fetch tickets:", error);
+				return [];
+			}
+		}
 
-    async render() {
-        return render(`
+		async render() {
+			return render(`
             <div class="chat-list-tickets">
                 <header>
                     <h2>
@@ -114,5 +122,6 @@ customElements.define('chat-list-tickets', class extends BaseElement {
                 </div>
             </div>
         `);
-    }
-})
+		}
+	},
+);

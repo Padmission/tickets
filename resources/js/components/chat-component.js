@@ -1,227 +1,239 @@
-import { Editor, Extension } from '@tiptap/core';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
+import { Editor, Extension } from "@tiptap/core";
+import Placeholder from "@tiptap/extension-placeholder";
+import StarterKit from "@tiptap/starter-kit";
 
-import render from "./helpers/render";
 import BaseElement from "./helpers/base-element";
+import render from "./helpers/render";
 
-customElements.define('chat-component',  class extends BaseElement {
-    get stylesheet() {
-        return '/css/padmission-tickets/chat-component.css';
-    }
+customElements.define(
+	"chat-component",
+	class extends BaseElement {
+		get stylesheet() {
+			return "/css/padmission-tickets/chat-component.css";
+		}
 
-    constructor() {
-        super();
+		constructor() {
+			super();
 
-        this.scrollThreshold = 100;
-        this.pollingIntervalMs = 5000;
+			this.scrollThreshold = 100;
+			this.pollingIntervalMs = 5000;
 
-        this.ticketId = null;
-        this.ticket = null;
+			this.ticketId = null;
+			this.ticket = null;
 
-        this.messages = [];
-        this.lastMessageId = 0;
-        this.lastSeenMessageId = 0;
-        this.lastTimestamp = null;
+			this.messages = [];
+			this.lastMessageId = 0;
+			this.lastSeenMessageId = 0;
+			this.lastTimestamp = null;
 
-        this.editor = null;
-        this.pollingInterval = null;
-        this.messageContent = '';
-        this.messageObserver = null;
-        this.messageListObserver = null;
+			this.editor = null;
+			this.pollingInterval = null;
+			this.messageContent = "";
+			this.messageObserver = null;
+			this.messageListObserver = null;
 
-        this.isNearBottom = true;
-    }
+			this.isNearBottom = true;
+		}
 
-    disconnectedCallback() {
-        this.stopPolling();
+		disconnectedCallback() {
+			this.stopPolling();
 
-        if (this.editor) {
-            this.editor.destroy();
-        }
+			if (this.editor) {
+				this.editor.destroy();
+			}
 
-        if (this.messageObserver) {
-            this.messageObserver.disconnect();
-        }
+			if (this.messageObserver) {
+				this.messageObserver.disconnect();
+			}
 
-        if (this.messageListObserver) {
-            this.messageListObserver.disconnect();
-        }
-    }
+			if (this.messageListObserver) {
+				this.messageListObserver.disconnect();
+			}
+		}
 
-    afterRender(node) {
-        this.messagesElement = node.querySelector('[data-chat-messages]');
-        this.editorElement = node.querySelector('[data-chat-input]');
-        this.sendButtonElement = node.querySelector('[data-chat-submit]');
-        this.scrollToBottomBtn = node.querySelector('[data-chat-scroll-to-bottom]');
-        this.lockTurnCheckbox = node.querySelector('[data-chat-lock-turn]');
+		afterRender(node) {
+			this.messagesElement = node.querySelector("[data-chat-messages]");
+			this.editorElement = node.querySelector("[data-chat-input]");
+			this.sendButtonElement = node.querySelector("[data-chat-submit]");
+			this.scrollToBottomBtn = node.querySelector(
+				"[data-chat-scroll-to-bottom]",
+			);
+			this.lockTurnCheckbox = node.querySelector("[data-chat-lock-turn]");
 
-        this.initNearBottomTracking()
+			this.initNearBottomTracking();
 
-        // Event listeners
-        this.scrollToBottomBtn
-            .addEventListener('click', () => this.scrollToBottom());
+			// Event listeners
+			this.scrollToBottomBtn.addEventListener("click", () =>
+				this.scrollToBottom(),
+			);
 
-        node
-            .querySelector('[data-composer]')
-            .addEventListener('submit', (event) => {
-                this.sendMessage();
-                event.preventDefault();
-            });
+			node
+				.querySelector("[data-composer]")
+				.addEventListener("submit", (event) => {
+					this.sendMessage();
+					event.preventDefault();
+				});
 
+			this.initTipTapEditor();
+			this.initIntersectionObserver();
 
-        this.initTipTapEditor();
-        this.initIntersectionObserver();
+			this.loadMessages().then(() => {
+				this.scrollToBottom();
+			});
 
-        this.loadMessages().then(() => {
-            this.scrollToBottom();
-        });
+			this.startPolling();
+		}
 
-        this.startPolling();
-    }
+		initNearBottomTracking() {
+			this.scrollToBottomBtn.style.display = "none";
 
-    initNearBottomTracking() {
-        this.scrollToBottomBtn.style.display = 'none';
+			this.messagesElement.addEventListener("scroll", () => {
+				const { scrollTop, scrollHeight, clientHeight } = this.messagesElement;
 
-        this.messagesElement.addEventListener('scroll', () => {
-            const { scrollTop, scrollHeight, clientHeight } = this.messagesElement;
+				const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+				this.isNearBottom = distanceFromBottom < this.scrollThreshold;
+				this.scrollToBottomBtn.style.display = this.isNearBottom
+					? "none"
+					: "flex";
+			});
+		}
 
-            this.isNearBottom = distanceFromBottom < this.scrollThreshold;
-            this.scrollToBottomBtn.style.display = this.isNearBottom ? 'none' : 'flex';
-        });
-    }
+		initTipTapEditor() {
+			const chat = this;
 
-    initTipTapEditor() {
-        const chat = this;
+			this.editor = new Editor({
+				element: this.editorElement,
+				extensions: [
+					StarterKit,
+					Placeholder.configure({
+						placeholder: "Start typing …",
+					}),
+					Extension.create({
+						addKeyboardShortcuts() {
+							return {
+								"Cmd-Enter": () => chat.sendMessage.call(chat),
+								"Ctrl-Enter": () => chat.sendMessage.call(chat),
+							};
+						},
+					}),
+				],
+				content: "",
+				onUpdate: ({ editor }) => (this.messageContent = editor.getHTML()),
+			});
+		}
 
-        this.editor = new Editor({
-            element: this.editorElement,
-            extensions: [
-                StarterKit,
-                Placeholder.configure({
-                    placeholder: 'Start typing …'
-                }),
-                Extension.create({
-                    addKeyboardShortcuts() {
-                        return {
-                            'Cmd-Enter': () => chat.sendMessage.call(chat),
-                            'Ctrl-Enter': () => chat.sendMessage.call(chat),
-                        }
-                    },
-                })
-            ],
-            content: '',
-            onUpdate: ({ editor }) => this.messageContent = editor.getHTML(),
+		async loadMessages() {
+			try {
+				const isInitialLoad = this.lastMessageId === null;
 
-        });
-    }
+				let url = `/padmission-tickets/api/tickets/${this.ticketId}/messages`;
 
-    async loadMessages() {
-        try {
-            const isInitialLoad = this.lastMessageId === null;
+				if (!isInitialLoad) {
+					url += `?offset=${encodeURIComponent(this.lastMessageId)}`;
+				}
 
-            let url = `/padmission-tickets/api/tickets/${this.ticketId}/messages`;
+				const response = await fetch(url, {
+					headers: {
+						Accept: "application/json",
+						"X-Requested-With": "XMLHttpRequest",
+					},
+					credentials: "same-origin",
+				});
 
-            if (! isInitialLoad) {
-                url += `?offset=${encodeURIComponent(this.lastMessageId)}`;
-            }
+				if (!response.ok) {
+					console.error("Error response:", await response.text());
+					throw new Error(`Failed to load messages: ${response.status}`);
+				}
 
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin'
-            });
+				let data;
 
-            if (! response.ok) {
-                console.error('Error response:', await response.text());
-                throw new Error(`Failed to load messages: ${response.status}`);
-            }
+				try {
+					data = await response.json();
+				} catch (error) {
+					console.error("Error parsing response:", error);
+					return;
+				}
 
-            let data;
+				const ticket = data.ticket;
+				const messages = data.messages;
 
-            try {
-                data = await response.json();
-            } catch (error) {
-                console.error('Error parsing response:', error);
-                return;
-            }
+				if (messages.length === 0) {
+					return;
+				}
 
-            let ticket = data.ticket;
-            let messages = data.messages;
+				const lastMessage = messages[messages.length - 1];
+				this.lastTimestamp = lastMessage.created_at;
+				this.lastMessageId = lastMessage.id;
 
-            if (messages.length === 0) {
-                return
-            }
+				if (this.lastSeenMessageId === 0) {
+					this.lastSeenMessageId = lastMessage.id;
+				}
 
-            const lastMessage = messages[messages.length - 1] ;
-            this.lastTimestamp = lastMessage.created_at;
-            this.lastMessageId = lastMessage.id;
+				if (ticket.is_closed) {
+					this.shadowRoot.querySelector("[data-composer]").style.display =
+						"none";
+				}
 
-            if (this.lastSeenMessageId === 0) {
-                this.lastSeenMessageId = lastMessage.id;
-            }
+				this.ticket = ticket;
 
-            if (ticket.is_closed) {
-                this.shadowRoot.querySelector('[data-composer]').style.display = 'none';
-            }
+				this.renderMessages(messages);
+				this.checkUnreadMessages();
 
-            this.ticket = ticket;
+				return messages;
+			} catch (error) {
+				console.error("Error loading messages:", error);
+			}
+		}
 
-            this.renderMessages(messages);
-            this.checkUnreadMessages();
+		checkUnreadMessages() {
+			const hasNewMessages = this.lastMessageId > this.lastSeenMessageId;
 
-            return messages;
-        } catch (error) {
-            console.error('Error loading messages:', error);
-        }
-    }
+			if (!hasNewMessages) {
+				this.scrollToBottomBtn.dataset.chatHasNewMessages = "false";
 
-    checkUnreadMessages() {
-        const hasNewMessages = this.lastMessageId > this.lastSeenMessageId;
+				return;
+			}
 
-        if (! hasNewMessages) {
-            this.scrollToBottomBtn.dataset.chatHasNewMessages = 'false';
+			this.scrollToBottomBtn.dataset.chatHasNewMessages = "true";
 
-            return;
-        }
+			if (this.isNearBottom) {
+				this.scrollToBottom();
+			}
+		}
 
-        this.scrollToBottomBtn.dataset.chatHasNewMessages = 'true';
+		renderMessages(messages = null) {
+			messages = messages || [];
 
-        if (this.isNearBottom) {
-            this.scrollToBottom();
-        }
-    }
+			messages.forEach((message) => {
+				if (message.content === null) {
+					return;
+				}
 
-    renderMessages(messages = null) {
-        messages = messages || [];
+				const lastDate =
+					this.messages.length > 0
+						? new Date(this.messages[this.messages.length - 1].created_at)
+						: true;
 
-        messages.forEach(message => {
-            if (message.content === null) {
-                return;
-            }
+				const formatter = (date) =>
+					`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 
-            const lastDate = this.messages.length > 0
-                ? new Date(this.messages[this.messages.length - 1].created_at)
-                : true;
+				const messageDate = new Date(message.created_at);
+				const hasDateChanged =
+					lastDate === true || formatter(lastDate) !== formatter(messageDate);
+				const absoluteDate = messageDate.toLocaleTimeString([], {
+					hour: "2-digit",
+					minute: "2-digit",
+				});
 
-            const formatter = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-
-            const messageDate = new Date(message.created_at);
-            const hasDateChanged = lastDate === true ||  (formatter(lastDate) !== formatter(messageDate));
-            const absoluteDate = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            let renderedHtml = render(`
+				const renderedHtml = render(`
                 ${
-                    hasDateChanged
-                        ? `<time datetime="${absoluteDate}" class="message-date">
+									hasDateChanged
+										? `<time datetime="${absoluteDate}" class="message-date">
                                 ${absoluteDate}
                             </time>`
-                        : ''
-                }
+										: ""
+								}
 
                 <div
                     class="message"
@@ -232,138 +244,143 @@ customElements.define('chat-component',  class extends BaseElement {
                         ${message.content}
                     </div>
                 </div>
-            `)
+            `);
 
-            this.messagesElement.append(renderedHtml);
-            this.messages.push(message);
-        });
+				this.messagesElement.append(renderedHtml);
+				this.messages.push(message);
+			});
 
-        this.observeMessages()
-    }
+			this.observeMessages();
+		}
 
-    startPolling() {
-        this.pollingInterval = setInterval(
-            () => this.loadMessages(),
-            this.pollingIntervalMs
-        );
-    }
+		startPolling() {
+			this.pollingInterval = setInterval(
+				() => this.loadMessages(),
+				this.pollingIntervalMs,
+			);
+		}
 
-    stopPolling() {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
-    }
+		stopPolling() {
+			if (this.pollingInterval) {
+				clearInterval(this.pollingInterval);
+				this.pollingInterval = null;
+			}
+		}
 
-    scrollToBottom() {
-        this.messagesElement.scrollTop = this.messagesElement.scrollHeight;
-    }
+		scrollToBottom() {
+			this.messagesElement.scrollTop = this.messagesElement.scrollHeight;
+		}
 
-    // Create an Intersection Observer to track visible messages
-    initIntersectionObserver() {
-        const options = {
-            root: this.messagesElement,
-            threshold: 1.0
-        };
+		// Create an Intersection Observer to track visible messages
+		initIntersectionObserver() {
+			const options = {
+				root: this.messagesElement,
+				threshold: 1.0,
+			};
 
-        this.messageObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (! entry.isIntersecting) {
-                    return;
-                }
+			this.messageObserver = new IntersectionObserver((entries) => {
+				entries.forEach((entry) => {
+					if (!entry.isIntersecting) {
+						return;
+					}
 
-                const messageId = parseInt(entry.target.dataset.messageId);
+					const messageId = Number.parseInt(entry.target.dataset.messageId);
 
-                if (this.lastSeenMessageId > messageId) {
-                    return;
-                }
+					if (this.lastSeenMessageId > messageId) {
+						return;
+					}
 
-                this.lastSeenMessageId = messageId;
+					this.lastSeenMessageId = messageId;
 
-                if (this.lastSeenMessageId >= this.lastMessageId) {
-                    this.scrollToBottomBtn.dataset.chatHasNewMessages = 'false';
-                }
-            });
-        }, options);
+					if (this.lastSeenMessageId >= this.lastMessageId) {
+						this.scrollToBottomBtn.dataset.chatHasNewMessages = "false";
+					}
+				});
+			}, options);
 
-        this.observeMessages();
-    }
+			this.observeMessages();
+		}
 
-    observeMessages() {
-        this.shadowRoot.querySelectorAll('.message').forEach(message => {
-            this.messageObserver.observe(message);
-        });
-    }
+		observeMessages() {
+			this.shadowRoot.querySelectorAll(".message").forEach((message) => {
+				this.messageObserver.observe(message);
+			});
+		}
 
-    addFiles(event) {
-        // TODO: Implement file upload functionality
-    }
+		addFiles(event) {
+			// TODO: Implement file upload functionality
+		}
 
-    toggleBold(event) {
-        this.editor.chain().focus().toggleBold().run()
-        event.currentTarget.classList.toggle('active');
-    }
-    toggleCode(event) {
-        this.editor.chain().focus().toggleCode().run();
-        event.currentTarget.classList.toggle('active');
-    }
+		toggleBold(event) {
+			this.editor.chain().focus().toggleBold().run();
+			event.currentTarget.classList.toggle("active");
+		}
+		toggleCode(event) {
+			this.editor.chain().focus().toggleCode().run();
+			event.currentTarget.classList.toggle("active");
+		}
 
-    async sendMessage() {
-        const lockTurn = this.lockTurnCheckbox?.checked || false;
+		async sendMessage() {
+			const lockTurn = this.lockTurnCheckbox?.checked || false;
 
-        if (! this.messageContent.trim()) {
-            return;
-        }
+			if (!this.messageContent.trim()) {
+				return;
+			}
 
-        try {
-            const response = await fetch(`/padmission-tickets/api/tickets/${this.ticketId}/messages`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    content: this.messageContent,
-                    lock_turn: lockTurn
-                })
-            });
+			try {
+				const response = await fetch(
+					`/padmission-tickets/api/tickets/${this.ticketId}/messages`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Accept: "application/json",
+							"X-Requested-With": "XMLHttpRequest",
+							"X-CSRF-TOKEN":
+								document
+									.querySelector('meta[name="csrf-token"]')
+									?.getAttribute("content") || "",
+						},
+						credentials: "same-origin",
+						body: JSON.stringify({
+							content: this.messageContent,
+							lock_turn: lockTurn,
+						}),
+					},
+				);
 
-            if (! response.ok) {
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
-                throw new Error(`Failed to send message: ${response.status}`);
-            }
+				if (!response.ok) {
+					const errorText = await response.text();
+					console.error("Error response:", errorText);
+					throw new Error(`Failed to send message: ${response.status}`);
+				}
 
-            // Clear the editor
-            this.messageContent = '';
-            this.editor.commands.clearContent();
+				// Clear the editor
+				this.messageContent = "";
+				this.editor.commands.clearContent();
 
-            let data;
+				let data;
 
-            try {
-                data = await response.json();
-            } catch (error) {
-                await this.loadMessages();
-                return;
-            }
+				try {
+					data = await response.json();
+				} catch (error) {
+					await this.loadMessages();
+					return;
+				}
 
-            let message = data.message;
-            this.lastMessageId = message.id;
-            this.lastTimestamp = message.created_at;
+				const message = data.message;
+				this.lastMessageId = message.id;
+				this.lastTimestamp = message.created_at;
 
-            this.renderMessages([message]);
-            this.scrollToBottom();
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    }
+				this.renderMessages([message]);
+				this.scrollToBottom();
+			} catch (error) {
+				console.error("Error sending message:", error);
+			}
+		}
 
-
-    render() {
-        return render(`
+		render() {
+			return render(`
             <div class="chat">
                 <div class="message-list" data-chat-messages>
 
@@ -431,17 +448,21 @@ customElements.define('chat-component',  class extends BaseElement {
                         </div>
                     </div>
 
-                    ${this.hasElevatedRights === 'true' ? `
+                    ${
+											this.hasElevatedRights === "true"
+												? `
                         <div class="composer__options">
                             <label>
                                 <input type="checkbox" data-chat-lock-turn />
                                 Lock turn to supporter
                             </label>
                         </div>
-                    `: '' }
+                    `
+												: ""
+										}
                 </form>
             </div>
         `);
-    }
-})
-
+		}
+	},
+);

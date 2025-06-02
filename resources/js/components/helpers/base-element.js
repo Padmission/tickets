@@ -1,66 +1,68 @@
 class BaseElement extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-        this._listeners = [];
-    }
+	constructor() {
+		super();
+		this.attachShadow({ mode: "open" });
+		this._listeners = [];
+	}
 
-    async connectedCallback() {
-        this._initializeAttributes();
-        this._initializeStylesheet();
-        await this._render();
-    }
+	async connectedCallback() {
+		this._initializeAttributes();
+		this._initializeStylesheet();
+		await this._render();
+	}
 
-    disconnectedCallback() {
+	disconnectedCallback() {
 		for (const { elem, event, callback } of this._listeners) {
 			elem?.removeEventListener(event, callback);
 		}
-    }
+	}
 
-    dispatch(eventName, detail = {}) {
-        const event = new CustomEvent(eventName, {
-            bubbles: true,
-            composed: true,
-            detail: detail
-        });
+	dispatch(eventName, detail = {}) {
+		const event = new CustomEvent(eventName, {
+			bubbles: true,
+			composed: true,
+			detail: detail,
+		});
 
-        window.dispatchEvent(event);
-    }
+		window.dispatchEvent(event);
+	}
 
-    changeView(viewName, attributes = {}) {
-        this.dispatch('change-view', {
-            viewName: viewName,
-            attributes: attributes
-        });
-    }
+	changeView(viewName, attributes = {}) {
+		this.dispatch("change-view", {
+			viewName: viewName,
+			attributes: attributes,
+		});
+	}
 
-    _initializeStylesheet() {
-        if (! this.stylesheet) {
-            return;
-        }
+	_initializeStylesheet() {
+		if (!this.stylesheet) {
+			return;
+		}
 
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = this.stylesheet;
-        console.warn('BaseElement: Using stylesheet:', this.stylesheet);
+		const link = document.createElement("link");
+		link.rel = "stylesheet";
+		link.href = this.stylesheet;
+		console.warn("BaseElement: Using stylesheet:", this.stylesheet);
 
-        this.shadowRoot.appendChild(link);
-    }
+		this.shadowRoot.appendChild(link);
+	}
 
-    _initializeAttributes() {
-        const attributes = this.getAttributeNames();
+	_initializeAttributes() {
+		const attributes = this.getAttributeNames();
 
-        attributes.forEach(attr => {
-            const camelCaseAttr = attr.replace(/-([a-z])/g, g => g[1].toUpperCase());
-            const value = this.getAttribute(attr);
+		attributes.forEach((attr) => {
+			const camelCaseAttr = attr.replace(/-([a-z])/g, (g) =>
+				g[1].toUpperCase(),
+			);
+			const value = this.getAttribute(attr);
 
-            if (value !== null) {
-                this[camelCaseAttr] = value;
-            }
-        });
-    }
+			if (value !== null) {
+				this[camelCaseAttr] = value;
+			}
+		});
+	}
 
-    _configureEventListeners(rootNode) {
+	_configureEventListeners(rootNode) {
 		let node;
 		const nestedCustomElements = [];
 
@@ -71,12 +73,12 @@ class BaseElement extends HTMLElement {
 			{
 				acceptNode: (node) => {
 					// Reject any node that is not an HTML element
-					if (! (node instanceof HTMLElement)) {
+					if (!(node instanceof HTMLElement)) {
 						return NodeFilter.FILTER_REJECT;
 					}
 
 					// Check if node is a nested custom element
-					if (node.tagName.includes('-') && node.tagName !== this.tagName) {
+					if (node.tagName.includes("-") && node.tagName !== this.tagName) {
 						nestedCustomElements.push(node);
 						return NodeFilter.FILTER_REJECT;
 					}
@@ -89,14 +91,14 @@ class BaseElement extends HTMLElement {
 					}
 					return NodeFilter.FILTER_ACCEPT;
 				},
-			}
+			},
 		);
 
 		while ((node = iterator.nextNode())) {
 			if (!node) return;
 
 			for (const attr of node.attributes) {
-				if (attr.name.startsWith('@')) {
+				if (attr.name.startsWith("@")) {
 					this._processEventHandler(attr);
 				}
 			}
@@ -113,7 +115,7 @@ class BaseElement extends HTMLElement {
 		// Example: `@click="handleClick"` -> `click` event and `handleClick` method
 		const { name: event, value: method } = attr;
 
-        this._listeners.push({
+		this._listeners.push({
 			elem: elem,
 			event: event.slice(1),
 			callback: (e) => this[method](e),
@@ -123,35 +125,35 @@ class BaseElement extends HTMLElement {
 		elem.removeAttributeNode(attr);
 	}
 
-    async _render() {
-        if (!this.render) {
+	async _render() {
+		if (!this.render) {
 			throw new Error(
-				'Web components extending BaseElement must implement a `render` method.'
+				"Web components extending BaseElement must implement a `render` method.",
 			);
 		}
 
-        if (this.beforeRender) {
-            this.beforeRender()
-        }
+		if (this.beforeRender) {
+			this.beforeRender();
+		}
 
-        const node = await this.render();
+		const node = await this.render();
 
-        if (this.afterRender) {
-            this.afterRender(node)
-        }
+		if (this.afterRender) {
+			this.afterRender(node);
+		}
 
-        this._configureEventListeners(node);
+		this._configureEventListeners(node);
 
-        if (this.bindListeners) {
-            this.bindListeners(node)
-        }
+		if (this.bindListeners) {
+			this.bindListeners(node);
+		}
 
-        this.shadowRoot.appendChild(node);
+		this.shadowRoot.appendChild(node);
 
-        if (this.renderedCallback) {
-            this.renderedCallback();
-        }
-    }
+		if (this.renderedCallback) {
+			this.renderedCallback();
+		}
+	}
 }
 
 export default BaseElement;

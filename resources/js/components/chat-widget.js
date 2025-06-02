@@ -1,51 +1,58 @@
-import render from "./helpers/render";
 import BaseElement from "./helpers/base-element";
+import render from "./helpers/render";
 
 import "./chat-widget/create";
 import "./chat-widget/view";
 import "./chat-widget/list";
 
-customElements.define('chat-widget', class extends BaseElement {
-    get stylesheet ()  {
-        return '/css/padmission-tickets/chat-widget.css';
-    }
+customElements.define(
+	"chat-widget",
+	class extends BaseElement {
+		get stylesheet() {
+			return "/css/padmission-tickets/chat-widget.css";
+		}
 
-    renderedCallback() {
-        this.shadowRoot.querySelector('button').addEventListener('click', (event) => {
-            this.shadowRoot.querySelector('dialog').showModal();
-        });
+		renderedCallback() {
+			this.shadowRoot
+				.querySelector("button")
+				.addEventListener("click", (event) => {
+					this.shadowRoot.querySelector("dialog").showModal();
+				});
 
-        window.addEventListener('close-chat-widget', (event) => {
-            const dialog = this.shadowRoot.querySelector('dialog');
+			window.addEventListener("close-chat-widget", (event) => {
+				const dialog = this.shadowRoot.querySelector("dialog");
 
-            if (dialog) {
-                dialog.close();
-            }
-        });
+				if (dialog) {
+					dialog.close();
+				}
+			});
 
-        window.addEventListener('change-view', (event) => {
-            const viewName = event.detail.viewName;
-            const attributes = event.detail.attributes || {};
+			window.addEventListener("change-view", (event) => {
+				const viewName = event.detail.viewName;
+				const attributes = event.detail.attributes || {};
 
-            this.changeView(viewName, attributes);
-        });
-    }
+				this.changeView(viewName, attributes);
+			});
+		}
 
-    changeView(viewName, attributes) {
+		changeView(viewName, attributes) {
+			const view = document.createElement(viewName);
 
-        const view = document.createElement(viewName);
+			for (const [key, value] of Object.entries(attributes)) {
+				const kebabCaseKey = key
+					.replace(/([a-z])([A-Z])/g, "$1-$2")
+					.toLowerCase();
 
-        for (const [key, value] of Object.entries(attributes)) {
-            const kebabCaseKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+				view.setAttribute(kebabCaseKey, value);
+			}
 
-            view.setAttribute(kebabCaseKey, value);
-        }
+			this.shadowRoot
+				.querySelector("[data-dialog-content]")
+				.replaceChildren(view);
+		}
 
-        this.shadowRoot.querySelector('[data-dialog-content]').replaceChildren(view);
-    }
-
-    render() {
-        return render(`
+		render() {
+			return render(`
             <style>
                 :host {
                     display: none;
@@ -69,5 +76,6 @@ customElements.define('chat-widget', class extends BaseElement {
                 </div>
             </dialog>
         `);
-    }
-})
+		}
+	},
+);

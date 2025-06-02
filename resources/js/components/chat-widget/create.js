@@ -1,53 +1,57 @@
 import BaseElement from "../helpers/base-element";
 import render from "../helpers/render";
 
-customElements.define('chat-create-ticket', class extends BaseElement {
-    get stylesheet ()  {
-        return '/css/padmission-tickets/chat-widget.css';
-    }
+customElements.define(
+	"chat-create-ticket",
+	class extends BaseElement {
+		get stylesheet() {
+			return "/css/padmission-tickets/chat-widget.css";
+		}
 
-    closeDialog() {
-        this.dispatch('close-chat-widget');
-    }
+		closeDialog() {
+			this.dispatch("close-chat-widget");
+		}
 
-    back() {
-        this.changeView('chat-list-tickets');
-    }
+		back() {
+			this.changeView("chat-list-tickets");
+		}
 
-    async submit(event) {
-        event.preventDefault();
+		async submit(event) {
+			event.preventDefault();
 
-        const formData = new FormData(event.currentTarget);
-        const data = Object.fromEntries(formData.entries());
-        const json = JSON.stringify(data);
+			const formData = new FormData(event.currentTarget);
+			const data = Object.fromEntries(formData.entries());
+			const json = JSON.stringify(data);
 
-        let resp = await fetch('/padmission-tickets/api/tickets', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-            },
-            body: json,
-        });
+			const resp = await fetch("/padmission-tickets/api/tickets", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+					"X-Requested-With": "XMLHttpRequest",
+					"X-CSRF-TOKEN":
+						document
+							.querySelector('meta[name="csrf-token"]')
+							?.getAttribute("content") || "",
+				},
+				body: json,
+			});
 
+			if (resp.ok) {
+				const data = await resp.json();
 
-        if (resp.ok) {
-            const data = await resp.json();
+				this.changeView("chat-view-ticket", {
+					ticketId: data.id,
+					subject: data.subject,
+				});
+			} else {
+				// Handle error
+				console.error("Failed to create ticket:", resp.statusText);
+			}
+		}
 
-            this.changeView('chat-view-ticket', {
-                ticketId: data.id,
-                subject: data.subject
-            });
-        } else {
-            // Handle error
-            console.error('Failed to create ticket:', resp.statusText);
-        }
-    }
-
-    render() {
-        return render(`
+		render() {
+			return render(`
             <div class="chat-create-ticket">
                 <header part="header">
                     <button
@@ -90,5 +94,6 @@ customElements.define('chat-create-ticket', class extends BaseElement {
                 </form>
             </div>
         `);
-    }
-})
+		}
+	},
+);

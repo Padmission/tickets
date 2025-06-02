@@ -9,7 +9,7 @@ dotenv.config()
 
 const __dirname = import.meta.dirname;
 const isDev = process.argv.includes('--dev')
-const hotFilePath = path.resolve(__dirname+'/../resources/dist/.hot')
+const hotFilePath = path.resolve(__dirname+'/../dist/.hot')
 
 const context = await esbuild.context({
     define: {
@@ -25,7 +25,7 @@ const context = await esbuild.context({
         './resources/js/components/chat-widget.js',
         './resources/js/components/chat-component.js'
     ],
-    outdir: './resources/dist',
+    outdir: './dist',
 })
 
 if (! isDev) {

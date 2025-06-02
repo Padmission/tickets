@@ -49,10 +49,10 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     {
         $files = [
             __DIR__.'/../resources/css/chat-component.css',
-            __DIR__.'/../resources/dist/chat-component.js',
+            __DIR__.'/../dist/chat-component.js',
 
             __DIR__.'/../resources/css/chat-widget.css',
-            __DIR__.'/../resources/dist/chat-widget.js',
+            __DIR__.'/../dist/chat-widget.js',
         ];
 
         foreach ($files as $filepath) {
@@ -103,6 +103,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     private function isDevMode(): bool
     {
-        return file_exists(__DIR__.'/../resources/dist/.hot');
+        return file_exists(__DIR__.'/../dist/.hot');
     }
 }
