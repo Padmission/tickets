@@ -74,35 +74,35 @@ class TicketSeeder extends Seeder
             'ticket_id' => $ticket->id,
             'sender' => ActivitySender::System,
             'type' => ActivityType::InternalMessage,
-            'message' => 'Conversation started',
+            'content' => 'Conversation started',
         ]);
 
         Activity::create([
             'ticket_id' => $ticket->id,
             'sender' => ActivitySender::Supporter,
             'type' => ActivityType::Message,
-            'message' => 'Hello, how can I help you?',
+            'content' => 'Hello, how can I help you?',
         ]);
 
         Activity::create([
             'ticket_id' => $ticket->id,
             'sender' => ActivitySender::User,
             'type' => ActivityType::Message,
-            'message' => 'Hey, I have a problem..',
+            'content' => 'Hey, I have a problem..',
         ]);
 
         Activity::create([
             'ticket_id' => $ticket->id,
             'sender' => ActivitySender::Supporter,
             'type' => ActivityType::Message,
-            'message' => 'Did you try turning it off and on again?',
+            'content' => 'Did you try turning it off and on again?',
         ]);
 
         Activity::create([
             'ticket_id' => $ticket->id,
             'sender' => ActivitySender::User,
             'type' => ActivityType::Message,
-            'message' => 'Thanks, that helped!',
+            'content' => 'Thanks, that helped!',
         ]);
     }
 }
