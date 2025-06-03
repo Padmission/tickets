@@ -19,8 +19,8 @@ return [
     ],
 
     'levels' => [
-        'default' => fn () => __('padmission-tickets::tickets.levels.default'),
-        'escalated' => fn () => __('padmission-tickets::tickets.levels.escalated'),
+        // 'default' => fn () => __('padmission-tickets::tickets.levels.default'),
+        // 'escalated' => fn () => __('padmission-tickets::tickets.levels.escalated'),
     ],
 
     /**
