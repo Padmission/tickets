@@ -79,7 +79,7 @@ customElements.define(
 		}
 
 		async render() {
-            // biome-ignore format: preserve template formatting
+			// biome-ignore format: preserve template formatting
 			return render(`
                 <div class="chat-list-tickets">
                     <header>
