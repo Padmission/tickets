@@ -1,6 +1,7 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
+import Link from '@tiptap/extension-link'
 
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
@@ -109,6 +110,10 @@ customElements.define(
 					Placeholder.configure({
 						placeholder: "Start typing …",
 					}),
+                    Link.configure({
+                      openOnClick: false,
+                      defaultProtocol: 'https',
+                    }),
 					Extension.create({
 						addKeyboardShortcuts() {
 							return {
@@ -313,12 +318,37 @@ customElements.define(
 
 		toggleBold(event) {
 			this.editor.chain().focus().toggleBold().run();
-			event.currentTarget.classList.toggle("active");
 		}
-		toggleCode(event) {
-			this.editor.chain().focus().toggleCode().run();
-			event.currentTarget.classList.toggle("active");
+
+        toggleList(event) {
+			this.editor.chain().focus().toggleBulletList().run();
 		}
+
+        toggleOrderedList(event) {
+			this.editor.chain().focus().toggleOrderedList().run();
+		}
+
+        setLink(event) {
+          const previousUrl = this.editor.getAttributes('link').href
+          let url = window.prompt('URL', previousUrl)
+
+          // Cancelled
+          if (url === null) {
+            return
+          }
+
+          if (url === '') {
+            this.editor.chain().focus().extendMarkRange('link').unsetLink().run()
+
+            return
+          }
+
+          if (! url.startsWith('http://') && ! url.startsWith('https://')) {
+            url = `https://${url}`;
+          }
+
+          this.editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+        }
 
 		async sendMessage() {
 			const lockTurn = this.lockTurnCheckbox?.checked || false;
@@ -427,10 +457,28 @@ customElements.define(
                             <button
                                 class="button-icon"
                                 type="button"
-                                @click="toggleCode"
+                                @click="setLink"
                             >
-                                <span class="sr-only">Add Code</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-icon lucide-code"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
+                                <span class="sr-only">Link</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            </button>
+
+                            <button
+                                class="button-icon"
+                                type="button"
+                                @click="toggleList"
+                            >
+                                <span class="sr-only">Unordered List</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
+                            </button>
+
+                            <button
+                                class="button-icon"
+                                type="button"
+                                @click="toggleOrderedList"
+                            >
+                                <span class="sr-only">Ordered List</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
                             </button>
 
                             <button type="submit" data-chat-submit>
