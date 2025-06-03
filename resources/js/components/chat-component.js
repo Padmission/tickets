@@ -171,7 +171,7 @@ customElements.define(
 				}
 
 				if (ticket.is_closed) {
-					this.shadowRoot.querySelector("[data-composer]").style.display =
+					this.rootNode().querySelector("[data-composer]").style.display =
 						"none";
 				}
 
@@ -302,7 +302,7 @@ customElements.define(
 		}
 
 		observeMessages() {
-			this.shadowRoot.querySelectorAll(".message").forEach((message) => {
+			this.rootNode().querySelectorAll(".message").forEach((message) => {
 				this.messageObserver.observe(message);
 			});
 		}

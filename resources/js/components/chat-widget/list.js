@@ -4,9 +4,9 @@ import render from "../helpers/render";
 customElements.define(
 	"chat-list-tickets",
 	class extends BaseElement {
-		get stylesheet() {
-			return "/css/padmission-tickets/chat-widget.css";
-		}
+        get useShadowDom() {
+            return false;
+        }
 
 		closeDialog() {
 			this.dispatch("close-chat-widget");
@@ -52,7 +52,7 @@ customElements.define(
 				}),
 			);
 
-			this.shadowRoot.querySelector("[data-ticket-list]").replaceChildren(node);
+			this.querySelector("[data-ticket-list]").replaceChildren(node);
 		}
 
 		createTicket() {

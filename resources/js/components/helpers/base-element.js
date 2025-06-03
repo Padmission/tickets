@@ -1,7 +1,26 @@
 class BaseElement extends HTMLElement {
+
+    _useShadowDom = null;
+    get useShadowDom() {
+        if (this._useShadowDom !== null) {
+            return this._useShadowDom;
+        }
+
+        if (this.hasAttribute('use-shadow-dom')) {
+            this._useShadowDom = this.getAttribute('use-shadow-dom') !== 'false'
+            this.removeAttribute('use-shadow-dom');
+            return this._useShadowDom;
+        }
+
+        return true;
+    }
 	constructor() {
 		super();
-		this.attachShadow({ mode: "open" });
+
+        if (this.useShadowDom) {
+            this.attachShadow({mode: "open"});
+        }
+
 		this._listeners = [];
 	}
 
@@ -34,6 +53,14 @@ class BaseElement extends HTMLElement {
 		});
 	}
 
+    rootNode() {
+        if (this.useShadowDom) {
+            return this.shadowRoot;
+        }
+
+        return this;
+    }
+
 	_initializeStylesheet() {
 		if (!this.stylesheet) {
 			return;
@@ -42,9 +69,8 @@ class BaseElement extends HTMLElement {
 		const link = document.createElement("link");
 		link.rel = "stylesheet";
 		link.href = this.stylesheet;
-		console.warn("BaseElement: Using stylesheet:", this.stylesheet);
 
-		this.shadowRoot.appendChild(link);
+		this.rootNode().appendChild(link);
 	}
 
 	_initializeAttributes() {
@@ -148,7 +174,11 @@ class BaseElement extends HTMLElement {
 			this.bindListeners(node);
 		}
 
-		this.shadowRoot.appendChild(node);
+        if (this.useShadowDom) {
+		    this.shadowRoot.appendChild(node);
+        } else {
+            this.appendChild(node);
+        }
 
 		if (this.renderedCallback) {
 			this.renderedCallback();

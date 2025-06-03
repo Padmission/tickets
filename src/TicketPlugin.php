@@ -47,9 +47,13 @@ final class TicketPlugin implements Plugin
         }
 
         if ($this->shouldShowChatWidget()) {
+            $primaryColor = data_get($panel->getColors(), 'primary', null);
+
             $panel->renderHook(
                 PanelsRenderHook::BODY_END,
-                fn () => view('padmission-tickets::filament.chat-widget')
+                fn () => view('padmission-tickets::filament.chat-widget', [
+                    'primaryColor' => $primaryColor,
+                ])
             );
         }
     }

@@ -1,3 +1,4 @@
+@use(Filament\Facades\Filament)
 @use(Filament\Support\Facades\FilamentAsset)
 <div wire:ignore style="height: 60vh">
     <style>
@@ -5,6 +6,18 @@
             padding: 0;
         }
     </style>
+
+    @php
+        $primaryColor = data_get(Filament::getCurrentPanel()->getColors(), 'primary.600');
+    @endphp
+
+    @if ($primaryColor)
+        <style>
+            chat-component {
+                --color-primary: rgb({{ $primaryColor }});
+            }
+        </style>
+    @endif
 
     <chat-component
         ticket-id="{{ $this->record->id }}"

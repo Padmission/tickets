@@ -4,9 +4,9 @@ import render from "../helpers/render";
 customElements.define(
 	"chat-view-ticket",
 	class extends BaseElement {
-		get stylesheet() {
-			return "/css/padmission-tickets/chat-widget.css";
-		}
+        get useShadowDom() {
+            return false;
+        }
 
 		closeDialog() {
 			this.dispatch("close-chat-widget");
@@ -44,10 +44,16 @@ customElements.define(
                 </header>
 
                 <chat-component
-                    ticket-id="${this.ticketId}"
+                    ticket-id="${this.ticketId || ''}"
                     scroll-threshold="100"
                     polling-interval="10000"
                 />
+
+                <style>
+                    chat-component {
+                        --color-primary: inherit;
+                    }
+                </style>
             </div>
         `);
 		}
