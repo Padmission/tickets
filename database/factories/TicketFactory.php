@@ -19,7 +19,6 @@ class TicketFactory extends Factory
     {
         return [
             'subject' => $this->faker->word(),
-            'panel' => 'test',
             'escalation_level' => 'default',
             'submitter_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
             'turn' => Turn::User,
