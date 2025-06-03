@@ -170,6 +170,7 @@ dialog {
 	height: clamp(var(--dialog-min-height), var(--dialog-max-height), 100%);
 	max-height: calc(100% - 4rem);
 	overflow-y: auto;
+	z-index: calc(infinity);
 
 	background-color: hsl(0 0% 100%);
 	border: 1px solid hsl(240 5.9% 90%);

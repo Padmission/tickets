@@ -16,7 +16,7 @@ customElements.define(
 			this.shadowRoot
 				.querySelector("button")
 				.addEventListener("click", (event) => {
-					this.shadowRoot.querySelector("dialog").showModal();
+					this.shadowRoot.querySelector("dialog").show();
 				});
 
 			window.addEventListener("close-chat-widget", (event) => {
