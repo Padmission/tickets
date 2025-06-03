@@ -1,25 +1,24 @@
 class BaseElement extends HTMLElement {
+	_useShadowDom = null;
+	get useShadowDom() {
+		if (this._useShadowDom !== null) {
+			return this._useShadowDom;
+		}
 
-    _useShadowDom = null;
-    get useShadowDom() {
-        if (this._useShadowDom !== null) {
-            return this._useShadowDom;
-        }
+		if (this.hasAttribute("use-shadow-dom")) {
+			this._useShadowDom = this.getAttribute("use-shadow-dom") !== "false";
+			this.removeAttribute("use-shadow-dom");
+			return this._useShadowDom;
+		}
 
-        if (this.hasAttribute('use-shadow-dom')) {
-            this._useShadowDom = this.getAttribute('use-shadow-dom') !== 'false'
-            this.removeAttribute('use-shadow-dom');
-            return this._useShadowDom;
-        }
-
-        return true;
-    }
+		return true;
+	}
 	constructor() {
 		super();
 
-        if (this.useShadowDom) {
-            this.attachShadow({mode: "open"});
-        }
+		if (this.useShadowDom) {
+			this.attachShadow({ mode: "open" });
+		}
 
 		this._listeners = [];
 	}
@@ -53,13 +52,13 @@ class BaseElement extends HTMLElement {
 		});
 	}
 
-    rootNode() {
-        if (this.useShadowDom) {
-            return this.shadowRoot;
-        }
+	rootNode() {
+		if (this.useShadowDom) {
+			return this.shadowRoot;
+		}
 
-        return this;
-    }
+		return this;
+	}
 
 	_initializeStylesheet() {
 		if (!this.stylesheet) {
@@ -174,11 +173,11 @@ class BaseElement extends HTMLElement {
 			this.bindListeners(node);
 		}
 
-        if (this.useShadowDom) {
-		    this.shadowRoot.appendChild(node);
-        } else {
-            this.appendChild(node);
-        }
+		if (this.useShadowDom) {
+			this.shadowRoot.appendChild(node);
+		} else {
+			this.appendChild(node);
+		}
 
 		if (this.renderedCallback) {
 			this.renderedCallback();

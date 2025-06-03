@@ -9,6 +9,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
+use Tiptap\Editor;
 
 class CreateMessageController
 {
@@ -24,12 +25,15 @@ class CreateMessageController
             'lock_turn' => 'boolean',
         ]);
 
+        $content = (new Editor)->sanitize($validated['content']);
+
         $activity = $ticket->activities()->create([
             'type' => ActivityType::Message,
             'sender' => $request->user()->id === $ticket->submitter_id
                 ? ActivitySender::User
                 : ActivitySender::Supporter,
-            'content' => $validated['content'],
+
+            'content' => $content,
         ]);
 
         $currentTurn = $ticket->turn;

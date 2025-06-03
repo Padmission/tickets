@@ -1,7 +1,8 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
-import Link from '@tiptap/extension-link'
+import Link from "@tiptap/extension-link";
+import fetchJson from "./helpers/fetch-json";
 
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
@@ -78,6 +79,10 @@ customElements.define(
 			this.initTipTapEditor();
 			this.initIntersectionObserver();
 
+			if (!this.ticketId) {
+				return;
+			}
+
 			this.loadMessages().then(() => {
 				this.scrollToBottom();
 			});
@@ -110,10 +115,10 @@ customElements.define(
 					Placeholder.configure({
 						placeholder: "Start typing …",
 					}),
-                    Link.configure({
-                      openOnClick: false,
-                      defaultProtocol: 'https',
-                    }),
+					Link.configure({
+						openOnClick: false,
+						defaultProtocol: "https",
+					}),
 					Extension.create({
 						addKeyboardShortcuts() {
 							return {
@@ -132,33 +137,12 @@ customElements.define(
 			try {
 				const isInitialLoad = this.lastMessageId === null;
 
-				let url = `/padmission-tickets/api/tickets/${this.ticketId}/messages`;
-
-				if (!isInitialLoad) {
-					url += `?offset=${encodeURIComponent(this.lastMessageId)}`;
-				}
-
-				const response = await fetch(url, {
-					headers: {
-						Accept: "application/json",
-						"X-Requested-With": "XMLHttpRequest",
+				const data = await fetchJson(
+					`/padmission-tickets/api/tickets/${this.ticketId}/messages`,
+					{
+						offset: isInitialLoad ? 0 : this.lastMessageId,
 					},
-					credentials: "same-origin",
-				});
-
-				if (!response.ok) {
-					console.error("Error response:", await response.text());
-					throw new Error(`Failed to load messages: ${response.status}`);
-				}
-
-				let data;
-
-				try {
-					data = await response.json();
-				} catch (error) {
-					console.error("Error parsing response:", error);
-					return;
-				}
+				);
 
 				const ticket = data.ticket;
 				const messages = data.messages;
@@ -231,25 +215,24 @@ customElements.define(
 					minute: "2-digit",
 				});
 
+				// biome-ignore format: preserve template formatting
 				const renderedHtml = render(`
-                ${
-									hasDateChanged
-										? `<time datetime="${absoluteDate}" class="message-date">
-                                ${absoluteDate}
-                            </time>`
-										: ""
-								}
+                    ${
+                        hasDateChanged
+                            ? ` <time datetime="${absoluteDate}" class="message-date">${absoluteDate} </time>`
+                            : ""
+                    }
 
-                <div
-                    class="message"
-                    data-side="${message.side}"
-                    data-message-id="${message.id}"
-                >
-                    <div class="message__content markdown">
-                        ${message.content}
+                    <div
+                        class="message"
+                        data-side="${message.side}"
+                        data-message-id="${message.id}"
+                    >
+                        <div class="message__content markdown">
+                            ${message.content}
+                        </div>
                     </div>
-                </div>
-            `);
+                `);
 
 				this.messagesElement.append(renderedHtml);
 				this.messages.push(message);
@@ -307,9 +290,11 @@ customElements.define(
 		}
 
 		observeMessages() {
-			this.rootNode().querySelectorAll(".message").forEach((message) => {
-				this.messageObserver.observe(message);
-			});
+			this.rootNode()
+				.querySelectorAll(".message")
+				.forEach((message) => {
+					this.messageObserver.observe(message);
+				});
 		}
 
 		addFiles(event) {
@@ -320,35 +305,58 @@ customElements.define(
 			this.editor.chain().focus().toggleBold().run();
 		}
 
-        toggleList(event) {
+		toggleList(event) {
 			this.editor.chain().focus().toggleBulletList().run();
 		}
 
-        toggleOrderedList(event) {
+		toggleOrderedList(event) {
 			this.editor.chain().focus().toggleOrderedList().run();
 		}
 
-        setLink(event) {
-          const previousUrl = this.editor.getAttributes('link').href
-          let url = window.prompt('URL', previousUrl)
+		setLink(event) {
+			const previousUrl = this.editor.getAttributes("link").href;
+			let url = window.prompt("URL", previousUrl);
 
-          // Cancelled
-          if (url === null) {
-            return
-          }
+			// Cancelled
+			if (url === null) {
+				return;
+			}
 
-          if (url === '') {
-            this.editor.chain().focus().extendMarkRange('link').unsetLink().run()
+			if (url === "") {
+				this.editor.chain().focus().extendMarkRange("link").unsetLink().run();
 
-            return
-          }
+				return;
+			}
 
-          if (! url.startsWith('http://') && ! url.startsWith('https://')) {
-            url = `https://${url}`;
-          }
+			if (!url.startsWith("http://") && !url.startsWith("https://")) {
+				url = `https://${url}`;
+			}
 
-          this.editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-        }
+			this.editor
+				.chain()
+				.focus()
+				.extendMarkRange("link")
+				.setLink({ href: url })
+				.run();
+		}
+
+		async createTicket() {
+			const subject = this.messageContent
+				.trim()
+				.replace(/(<([^>]+)>)/gi, "") // Strip HTML tags
+				.substring(0, 40);
+
+			const data = await fetchJson(
+				`/padmission-tickets/api/tickets/`,
+				{ subject },
+				"POST",
+			);
+
+			this.dispatch("ticket-created", data);
+			this.startPolling();
+
+			return data.id;
+		}
 
 		async sendMessage() {
 			const lockTurn = this.lockTurnCheckbox?.checked || false;
@@ -357,46 +365,25 @@ customElements.define(
 				return;
 			}
 
+			console.log("Ticket:", this.ticketId, !this.ticketId);
+			if (!this.ticketId) {
+				this.ticketId = await this.createTicket();
+				console.log("Created new ticket with ID:", this.ticketId);
+			}
+
 			try {
-				const response = await fetch(
+				const data = await fetchJson(
 					`/padmission-tickets/api/tickets/${this.ticketId}/messages`,
 					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							Accept: "application/json",
-							"X-Requested-With": "XMLHttpRequest",
-							"X-CSRF-TOKEN":
-								document
-									.querySelector('meta[name="csrf-token"]')
-									?.getAttribute("content") || "",
-						},
-						credentials: "same-origin",
-						body: JSON.stringify({
-							content: this.messageContent,
-							lock_turn: lockTurn,
-						}),
+						content: this.messageContent,
+						lock_turn: lockTurn,
 					},
+					"POST",
 				);
-
-				if (!response.ok) {
-					const errorText = await response.text();
-					console.error("Error response:", errorText);
-					throw new Error(`Failed to send message: ${response.status}`);
-				}
 
 				// Clear the editor
 				this.messageContent = "";
 				this.editor.commands.clearContent();
-
-				let data;
-
-				try {
-					data = await response.json();
-				} catch (error) {
-					await this.loadMessages();
-					return;
-				}
 
 				const message = data.message;
 				this.lastMessageId = message.id;
@@ -410,107 +397,107 @@ customElements.define(
 		}
 
 		render() {
+			// biome-ignore format: preserve template formatting
 			return render(`
-            <div class="chat">
-                <div class="message-list" data-chat-messages>
+                <div class="chat">
+                    <div class="message-list" data-chat-messages>
 
-                </div>
-
-                <div class="scroll-to-bottom-wrapper">
-                    <button
-                        class="scroll-to-bottom"
-                        data-chat-scroll-to-bottom
-                    >
-                        <span class="chat__badge">New messages</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </button>
-                </div>
-
-
-                <form class="composer" data-composer>
-                    <div class="composer__message">
-                        <div data-chat-input></div>
-
-                        <div class="composer__toolbar">
-                            <button
-                                class="button-icon"
-                                type="button"
-                                @click="addFiles"
-                                style="display: none;"
-                            >
-                                <span class="sr-only">Add files</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
-                            </button>
-
-                            <button
-                                class="button-icon"
-                                type="button"
-                                @click="toggleBold"
-                            >
-                                <span class="sr-only">Bold</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
-                            </button>
-
-                            <button
-                                class="button-icon"
-                                type="button"
-                                @click="setLink"
-                            >
-                                <span class="sr-only">Link</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                            </button>
-
-                            <button
-                                class="button-icon"
-                                type="button"
-                                @click="toggleList"
-                            >
-                                <span class="sr-only">Unordered List</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
-                            </button>
-
-                            <button
-                                class="button-icon"
-                                type="button"
-                                @click="toggleOrderedList"
-                            >
-                                <span class="sr-only">Ordered List</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
-                            </button>
-
-                            <button type="submit" data-chat-submit>
-                                <span>Send</span>
-
-                                <kbd>
-                                    <span class="sr-only">Command-Key</span>
-                                    <span aria-hidden="true">⌘</span>
-                                </kbd>
-                                <kbd>
-                                    <span class="sr-only">Enter-Key</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-corner-down-left-icon lucide-corner-down-left"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>
-                                </kbd>
-                            </button>
-                        </div>
                     </div>
 
-                    ${
-											this.hasElevatedRights === "true"
-												? `
-                        <div class="composer__options">
-                            <label>
-                                <input type="checkbox" data-chat-lock-turn />
-                                Lock turn to supporter
-                            </label>
+                    <div class="scroll-to-bottom-wrapper">
+                        <button
+                            class="scroll-to-bottom"
+                            data-chat-scroll-to-bottom
+                        >
+                            <span class="chat__badge">New messages</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form class="composer" data-composer>
+                        <div class="composer__message">
+                            <div data-chat-input></div>
+
+                            <div class="composer__toolbar">
+                                <button
+                                    class="button-icon"
+                                    type="button"
+                                    @click="addFiles"
+                                    style="display: none;"
+                                >
+                                    <span class="sr-only">Add files</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
+                                </button>
+
+                                <button
+                                    class="button-icon"
+                                    type="button"
+                                    @click="toggleBold"
+                                >
+                                    <span class="sr-only">Bold</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
+                                </button>
+
+                                <button
+                                    class="button-icon"
+                                    type="button"
+                                    @click="setLink"
+                                >
+                                    <span class="sr-only">Link</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                </button>
+
+                                <button
+                                    class="button-icon"
+                                    type="button"
+                                    @click="toggleList"
+                                >
+                                    <span class="sr-only">Unordered List</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
+                                </button>
+
+                                <button
+                                    class="button-icon"
+                                    type="button"
+                                    @click="toggleOrderedList"
+                                >
+                                    <span class="sr-only">Ordered List</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
+                                </button>
+
+                                <button type="submit" data-chat-submit>
+                                    <span>Send</span>
+
+                                    <kbd>
+                                        <span class="sr-only">Command-Key</span>
+                                        <span aria-hidden="true">⌘</span>
+                                    </kbd>
+                                    <kbd>
+                                        <span class="sr-only">Enter-Key</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-corner-down-left-icon lucide-corner-down-left"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>
+                                    </kbd>
+                                </button>
+                            </div>
                         </div>
-                    `
-												: ""
-										}
-                </form>
-            </div>
-        `);
+
+                        ${
+                            this.hasElevatedRights === "true"
+                                ? `
+                                    <div class="composer__options">
+                                        <label>
+                                            <input type="checkbox" data-chat-lock-turn />
+                                            Lock turn to supporter
+                                        </label>
+                                    </div>
+                                `
+                                : ""
+                        }
+                    </form>
+                </div>
+            `);
 		}
 	},
 );

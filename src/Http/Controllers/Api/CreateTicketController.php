@@ -10,6 +10,7 @@ use Padmission\Tickets\Models\Priority;
 use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
+use Tiptap\Editor;
 
 class CreateTicketController
 {
@@ -20,12 +21,16 @@ class CreateTicketController
     {
         $this->authorize('create', Ticket::class);
 
-        $validated = $request->validate([
+        $request->validate([
             'subject' => 'required|string|max:255',
         ]);
 
+        $subject = (new Editor)
+            ->setContent($request->input('subject'))
+            ->getText();
+
         $ticket = TicketPlugin::resolveModelClass(Ticket::class)::create([
-            ...$validated,
+            'subject' => $subject,
             'submitter_id' => $request->user()->id,
             'turn' => Turn::User,
             'status_id' => TicketPlugin::resolveModelClass(Status::class)::first()->id,

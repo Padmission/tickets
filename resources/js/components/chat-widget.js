@@ -1,7 +1,6 @@
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
 
-import "./chat-widget/create";
 import "./chat-widget/view";
 import "./chat-widget/list";
 
@@ -16,6 +15,7 @@ customElements.define(
 			this.shadowRoot
 				.querySelector("button")
 				.addEventListener("click", (event) => {
+					this.changeView("chat-list-tickets");
 					this.shadowRoot.querySelector("dialog").show();
 				});
 
@@ -35,7 +35,7 @@ customElements.define(
 			});
 		}
 
-		changeView(viewName, attributes) {
+		changeView(viewName, attributes = {}) {
 			const view = document.createElement(viewName);
 
 			for (const [key, value] of Object.entries(attributes)) {
@@ -52,30 +52,31 @@ customElements.define(
 		}
 
 		render() {
+			// biome-ignore format: preserve template formatting
 			return render(`
-            <style>
-                :host {
-                    display: none;
-                }
-            </style>
+                <style>
+                    :host {
+                        display: none;
+                    }
+                </style>
 
-            <button
-                class="button-icon"
-                data-open-dialog
-            >
-                <span class="sr-only">Open support chat</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-question-icon lucide-message-circle-question"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-            </button>
+                <button
+                    class="button-icon"
+                    data-open-dialog
+                >
+                    <span class="sr-only">Open support chat</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-question-icon lucide-message-circle-question"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                </button>
 
-            <dialog
-                id="chat-widget-dialog"
-                closedBy="closerequest"
-            >
-                <div data-dialog-content>
-                    <chat-list-tickets></chat-list-tickets>
-                </div>
-            </dialog>
-        `);
+                <dialog
+                    id="chat-widget-dialog"
+                    closedBy="closerequest"
+                >
+                    <div data-dialog-content>
+
+                    </div>
+                </dialog>
+            `);
 		}
 	},
 );

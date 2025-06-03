@@ -18,7 +18,7 @@ class ListTicketsController
         $this->authorize('create', Ticket::class);
 
         $tickets = TicketPlugin::resolveModelClass(Ticket::class)::query()
-            ->with('latestActivity')
+            ->with('latestMessage')
             ->where('submitter_id', $request->user()->id)
             ->orderBy('updated_at', 'desc')
             ->get();
@@ -28,9 +28,7 @@ class ListTicketsController
                 ->map(fn ($ticket) => [
                     'id' => $ticket->id,
                     'subject' => $ticket->subject,
-                    'latest_activity' => str($ticket->latestActivity?->content)
-                        ->stripTags()
-                        ->words(20),
+                    'latest_message' => str($ticket->latestMessage->content)->stripTags()->words(20),
                     'updated_at' => $ticket->updated_at->diffForHumans(),
                     'is_closed' => $ticket->isClosed,
                 ]),

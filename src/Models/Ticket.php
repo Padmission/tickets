@@ -82,11 +82,16 @@ class Ticket extends Model
         return $this->hasMany(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id');
     }
 
-    public function latestActivity(): HasOne
+    public function latestMessage(): HasOne
     {
         return $this
             ->hasOne(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id')
-            ->latestOfMany();
+            ->ofMany([
+                'created_at' => 'max',
+            ], function (Builder $query) {
+                $query->where('type', ActivityType::Message->value);
+            });
+
     }
 
     /* Scopes */
