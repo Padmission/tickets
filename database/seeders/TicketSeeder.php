@@ -45,6 +45,7 @@ class TicketSeeder extends Seeder
             ]);
 
         $tickets[] = Ticket::factory()
+            ->recycle($statuses)
             ->recycle($priorities)
             ->recycle($users)
             ->closed()
