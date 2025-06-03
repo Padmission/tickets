@@ -20,7 +20,7 @@ customElements.define(
 		}
 
 		render() {
-            // biome-ignore format: preserve template formatting
+			// biome-ignore format: preserve template formatting
 			return render(`
                 <div class="chat-view-ticket">
                     <header>
