@@ -79,15 +79,15 @@ customElements.define(
 			this.initTipTapEditor();
 			this.initIntersectionObserver();
 
-            if (this.defaultMessage) {
-                this.renderMessages([
-                    {
-                        content: this.defaultMessage,
-                        side: 'other',
-                        created_at: new Date().toISOString(),
-                    }
-                ])
-            }
+			if (this.defaultMessage) {
+				this.renderMessages([
+					{
+						content: this.defaultMessage,
+						side: "other",
+						created_at: new Date().toISOString(),
+					},
+				]);
+			}
 
 			if (!this.ticketId) {
 				return;
