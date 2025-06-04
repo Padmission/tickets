@@ -35,6 +35,7 @@ return [
             'assignee' => 'Assignee',
             'submitter' => 'Submitter',
             'last_message' => 'Last Message',
+            'closed_at' => 'Closed At',
         ],
 
         'statuses' => [
