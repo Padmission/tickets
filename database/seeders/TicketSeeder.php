@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Database\Seeders;
 
+use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Seeder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -17,55 +18,59 @@ class TicketSeeder extends Seeder
 {
     public function run(): void
     {
-        $statuses = TicketPlugin::resolveModelClass(Status::class)::getOpenStatuses();
-        $priorities = TicketPlugin::resolveModelClass(Priority::class)::all();
+        foreach (Filament::getPanels() as $panel) {
+            Filament::setCurrentPanel($panel);
 
-        $users = TicketPlugin::resolveModelClass(Authenticatable::class)::factory()
-            ->count(3)
-            ->create();
+            $statuses = TicketPlugin::resolveModelClass(Status::class)::getOpenStatuses();
+            $priorities = TicketPlugin::resolveModelClass(Priority::class)::all();
 
-        $tickets = [];
+            $users = TicketPlugin::resolveModelClass(Authenticatable::class)::factory()
+                ->count(3)
+                ->create();
 
-        $tickets[] = Ticket::factory()
-            ->recycle($statuses)
-            ->recycle($priorities)
-            ->recycle($users)
-            ->create([
-                'subject' => 'Users Turn',
-                'turn' => Turn::User,
-            ]);
+            $tickets = [];
 
-        $tickets[] = Ticket::factory()
-            ->recycle($statuses)
-            ->recycle($priorities)
-            ->recycle($users)
-            ->create([
-                'subject' => 'Supporters Turn',
-                'turn' => Turn::Supporter,
-            ]);
+            $tickets[] = Ticket::factory()
+                ->recycle($statuses)
+                ->recycle($priorities)
+                ->recycle($users)
+                ->create([
+                    'subject' => 'Users Turn',
+                    'turn' => Turn::User,
+                ]);
 
-        $tickets[] = Ticket::factory()
-            ->recycle($statuses)
-            ->recycle($priorities)
-            ->recycle($users)
-            ->closed()
-            ->create([
-                'subject' => 'Closed Ticket',
-                'turn' => Turn::Supporter,
-            ]);
+            $tickets[] = Ticket::factory()
+                ->recycle($statuses)
+                ->recycle($priorities)
+                ->recycle($users)
+                ->create([
+                    'subject' => 'Supporters Turn',
+                    'turn' => Turn::Supporter,
+                ]);
 
-        $tickets[] = Ticket::factory()
-            ->recycle($statuses)
-            ->recycle($priorities)
-            ->recycle($users)
-            ->withSubmitterData()
-            ->create([
-                'subject' => 'Non-user submitter',
-                'turn' => Turn::Supporter,
-            ]);
+            $tickets[] = Ticket::factory()
+                ->recycle($statuses)
+                ->recycle($priorities)
+                ->recycle($users)
+                ->closed()
+                ->create([
+                    'subject' => 'Closed Ticket',
+                    'turn' => Turn::Supporter,
+                ]);
 
-        foreach ($tickets as $ticket) {
-            $this->addActivities($ticket);
+            $tickets[] = Ticket::factory()
+                ->recycle($statuses)
+                ->recycle($priorities)
+                ->recycle($users)
+                ->withSubmitterData()
+                ->create([
+                    'subject' => 'Non-user submitter',
+                    'turn' => Turn::Supporter,
+                ]);
+
+            foreach ($tickets as $ticket) {
+                $this->addActivities($ticket);
+            }
         }
     }
 
