@@ -94,6 +94,13 @@ class Ticket extends Model
 
     }
 
+    public function latestActivity(): HasOne
+    {
+        return $this
+            ->hasOne(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id')
+            ->latestOfMany();
+    }
+
     /* Scopes */
 
     #[Scope]

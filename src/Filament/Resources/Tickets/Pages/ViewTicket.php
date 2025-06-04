@@ -77,8 +77,8 @@ class ViewTicket extends ViewRecord
                             ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
                             ->columnSpanFull(),
 
-                        TextEntry::make('latestActivity.created_at')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.last_activity'))
+                        TextEntry::make('latestMessage.created_at')
+                            ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                             ->hidden(fn (Ticket $record) => $record->isClosed)
                             ->dateTime()
                             ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
@@ -86,37 +86,10 @@ class ViewTicket extends ViewRecord
                             ->columnSpanFull(),
 
                         TextEntry::make('closed_at')
-                            // ->label(__('padmission-tickets::tickets.resources.tickets.last_activity'))
-                            ->label('Closed At')
+                            ->label(__('padmission-tickets::tickets.resources.tickets.closed_at'))
                             ->visible(fn (Ticket $record) => $record->isClosed)
                             ->dateTime()
                             ->formatStateUsing(fn ($state) => $state?->diffForHumans())
-                            ->tooltip(fn ($state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
-                            ->columnSpanFull(),
-                    ]),
-
-                    Section::make('Stats')->compact()->schema([
-                        TextEntry::make('created_at')
-                            // ->label(__('padmission-tickets::tickets.resources.tickets.open_for'))
-                            ->label('Open For')
-                            ->dateTime()
-                            ->formatStateUsing(fn ($state) => $state?->diffForHumans())
-                            ->tooltip(fn ($state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
-                            ->columnSpanFull(),
-
-                        TextEntry::make('created_at')
-                            // ->label(__('padmission-tickets::tickets.resources.tickets.open_for'))
-                            ->label('Initial Respones Time')
-                            ->dateTime()
-                            ->formatStateUsing(fn ($state) => $state?->diffForHumans(null, true))
-                            ->tooltip(fn ($state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
-                            ->columnSpanFull(),
-
-                        TextEntry::make('created_at')
-                            // ->label(__('padmission-tickets::tickets.resources.tickets.open_for'))
-                            ->label('Total Supporter Time')
-                            ->dateTime()
-                            ->formatStateUsing(fn ($state) => $state?->diffForHumans(null, true))
                             ->tooltip(fn ($state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
                             ->columnSpanFull(),
                     ]),
