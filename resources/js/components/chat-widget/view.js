@@ -8,14 +8,14 @@ customElements.define(
 			return false;
 		}
 
-        async connectedCallback() {
-            const widget = this.getRootNode().host;
-            this.defaultMessage = widget.defaultMessage;
+		async connectedCallback() {
+			const widget = this.getRootNode().host;
+			this.defaultMessage = widget.defaultMessage;
 
-            super.connectedCallback();
-        }
+			super.connectedCallback();
+		}
 
-        renderedCallback() {
+		renderedCallback() {
 			window.addEventListener("ticket-created", (event) => {
 				this.querySelector("[data-chat-subject]").innerHTML =
 					event.detail.subject;

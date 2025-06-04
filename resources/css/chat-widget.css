@@ -14,7 +14,6 @@
 	--dialog-min-height: 35em;
 	--dialog-max-height: 50svh;
 
-
 	--header-border: light-dark(
 		oklch(from var(--color-primary) 20% 0.1 h / 0.1),
 		oklch(from var(--color-primary) 80% 0.1 h / 0.1)
@@ -25,7 +24,7 @@
 	);
 
 	display: block !important;
-    color: var(--color-text);
+	color: var(--color-text);
 
 	button {
 		pointer-events: all;
@@ -361,22 +360,22 @@ header {
 	display: flex;
 	flex-direction: column;
 
-    header {
-        position: absolute;
-        inset-inline: 0;
-        inset-block-start: 0;
-        width: 100%;
-        padding: 1em;
-        background-color: var(--header-bg);
-        color: white;
+	header {
+		position: absolute;
+		inset-inline: 0;
+		inset-block-start: 0;
+		width: 100%;
+		padding: 1em;
+		background-color: var(--header-bg);
+		color: white;
 
-        .button-icon {
-            &:focus-visible,
-        	&:hover {
-           		background-color: oklch(from var(--color-text) 98% 5% h / 0.1);
-            }
-        }
-    }
+		.button-icon {
+			&:focus-visible,
+			&:hover {
+				background-color: oklch(from var(--color-text) 98% 5% h / 0.1);
+			}
+		}
+	}
 	h2 {
 		font-size: 1rem;
 		white-space: nowrap;
