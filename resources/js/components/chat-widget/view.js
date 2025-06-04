@@ -8,7 +8,14 @@ customElements.define(
 			return false;
 		}
 
-		renderedCallback() {
+        async connectedCallback() {
+            const widget = this.getRootNode().host;
+            this.defaultMessage = widget.defaultMessage;
+
+            super.connectedCallback();
+        }
+
+        renderedCallback() {
 			window.addEventListener("ticket-created", (event) => {
 				this.querySelector("[data-chat-subject]").innerHTML =
 					event.detail.subject;
@@ -52,6 +59,7 @@ customElements.define(
 
                     <chat-component
                         ticket-id="${this.ticketId || ""}"
+                        default-message="${this.defaultMessage || ""}"
                         scroll-threshold="100"
                         polling-interval="10000"
                     />
