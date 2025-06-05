@@ -8,10 +8,10 @@ use Illuminate\Database\Seeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketSeeder extends Seeder

@@ -18,8 +18,8 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
-use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\TicketPlugin;
 
 class PriorityResource extends Resource

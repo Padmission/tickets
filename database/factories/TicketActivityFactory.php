@@ -5,8 +5,8 @@ namespace Padmission\Tickets\Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
-use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 
 class TicketActivityFactory extends Factory
 {

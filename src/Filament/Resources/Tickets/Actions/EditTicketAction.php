@@ -7,10 +7,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\Facades\Blade;
-use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 
 class EditTicketAction extends EditAction
 {
