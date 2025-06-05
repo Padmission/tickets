@@ -10,6 +10,12 @@ return new class extends Migration
     {
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
+
+            if (Padmission\Tickets\Support\Utils::isTenantEnabled()) {
+                $tenantForeignKey = config('padmission-tickets.tenant.tenant_foreign_key', 'tenant_id');
+                $table->foreignId($tenantForeignKey)->constrained()->cascadeOnDelete();
+            }
+
             $table->string('escalation_level')->default('default');
             $table->string('subject');
             $table->foreignId('status_id');
