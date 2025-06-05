@@ -15,15 +15,11 @@ use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 final class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
-
+    protected bool $shouldRegisterTicketResource = false;
     protected bool $shouldRegisterResources = false;
-
     protected string $escalationLevel = 'default';
-
     protected ?AssignmentStrategy $assignmentStrategy = null;
-
     protected ?NotificationStrategy $notificationStrategy = null;
-
     protected bool $shouldShowChatWidget = false;
 
     public static function make(): static
@@ -38,13 +34,21 @@ final class TicketPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
+        $resources = [];
+
         if ($this->shouldRegisterResources()) {
-            $panel->resources([
+            $resources = [
                 Resources\Tickets\TicketResource::class,
                 Resources\Statuses\StatusResource::class,
                 Resources\Priorities\PriorityResource::class,
-            ]);
+            ];
         }
+
+        if ($this->shouldRegisterResources() || $this->shouldRegisterSingleTicketResource()) {
+            $resources[] = Resources\Tickets\TicketResource::class;
+        }
+
+        $panel->resources($resources);
 
         if ($this->shouldShowChatWidget()) {
             $panel->renderHook(
@@ -123,6 +127,18 @@ final class TicketPlugin implements Plugin
         $this->shouldRegisterResources = $shouldRegister;
 
         return $this;
+    }
+
+    public function registerSingleTicketResource(bool $shouldRegister = true): static
+    {
+        $this->shouldRegisterTicketResource = $shouldRegister;
+
+        return $this;
+    }
+
+    public function shouldRegisterSingleTicketResource(): bool
+    {
+        return $this->shouldRegisterTicketResource;
     }
 
     public function shouldRegisterResources(): bool
