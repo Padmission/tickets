@@ -10,6 +10,12 @@ return new class extends Migration
     {
         Schema::create('ticket_priorities', function (Blueprint $table) {
             $table->id();
+
+            if (Padmission\Tickets\Support\Utils::isTenantEnabled()) {
+                $tenantForeignKey = config('padmission-tickets.tenant.tenant_foreign_key', 'tenant_id');
+                $table->foreignId($tenantForeignKey)->constrained()->cascadeOnDelete();
+            }
+
             $table->string('panel');
             $table->string('display_name');
             $table->string('color');

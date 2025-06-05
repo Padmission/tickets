@@ -4,6 +4,17 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Config;
 
 return [
+
+    /**
+     * Enable or disable the tenant feature.
+     *
+     * If enabled, the package will use the tenant context for all operations.
+     */
+    'tenant' => [
+        'enabled' => false,
+        'tenant_foreign_key' => 'tenant_id',
+    ],
+
     /**
      * Swap package models (left) with your own model (right).
      * Your models should extend the package models to ensure type safety.
