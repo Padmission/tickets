@@ -6,9 +6,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Models\Priority;
-use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 use Tiptap\Editor;
 
@@ -33,8 +33,8 @@ class CreateTicketController
             'subject' => $subject,
             'submitter_id' => $request->user()->id,
             'turn' => Turn::User,
-            'status_id' => TicketPlugin::resolveModelClass(Status::class)::first()->id,
-            'priority_id' => TicketPlugin::resolveModelClass(Priority::class)::first()->id,
+            'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::first()->id,
+            'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::first()->id,
         ]);
 
         return [

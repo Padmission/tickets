@@ -27,7 +27,7 @@ class CreateMessageController
 
         $content = (new Editor)->sanitize($validated['content']);
 
-        $activity = $ticket->activities()->create([
+        $activity = $ticket->ticketActivities()->create([
             'type' => ActivityType::Message,
             'sender' => $request->user()->id === $ticket->submitter_id
                 ? ActivitySender::User
@@ -45,7 +45,7 @@ class CreateMessageController
         }
 
         if ($currentTurn !== $nextTurn) {
-            $ticket->activities()->create([
+            $ticket->ticketActivities()->create([
                 'type' => ActivityType::TurnChanged,
                 'sender' => ActivitySender::System,
                 'data' => [
