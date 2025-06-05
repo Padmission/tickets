@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Padmission\Tickets\Database\Factories\ActivityFactory;
+use Padmission\Tickets\Database\Factories\TicketActivityFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\TicketPlugin;
 
-#[UseFactory(ActivityFactory::class)]
-class Activity extends Model
+#[UseFactory(TicketActivityFactory::class)]
+class TicketActivity extends Model
 {
     use HasFactory, SoftDeletes;
 

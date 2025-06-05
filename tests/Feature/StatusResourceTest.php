@@ -3,12 +3,12 @@
 use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Statuses\Pages\ListStatuses;
-use Padmission\Tickets\Models\Status;
+use Padmission\Tickets\Models\TicketStatus;
 
 it('lists statuses', function () {
-    Status::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3, 'panel' => 'test']);
-    Status::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2,  'panel' => 'test']);
-    Status::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1, 'panel' => 'test']);
+    TicketStatus::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3, 'panel' => 'test']);
+    TicketStatus::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2,  'panel' => 'test']);
+    TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1, 'panel' => 'test']);
 
     Livewire::test(ListStatuses::class)
         ->assertSee(__('padmission-tickets::tickets.resources.statuses.plural_model_label'))
@@ -21,22 +21,22 @@ it('lists statuses', function () {
 });
 
 it('only shows statuses from current panel', function () {
-    Status::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
-    Status::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);
+    TicketStatus::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
+    TicketStatus::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);
 
     Livewire::test(ListStatuses::class)->assertCountTableRecords(1);
 });
 
 it('can reorder statuses', function () {
-    Status::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
-    Status::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
-    Status::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
+    TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    TicketStatus::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
+    TicketStatus::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
 
     Livewire::test(ListStatuses::class)
         ->call('reorderTable', [3, 2, 1])
         ->assertHasNoErrors();
 
-    $this->assertDatabaseHas(Status::class, [
+    $this->assertDatabaseHas(TicketStatus::class, [
         'id' => 1,
         'order' => 3,
     ]);
@@ -55,7 +55,7 @@ it('can create status', function () {
         ])
         ->assertHasNoActionErrors();
 
-    $this->assertDatabaseHas(Status::class, [
+    $this->assertDatabaseHas(TicketStatus::class, [
         'display_name' => 'New Status',
         'color' => 'Zinc',
         'order' => 99,
@@ -63,7 +63,7 @@ it('can create status', function () {
 });
 
 it('can edit status', function () {
-    $status = Status::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    $status = TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListStatuses::class)
         ->callTableAction('edit', $status, [
@@ -72,7 +72,7 @@ it('can edit status', function () {
         ])
         ->assertHasNoActionErrors();
 
-    $this->assertDatabaseHas(Status::class, [
+    $this->assertDatabaseHas(TicketStatus::class, [
         'id' => $status->id,
         'display_name' => 'New Name',
         'color' => 'Red',
@@ -81,13 +81,13 @@ it('can edit status', function () {
 });
 
 it('can delete status', function () {
-    $status = Status::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    $status = TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListStatuses::class)
         ->callTableAction('delete', $status->id)
         ->assertHasNoErrors();
 
-    $this->assertSoftDeleted(Status::class, [
+    $this->assertSoftDeleted(TicketStatus::class, [
         'id' => $status->id,
     ]);
 });

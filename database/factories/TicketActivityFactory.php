@@ -5,12 +5,12 @@ namespace Padmission\Tickets\Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
-use Padmission\Tickets\Models\Activity;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\Ticket;
 
-class ActivityFactory extends Factory
+class TicketActivityFactory extends Factory
 {
-    protected $model = Activity::class;
+    protected $model = TicketActivity::class;
 
     public function definition(): array
     {
