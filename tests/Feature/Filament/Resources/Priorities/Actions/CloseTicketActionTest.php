@@ -4,8 +4,8 @@ use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
-use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Tests\User;
 
 it('closes ticket', function () {

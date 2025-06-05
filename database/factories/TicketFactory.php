@@ -5,9 +5,9 @@ namespace Padmission\Tickets\Database\Factories;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
