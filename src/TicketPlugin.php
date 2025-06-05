@@ -15,11 +15,17 @@ use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 final class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
+
     protected bool $shouldRegisterTicketResource = false;
+
     protected bool $shouldRegisterResources = false;
+
     protected string $escalationLevel = 'default';
+
     protected ?AssignmentStrategy $assignmentStrategy = null;
+
     protected ?NotificationStrategy $notificationStrategy = null;
+
     protected bool $shouldShowChatWidget = false;
 
     public static function make(): static
