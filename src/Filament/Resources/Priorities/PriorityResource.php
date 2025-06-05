@@ -18,7 +18,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
-use Padmission\Tickets\Models\Priority;
+use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\TicketPlugin;
 
@@ -28,7 +28,7 @@ class PriorityResource extends Resource
 
     public static function getModel(): string
     {
-        return TicketPlugin::resolveModelClass(Priority::class);
+        return TicketPlugin::resolveModelClass(TicketPriority::class);
     }
 
     public static function getModelLabel(): string
@@ -78,7 +78,7 @@ class PriorityResource extends Resource
             ->columns([
                 ColorColumn::make('color')
                     ->label(__('padmission-tickets::tickets.resources.priorities.color'))
-                    ->getStateUsing(fn (Priority $record) => 'rgb('.Color::{$record->color}[600].')'),
+                    ->getStateUsing(fn (TicketPriority $record) => 'rgb('.Color::{$record->color}[600].')'),
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.priorities.display_name')),

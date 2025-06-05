@@ -42,22 +42,22 @@ class Ticket extends Model
     /* Relations */
 
     /**
-     * @return BelongsTo<Status, $this>
+     * @return BelongsTo<TicketStatus, $this>
      */
     public function status(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Status::class)
+            TicketPlugin::resolveModelClass(TicketStatus::class)
         )->withTrashed();
     }
 
     /**
-     * @return BelongsTo<Priority, $this>
+     * @return BelongsTo<TicketPriority, $this>
      */
     public function priority(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Priority::class)
+            TicketPlugin::resolveModelClass(TicketPriority::class)
         )->withTrashed();
     }
 
@@ -77,15 +77,15 @@ class Ticket extends Model
         );
     }
 
-    public function activities(): HasMany
+    public function ticketActivities(): HasMany
     {
-        return $this->hasMany(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id');
+        return $this->hasMany(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id');
     }
 
     public function latestMessage(): HasOne
     {
         return $this
-            ->hasOne(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id')
+            ->hasOne(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id')
             ->ofMany([
                 'created_at' => 'max',
             ], function (Builder $query) {
@@ -97,7 +97,7 @@ class Ticket extends Model
     public function latestActivity(): HasOne
     {
         return $this
-            ->hasOne(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id')
+            ->hasOne(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id')
             ->latestOfMany();
     }
 
@@ -132,12 +132,12 @@ class Ticket extends Model
             return;
         }
 
-        $statusModel = TicketPlugin::resolveModelClass(Status::class);
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
         $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
 
         DB::beginTransaction();
 
-        $this->activities()->create([
+        $this->ticketActivities()->create([
             'type' => ActivityType::Closed,
             'sender' => ActivitySender::System,
             'data' => [

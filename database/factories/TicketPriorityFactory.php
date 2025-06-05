@@ -4,11 +4,11 @@ namespace Padmission\Tickets\Database\Factories;
 
 use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Padmission\Tickets\Models\Status;
+use Padmission\Tickets\Models\TicketPriority;
 
-class StatusFactory extends Factory
+class TicketPriorityFactory extends Factory
 {
-    protected $model = Status::class;
+    protected $model = TicketPriority::class;
 
     public function definition(): array
     {

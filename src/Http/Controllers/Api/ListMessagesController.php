@@ -7,7 +7,7 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Models\Activity;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\Ticket;
 
 class ListMessagesController
@@ -24,21 +24,21 @@ class ListMessagesController
             : ActivitySender::Supporter;
 
         $messages = $ticket
-            ->activities()
+            ->ticketActivities()
             ->when($request->has('offset'), fn ($query) => $query->where('id', '>', $request->integer('offset')))
             ->get();
 
         if (! $request->user()->can('viewAny')) {
-            $messages = $messages->filter(function (Activity $message) {
+            $messages = $messages->filter(function (TicketActivity $message) {
                 return $message->type === ActivityType::Message;
             });
         }
 
-        $messages = $messages->filter(function (Activity $message) {
+        $messages = $messages->filter(function (TicketActivity $message) {
             return filled($message->content);
         });
 
-        $messages = $messages->map(function (Activity $message) use ($currentSender) {
+        $messages = $messages->map(function (TicketActivity $message) use ($currentSender) {
             $message->side = match (true) {
                 $message->sender === ActivitySender::System => 'system',
                 $message->sender === $currentSender => 'me',
