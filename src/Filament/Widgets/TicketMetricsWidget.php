@@ -11,14 +11,20 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
 use Padmission\Tickets\Services\TicketMetricsService;
 
+/**
+ * @property \Filament\Forms\Form $form
+ */
 class TicketMetricsWidget extends BaseWidget implements HasForms
 {
     use CanCalculatePollingInterval;
     use InteractsWithForms;
 
-    protected static string $view = 'padmission-tickets::filament.widgets.stats-overview-widget';
-
     public ?int $timeRange = 7;
+
+    /**
+     * @var view-string
+     */
+    protected static string $view = 'filament-widgets::stats-overview-widget';
 
     public function mount(): void
     {
