@@ -23,7 +23,6 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
         return __('Open vs Closed Tickets by Day');
     }
 
-
     public static function getCurrentSwatch(): array
     {
         $defaultColors = [
@@ -71,8 +70,8 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
             $colorA = $colors['primary'] ? $colors['primary'][500] : '#3b82f6';
             $colorB = $colors['secondary'] ? $colors['secondary'][500] : '#10b981';
 
-            $colorA = strpos($colorA, '#') === 0 ? $colorA : 'rgb(' . $colorA . ')';
-            $colorB = strpos($colorB, '#') === 0 ? $colorB : 'rgb(' . $colorB . ')';
+            $colorA = strpos($colorA, '#') === 0 ? $colorA : 'rgb('.$colorA.')';
+            $colorB = strpos($colorB, '#') === 0 ? $colorB : 'rgb('.$colorB.')';
 
             return [
                 'labels' => $data['labels'],

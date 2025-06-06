@@ -3,24 +3,22 @@
 namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
 use Padmission\Tickets\Services\TicketMetricsService;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
+
 class TicketMetricsWidget extends BaseWidget implements HasForms
 {
     use CanCalculatePollingInterval;
     use InteractsWithForms;
 
-
     protected static string $view = 'padmission-tickets::filament.widgets.stats-overview-widget';
 
     public ?int $timeRange = 7;
-
 
     public function mount(): void
     {
@@ -29,9 +27,11 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
         ]);
     }
 
-    public function getDefaultTimeRange(): int {
+    public function getDefaultTimeRange(): int
+    {
         return 7;
     }
+
     public function form(Form $form): Form
     {
         return $form
@@ -41,9 +41,9 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
                     ->options($this->getDateRangeOptions())
                     ->hiddenLabel()
                     ->live(debounce: 500)
-                    ->afterStateUpdated(function($state, Select $component) {
+                    ->afterStateUpdated(function ($state, Select $component) {
                         $this->timeRange = is_numeric($state) ? $state : $this->getDefaultTimeRange();
-                    })
+                    }),
             ]);
     }
 

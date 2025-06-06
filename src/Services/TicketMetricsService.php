@@ -12,10 +12,13 @@ class TicketMetricsService
 {
     protected int $cacheTimeInSeconds = 5;
 
-    public function setCacheTime(int $seconds) : self {
+    public function setCacheTime(int $seconds): self
+    {
         $this->cacheTimeInSeconds = $seconds ? $seconds : 5;
+
         return $this;
     }
+
     /**
      * Calculate the average time to close tickets
      *
@@ -189,7 +192,7 @@ class TicketMetricsService
     {
         $cacheKey = __METHOD__.'-'.$days;
 
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function() use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = now()->subDays($days - 1)->startOfDay();
             $endDate = now()->endOfDay();

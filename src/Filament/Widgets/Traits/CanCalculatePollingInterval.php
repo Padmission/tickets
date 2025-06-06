@@ -1,7 +1,7 @@
 <?php
 
 namespace Padmission\Tickets\Filament\Widgets\Traits;
-use Illuminate\Support\Str;
+
 use Carbon\CarbonInterval;
 
 /**
@@ -9,7 +9,8 @@ use Carbon\CarbonInterval;
  * to be the same as the polling interval for efficiency.  It prevents people with
  * the same widgets open from hitting the db over and over for the same data.
  */
-trait CanCalculatePollingInterval {
+trait CanCalculatePollingInterval
+{
     /**
      * Convert Filament polling interval to seconds or null for infinite polling.
      *
@@ -19,7 +20,7 @@ trait CanCalculatePollingInterval {
     {
         $interval = $this->getPollingInterval();
 
-        if (!$interval) {
+        if (! $interval) {
             return null;
         }
 
@@ -41,6 +42,7 @@ trait CanCalculatePollingInterval {
             try {
                 if (str_starts_with($interval, 'p')) {
                     $carbonInterval = CarbonInterval::fromString(strtoupper($interval));
+
                     return $carbonInterval->totalSeconds > 0 ? (int) ceil($carbonInterval->totalSeconds) : null;
                 }
             } catch (\Exception $e) {
@@ -79,5 +81,4 @@ trait CanCalculatePollingInterval {
 
         return null;
     }
-
 }
