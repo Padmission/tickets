@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -118,14 +117,12 @@ class Ticket extends Model
 
     /* Scopes */
 
-    #[Scope]
-    protected function open(Builder $query): void
+    protected function scopeOpen(Builder $query): void
     {
         $query->whereNull('closed_at');
     }
 
-    #[Scope]
-    protected function closed(Builder $query): void
+    protected function scopeClosed(Builder $query): void
     {
         $query->whereNotNull('closed_at');
     }
