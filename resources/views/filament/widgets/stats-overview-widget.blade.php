@@ -18,15 +18,9 @@
                             {{ $heading }}
                         </h3>
                     @endif
-                    @if($hasDateRangePicker)
+                        @if($hasDateRangePicker)
                         <div class="flex-shrink-0">
-                            <select wire:model="timeRange"
-                                    wire:change="$refresh"
-                                    class="text-xs border-gray-300 rounded-lg shadow-sm">
-                                @foreach($dateRangeOptions as $k => $v)
-                                    <option value="{{ $k }}">{{ $v }}</option>
-                                    @endforeach
-                            </select>
+                            {{ $this->form }}
                         </div>
                     @endif
                 </div>
