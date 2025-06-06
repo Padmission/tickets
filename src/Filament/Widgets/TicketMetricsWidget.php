@@ -42,15 +42,15 @@ class TicketMetricsWidget extends BaseWidget
         $detailedMetrics = $metricsService->getCloseTimeMetrics($timeRangePeriod);
 
         return [
-            Stat::make($this->getHeading(), $metrics['average_close_time'])
+            Stat::make(__('Average Close Time'), $metrics['average_close_time'])
                 ->description(__(':count tickets closed', ['count' => $metrics['total_closed_tickets']]))
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('primary'),
-            Stat::make($this->getDescription(), $detailedMetrics['minimum'])
+            Stat::make(__('Fastest Resolution'), $detailedMetrics['minimum'])
                 ->description(__('Best case scenario'))
                 ->descriptionIcon('heroicon-m-arrow-trending-down')
                 ->color('success'),
-            Stat::make($this->getDescription(), $detailedMetrics['maximum'])
+            Stat::make(__('Slowest Resolution'), $detailedMetrics['maximum'])
                 ->description(__('Worst case scenario'))
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('danger'),
