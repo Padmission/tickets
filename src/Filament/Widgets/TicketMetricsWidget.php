@@ -2,10 +2,9 @@
 
 namespace Padmission\Tickets\Filament\Widgets;
 
-use Padmission\Tickets\Services\TicketMetricsService;
-use Filament\Forms;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Padmission\Tickets\Services\TicketMetricsService;
 
 class TicketMetricsWidget extends BaseWidget
 {
@@ -23,7 +22,8 @@ class TicketMetricsWidget extends BaseWidget
         return __('Statistics about ticket resolution times');
     }
 
-    public function getDateRangeOptions() : array {
+    public function getDateRangeOptions(): array
+    {
         return [
             1 => __('Last 1 day'),
             7 => __('Last 7 days'),
