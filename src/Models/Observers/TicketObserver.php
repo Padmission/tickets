@@ -4,8 +4,8 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketObserver
@@ -28,36 +28,40 @@ class TicketObserver
 
     protected function addAssignee(Ticket $ticket): void
     {
-        $panel = $ticket->panel;
+        // TODO: Make this independent from panel
 
-        $plugin = TicketPlugin::get($panel);
-        $assignmentStrategy = $plugin->getAssignmentStrategy();
-
-        if ($assignmentStrategy === null) {
-            return;
-        }
-
-        $assignmentStrategy->assign($ticket);
+        // $panel = $ticket->panel;
+        //
+        // $plugin = TicketPlugin::get($panel);
+        // $assignmentStrategy = $plugin->getAssignmentStrategy();
+        //
+        // if ($assignmentStrategy === null) {
+        //     return;
+        // }
+        //
+        // $assignmentStrategy->assign($ticket);
     }
 
     protected function sendTicketCreatedNotification(Ticket $ticket): void
     {
-        $panel = $ticket->panel;
+        // TODO: Make this independent from panel
 
-        $plugin = TicketPlugin::get($panel);
-        $notificationStrategy = $plugin->getNotificationStrategy();
-
-        if ($notificationStrategy === null) {
-            return;
-        }
-
-        $notificationStrategy->notify($ticket);
+        // $panel = $ticket->panel;
+        //
+        // $plugin = TicketPlugin::get($panel);
+        // $notificationStrategy = $plugin->getNotificationStrategy();
+        //
+        // if ($notificationStrategy === null) {
+        //     return;
+        // }
+        //
+        // $notificationStrategy->notify($ticket);
     }
 
     protected function handlePriorityTransition(Ticket $ticket): void
     {
         if ($ticket->isDirty('priority_id')) {
-            $ticket->activities()->create([
+            $ticket->ticketActivities()->create([
                 'type' => ActivityType::PriorityChanged,
                 'sender' => ActivitySender::System,
                 'data' => [
@@ -71,7 +75,7 @@ class TicketObserver
     protected function handleStatusTransition(Ticket $ticket): void
     {
         if ($ticket->isDirty('status_id')) {
-            $ticket->activities()->create([
+            $ticket->ticketActivities()->create([
                 'type' => ActivityType::StatusChanged,
                 'sender' => ActivitySender::System,
                 'data' => [
@@ -80,7 +84,7 @@ class TicketObserver
                 ],
             ]);
 
-            $isClosedStatus = (int) $ticket->status_id === TicketPlugin::resolveModelClass(Status::class)::getClosedStatus()->getKey();
+            $isClosedStatus = (int) $ticket->status_id === TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus()->getKey();
 
             if ($isClosedStatus) {
                 $ticket->close(auth()->id());

@@ -34,7 +34,8 @@ return [
             'subject' => 'Subject',
             'assignee' => 'Assignee',
             'submitter' => 'Submitter',
-            'last_activity' => 'Last Activity',
+            'last_message' => 'Last Message',
+            'closed_at' => 'Closed At',
         ],
 
         'statuses' => [
