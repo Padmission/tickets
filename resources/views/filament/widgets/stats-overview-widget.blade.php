@@ -4,25 +4,22 @@
     $description = $this->getDescription();
     $hasHeading = filled($heading);
     $dateRangeOptions = $this->getDateRangeOptions();
-    $hasDateRangePicker = filled($dateRangeOptions);
     $hasDescription = filled($description);
 @endphp
 
 <x-filament-widgets::widget class="fi-wi-stats-overview grid gap-y-4">
     @if ($hasHeading || $hasDescription)
         <div class="fi-wi-stats-overview-header grid gap-y-1">
-            @if ($hasHeading || $hasDateRangePicker)
+            @if ($hasHeading)
                 <div class="flex items-center justify-between gap-x-4">
                     @if($hasHeading)
                         <h3 class="fi-wi-stats-overview-header-heading text-base font-semibold leading-6 text-gray-950 dark:text-white">
                             {{ $heading }}
                         </h3>
                     @endif
-                        @if($hasDateRangePicker)
                         <div class="flex-shrink-0">
                             {{ $this->form }}
                         </div>
-                    @endif
                 </div>
             @endif
             @if ($hasDescription)

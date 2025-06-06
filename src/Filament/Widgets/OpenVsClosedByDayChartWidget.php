@@ -26,37 +26,26 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
 
     public static function getCurrentSwatch(): array
     {
-        $defaultColors = [
-            'primary' => Color::Blue,
-            'secondary' => Color::Gray,
+        $panel = \Filament\Facades\Filament::getCurrentPanel()
+            ?? \Filament\Facades\Filament::getDefaultPanel();
+
+        $panelColors = $panel ? $panel->getColors() : [];
+
+        return [
+            'primary' => static::normalizeColor($panelColors['primary'] ?? \Filament\Support\Colors\Color::Blue, \Filament\Support\Colors\Color::Blue),
+            'secondary' => static::normalizeColor($panelColors['secondary'] ?? \Filament\Support\Colors\Color::Gray, \Filament\Support\Colors\Color::Gray),
         ];
-
-        $currentColors = Color::all();
-
-        $swatch = [];
-
-        foreach ($defaultColors as $name => $defaultColor) {
-            $swatch[$name] = self::getColorShades($currentColors[$name] ?? $defaultColor);
-        }
-
-        return $swatch;
     }
 
-    private static function getColorShades($color): array
+    private static function normalizeColor($color, array $fallback): array
     {
-        return [
-            50 => $color[50],
-            100 => $color[100],
-            200 => $color[200],
-            300 => $color[300],
-            400 => $color[400],
-            500 => $color[500],
-            600 => $color[600],
-            700 => $color[700],
-            800 => $color[800],
-            900 => $color[900],
-            950 => $color[950],
-        ];
+        if (is_array($color) && isset($color[500])) {
+            return $color;
+        }
+        if (is_string($color)) {
+            return [500 => $color];
+        }
+        return $fallback;
     }
 
     protected function formatChartDate(Carbon $date): string

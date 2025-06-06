@@ -24,7 +24,7 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
     /**
      * @var view-string
      */
-    protected static string $view = 'filament-widgets::stats-overview-widget';
+    protected static string $view = 'padmission-tickets::filament.widgets.stats-overview-widget';
 
     public function mount(): void
     {
@@ -47,9 +47,7 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
                     ->options($this->getDateRangeOptions())
                     ->hiddenLabel()
                     ->live(debounce: 500)
-                    ->afterStateUpdated(function ($state, Select $component) {
-                        $this->timeRange = is_numeric($state) ? $state : $this->getDefaultTimeRange();
-                    }),
+                    ->nullable(false)
             ]);
     }
 
