@@ -26,14 +26,14 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
 
     public static function getCurrentSwatch(): array
     {
-        $panel = \Filament\Facades\Filament::getCurrentPanel()
-            ?? \Filament\Facades\Filament::getDefaultPanel();
+        $panel = Filament::getCurrentPanel()
+            ?? Filament::getDefaultPanel();
 
         $panelColors = $panel ? $panel->getColors() : [];
 
         return [
-            'primary' => static::normalizeColor($panelColors['primary'] ?? \Filament\Support\Colors\Color::Blue, \Filament\Support\Colors\Color::Blue),
-            'secondary' => static::normalizeColor($panelColors['secondary'] ?? \Filament\Support\Colors\Color::Gray, \Filament\Support\Colors\Color::Gray),
+            'primary' => static::normalizeColor($panelColors['primary'] ?? Color::Blue, Color::Blue),
+            'secondary' => static::normalizeColor($panelColors['secondary'] ?? Color::Gray, Color::Gray),
         ];
     }
 
