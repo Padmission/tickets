@@ -71,13 +71,29 @@ $panel->plugin(TicketPlugin::make());
 
 ### Resources
 
-The package comes with a set of Filament resources to manage tickets. If you want to to manage tickets via this Filament panel, you can use `->registerResources()`` method:
+The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use `->registerResources()` method:
 
 ```php
 use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
     ->registerResources();
+```
+
+For each resource you can easily overwrite it's label, navigation group, and navigation icon:
+
+```php
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;class YourServiceProvider {
+    public function boot() {
+        TicketResource::configure(
+            modelLabel: 'Your Label',
+            pluralModelLabel: fn () => __('your.model'),
+            navigationGroup: 'New Group',
+            navigationIcon: 'heroicon-o-tag' 
+        );
+    }
+}
+
 ```
 
 ### Chat Widget

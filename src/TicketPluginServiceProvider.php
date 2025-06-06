@@ -13,6 +13,8 @@ use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
+define('TICKET_PLUGIN_DIR', __DIR__.'/..');
+
 class TicketPluginServiceProvider extends PackageServiceProvider
 {
     private array $devConfig;
