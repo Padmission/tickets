@@ -66,7 +66,19 @@ class TestCase extends \Orchestra\Testbench\TestCase
             ->default()
             ->id('test')
             ->path('test')
-            ->plugin(TicketPlugin::make()),
+            ->plugin(
+                TicketPlugin::make()->registerResources()
+            ),
         );
+    }
+
+    // Helper methods
+    public function login(?Authenticatable $user = null): Authenticatable
+    {
+        $user ??= User::factory()->create();
+
+        $this->actingAs($user);
+
+        return $user;
     }
 }

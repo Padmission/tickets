@@ -50,7 +50,7 @@ class ListMessagesController
 
         return [
             'ticket' => [
-                'status' => $ticket->status->name,
+                'status' => $ticket->status->display_name,
                 'is_closed' => $ticket->isClosed,
             ],
             'messages' => $messages->values(),
