@@ -184,7 +184,8 @@ class TicketMetricsService
 
     public function getOpenVsClosedByDayChartData(int $days): array
     {
-        $cacheKey = __METHOD__ . '-' . $days;
+        $cacheKey = __METHOD__.'-'.$days;
+
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = now()->subDays($days - 1)->startOfDay();
@@ -209,7 +210,7 @@ class TicketMetricsService
                 ->where('created_at', '<', $startDate)
                 ->where(function ($q) use ($startDate) {
                     $q->whereNull('closed_at')
-                      ->orWhere('closed_at', '>=', $startDate);
+                        ->orWhere('closed_at', '>=', $startDate);
                 })
                 ->count();
 

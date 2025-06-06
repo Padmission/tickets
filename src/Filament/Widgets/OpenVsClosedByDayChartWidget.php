@@ -73,8 +73,8 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
             $colors = static::getCurrentSwatch();
             $colorA = $colors['primary'] ? $colors['primary'][500] : '#3b82f6';
             $colorB = $colors['secondary'] ? $colors['secondary'][500] : '#10b981';
-            $colorA = strpos($colorA, '#') === 0 ? $colorA : 'rgb(' . $colorA . ')';
-            $colorB = strpos($colorB, '#') === 0 ? $colorB : 'rgb(' . $colorB . ')';
+            $colorA = strpos($colorA, '#') === 0 ? $colorA : 'rgb('.$colorA.')';
+            $colorB = strpos($colorB, '#') === 0 ? $colorB : 'rgb('.$colorB.')';
 
             $labels = [];
             $openCounts = [];

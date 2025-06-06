@@ -18,7 +18,7 @@ trait CanCalculatePollingInterval
      */
     public function getPollingIntervalInSeconds(): ?int
     {
-        return once(function() {
+        return once(function () {
 
             $interval = $this->getPollingInterval();
 
