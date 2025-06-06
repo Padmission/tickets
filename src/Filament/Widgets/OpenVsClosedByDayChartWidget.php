@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Widgets;
 
+use Carbon\Carbon;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
@@ -58,7 +59,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
         ];
     }
 
-    protected function formatChartDate(\Carbon\Carbon $date): string
+    protected function formatChartDate(Carbon $date): string
     {
         return $date->translatedFormat('M j');
     }
