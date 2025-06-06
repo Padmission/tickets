@@ -12,6 +12,7 @@ class TicketAssigned
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public Ticket $ticket;
+
     public $assignedTo;
 
     public function __construct(Ticket $ticket, $assignedTo)

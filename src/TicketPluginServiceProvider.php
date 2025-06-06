@@ -47,7 +47,8 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     }
 
-    public function packageBooted() : void {
+    public function packageBooted(): void
+    {
         $this->bootEventListeners();
     }
 
@@ -117,7 +118,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         $listeners = config('padmission-tickets.event-listeners', []);
 
         foreach ($listeners as $event => $eventListeners) {
-            if (!is_array($eventListeners)) {
+            if (! is_array($eventListeners)) {
                 $eventListeners = [$eventListeners];
             }
 

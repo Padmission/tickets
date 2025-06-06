@@ -45,10 +45,10 @@ return [
 
     'event-listeners' => [
         \Padmission\Tickets\Events\TicketActivity::class => [
-            \Padmission\Tickets\Listeners\TicketActivityListener::class
+            \Padmission\Tickets\Listeners\TicketActivityListener::class,
         ],
         \Padmission\Tickets\Events\TicketAssigned::class => [
-            \Padmission\Tickets\Listeners\TicketAssignedListener::class
-        ]
-    ]
+            \Padmission\Tickets\Listeners\TicketAssignedListener::class,
+        ],
+    ],
 ];

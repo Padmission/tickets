@@ -12,7 +12,9 @@ class TicketActivity
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public Ticket $ticket;
+
     public string $activityType;
+
     public $metadata;
 
     public function __construct(Ticket $ticket, string $activityType, $metadata = null)
