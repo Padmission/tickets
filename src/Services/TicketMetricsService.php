@@ -13,12 +13,13 @@ class TicketMetricsService
     /**
      * Calculate the average time to close tickets
      *
-     * @param int|null $days Number of days to look back (null for all time)
+     * @param  int|null  $days  Number of days to look back (null for all time)
      * @return array Returns average time and count of tickets analyzed
      */
     public function getAverageCloseTime(?int $days = 30): array
     {
         $cacheKey = __METHOD__.'-'.$days;
+
         return Cache::remember($cacheKey, 60, function () use ($days) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at');
@@ -29,16 +30,17 @@ class TicketMetricsService
 
             $result = $query->select([
                 DB::raw('COUNT(*) as total_tickets'),
-                DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds')
+                DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
             ])->first();
 
             $totalClosedTickets = $result->total_tickets ?? 0;
             $avgSeconds = $result->avg_seconds ?? 0;
             $avgTime = $this->formatTimespan($avgSeconds);
+
             return [
                 'average_close_time' => $avgTime,
                 'average_seconds' => $avgSeconds,
-                'total_closed_tickets' => $totalClosedTickets
+                'total_closed_tickets' => $totalClosedTickets,
             ];
         });
     }
@@ -46,12 +48,12 @@ class TicketMetricsService
     /**
      * Get metrics for ticket closure times (min, max, average)
      *
-     * @param int|null $days Number of days to look back
-     * @return array
+     * @param  int|null  $days  Number of days to look back
      */
     public function getCloseTimeMetrics(?int $days = 30): array
     {
         $cacheKey = __METHOD__.'-'.$days;
+
         return Cache::remember($cacheKey, 60, function () use ($days) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at');
@@ -62,8 +64,9 @@ class TicketMetricsService
                 DB::raw('COUNT(*) as total_tickets'),
                 DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
                 DB::raw('MIN(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as min_seconds'),
-                DB::raw('MAX(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as max_seconds')
+                DB::raw('MAX(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as max_seconds'),
             ])->first();
+
             return [
                 'average' => $this->formatTimespan($result->avg_seconds ?? 0),
                 'minimum' => $this->formatTimespan($result->min_seconds ?? 0),
@@ -77,35 +80,35 @@ class TicketMetricsService
      * Format a time span in seconds to a human-readable format.
      * If we plan on selling this, we need to make it i18n compatible.
      *
-     * @param int $seconds
-     * @return string
+     * @param  int  $seconds
      */
     public function formatTimespan(float $seconds): string
     {
         if ($seconds < 60) {
-            return round($seconds) . ' seconds';
+            return round($seconds).' seconds';
         }
         if ($seconds < 3600) {
             $minutes = round($seconds / 60, 1);
-            return $minutes . ' ' . ($minutes == 1 ? 'minute' : 'minutes');
+
+            return $minutes.' '.($minutes == 1 ? 'minute' : 'minutes');
         }
         if ($seconds < 86400) {
             $hours = round($seconds / 3600, 1);
-            return $hours . ' ' . ($hours == 1 ? 'hour' : 'hours');
+
+            return $hours.' '.($hours == 1 ? 'hour' : 'hours');
         }
         $days = round($seconds / 86400, 1);
-        return $days . ' ' . ($days == 1 ? 'day' : 'days');
+
+        return $days.' '.($days == 1 ? 'day' : 'days');
     }
 
     /**
      * Get stacked bar chart data for tickets opened and closed by day
-     *
-     * @param int $days
-     * @return array
      */
     public function getTicketsByDayChartData(int $days = 14): array
     {
         $cacheKey = __METHOD__.'-'.$days;
+
         return Cache::remember($cacheKey, 60, function () use ($days) {
             $statusModel = TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Status::class);
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
@@ -132,9 +135,10 @@ class TicketMetricsService
             for ($i = 0; $i < $days; $i++) {
                 $date = $startDate->copy()->addDays($i)->toDateString();
                 $labels[] = $date;
-                $openCounts[] = (int)($opened[$date] ?? 0);
-                $closedCounts[] = (int)($closed[$date] ?? 0);
+                $openCounts[] = (int) ($opened[$date] ?? 0);
+                $closedCounts[] = (int) ($closed[$date] ?? 0);
             }
+
             return [
                 'labels' => $labels,
                 'datasets' => [
@@ -155,16 +159,16 @@ class TicketMetricsService
 
     /**
      * Get the number of tickets waiting on support (open tickets)
-     *
-     * @return int
      */
     public function getOpenTicketsCount(): int
     {
         $cacheKey = __METHOD__;
+
         return Cache::remember($cacheKey, 60, function () {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $statusModel = TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Status::class);
             $openStatusIds = $statusModel::getOpenStatuses()->pluck('id')->all();
+
             return $ticketModel::query()->whereIn('status_id', $openStatusIds)->count();
         });
     }
@@ -174,13 +178,11 @@ class TicketMetricsService
      * For each day, shows tickets that were open at any point that day, split into:
      *   - closed that day
      *   - open but not closed that day
-     *
-     * @param int $days
-     * @return array
      */
     public function getOpenVsClosedByDayChartData(int $days = 14): array
     {
         $cacheKey = __METHOD__.'-'.$days;
+
         return Cache::remember($cacheKey, 60, function () use ($days) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = now()->subDays($days - 1)->startOfDay();
@@ -196,7 +198,7 @@ class TicketMetricsService
                     ->where('created_at', '<=', $date->endOfDay())
                     ->where(function ($q) use ($date) {
                         $q->whereNull('closed_at')
-                          ->orWhere('closed_at', '>=', $date->startOfDay());
+                            ->orWhere('closed_at', '>=', $date->startOfDay());
                     });
                 $openTickets = $openTicketsQuery->get(['id', 'closed_at']);
                 $closedThatDay = $openTickets->filter(function ($t) use ($date) {
@@ -206,6 +208,7 @@ class TicketMetricsService
                 $openNotClosedCounts[] = $openNotClosedThatDay;
                 $closedCounts[] = $closedThatDay;
             }
+
             return [
                 'labels' => $labels,
                 'datasets' => [

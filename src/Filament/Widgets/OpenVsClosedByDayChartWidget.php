@@ -19,6 +19,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
     protected function getData(): array
     {
         $service = app(TicketMetricsService::class);
+
         return $service->getOpenVsClosedByDayChartData($this->days);
     }
 
