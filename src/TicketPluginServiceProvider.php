@@ -6,6 +6,7 @@ use Dotenv\Dotenv;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Models\Policies\TicketPolicy;
@@ -43,6 +44,11 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
         $this->registerCssFiles();
         $this->registerBrowserSync();
+
+    }
+
+    public function packageBooted() : void {
+        $this->bootEventListeners();
     }
 
     private function registerCssFiles(): void
@@ -104,5 +110,20 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     private function isDevMode(): bool
     {
         return file_exists(__DIR__.'/../dist/.hot');
+    }
+
+    protected function bootEventListeners(): void
+    {
+        $listeners = config('padmission-tickets.event-listeners', []);
+
+        foreach ($listeners as $event => $eventListeners) {
+            if (!is_array($eventListeners)) {
+                $eventListeners = [$eventListeners];
+            }
+
+            foreach ($eventListeners as $listener) {
+                Event::listen($event, $listener);
+            }
+        }
     }
 }
