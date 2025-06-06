@@ -28,30 +28,34 @@ class TicketObserver
 
     protected function addAssignee(Ticket $ticket): void
     {
-        $panel = $ticket->panel;
+        // TODO: Make this independent from panel
 
-        $plugin = TicketPlugin::get($panel);
-        $assignmentStrategy = $plugin->getAssignmentStrategy();
-
-        if ($assignmentStrategy === null) {
-            return;
-        }
-
-        $assignmentStrategy->assign($ticket);
+        // $panel = $ticket->panel;
+        //
+        // $plugin = TicketPlugin::get($panel);
+        // $assignmentStrategy = $plugin->getAssignmentStrategy();
+        //
+        // if ($assignmentStrategy === null) {
+        //     return;
+        // }
+        //
+        // $assignmentStrategy->assign($ticket);
     }
 
     protected function sendTicketCreatedNotification(Ticket $ticket): void
     {
-        $panel = $ticket->panel;
+        // TODO: Make this independent from panel
 
-        $plugin = TicketPlugin::get($panel);
-        $notificationStrategy = $plugin->getNotificationStrategy();
-
-        if ($notificationStrategy === null) {
-            return;
-        }
-
-        $notificationStrategy->notify($ticket);
+        // $panel = $ticket->panel;
+        //
+        // $plugin = TicketPlugin::get($panel);
+        // $notificationStrategy = $plugin->getNotificationStrategy();
+        //
+        // if ($notificationStrategy === null) {
+        //     return;
+        // }
+        //
+        // $notificationStrategy->notify($ticket);
     }
 
     protected function handlePriorityTransition(Ticket $ticket): void

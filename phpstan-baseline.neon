@@ -13,10 +13,8 @@ parameters:
             path: src/Filament/Infolists/Components/SubmitterEntry.php
 
         -
-            message: '#^Parameter \#1 \$view of function view expects view\-string\|null, string given\.$#'
+            message: '#^Parameter \#1 \$view (.*) expects view\-string\|null, string given\.$#'
             identifier: argument.type
-            count: 1
-            path: src/Filament/Livewire/TicketChat.php
 
         -
             message: '#^Trait Padmission\\Tickets\\Models\\Concerns\\HasAssignedTickets is used zero times and is not analysed\.$#'

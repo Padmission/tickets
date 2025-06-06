@@ -13,6 +13,9 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\TicketPlugin;
 
+/**
+ * @property string $side
+ */
 #[UseFactory(TicketActivityFactory::class)]
 class TicketActivity extends Model
 {

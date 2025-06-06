@@ -6,6 +6,8 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
 
 it('lists tickets', function () {
+    $this->login();
+
     $ticket = Ticket::factory()->create();
 
     Livewire::test(ListTickets::class)
@@ -19,6 +21,8 @@ it('lists tickets', function () {
 });
 
 it('sorts by turn then by updated_at', function () {
+    $this->login();
+
     [$ticketA, $ticketB, $ticketC] = Ticket::factory()
         ->count(3)
         ->sequence(

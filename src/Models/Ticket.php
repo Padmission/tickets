@@ -61,6 +61,9 @@ class Ticket extends Model
         )->withTrashed();
     }
 
+    /**
+     * @return BelongsTo<Model, $this>
+     */
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(
@@ -69,6 +72,9 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * @return BelongsTo<Model, $this>
+     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(
@@ -77,11 +83,17 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * @return HasMany<TicketActivity, $this>
+     */
     public function ticketActivities(): HasMany
     {
         return $this->hasMany(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id');
     }
 
+    /**
+     * @return HasOne<TicketActivity, $this>
+     */
     public function latestMessage(): HasOne
     {
         return $this
@@ -94,6 +106,9 @@ class Ticket extends Model
 
     }
 
+    /**
+     * @return HasOne<TicketActivity, $this>
+     */
     public function latestActivity(): HasOne
     {
         return $this

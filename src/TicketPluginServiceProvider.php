@@ -28,11 +28,11 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             // TODO: Refactor into install command. For now keep this during development.
             ->discoversMigrations()
             ->runsMigrations();
-
-        Gate::policy(
-            Ticket::class,
-            TicketPolicy::class
-        );
+        //
+        // Gate::policy(
+        //     Ticket::class,
+        //     TicketPolicy::class
+        // );
     }
 
     public function bootingPackage(): void
