@@ -30,7 +30,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
         $panel = Filament::getCurrentPanel()
             ?? Filament::getDefaultPanel();
 
-        $panelColors = $panel ? $panel->getColors() : [];
+        $panelColors = $panel->getColors();
 
         return [
             'primary' => static::normalizeColor($panelColors['primary'] ?? Color::Blue, Color::Blue),
@@ -38,7 +38,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
         ];
     }
 
-    private static function normalizeColor($color, array $fallback): array
+    protected static function normalizeColor($color, array $fallback): array
     {
         if (is_array($color) && isset($color[500])) {
             return $color;

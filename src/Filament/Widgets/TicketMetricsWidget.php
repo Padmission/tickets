@@ -22,7 +22,7 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
     public ?int $timeRange = 7;
 
     /**
-     * @var view-string
+     * @var string
      */
     protected static string $view = 'padmission-tickets::filament.widgets.stats-overview-widget';
 

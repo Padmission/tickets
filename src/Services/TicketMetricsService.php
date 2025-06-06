@@ -20,8 +20,6 @@ class TicketMetricsService
     }
 
     /**
-     * Calculate the average time to close tickets
-     *
      * @param  int|null  $days  Number of days to look back (null for all time)
      * @return array Returns average time and count of tickets analyzed
      */
@@ -112,61 +110,6 @@ class TicketMetricsService
     }
 
     /**
-     * Get stacked bar chart data for tickets opened and closed by day
-     */
-    public function getTicketsByDayChartData(int $days = 14): array
-    {
-        $cacheKey = __METHOD__.'-'.$days;
-
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
-            $statusModel = TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Status::class);
-            $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-            $openStatusIds = $statusModel::getOpenStatuses()->pluck('id')->all();
-            $closedStatusId = optional($statusModel::getClosedStatus())->id;
-            $startDate = now()->subDays($days - 1)->startOfDay();
-            $endDate = now()->endOfDay();
-            $opened = $ticketModel::query()
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
-                ->groupBy('date')
-                ->orderBy('date')
-                ->pluck('count', 'date');
-            $closed = $ticketModel::query()
-                ->whereNotNull('closed_at')
-                ->whereBetween('closed_at', [$startDate, $endDate])
-                ->selectRaw('DATE(closed_at) as date, COUNT(*) as count')
-                ->groupBy('date')
-                ->orderBy('date')
-                ->pluck('count', 'date');
-            $labels = [];
-            $openCounts = [];
-            $closedCounts = [];
-            for ($i = 0; $i < $days; $i++) {
-                $date = $startDate->copy()->addDays($i)->toDateString();
-                $labels[] = $date;
-                $openCounts[] = (int) ($opened[$date] ?? 0);
-                $closedCounts[] = (int) ($closed[$date] ?? 0);
-            }
-
-            return [
-                'labels' => $labels,
-                'datasets' => [
-                    [
-                        'label' => __('Tickets Opened'),
-                        'backgroundColor' => '#3b82f6',
-                        'data' => $openCounts,
-                    ],
-                    [
-                        'label' => __('Tickets Closed'),
-                        'backgroundColor' => '#10b981',
-                        'data' => $closedCounts,
-                    ],
-                ],
-            ];
-        });
-    }
-
-    /**
      * Get the number of tickets waiting on support (open tickets)
      */
     public function getOpenTicketsCount(): int
@@ -174,11 +117,9 @@ class TicketMetricsService
         $cacheKey = __METHOD__;
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
-            $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-            $statusModel = TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Status::class);
-            $openStatusIds = $statusModel::getOpenStatuses()->pluck('id')->all();
-
-            return $ticketModel::query()->whereIn('status_id', $openStatusIds)->count();
+            return TicketPlugin::resolveModelClass(Ticket::class)::query()
+                ->whereNull('closed_at')
+                ->count();
         });
     }
 
@@ -208,8 +149,8 @@ class TicketMetricsService
 
             $openAtStart = $ticketModel::query()
                 ->where('created_at', '<', $startDate)
-                ->where(function ($q) use ($startDate) {
-                    $q->whereNull('closed_at')
+                ->where(function ($query) use ($startDate) {
+                    $query->whereNull('closed_at')
                         ->orWhere('closed_at', '>=', $startDate);
                 })
                 ->count();
