@@ -21,9 +21,6 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
 
     public ?int $timeRange = 7;
 
-    /**
-     * @var string
-     */
     protected static string $view = 'padmission-tickets::filament.widgets.stats-overview-widget';
 
     public function mount(): void
@@ -47,7 +44,7 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
                     ->options($this->getDateRangeOptions())
                     ->hiddenLabel()
                     ->live(debounce: 500)
-                    ->nullable(false)
+                    ->nullable(false),
             ]);
     }
 

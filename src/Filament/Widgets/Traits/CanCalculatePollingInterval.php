@@ -2,8 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Widgets\Traits;
 
-use Carbon\CarbonInterval;
-
 /**
  * I know this is overkill, but I figured we should set our caching on the widgets
  * to be the same as the polling interval for efficiency.  It prevents people with
@@ -38,12 +36,15 @@ trait CanCalculatePollingInterval
                     try {
                         if (str_starts_with($str, 'p')) {
                             $carbonInterval = \Carbon\CarbonInterval::fromString(strtoupper($str));
+
                             return $carbonInterval->totalSeconds > 0 ? (int) ceil($carbonInterval->totalSeconds) : null;
                         }
-                    } catch (\Exception $e) {}
+                    } catch (\Exception $e) {
+                    }
                     if (preg_match('/^(\d+(?:\.\d+)?)\s*([a-z]+)$/', $str, $matches)) {
                         $value = (float) $matches[1];
                         $unit = $matches[2];
+
                         return match ($unit) {
                             's', 'sec', 'second', 'seconds' => (int) ceil($value),
                             'm', 'min', 'minute', 'minutes' => (int) ceil($value * 60),
@@ -56,8 +57,10 @@ trait CanCalculatePollingInterval
                     // If it's a numeric string
                     if (is_numeric($str)) {
                         $intval = (int) $str;
+
                         return $intval > 0 ? $intval : null;
                     }
+
                     return null;
                 default:
                     return null;

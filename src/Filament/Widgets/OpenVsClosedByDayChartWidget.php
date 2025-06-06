@@ -46,6 +46,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
         if (is_string($color)) {
             return [500 => $color];
         }
+
         return $fallback;
     }
 

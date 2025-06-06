@@ -86,8 +86,6 @@ class TicketMetricsService
     /**
      * Format a time span in seconds to a human-readable format.
      * If we plan on selling this, we need to make it i18n compatible.
-     *
-     * @param  float  $seconds
      */
     public function formatTimespan(float $seconds): string
     {
