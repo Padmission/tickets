@@ -182,54 +182,43 @@ class TicketMetricsService
         });
     }
 
-    /**
-     * Get stacked bar chart data for tickets open vs closed by day.
-     * For each day, shows tickets that were open at any point that day, split into:
-     *   - closed that day
-     *   - open but not closed that day
-     */
-    public function getOpenVsClosedByDayChartData(int $days = 14): array
+    public function getOpenVsClosedByDayChartData(int $days): array
     {
-        $cacheKey = __METHOD__.'-'.$days;
-
+        $cacheKey = __METHOD__ . '-' . $days;
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = now()->subDays($days - 1)->startOfDay();
             $endDate = now()->endOfDay();
-            $labels = [];
-            $openNotClosedCounts = [];
-            $closedCounts = [];
-            for ($i = 0; $i < $days; $i++) {
-                $date = $startDate->copy()->addDays($i);
-                $dateStr = $date->toDateString();
-                $labels[] = $dateStr;
-                $openTicketsQuery = $ticketModel::query()
-                    ->where('created_at', '<=', $date->endOfDay())
-                    ->where(function ($q) use ($date) {
-                        $q->whereNull('closed_at')
-                            ->orWhere('closed_at', '>=', $date->startOfDay());
-                    });
-                $openTickets = $openTicketsQuery->get(['id', 'closed_at']);
-                $closedThatDay = $openTickets->filter(function ($t) use ($date) {
-                    return $t->closed_at && $t->closed_at->isSameDay($date);
-                })->count();
-                $openNotClosedThatDay = $openTickets->count() - $closedThatDay;
-                $openNotClosedCounts[] = $openNotClosedThatDay;
-                $closedCounts[] = $closedThatDay;
-            }
+
+            $opened = $ticketModel::query()
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->selectRaw('DATE(created_at) as day, COUNT(*) as count')
+                ->groupBy('day')
+                ->pluck('count', 'day')
+                ->all();
+
+            $closed = $ticketModel::query()
+                ->whereNotNull('closed_at')
+                ->whereBetween('closed_at', [$startDate, $endDate])
+                ->selectRaw('DATE(closed_at) as day, COUNT(*) as count')
+                ->groupBy('day')
+                ->pluck('count', 'day')
+                ->all();
+
+            $openAtStart = $ticketModel::query()
+                ->where('created_at', '<', $startDate)
+                ->where(function ($q) use ($startDate) {
+                    $q->whereNull('closed_at')
+                      ->orWhere('closed_at', '>=', $startDate);
+                })
+                ->count();
 
             return [
-                'labels' => $labels,
-                'datasets' => [
-                    [
-                        'label' => __('Opened that day'),
-                        'data' => $openNotClosedCounts,
-                    ],
-                    [
-                        'label' => __('Closed that day'),
-                        'data' => $closedCounts,
-                    ],
-                ],
+                'opened' => $opened,
+                'closed' => $closed,
+                'openAtStart' => $openAtStart,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
             ];
         });
     }
