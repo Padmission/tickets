@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -61,6 +60,9 @@ class Ticket extends Model
         )->withTrashed();
     }
 
+    /**
+     * @return BelongsTo<Model, $this>
+     */
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(
@@ -69,6 +71,9 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * @return BelongsTo<Model, $this>
+     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(
@@ -77,11 +82,17 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * @return HasMany<TicketActivity, $this>
+     */
     public function ticketActivities(): HasMany
     {
         return $this->hasMany(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id');
     }
 
+    /**
+     * @return HasOne<TicketActivity, $this>
+     */
     public function latestMessage(): HasOne
     {
         return $this
@@ -94,6 +105,9 @@ class Ticket extends Model
 
     }
 
+    /**
+     * @return HasOne<TicketActivity, $this>
+     */
     public function latestActivity(): HasOne
     {
         return $this
@@ -103,14 +117,12 @@ class Ticket extends Model
 
     /* Scopes */
 
-    #[Scope]
-    protected function open(Builder $query): void
+    protected function scopeOpen(Builder $query): void
     {
         $query->whereNull('closed_at');
     }
 
-    #[Scope]
-    protected function closed(Builder $query): void
+    protected function scopeClosed(Builder $query): void
     {
         $query->whereNotNull('closed_at');
     }

@@ -71,9 +71,11 @@ final class TicketPlugin implements Plugin
     public static function get(?string $panelId = null): static
     {
         $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentPanel();
-        $plugin = $panel->getPlugin(static::$id);
 
-        assert($plugin instanceof static);
+        /**
+         * @var static $plugin
+         */
+        $plugin = $panel->getPlugin(static::$id);
 
         return $plugin;
     }

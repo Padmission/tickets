@@ -1,10 +1,10 @@
 <?php
 
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
 
 it('filters by panel', function () {
-    [$ticketA, $ticketB] = Ticket::factory()
+    [$statusA, $statusB] = TicketStatus::factory()
         ->sequence(
             ['panel' => 'test'],
             ['panel' => 'test2'],
@@ -12,8 +12,8 @@ it('filters by panel', function () {
         ->count(2)
         ->create();
 
-    $tickets = Ticket::query()->tap(new CurrentPanelScope)->get();
+    $statuses = TicketStatus::query()->tap(new CurrentPanelScope)->get();
 
-    expect($tickets->count())->toEqual(1)
-        ->and($tickets->first()->id)->toEqual($ticketA->id);
+    expect($statuses->count())->toEqual(1)
+        ->and($statuses->first()->id)->toEqual($statusA->id);
 });

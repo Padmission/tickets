@@ -6,7 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Seeder;
 use Padmission\Tickets\Models\TicketPriority;
 
-class PrioritySeeder extends Seeder
+class TicketPrioritySeeder extends Seeder
 {
     public function run(): void
     {
