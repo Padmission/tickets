@@ -10,6 +10,12 @@ use Padmission\Tickets\TicketPlugin;
 
 class TicketMetricsService
 {
+    protected int $cacheTimeInSeconds = 5;
+
+    public function setCacheTime(int $seconds) : self {
+        $this->cacheTimeInSeconds = $seconds ? $seconds : 5;
+        return $this;
+    }
     /**
      * Calculate the average time to close tickets
      *
@@ -20,7 +26,7 @@ class TicketMetricsService
     {
         $cacheKey = __METHOD__.'-'.$days;
 
-        return Cache::remember($cacheKey, 60, function () use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at');
 
@@ -54,7 +60,7 @@ class TicketMetricsService
     {
         $cacheKey = __METHOD__.'-'.$days;
 
-        return Cache::remember($cacheKey, 60, function () use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at');
             if ($days !== null) {
@@ -109,7 +115,7 @@ class TicketMetricsService
     {
         $cacheKey = __METHOD__.'-'.$days;
 
-        return Cache::remember($cacheKey, 60, function () use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $statusModel = TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Status::class);
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $openStatusIds = $statusModel::getOpenStatuses()->pluck('id')->all();
@@ -164,7 +170,7 @@ class TicketMetricsService
     {
         $cacheKey = __METHOD__;
 
-        return Cache::remember($cacheKey, 60, function () {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $statusModel = TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Status::class);
             $openStatusIds = $statusModel::getOpenStatuses()->pluck('id')->all();
@@ -183,7 +189,7 @@ class TicketMetricsService
     {
         $cacheKey = __METHOD__.'-'.$days;
 
-        return Cache::remember($cacheKey, 60, function () use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function() use ($days) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = now()->subDays($days - 1)->startOfDay();
             $endDate = now()->endOfDay();
@@ -214,12 +220,10 @@ class TicketMetricsService
                 'datasets' => [
                     [
                         'label' => __('Opened that day'),
-                        'backgroundColor' => '#fbbf24',
                         'data' => $openNotClosedCounts,
                     ],
                     [
                         'label' => __('Closed that day'),
-                        'backgroundColor' => '#10b981',
                         'data' => $closedCounts,
                     ],
                 ],

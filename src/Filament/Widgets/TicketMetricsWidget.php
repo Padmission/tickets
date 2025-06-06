@@ -7,12 +7,15 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
 use Padmission\Tickets\Services\TicketMetricsService;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
 class TicketMetricsWidget extends BaseWidget implements HasForms
 {
+    use CanCalculatePollingInterval;
     use InteractsWithForms;
+
 
     protected static string $view = 'padmission-tickets::filament.widgets.stats-overview-widget';
 
@@ -69,7 +72,9 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
     protected function getStats(): array
     {
         $timeRangePeriod = $this->timeRange === 0 ? null : $this->timeRange;
+
         $metricsService = app(TicketMetricsService::class);
+        $metricsService->setCacheTime($this->getPollingIntervalInSeconds());
         $metrics = $metricsService->getAverageCloseTime($timeRangePeriod);
         $detailedMetrics = $metricsService->getCloseTimeMetrics($timeRangePeriod);
 
