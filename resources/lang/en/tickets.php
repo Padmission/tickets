@@ -21,11 +21,11 @@ return [
     ],
 
     'resources' => [
-        'navigation_group' => 'Centers',
+        'navigation_group' => 'Tickets',
 
         'tickets' => [
-            'model_label' => 'Support Ticket',
-            'plural_model_label' => 'Support Tickets',
+            'model_label' => 'Ticket',
+            'plural_model_label' => 'Tickets',
 
             'display_name' => 'Display Name',
             'turn' => 'Turn',
