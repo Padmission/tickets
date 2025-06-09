@@ -2,18 +2,9 @@
 
 namespace Padmission\Tickets\Filament\Widgets\Traits;
 
-/**
- * I know this is overkill, but I figured we should set our caching on the widgets
- * to be the same as the polling interval for efficiency.  It prevents people with
- * the same widgets open from hitting the db over and over for the same data.
- */
 trait CanCalculatePollingInterval
 {
-    /**
-     * Convert Filament polling interval to seconds or null for infinite polling.
-     *
-     * @return int|null Seconds as integer, or null for infinite/no polling
-     */
+
     public function getPollingIntervalInSeconds(): ?int
     {
         return once(function () {

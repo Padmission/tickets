@@ -20,8 +20,8 @@ class OpenTicketsWidget extends BaseWidget
         $count = $metricsService->getOpenTicketsCount();
 
         return [
-            Stat::make(__('Tickets Waiting on Support'), $count)
-                ->description(__('Tickets with open status'))
+            Stat::make(__('padmission-tickets::tickets.widgets.tickets_waiting_on_support'), $count)
+                ->description(__('padmission-tickets::tickets.widgets.tickets_with_open_status'))
                 ->descriptionIcon('heroicon-m-inbox')
                 ->color('warning'),
         ];

@@ -22,7 +22,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
 
     public function getHeading(): string
     {
-        return __('Open vs Closed Tickets by Day');
+        return __('padmission-tickets::tickets.widgets.open_vs_closed_tickets_by_day');
     }
 
     public static function getCurrentSwatch(): array
@@ -98,7 +98,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
                 'labels' => $labels,
                 'datasets' => [
                     [
-                        'label' => __('Open at End of Day'),
+                        'label' => __('padmission-tickets::tickets.widgets.open_at_end_of_day'),
                         'data' => $openCounts,
                         'borderColor' => $colorA,
                         'backgroundColor' => $colorA,
@@ -108,7 +108,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
                         'fill' => false,
                     ],
                     [
-                        'label' => __('Closed that day'),
+                        'label' => __('padmission-tickets::tickets.widgets.closed_that_day'),
                         'data' => $closedCounts,
                         'borderColor' => $colorB,
                         'backgroundColor' => $colorB,

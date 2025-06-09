@@ -40,7 +40,7 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
         return $form
             ->schema([
                 Select::make('timeRange')
-                    ->label(__('Time Range'))
+                    ->label(__('padmission-tickets::tickets.widgets.time_range'))
                     ->options($this->getDateRangeOptions())
                     ->hiddenLabel()
                     ->live(debounce: 500)
@@ -50,23 +50,23 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
 
     protected function getHeading(): string
     {
-        return __('Ticket Performance Metrics');
+        return __('padmission-tickets::tickets.widgets.ticket_performance_metrics');
     }
 
     protected function getDescription(): ?string
     {
-        return __('Statistics about ticket resolution times');
+        return __('padmission-tickets::tickets.widgets.statistics_about_ticket_resolution_times');
     }
 
     public function getDateRangeOptions(): array
     {
         return [
-            1 => __('Last 1 day'),
-            7 => __('Last 7 days'),
-            30 => __('Last 30 days'),
-            90 => __('Last 90 days'),
-            365 => __('Last 365 days'),
-            0 => __('All Time'),
+            1 => __('padmission-tickets::tickets.widgets.last_1_day'),
+            7 => __('padmission-tickets::tickets.widgets.last_7_days'),
+            30 => __('padmission-tickets::tickets.widgets.last_30_days'),
+            90 => __('padmission-tickets::tickets.widgets.last_90_days'),
+            365 => __('padmission-tickets::tickets.widgets.last_365_days'),
+            0 => __('padmission-tickets::tickets.widgets.all_time'),
         ];
     }
 
@@ -80,16 +80,16 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
         $detailedMetrics = $metricsService->getCloseTimeMetrics($timeRangePeriod);
 
         return [
-            Stat::make(__('Average Close Time'), $metrics['average_close_time'])
-                ->description(__(':count tickets closed', ['count' => $metrics['total_closed_tickets']]))
+            Stat::make(__('padmission-tickets::tickets.widgets.average_close_time'), $metrics['average_close_time'])
+                ->description(__('padmission-tickets::tickets.widgets.count_tickets_closed', ['count' => $metrics['total_closed_tickets']]))
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('primary'),
-            Stat::make(__('Fastest Resolution'), $detailedMetrics['minimum'])
-                ->description(__('Best case scenario'))
+            Stat::make(__('padmission-tickets::tickets.widgets.fastest_resolution'), $detailedMetrics['minimum'])
+                ->description(__('padmission-tickets::tickets.widgets.best_case_scenario'))
                 ->descriptionIcon('heroicon-m-arrow-trending-down')
                 ->color('success'),
-            Stat::make(__('Slowest Resolution'), $detailedMetrics['maximum'])
-                ->description(__('Worst case scenario'))
+            Stat::make(__('padmission-tickets::tickets.widgets.slowest_resolution'), $detailedMetrics['maximum'])
+                ->description(__('padmission-tickets::tickets.widgets.worst_case_scenario'))
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('danger'),
         ];
