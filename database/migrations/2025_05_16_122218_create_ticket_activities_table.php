@@ -13,7 +13,6 @@ return new class extends Migration
             $table->foreignId('ticket_id');
 
             $table->string('sender');
-            $table->string('visibility');
             $table->string('type');
             $table->text('content')->nullable();
             $table->json('data')->nullable();

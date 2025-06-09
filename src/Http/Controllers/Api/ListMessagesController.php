@@ -6,10 +6,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
-use Padmission\Tickets\Enums\ActivityVisibility;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 
@@ -33,12 +32,7 @@ class ListMessagesController
                 fn (Builder $query) => $query->where('id', '>', $request->integer('offset'))
             )
             ->get()
-            ->when(
-                $request->user()->cannot('viewAny'),
-                fn (Collection $collection) => $collection->filter(
-                    fn (TicketActivity $message) => $message->visibility === ActivityVisibility::Public
-                )
-            )
+            ->filter(fn (TicketActivity $activity) => $this->shouldShowActivity($activity))
             ->map(function (TicketActivity $message) use ($currentSender) {
                 $message->side = match (true) {
                     $message->sender === ActivitySender::System => ActivitySide::System,
@@ -56,5 +50,15 @@ class ListMessagesController
             ],
             'messages' => $messages->values(),
         ];
+    }
+
+    protected function shouldShowActivity(TicketActivity $activity): bool
+    {
+        // TODO: Add correct policy
+        if (auth()->user()->can('viewAny')) {
+            return true;
+        }
+
+        return in_array($activity->type, [ActivityType::Closed, ActivityType::Message, ActivityType::Closed]);
     }
 }

@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Enums\ActivityVisibility;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -63,7 +62,6 @@ class TicketObserver
     {
         if ($ticket->isDirty('priority_id')) {
             $ticket->ticketActivities()->create([
-                'visibility' => ActivityVisibility::Private,
                 'type' => ActivityType::PriorityChanged,
                 'sender' => ActivitySender::System,
                 'data' => [
@@ -78,7 +76,6 @@ class TicketObserver
     {
         if ($ticket->isDirty('status_id')) {
             $ticket->ticketActivities()->create([
-                'visibility' => ActivityVisibility::Private,
                 'type' => ActivityType::StatusChanged,
                 'sender' => ActivitySender::System,
                 'data' => [

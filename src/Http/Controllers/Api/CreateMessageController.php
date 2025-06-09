@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Enums\ActivityVisibility;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
@@ -32,7 +31,6 @@ class CreateMessageController
 
         $activity = $ticket->ticketActivities()->create([
             'type' => ActivityType::Message,
-            'visibility' => ActivityVisibility::Public,
             'sender' => $request->user()->id === $ticket->submitter_id
                 ? ActivitySender::User
                 : ActivitySender::Supporter,
@@ -63,7 +61,6 @@ class CreateMessageController
         if ($currentTurn !== $nextTurn) {
             $ticket->ticketActivities()->create([
                 'type' => ActivityType::TurnChanged,
-                'visibility' => ActivityVisibility::Private,
                 'sender' => ActivitySender::System,
                 'data' => [
                     'from' => $currentTurn,

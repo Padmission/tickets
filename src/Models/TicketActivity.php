@@ -13,7 +13,6 @@ use Padmission\Tickets\Database\Factories\TicketActivityFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Enums\ActivityVisibility;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\TicketPlugin;
 
@@ -33,7 +32,6 @@ class TicketActivity extends Model
         'data' => 'array',
         'type' => ActivityType::class,
         'sender' => ActivitySender::class,
-        'visibility' => ActivityVisibility::class,
         'created_at' => 'immutable_datetime',
     ];
 
