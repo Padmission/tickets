@@ -6,9 +6,12 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\ActivityVisibility;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 use Tiptap\Editor;
 
 class CreateMessageController
@@ -29,6 +32,7 @@ class CreateMessageController
 
         $activity = $ticket->ticketActivities()->create([
             'type' => ActivityType::Message,
+            'visibility' => ActivityVisibility::Public,
             'sender' => $request->user()->id === $ticket->submitter_id
                 ? ActivitySender::User
                 : ActivitySender::Supporter,
@@ -36,17 +40,30 @@ class CreateMessageController
             'content' => $content,
         ]);
 
+        $activity->side = ActivitySide::Me;
+
+        $this->handleTurnChange($ticket, $activity, $validated['lock_turn']);
+
+        return [
+            'message' => $activity,
+        ];
+    }
+
+    protected function handleTurnChange(Ticket $ticket, TicketActivity $activity, bool $lockTurn = false): void
+    {
         $currentTurn = $ticket->turn;
 
-        if ($validated['lock_turn'] ?? false) {
-            $nextTurn = $currentTurn;
-        } else {
-            $nextTurn = $currentTurn === Turn::User ? Turn::Supporter : Turn::User;
-        }
+        $nextTurn = match (true) {
+            $lockTurn => $currentTurn,
+            $activity->sender === ActivitySender::Supporter => Turn::User,
+            $activity->sender === ActivitySender::User => Turn::Supporter,
+            default => $currentTurn,
+        };
 
         if ($currentTurn !== $nextTurn) {
             $ticket->ticketActivities()->create([
                 'type' => ActivityType::TurnChanged,
+                'visibility' => ActivityVisibility::Private,
                 'sender' => ActivitySender::System,
                 'data' => [
                     'from' => $currentTurn,
@@ -58,11 +75,5 @@ class CreateMessageController
                 'turn' => $nextTurn,
             ]);
         }
-
-        $activity->side = 'me';
-
-        return [
-            'message' => $activity,
-        ];
     }
 }

@@ -4,9 +4,9 @@ namespace Padmission\Tickets\Enums;
 
 enum ActivityType: string
 {
-    case Opened = 'opened';
-
     case Message = 'message';
+
+    case Opened = 'opened';
 
     case InternalMessage = 'internal-message';
 
