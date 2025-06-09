@@ -4,11 +4,8 @@ namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketMetricsService;
-use Padmission\Tickets\TicketPlugin;
 
 class OpenTicketsWidget extends BaseWidget
 {
