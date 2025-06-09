@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketActivityFactory;
 use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\ActivityVisibility;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\TicketPlugin;
 
 /**
- * @property string $side
+ * @property ActivitySide $side
  */
 #[UseFactory(TicketActivityFactory::class)]
 class TicketActivity extends Model
