@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Filament\Widgets\Traits;
 
 trait CanCalculatePollingInterval
 {
-
     public function getPollingIntervalInSeconds(): ?int
     {
         return once(function () {
