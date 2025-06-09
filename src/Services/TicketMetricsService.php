@@ -36,10 +36,20 @@ class TicketMetricsService
                 $query->where('created_at', '>=', Carbon::now()->subDays($days));
             }
 
-            $result = $query->select([
-                DB::raw('COUNT(*) as total_tickets'),
-                DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
-            ])->first();
+            $connection = $query->getConnection();
+            $driver = $connection->getDriverName();
+
+            if ($driver === 'sqlite') {
+                $result = $query->select([
+                    DB::raw('COUNT(*) as total_tickets'),
+                    DB::raw("AVG(strftime('%s', closed_at) - strftime('%s', created_at)) as avg_seconds"),
+                ])->first();
+            } else {
+                $result = $query->select([
+                    DB::raw('COUNT(*) as total_tickets'),
+                    DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
+                ])->first();
+            }
 
             $totalClosedTickets = $result->total_tickets ?? 0;
             $avgSeconds = $result->avg_seconds ?? 0;
