@@ -4,13 +4,10 @@ namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketMetricsService;
-use Padmission\Tickets\TicketPlugin;
 
-class OpenTicketsWidget extends BaseWidget
+class TicketTimeToCloseWidget extends BaseWidget
 {
     use CanCalculatePollingInterval;
 
@@ -19,15 +16,17 @@ class OpenTicketsWidget extends BaseWidget
     public function getStats(): array
     {
 
+        $timeRangePeriod = 0;
+
         $metricsService = app(TicketMetricsService::class);
         $metricsService->setCacheTime($this->getPollingIntervalInSeconds());
-        $count = $metricsService->getOpenTicketsCount();
+        $metrics = $metricsService->getAverageCloseTime($timeRangePeriod);
 
         return [
-            Stat::make(__('padmission-tickets::tickets.widgets.tickets_open'), $count)
-                ->description(__('padmission-tickets::tickets.widgets.tickets_with_open_status'))
-                ->descriptionIcon('heroicon-m-inbox')
-                ->color('warning'),
+            Stat::make(__('padmission-tickets::tickets.widgets.average_close_time'), $metrics['average_close_time'])
+                ->description(__('padmission-tickets::tickets.widgets.count_tickets_closed', ['count' => $metrics['total_closed_tickets']]))
+                ->descriptionIcon('heroicon-m-clock')
+                ->color('primary'),
         ];
     }
 }

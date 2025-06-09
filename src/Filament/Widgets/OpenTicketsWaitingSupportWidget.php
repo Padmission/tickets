@@ -4,13 +4,10 @@ namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketMetricsService;
-use Padmission\Tickets\TicketPlugin;
 
-class OpenTicketsWidget extends BaseWidget
+class OpenTicketsWaitingSupportWidget extends BaseWidget
 {
     use CanCalculatePollingInterval;
 
@@ -21,10 +18,10 @@ class OpenTicketsWidget extends BaseWidget
 
         $metricsService = app(TicketMetricsService::class);
         $metricsService->setCacheTime($this->getPollingIntervalInSeconds());
-        $count = $metricsService->getOpenTicketsCount();
+        $count = $metricsService->getOpenTicketsWaitingOnSupportCount();
 
         return [
-            Stat::make(__('padmission-tickets::tickets.widgets.tickets_open'), $count)
+            Stat::make(__('padmission-tickets::tickets.widgets.tickets_open_waiting_on_support'), $count)
                 ->description(__('padmission-tickets::tickets.widgets.tickets_with_open_status'))
                 ->descriptionIcon('heroicon-m-inbox')
                 ->color('warning'),

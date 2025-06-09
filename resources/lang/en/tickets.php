@@ -55,7 +55,8 @@ return [
     ],
 
     'widgets' => [
-        'tickets_waiting_on_support' => 'Tickets Waiting on Support',
+        'tickets_open' => 'Open Tickets',
+        'tickets_open_waiting_on_support' => 'Tickets Waiting on Support',
         'tickets_with_open_status' => 'Tickets with open status',
         'ticket_performance_metrics' => 'Ticket Performance Metrics',
         'statistics_about_ticket_resolution_times' => 'Statistics about ticket resolution times',

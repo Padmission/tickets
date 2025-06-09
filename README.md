@@ -119,6 +119,26 @@ TicketPlugin::make()
     );
 ```
 
+## Filament Widgets
+This package comes with multiple widgets that can be added to your dashboard. You can find the widgets in the `Padmission\Tickets\Filament\Widgets` namespace.
+
+To view any of them, add these classes to your plugins([]) section of your Panel Provider.  
+
+```php
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWaitingSupportWidget;
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OpenVsClosedByDayChartWidget;
+use Padmission\Tickets\Filament\Widgets\TicketTimeToCloseWidget;
+
+
+->plugins([
+    OpenTicketsWaitingSupportWidget,
+    OpenTicketsWidget,
+    OpenVsClosedByDayChartWidget,
+    TicketTimeToCloseWidget
+]);
+```
+
 ## Support
 
 For additional support:

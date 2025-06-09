@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Services;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -31,7 +32,7 @@ class TicketMetricsService
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at');
 
-            if ($days !== null) {
+            if ($days !== null && $days > 0) {
                 $query->where('created_at', '>=', Carbon::now()->subDays($days));
             }
 
@@ -110,12 +111,25 @@ class TicketMetricsService
     /**
      * Get the number of tickets waiting on support (open tickets)
      */
+    public function getOpenTicketsWaitingOnSupportCount(): int
+    {
+        $cacheKey = __METHOD__;
+
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
+            return TicketPlugin::resolveModelClass(Ticket::class)::query()
+                ->where('turn', Turn::Supporter)
+                ->whereNull('closed_at')
+                ->count();
+        });
+    }
+
     public function getOpenTicketsCount(): int
     {
         $cacheKey = __METHOD__;
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
             return TicketPlugin::resolveModelClass(Ticket::class)::query()
+                ->where('turn', Turn::Supporter)
                 ->whereNull('closed_at')
                 ->count();
         });
