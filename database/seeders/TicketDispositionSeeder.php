@@ -13,6 +13,7 @@ class TicketDispositionSeeder extends Seeder
 {
 
     public function getDefaults() : array {
+
         return [
             trans('padmission-tickets::dispositions.resolved'),
             trans('padmission-tickets::dispositions.abandoned'),
