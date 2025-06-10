@@ -14,7 +14,7 @@ return new class extends Migration
 
             $table->string('sender');
             $table->string('type');
-            $table->text('message')->nullable();
+            $table->text('content')->nullable();
             $table->json('data')->nullable();
             $table->timestamps();
             $table->softDeletes();

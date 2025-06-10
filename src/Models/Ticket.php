@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -41,26 +40,40 @@ class Ticket extends Model
 
     /* Relations */
 
+
     /**
-     * @return BelongsTo<Status, $this>
+     * @return BelongsTo<TicketDisposition, $this>
+     */
+    public function disposition(): BelongsTo
+    {
+        return $this->belongsTo(
+            TicketPlugin::resolveModelClass(TicketDisposition::class)
+        )->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<TicketStatus, $this>
      */
     public function status(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Status::class)
+            TicketPlugin::resolveModelClass(TicketStatus::class)
         )->withTrashed();
     }
 
     /**
-     * @return BelongsTo<Priority, $this>
+     * @return BelongsTo<TicketPriority, $this>
      */
     public function priority(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Priority::class)
+            TicketPlugin::resolveModelClass(TicketPriority::class)
         )->withTrashed();
     }
 
+    /**
+     * @return BelongsTo<Model, $this>
+     */
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(
@@ -69,6 +82,9 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * @return BelongsTo<Model, $this>
+     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(
@@ -77,28 +93,47 @@ class Ticket extends Model
         );
     }
 
-    public function activities(): HasMany
+    /**
+     * @return HasMany<TicketActivity, $this>
+     */
+    public function ticketActivities(): HasMany
     {
-        return $this->hasMany(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id');
+        return $this->hasMany(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id');
     }
 
+    /**
+     * @return HasOne<TicketActivity, $this>
+     */
+    public function latestMessage(): HasOne
+    {
+        return $this
+            ->hasOne(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id')
+            ->ofMany([
+                'created_at' => 'max',
+            ], function (Builder $query) {
+                $query->where('type', ActivityType::Message->value);
+            });
+
+    }
+
+    /**
+     * @return HasOne<TicketActivity, $this>
+     */
     public function latestActivity(): HasOne
     {
         return $this
-            ->hasOne(TicketPlugin::resolveModelClass(Activity::class), 'ticket_id')
+            ->hasOne(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id')
             ->latestOfMany();
     }
 
     /* Scopes */
 
-    #[Scope]
-    protected function open(Builder $query): void
+    protected function scopeOpen(Builder $query): void
     {
         $query->whereNull('closed_at');
     }
 
-    #[Scope]
-    protected function closed(Builder $query): void
+    protected function scopeClosed(Builder $query): void
     {
         $query->whereNotNull('closed_at');
     }
@@ -120,12 +155,12 @@ class Ticket extends Model
             return;
         }
 
-        $statusModel = TicketPlugin::resolveModelClass(Status::class);
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
         $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
 
         DB::beginTransaction();
 
-        $this->activities()->create([
+        $this->ticketActivities()->create([
             'type' => ActivityType::Closed,
             'sender' => ActivitySender::System,
             'data' => [

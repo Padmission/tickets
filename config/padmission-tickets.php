@@ -13,14 +13,14 @@ return [
     'models' => [
         Authenticatable::class => App\Models\User::class,
         Padmission\Tickets\Models\Ticket::class => Padmission\Tickets\Models\Ticket::class,
-        Padmission\Tickets\Models\Activity::class => Padmission\Tickets\Models\Activity::class,
-        Padmission\Tickets\Models\Priority::class => Padmission\Tickets\Models\Priority::class,
-        Padmission\Tickets\Models\Status::class => Padmission\Tickets\Models\Status::class,
+        Padmission\Tickets\Models\TicketActivity::class => Padmission\Tickets\Models\TicketActivity::class,
+        Padmission\Tickets\Models\TicketPriority::class => Padmission\Tickets\Models\TicketPriority::class,
+        Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
     ],
 
     'levels' => [
-        'default' => fn () => __('padmission-tickets::tickets.levels.default'),
-        'escalated' => fn () => __('padmission-tickets::tickets.levels.escalated'),
+        // 'default' => fn () => __('padmission-tickets::tickets.levels.default'),
+        // 'escalated' => fn () => __('padmission-tickets::tickets.levels.escalated'),
     ],
 
     /**

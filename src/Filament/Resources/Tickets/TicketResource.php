@@ -15,9 +15,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Models\Activity;
-use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketResource extends Resource
@@ -66,7 +66,7 @@ class TicketResource extends Resource
                     ->orderBy(
                         fn ($query) => $query
                             ->select('created_at')
-                            ->from((new (TicketPlugin::resolveModelClass(Activity::class)))->getTable())
+                            ->from((new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable())
                             ->whereColumn('ticket_id', 'tickets.id')
                             ->latest()
                             ->limit(1),
@@ -93,6 +93,7 @@ class TicketResource extends Resource
 
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
+                    ->html()
                     ->searchable(),
 
                 TextColumn::make('assignee.name')
@@ -100,8 +101,8 @@ class TicketResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('latestActivity.created_at')
-                    ->label(__('padmission-tickets::tickets.resources.tickets.last_activity'))
+                TextColumn::make('latestMessage.created_at')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                     ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
                     ->tooltip(fn (?CarbonImmutable $state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
                     ->sortable(),
@@ -109,7 +110,7 @@ class TicketResource extends Resource
             ->filters([
                 SelectFilter::make('status')
                     ->relationship('status', 'display_name')
-                    ->default(fn () => TicketPlugin::resolveModelClass(Status::class)::getOpenStatuses()->pluck('id')->toArray())
+                    ->default(fn () => TicketPlugin::resolveModelClass(TicketStatus::class)::getOpenStatuses()->pluck('id')->toArray())
                     ->multiple()
                     ->preload(),
 

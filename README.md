@@ -8,40 +8,19 @@
 ## Introduction
 
 
-
 ## Prerequisites
 
 - **PHP**: 8.3 or higher
 - **Laravel**: 11.0 or higher
 - **Filament**: 3.0 or higher
 
-## Installation
-
-
-**Step 1:** Install the package via Composer:
-
-```
-composer require padmission/tickets
-```
-
-**Step 2:** Run the migrations to set up the database tables:
-
-```bash
-php artisan migrate
-```
-**Step 3:** Add the plugin to your Filament panel:
-
-```php
-use Padmission\Tickets\TicketPlugin;
-
-$panel->plugin(TicketPlugin::make());
-```
+## Getting Started
 
 ### Activating Your License
 
 For distribution we use [Satis Padmission](https://satis.padmission.com/), a private Composer repository. During the purchasing process, Lemon Squeezy will provide you with a license key that you'll need for installation.
 
-### Step 1: Configure Composer Repository
+### Configure Composer Repository
 
 Add the private repository to your `composer.json` file:
 
@@ -56,11 +35,11 @@ Add the private repository to your `composer.json` file:
 }
 ```
 
-### Step 2: Install the Package
+### Installation
 
-Install Data Lens using Composer:
+**Step 1:** Install the package via Composer:
 
-```bash
+```
 composer require padmission/tickets
 ```
 
@@ -68,10 +47,42 @@ When prompted, provide your authentication details:
 - **Username**: Your email address (e.g., myname@example.com)
 - **Password**: Your license key (e.g., 9f3a2e1d-5b7c-4f86-a9d0-3e1c2b4a5f8e)
 
+**Step 2:** Run the migrations to set up the database tables:
+
+```bash
+php artisan migrate
+```
+
+**Step 3**: Publish the assets
+
+```
+php artisan filament:assets
+```
+
+**Step 4:** Add the plugin to your Filament panel:
+
+```php
+use Padmission\Tickets\TicketPlugin;
+
+$panel->plugin(TicketPlugin::make());
+```
+
 ## Configuration
 
+### Resources
+
+The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use the `->registerResources()` method:
+
+```php
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->registerResources();
+```
+
 ### Disposition
-The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed. You can configure dispositions with an BackedEnum via `->useDisposition(YourEnum::class)`. If you omit the enum the package will use the default `Padmission\Tickets\Enums\Disposition` enum.
+
+The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed. You can configure dispositions with a BackedEnum via `->useDisposition(YourEnum::class)`. If you omit the enum, the package will use the default `Padmission\Tickets\Enums\Disposition` enum.
 
 ```php
 use Padmission\Tickets\TicketPlugin;
@@ -79,6 +90,29 @@ use App\Enums\YourDisposition;
 
 TicketPlugin::make()
     ->useDisposition(YourDisposition::class);
+```
+
+### Chat Widget
+
+Users can create tickets via a chat widget. To enable the widget in a panel, use the `->showChatWidget()` method:
+
+```php
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->showChatWidget();
+```
+
+If you want to render the chat widget outside a Filament panel add the Blade component at the end of your body tag:
+
+```blade
+<x-padmission-tickets::chat-widget />
+```
+
+Make sure the CSRF token is included in your HTML head section:
+
+```blade
+<meta name="csrf-token" content="{{ csrf_token() }}">
 ```
 
 ### Escalation levels
@@ -142,4 +176,21 @@ For additional support:
 
 ## License
 
-The Data Lens package is a private, paid package. All rights reserved. Unauthorized distribution, modification, or use is strictly prohibited.
+The Tickets package is a private, paid package. All rights reserved. Unauthorized distribution, modification, or use is strictly prohibited.
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+### Watch Mode
+
+When running `npm run dev`, the package will be in debug mode and automatically load compiled assets directly from the dist file. No need for `php artisan filament:assets`.
+
+Make sure you didn't publish the assets before running `npm run dev`, as this will cause the package to load the published assets instead of the compiled ones.
+
+### BrowserSync
+
+BrowserSync will reload the page when you make changes to the resources. You can configure the project url you are using for development and the BrowserSync port via the .env file

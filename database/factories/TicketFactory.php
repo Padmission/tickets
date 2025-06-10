@@ -6,9 +6,10 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Padmission\Tickets\Enums\Disposition;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Models\Priority;
-use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
@@ -25,8 +26,8 @@ class TicketFactory extends Factory
             'turn' => Turn::User,
             'data' => [],
 
-            'status_id' => TicketPlugin::resolveModelClass(Status::class)::factory(),
-            'priority_id' => TicketPlugin::resolveModelClass(Priority::class)::factory(),
+            'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::factory(),
+            'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::factory(),
             'assignee_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
         ];
     }
@@ -45,8 +46,8 @@ class TicketFactory extends Factory
     public function closed(): static
     {
         return $this->state([
-            'status_id' => TicketPlugin::resolveModelClass(Status::class)::getClosedStatus(),
-            'disposition' => $this->faker->randomElement(Disposition::cases()),
+            'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus(),
+            'disposition_id' => TicketPlugin::resolveModelClass(TicketDisposition::class)::factory(),
             'closed_at' => now(),
             'closed_by' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
         ]);

@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Models\Status;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 class StatusResource extends Resource
@@ -27,7 +27,7 @@ class StatusResource extends Resource
 
     public static function getModel(): string
     {
-        return TicketPlugin::resolveModelClass(Status::class);
+        return TicketPlugin::resolveModelClass(TicketStatus::class);
     }
 
     public static function getModelLabel(): string
@@ -76,7 +76,7 @@ class StatusResource extends Resource
             ->columns([
                 ColorColumn::make('color')
                     ->label(__('padmission-tickets::tickets.resources.statuses.color'))
-                    ->getStateUsing(fn (Status $record) => 'rgb('.$record->colorPalette[600].')'),
+                    ->getStateUsing(fn (TicketStatus $record) => 'rgb('.$record->colorPalette[600].')'),
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.display_name')),

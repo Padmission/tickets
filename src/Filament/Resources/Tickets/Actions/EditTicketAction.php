@@ -7,11 +7,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\Facades\Blade;
-use Padmission\Tickets\Models\Priority;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Models\Status;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 
 class EditTicketAction extends EditAction
 {
@@ -39,17 +38,8 @@ class EditTicketAction extends EditAction
                     ->label(__('padmission-tickets::tickets.resources.tickets.status'))
                     ->allowHtml()
                     ->native(false)
-                    ->relationship('status', 'display_name', fn ($query) => $query
-                        ->tap(new CurrentPanelScope)
-                        ->orderBy('order', 'asc')
-                        ->whereNotIn('id', TicketPlugin::resolveModelClass(Status::class)::query()
-                            ->select('id')
-                            ->tap(new CurrentPanelScope)
-                            ->orderByDesc('order')
-                            ->limit(1)
-                        )
-                    )
-                    ->getOptionLabelFromRecordUsing(function (Status $status) {
+                    ->relationship('status', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
+                    ->getOptionLabelFromRecordUsing(function (TicketStatus $status) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
                                 <x-filament::badge
@@ -70,7 +60,7 @@ class EditTicketAction extends EditAction
                     ->allowHtml()
                     ->native(false)
                     ->relationship('priority', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
-                    ->getOptionLabelFromRecordUsing(function (Priority $priority) {
+                    ->getOptionLabelFromRecordUsing(function (TicketPriority $priority) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
                                 <x-filament::badge :color="$priority->colorPalette" size="sm">

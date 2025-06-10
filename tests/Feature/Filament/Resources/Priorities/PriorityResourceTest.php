@@ -3,12 +3,12 @@
 use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Priorities\Pages\ListPriorities;
-use Padmission\Tickets\Models\Priority;
+use Padmission\Tickets\Models\TicketPriority;
 
 it('lists priorities', function () {
-    Priority::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
-    Priority::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
-    Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    TicketPriority::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
+    TicketPriority::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
+    TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
         ->assertSee(__('padmission-tickets::tickets.resources.priorities.plural_model_label'))
@@ -20,22 +20,22 @@ it('lists priorities', function () {
 });
 
 it('only shows priorities from current panel', function () {
-    Priority::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
-    Priority::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);
+    TicketPriority::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
+    TicketPriority::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);
 
     Livewire::test(ListPriorities::class)->assertCountTableRecords(1);
 });
 
 it('can reorder priorities', function () {
-    Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
-    Priority::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
-    Priority::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
+    TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    TicketPriority::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
+    TicketPriority::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
 
     Livewire::test(ListPriorities::class)
         ->call('reorderTable', [3, 2, 1])
         ->assertHasNoErrors();
 
-    $this->assertDatabaseHas(Priority::class, [
+    $this->assertDatabaseHas(TicketPriority::class, [
         'id' => 1,
         'order' => 3,
     ]);
@@ -54,7 +54,7 @@ it('can create priority', function () {
         ])
         ->assertHasNoActionErrors();
 
-    $this->assertDatabaseHas(Priority::class, [
+    $this->assertDatabaseHas(TicketPriority::class, [
         'display_name' => 'New Priority',
         'color' => 'Zinc',
         'order' => 99,
@@ -62,7 +62,7 @@ it('can create priority', function () {
 });
 
 it('can edit priority', function () {
-    $priority = Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    $priority = TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
         ->callTableAction('edit', $priority, [
@@ -80,11 +80,11 @@ it('can edit priority', function () {
 });
 
 it('can delete status', function () {
-    $priority = Priority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
+    $priority = TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
         ->callTableAction('delete', $priority->id)
         ->assertHasNoErrors();
 
-    $this->assertSoftDeleted(Priority::class, ['id' => $priority->id]);
+    $this->assertSoftDeleted(TicketPriority::class, ['id' => $priority->id]);
 });

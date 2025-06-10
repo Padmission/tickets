@@ -6,6 +6,7 @@ use BackedEnum;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
@@ -17,13 +18,15 @@ final class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
+    protected bool $shouldRegisterResources = false;
+
     protected string $escalationLevel = 'default';
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
 
     protected ?NotificationStrategy $notificationStrategy = null;
 
-    protected ?string $dispositionEnum = null;
+    protected bool $shouldShowChatWidget = false;
 
     public static function make(): static
     {
@@ -37,12 +40,22 @@ final class TicketPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        $panel
-            ->resources([
+        if ($this->shouldRegisterResources()) {
+            $panel->resources([
                 Resources\Tickets\TicketResource::class,
                 Resources\Statuses\StatusResource::class,
                 Resources\Priorities\PriorityResource::class,
             ]);
+        }
+
+        if ($this->shouldShowChatWidget()) {
+            $panel->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('padmission-tickets::filament.chat-widget', [
+                    'primaryColor' => data_get($panel->getColors(), 'primary', null),
+                ])
+            );
+        }
     }
 
     public function boot(Panel $panel): void {}
@@ -50,9 +63,11 @@ final class TicketPlugin implements Plugin
     public static function get(?string $panelId = null): static
     {
         $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentPanel();
-        $plugin = $panel->getPlugin(static::$id);
 
-        assert($plugin instanceof static);
+        /**
+         * @var static $plugin
+         */
+        $plugin = $panel->getPlugin(static::$id);
 
         return $plugin;
     }
@@ -71,7 +86,6 @@ final class TicketPlugin implements Plugin
     }
 
     /* Configuration options */
-
     public function escalationLevel(string $level): static
     {
         $this->escalationLevel = $level;
@@ -108,21 +122,27 @@ final class TicketPlugin implements Plugin
         return $this->notificationStrategy;
     }
 
-    /**
-     * @param  class-string<BackedEnum & HasLabel>|null  $dispositionEnum
-     */
-    public function useDisposition(?string $dispositionEnum = null): static
+    public function registerResources(bool $shouldRegister = true): static
     {
-        $this->dispositionEnum = $dispositionEnum ?? Disposition::class;
+        $this->shouldRegisterResources = $shouldRegister;
 
         return $this;
     }
 
-    /**
-     * @return class-string<BackedEnum & HasLabel>|null
-     */
-    public function getDispositionEnum(): ?string
+    public function shouldRegisterResources(): bool
     {
-        return $this->dispositionEnum;
+        return $this->shouldRegisterResources;
+    }
+
+    public function showChatWidget(bool $shouldShow = true): static
+    {
+        $this->shouldShowChatWidget = $shouldShow;
+
+        return $this;
+    }
+
+    public function shouldShowChatWidget(): bool
+    {
+        return $this->shouldShowChatWidget;
     }
 }
