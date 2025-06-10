@@ -5,24 +5,22 @@ namespace Padmission\Tickets\Database\Seeders;
 use Filament\Facades\Filament;
 use Illuminate\Database\Seeder;
 use Padmission\Tickets\Models\TicketDisposition;
-use Padmission\Tickets\Models\TicketPriority;
-use Padmission\Tickets\Models\TicketStatus;
-use Filament\Colors\Color;
 
 class TicketDispositionSeeder extends Seeder
 {
-
-    public function getDefaults() : array {
+    public function getDefaults(): array
+    {
 
         return [
             trans('padmission-tickets::dispositions.resolved'),
             trans('padmission-tickets::dispositions.abandoned'),
             trans('padmission-tickets::dispositions.unresolvable'),
             trans('padmission-tickets::dispositions.withdrawn'),
-            trans('padmission-tickets::dispositions.testing_training')
+            trans('padmission-tickets::dispositions.testing_training'),
         ];
 
     }
+
     public function run(): void
     {
 
@@ -33,7 +31,7 @@ class TicketDispositionSeeder extends Seeder
             ->reject(fn ($value) => in_array($value, [
                 'slate', 'zinc', 'neutral', 'stone',
             ]))
-            ->map(function($color) {
+            ->map(function ($color) {
                 return ucfirst($color);
             });
 
@@ -44,12 +42,12 @@ class TicketDispositionSeeder extends Seeder
                 continue;
             }
 
-            collect(array_chunk($defaults, 10))->each(function(array $chunk) use ($panel, $colors) {
+            collect(array_chunk($defaults, 10))->each(function (array $chunk) use ($panel, $colors) {
                 collect($chunk)->diff(TicketDisposition::where('panel', $panel->getId())
                     ->whereIn('display_name', $chunk)
                     ->get()
                     ->pluck('display_name'))
-                    ->each(function($name) use ($panel, $colors) {
+                    ->each(function ($name) use ($panel, $colors) {
                         TicketDisposition::create([
                             'display_name' => $name,
                             'color' => $colors->random(),
@@ -59,6 +57,4 @@ class TicketDispositionSeeder extends Seeder
             });
         }
     }
-
-
 }

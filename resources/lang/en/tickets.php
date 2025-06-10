@@ -63,5 +63,5 @@ return [
             'display_name' => 'Display Name',
             'color' => 'Color',
         ],
-    ]
+    ],
 ];

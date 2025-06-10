@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Database\Factories;
 
 use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
 
 class TicketStatusFactory extends Factory

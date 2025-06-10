@@ -1,10 +1,9 @@
 <?php
 
+use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
-use Illuminate\Support\Facades\DB;
-use Filament\Facades\Filament;
 use Padmission\Tickets\TicketPlugin;
 
 it('can close a ticket with a disposition', function () {
@@ -21,7 +20,7 @@ it('can close a ticket with a disposition', function () {
     // Create test data - don't set panel on ticket as it doesn't have that column
     $ticket = Ticket::factory()->create();
     $disposition = TicketDisposition::factory()->create([
-        'panel' => $panel->getId()
+        'panel' => $panel->getId(),
     ]);
 
     $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);

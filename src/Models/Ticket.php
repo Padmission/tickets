@@ -41,7 +41,6 @@ class Ticket extends Model
 
     /* Relations */
 
-
     /**
      * @return BelongsTo<TicketDisposition, $this>
      */
@@ -150,7 +149,7 @@ class Ticket extends Model
     }
 
     /* Business Logic */
-    public function close(Model|int $disposition = null, ?int $closedBy = null): void
+    public function close(Model|int|null $disposition = null, ?int $closedBy = null): void
     {
         if ($this->isClosed) {
             return;
@@ -162,11 +161,11 @@ class Ticket extends Model
         DB::beginTransaction();
 
         if ($disposition) {
-            if (!$disposition instanceof Model) {
+            if (! $disposition instanceof Model) {
                 $context = $disposition;
                 $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
                 $disposition = $dispositionModel::find($disposition);
-                if (!$disposition) {
+                if (! $disposition) {
                     throw new TicketDispositionNotFoundException($context);
                 }
             }

@@ -14,7 +14,7 @@ class TicketDispositionNotFoundException extends Exception
     protected $context;
 
     /**
-     * @param mixed $context
+     * @param  mixed  $context
      */
     public function __construct($context = null)
     {

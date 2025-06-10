@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets;
 
-use BackedEnum;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
@@ -10,7 +9,6 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
-use Padmission\Tickets\Enums\Disposition;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
