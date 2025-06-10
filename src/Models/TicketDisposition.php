@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
