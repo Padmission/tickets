@@ -3,8 +3,6 @@
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
 
-uses(\Padmission\Tickets\Tests\TestCase::class);
-
 it('can close a ticket with a disposition', function () {
     // Create a ticket
     $ticket = Ticket::factory()->create(['status_id' => 1]);

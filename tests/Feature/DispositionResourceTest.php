@@ -6,9 +6,6 @@ use Padmission\Tickets\Filament\Resources\Dispositions\Pages\ListDispositions;
 use Padmission\Tickets\Models\TicketDisposition;
 
 
-uses(\Padmission\Tickets\Tests\TestCase::class);
-
-
 it('lists dispositions', function () {
     TicketDisposition::factory()->create(['display_name' => 'Follow Up', 'color' => 'Red', 'order' => 3, 'panel' => 'test']);
     TicketDisposition::factory()->create(['display_name' => 'Escalated', 'color' => 'Blue', 'order' => 2,  'panel' => 'test']);
