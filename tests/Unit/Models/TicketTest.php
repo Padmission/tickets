@@ -7,6 +7,7 @@ use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Notifications\TicketCreatedNotification;
 use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
@@ -107,6 +108,9 @@ it('cannot be closed twice', function () {
 });
 
 it('closes ticket when status is changed to closed', function () {
+    $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+    $disposition = $dispositionModel::factory()->create();
+
     (new TicketStatusSeeder)->run();
     $closedStatusId = TicketStatus::getClosedStatus()->getKey();
 
@@ -116,7 +120,7 @@ it('closes ticket when status is changed to closed', function () {
     $this->freezeSecond();
     $this->actingAs($user);
 
-    $ticket->update(['status_id' => $closedStatusId]);
+    $ticket->close($disposition, $user->getKey());
 
     expect($ticket->refresh())
         ->isClosed->toBeTrue()

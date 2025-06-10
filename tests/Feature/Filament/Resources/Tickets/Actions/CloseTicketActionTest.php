@@ -19,9 +19,9 @@ it('can close a ticket with a disposition', function () {
 
     // Create test data - don't set panel on ticket as it doesn't have that column
     $ticket = Ticket::factory()->create();
-    $disposition = TicketDisposition::factory()->create([
-        'panel' => $panel->getId(),
-    ]);
+
+    $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+    $disposition = $dispositionModel::factory()->create();
 
     $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
     $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();

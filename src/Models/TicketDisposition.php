@@ -28,7 +28,7 @@ class TicketDisposition extends Model
         static::creating(function ($model) {
             $model->panel ??= Filament::getCurrentPanel()->getId();
         });
-    }
+     }
 
     /**
      * @return Attribute<array,never>

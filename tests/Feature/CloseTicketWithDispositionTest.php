@@ -9,7 +9,6 @@ it('can close a ticket with a disposition', function () {
 
     // Create a disposition
     $disposition = TicketDisposition::factory()->create();
-
     // Close the ticket with the disposition
     $ticket->close($disposition);
     $ticket->refresh();
