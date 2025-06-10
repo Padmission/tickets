@@ -149,7 +149,7 @@ class Ticket extends Model
     }
 
     /* Business Logic */
-    public function close(?string $disposition = null, ?int $closedBy = null): void
+    public function close(Model|int $disposition = null, ?int $closedBy = null): void
     {
         if ($this->isClosed) {
             return;
@@ -159,6 +159,18 @@ class Ticket extends Model
         $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
 
         DB::beginTransaction();
+
+        if ($disposition) {
+            if (!$disposition instanceof Model) {
+                $context = $disposition;
+                $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+                $disposition = $dispositionModel::find($disposition);
+                if (!$context) {
+                    throw new DispositionNotFoundException($context);
+                }
+            }
+            $this->disposition()->associate($disposition);
+        }
 
         $this->ticketActivities()->create([
             'type' => ActivityType::Closed,
@@ -170,7 +182,7 @@ class Ticket extends Model
 
         $this->update([
             'status_id' => $closedStatus->getKey(),
-            'disposition' => $disposition,
+            'disposition_id' => $disposition ? $disposition->getKey() : null,
             'closed_at' => now(),
             'closed_by' => $closedBy,
         ]);

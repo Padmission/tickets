@@ -53,5 +53,12 @@ return [
             'display_name' => 'Display Name',
             'color' => 'Color',
         ],
-    ],
+
+        'dispositions' => [
+            'model_label' => 'Disposition',
+            'plural_model_label' => 'Dispositions',
+            'display_name' => 'Display Name',
+            'color' => 'Color',
+        ],
+    ]
 ];

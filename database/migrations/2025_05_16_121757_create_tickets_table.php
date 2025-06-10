@@ -22,7 +22,6 @@ return new class extends Migration
             $table->json('data')->nullable();
             $table->dateTime('closed_at')->nullable();
             $table->foreignId('closed_by')->nullable();
-            $table->string('disposition')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

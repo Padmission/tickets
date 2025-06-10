@@ -1,9 +1,13 @@
 <?php
 
+/**
+ * These are only used while seeding.
+ */
+
 return [
-    'opened' => 'Conversation started',
-    'closed' => 'Conversation closed',
-    'status_changed' => 'Status Changed from :from to :to',
-    'priority_changed' => 'Status Changed from :from to :to',
-    'turn_changed' => 'Status Changed from :from to :to',
+    'resolved' => 'Resolved',
+    'abandoned' => 'Abandoned',
+    'unresolvable' => 'Unresolvable',
+    'withdrawn' => 'Withdrawn',
+    'testing_training' => 'Testing/Training',
 ];
