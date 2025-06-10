@@ -18,6 +18,7 @@ use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Exceptions\TicketDispositionNotFoundException;
 use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
@@ -165,8 +166,8 @@ class Ticket extends Model
                 $context = $disposition;
                 $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
                 $disposition = $dispositionModel::find($disposition);
-                if (!$context) {
-                    throw new DispositionNotFoundException($context);
+                if (!$disposition) {
+                    throw new TicketDispositionNotFoundException($context);
                 }
             }
             $this->disposition()->associate($disposition);

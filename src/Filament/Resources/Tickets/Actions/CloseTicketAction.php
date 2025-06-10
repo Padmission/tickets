@@ -52,7 +52,9 @@ class CloseTicketAction extends Action
     }
 
     protected function dispositionsExist(): bool {
-        return Cache::remember(__METHOD__, 10, function() {
+        $panel = Filament::getCurrentPanel();
+        $cacheKey = __METHOD__.'::'.($panel ? $panel->getId() : '');
+        return Cache::remember($cacheKey, 10, function() {
             return TicketDisposition::exists();
         });
     }

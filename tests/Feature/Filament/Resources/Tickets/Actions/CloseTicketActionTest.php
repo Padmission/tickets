@@ -7,8 +7,6 @@ use Illuminate\Support\Facades\DB;
 use Filament\Facades\Filament;
 use Padmission\Tickets\TicketPlugin;
 
-uses(\Padmission\Tickets\Tests\TestCase::class);
-
 it('can close a ticket with a disposition', function () {
     // Ensure we're using the test panel
     $panel = Filament::getCurrentPanel();
