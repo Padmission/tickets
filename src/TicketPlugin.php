@@ -44,6 +44,7 @@ final class TicketPlugin implements Plugin
             $panel->resources([
                 Resources\Tickets\TicketResource::class,
                 Resources\Statuses\StatusResource::class,
+                Resources\Dispositions\DispositionResource::class,
                 Resources\Priorities\PriorityResource::class,
             ]);
         }

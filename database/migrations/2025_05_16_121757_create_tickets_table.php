@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('subject');
             $table->foreignId('status_id');
             $table->foreignId('priority_id');
+            $table->foreignId('disposition_id')->nullable();
             $table->foreignId('assignee_id')->nullable();
             $table->unsignedInteger('submitter_id')->nullable();
             $table->json('submitter_data')->nullable();
