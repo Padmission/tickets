@@ -2,13 +2,16 @@
 
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Models\TicketStatus;
 
 it('can close a ticket with a disposition', function () {
+
     // Create a ticket
     $ticket = Ticket::factory()->create(['status_id' => 1]);
 
-    // Create a disposition
     $disposition = TicketDisposition::factory()->create();
+    $status = TicketStatus::factory()->create();
+
     // Close the ticket with the disposition
     $ticket->close($disposition);
     $ticket->refresh();
