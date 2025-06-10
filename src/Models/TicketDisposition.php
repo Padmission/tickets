@@ -44,7 +44,7 @@ class TicketDisposition extends Model
                 $builder->where('panel', $panel->getId());
             }
         });
-     }
+    }
 
     /**
      * @return Attribute<array,never>
@@ -56,10 +56,12 @@ class TicketDisposition extends Model
         );
     }
 
-    public static function getPanelCacheKey(?Panel $panel = null) : string {
-        if (!$panel) {
+    public static function getPanelCacheKey(?Panel $panel = null): string
+    {
+        if (! $panel) {
             $panel = Filament::getCurrentPanel();
         }
+
         return __METHOD__.'::'.($panel ? $panel->getId() : '');
     }
 }

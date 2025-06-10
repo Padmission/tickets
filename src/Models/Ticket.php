@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -162,7 +161,7 @@ class Ticket extends Model
         DB::beginTransaction();
 
         if ($disposition) {
-            if (!is_object($disposition)) {
+            if (! is_object($disposition)) {
                 $context = $disposition;
                 $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
                 $disposition = $dispositionModel::find($disposition);
