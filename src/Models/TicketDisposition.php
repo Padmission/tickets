@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketDispositionFactory;
-
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 #[UseFactory(TicketDispositionFactory::class)]
+#[ScopedBy([CurrentPanelScope::class])]
 class TicketDisposition extends Model
 {
     use HasFactory;

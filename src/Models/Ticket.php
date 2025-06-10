@@ -165,7 +165,7 @@ class Ticket extends Model
             if (!is_object($disposition)) {
                 $context = $disposition;
                 $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
-                $disposition = $dispositionModel::where('panel', $this->panel)->find($disposition);
+                $disposition = $dispositionModel::find($disposition);
                 if (! $disposition) {
                     throw new TicketDispositionNotFoundException($context);
                 }
@@ -187,8 +187,6 @@ class Ticket extends Model
             'closed_at' => now(),
             'closed_by' => $closedBy,
         ]);
-
-        return;
 
         DB::commit();
     }
