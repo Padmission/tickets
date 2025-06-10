@@ -164,7 +164,7 @@ class Ticket extends Model
             if (! $disposition instanceof Model) {
                 $context = $disposition;
                 $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
-                $disposition = $dispositionModel::find($disposition);
+                $disposition = $dispositionModel::where('panel', $this->panel)->find($disposition);
                 if (! $disposition) {
                     throw new TicketDispositionNotFoundException($context);
                 }
