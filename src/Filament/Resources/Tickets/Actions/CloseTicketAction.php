@@ -8,6 +8,7 @@ use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\TicketPlugin;
 
 class CloseTicketAction extends Action
 {
@@ -51,10 +52,11 @@ class CloseTicketAction extends Action
 
     protected function dispositionsExist(): bool
     {
-        $panel = Filament::getCurrentPanel();
-        $cacheKey = __METHOD__.'::'.($panel ? $panel->getId() : '');
+        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
 
-        return Cache::remember($cacheKey, 10, function () {
+        $cacheKey = $dispositionModel::getPanelCacheKey();
+
+        return Cache::rememberForever($cacheKey, function () {
             return TicketDisposition::exists();
         });
     }

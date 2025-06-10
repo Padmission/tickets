@@ -38,7 +38,7 @@ class TicketDispositionSeeder extends Seeder
         foreach (Filament::getPanels() as $panel) {
             Filament::setCurrentPanel($panel);
 
-            if (TicketDisposition::where('panel', $panel->getId())->exists()) {
+            if (TicketDisposition::exists()) {
                 continue;
             }
 
