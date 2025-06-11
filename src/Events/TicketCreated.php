@@ -7,17 +7,11 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Padmission\Tickets\Models\Ticket;
 
-class TicketActivity
+class TicketCreated
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public string $activityType;
+    public function __construct(public Ticket $ticket) {
 
-    public $metadata;
-
-    public function __construct(public Ticket $ticket, string $activityType, $metadata = null)
-    {
-        $this->activityType = $activityType;
-        $this->metadata = $metadata;
     }
 }

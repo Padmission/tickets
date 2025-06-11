@@ -18,6 +18,7 @@ use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Events\TicketClosed;
 use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
@@ -115,6 +116,11 @@ class Ticket extends Model
             ->latestOfMany();
     }
 
+    public function ticketNotifications(): HasMany
+    {
+        return $this->hasMany(TicketPlugin::resolveModelClass(TicketNotification::class), 'ticket_id');
+    }
+
     /* Scopes */
 
     protected function scopeOpen(Builder $query): void
@@ -164,5 +170,7 @@ class Ticket extends Model
         ]);
 
         DB::commit();
+
+        event(new TicketClosed($this));
     }
 }

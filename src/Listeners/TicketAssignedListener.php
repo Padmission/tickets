@@ -3,11 +3,8 @@
 namespace Padmission\Tickets\Listeners;
 
 use Padmission\Tickets\Events\TicketAssigned;
+use Padmission\Tickets\Jobs\NotificationJob;
 
-class TicketAssignedListener
+class TicketAssignedListener extends AbstractTicketListener
 {
-    public function handle(TicketAssigned $event): void
-    {
-        // Handle the ticket assignment (e.g., notify user, log, etc.)
-    }
 }

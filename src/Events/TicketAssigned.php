@@ -11,13 +11,7 @@ class TicketAssigned
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public Ticket $ticket;
+    public function __construct(public Ticket $ticket) {
 
-    public $assignedTo;
-
-    public function __construct(Ticket $ticket, $assignedTo)
-    {
-        $this->ticket = $ticket;
-        $this->assignedTo = $assignedTo;
     }
 }

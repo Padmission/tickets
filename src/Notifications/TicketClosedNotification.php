@@ -7,5 +7,5 @@ use Illuminate\Notifications\Notification;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 
-class TicketCreatedNotification extends AbstractTicketHistoryNotification {
+class TicketClosedNotification extends AbstractTicketHistoryNotification {
 }

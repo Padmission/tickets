@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Events\TicketCreated;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -17,7 +18,7 @@ class TicketObserver
 
     public function created(Ticket $ticket): void
     {
-        $this->sendTicketCreatedNotification($ticket);
+        event(new TicketCreated($ticket));
     }
 
     public function updating(Ticket $ticket): void
@@ -42,21 +43,6 @@ class TicketObserver
         // $assignmentStrategy->assign($ticket);
     }
 
-    protected function sendTicketCreatedNotification(Ticket $ticket): void
-    {
-        // TODO: Make this independent from panel
-
-        // $panel = $ticket->panel;
-        //
-        // $plugin = TicketPlugin::get($panel);
-        // $notificationStrategy = $plugin->getNotificationStrategy();
-        //
-        // if ($notificationStrategy === null) {
-        //     return;
-        // }
-        //
-        // $notificationStrategy->notify($ticket);
-    }
 
     protected function handlePriorityTransition(Ticket $ticket): void
     {
@@ -89,6 +75,18 @@ class TicketObserver
             if ($isClosedStatus) {
                 $ticket->close(auth()->id());
             }
+        }
+    }
+
+    public function saving(Ticket $ticket): void {
+
+    }
+    public function saved(Ticket $ticket): void {
+        if ($ticket->wasChanged('assignee_id')) {
+            $old = $ticket->getOriginal('assignee_id');
+            $new = $ticket->assignee_id;
+            dd($old, $new);
+            // Fire your event here
         }
     }
 }

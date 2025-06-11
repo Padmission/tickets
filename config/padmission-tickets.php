@@ -14,6 +14,7 @@ return [
         Authenticatable::class => App\Models\User::class,
         Padmission\Tickets\Models\Ticket::class => Padmission\Tickets\Models\Ticket::class,
         Padmission\Tickets\Models\TicketActivity::class => Padmission\Tickets\Models\TicketActivity::class,
+        Padmission\Tickets\Models\TicketNotification::class => Padmission\Tickets\Models\TicketNotification::class,
         Padmission\Tickets\Models\TicketPriority::class => Padmission\Tickets\Models\TicketPriority::class,
         Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
     ],
@@ -50,5 +51,17 @@ return [
         \Padmission\Tickets\Events\TicketAssigned::class => [
             \Padmission\Tickets\Listeners\TicketAssignedListener::class,
         ],
+        \Padmission\Tickets\Events\TicketClosed::class => [
+            \Padmission\Tickets\Listeners\TicketClosedListener::class,
+        ],
+        \Padmission\Tickets\Events\TicketCreated::class => [
+            \Padmission\Tickets\Listeners\TicketCreatedListener::class,
+        ],
     ],
+    'notifications' => [
+        'activity' => Padmission\Tickets\Notifications\TicketActivityNotification::class,
+        'assigned' => Padmission\Tickets\Notifications\TicketAssignedNotification::class,
+        'closed' => Padmission\Tickets\Notifications\TicketClosedNotification::class,
+        'created' => Padmission\Tickets\Notifications\TicketCreatedNotification::class,
+    ]
 ];

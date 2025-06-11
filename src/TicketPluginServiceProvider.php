@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets;
 
+use App\Models\User;
 use Dotenv\Dotenv;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
@@ -9,6 +10,7 @@ use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Padmission\Tickets\Managers\NotificationManager;
 use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
@@ -50,9 +52,21 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     public function packageBooted(): void
     {
         $this->bootEventListeners();
+
     }
 
-    private function registerCssFiles(): void
+    public function packageRegistered(): void
+    {
+        // Register the notification manager
+        $this->app->singleton(NotificationManager::class, function ($app) {
+            return new NotificationManager($app);
+        });
+
+        // Register the facade alias
+        $this->app->alias(NotificationManager::class, 'notification-strategies');
+    }
+
+        private function registerCssFiles(): void
     {
         $files = [
             __DIR__.'/../resources/css/chat-component.css',

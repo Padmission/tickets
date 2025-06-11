@@ -3,11 +3,9 @@
 namespace Padmission\Tickets\Listeners;
 
 use Padmission\Tickets\Events\TicketActivity;
+use Padmission\Tickets\Jobs\NotificationJob;
 
-class TicketActivityListener
+class TicketActivityListener extends AbstractTicketListener
 {
-    public function handle(TicketActivity $event): void
-    {
-        // Handle the ticket activity (e.g., log, notify, etc.)
-    }
+
 }
