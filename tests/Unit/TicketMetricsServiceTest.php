@@ -5,9 +5,6 @@ use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketMetricsService;
-use Padmission\Tickets\Tests\TestCase;
-
-uses(TestCase::class);
 
 describe('TicketMetricsService', function () {
     beforeEach(function () {
