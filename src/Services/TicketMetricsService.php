@@ -3,12 +3,11 @@
 namespace Padmission\Tickets\Services;
 
 use Carbon\Carbon;
-use Illuminate\Database\Connection;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Padmission\Tickets\Exceptions\DriverNameResolutionException;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Exceptions\DriverNameResolutionException;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -175,12 +174,12 @@ class TicketMetricsService
     {
         if (method_exists($connection, 'getDriverName')) {
             return $connection->getDriverName();
-        } else if (method_exists($connection, 'getConfig')) {
+        } elseif (method_exists($connection, 'getConfig')) {
             $config = $connection->getConfig();
             if (is_array($config) && array_key_exists('driver', $config)) {
                 return $config['driver'];
             }
         }
-        throw new DriverNameResolutionException();
+        throw new DriverNameResolutionException;
     }
 }
