@@ -75,7 +75,7 @@ class TicketMetricsService
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at')
-                ->when($days, function($sub) use ($days) {
+                ->when($days, function ($sub) use ($days) {
                     $sub->where('created_at', '>=', Carbon::now()->subDays($days));
                 });
             $result = $query->select([

@@ -2,11 +2,10 @@
 
 namespace Padmission\Tickets\Filament\Widgets\Traits;
 
-use Carbon\CarbonInterval;
-
 trait CanCalculatePollingInterval
 {
-    public function getMaxPollingIntervalInSeconds() : int {
+    public function getMaxPollingIntervalInSeconds(): int
+    {
         return min(10, $this->getPollingIntervalInSeconds());
     }
 
