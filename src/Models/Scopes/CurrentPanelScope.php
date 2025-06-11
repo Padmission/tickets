@@ -13,7 +13,7 @@ class CurrentPanelScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         $panel = Filament::getCurrentPanel();
-        $panel = $panel ? $panel->getPanel() : $model->panel;
+        $panel = $panel ? $panel->getId() : $model->panel;
         if ($panel) {
             $builder->where('panel', $panel);
         }
