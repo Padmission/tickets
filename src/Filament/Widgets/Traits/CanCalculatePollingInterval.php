@@ -2,6 +2,8 @@
 
 namespace Padmission\Tickets\Filament\Widgets\Traits;
 
+use Carbon\CarbonInterval;
+
 trait CanCalculatePollingInterval
 {
     public function getPollingIntervalInSeconds(): ?int
@@ -25,7 +27,7 @@ trait CanCalculatePollingInterval
                     }
                     try {
                         if (str_starts_with($str, 'p')) {
-                            $carbonInterval = \Carbon\CarbonInterval::fromString(strtoupper($str));
+                            $carbonInterval = CarbonInterval::fromString(strtoupper($str));
 
                             return $carbonInterval->totalSeconds > 0 ? (int) ceil($carbonInterval->totalSeconds) : null;
                         }
