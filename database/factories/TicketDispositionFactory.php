@@ -14,7 +14,6 @@ class TicketDispositionFactory extends Factory
     {
         return [
             'display_name' => $this->faker->words(2, true),
-            'color' => ucfirst($this->faker->randomElement(array_keys(Color::all()))),
             'order' => $this->faker->randomNumber(),
         ];
     }

@@ -5,34 +5,46 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
+use Livewire\Livewire;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 
-it('can close a ticket with a disposition', function () {
-    // Ensure we're using the test panel
-    $panel = Filament::getCurrentPanel();
+it('closes ticket', function () {
 
-    // Create a closed status first - needed for the close method to work
-    $closedStatus = TicketStatus::factory()->create([
-        'display_name' => 'Closed',
-        'order' => 999, // High number ensures it's the last one when ordering DESC
-        'panel' => $panel->getId(), // Match the panel ID set in TestCase
-    ]);
+    (new TicketStatusSeeder)->run();
 
-    // Create test data - don't set panel on ticket as it doesn't have that column
-    $ticket = Ticket::factory()->create();
+    $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+    $ticket = $ticketModel::factory()->create();
 
     $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
     $disposition = $dispositionModel::factory()->create();
 
-    $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
-    $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
+    $user = $this->login();
+    $this->freezeSecond();
 
-    // Close the ticket with a disposition
-    $ticket->close($disposition);
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionVisible(CloseTicketAction::class)
+        ->callAction(CloseTicketAction::class, [
+            'disposition' => $disposition->id,
+        ])
+        ->assertHasNoActionErrors();
 
-    // Verify the ticket was closed with the correct disposition
-    $ticket->refresh();
-    expect($ticket->isClosed)->toBeTrue();
-    expect($ticket->disposition_id)->toBe($disposition->getKey());
-    expect($ticket->disposition->is($disposition))->toBeTrue();
-    expect($ticket->status_id)->toBe($closedStatus->getKey());
+    expect($ticket->refresh())
+        ->isClosed->toBeTrue()
+        ->status->toEqual(TicketStatus::getClosedStatus())
+        ->closed_at->toEqual(now())
+        ->closed_by->toEqual($user->id)
+        ->disposition_id->toEqual($disposition->getKey());
 });
+
+it('hides action when ticket is closed', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $ticket = Ticket::factory()->closed()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionHidden(CloseTicketAction::class);
+});
+

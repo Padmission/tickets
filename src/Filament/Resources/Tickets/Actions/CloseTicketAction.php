@@ -52,9 +52,8 @@ class CloseTicketAction extends Action
 
     protected function dispositionsExist(): bool
     {
-        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
-
-        $cacheKey = $dispositionModel::getPanelCacheKey();
+        $panel = Filament::getCurrentPanel();
+        $cacheKey = 'TicketDisposition::'.($panel ? $panel->getId() : '');
 
         return Cache::rememberForever($cacheKey, function () {
             return TicketDisposition::exists();

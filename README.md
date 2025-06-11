@@ -82,15 +82,8 @@ TicketPlugin::make()
 
 ### Disposition
 
-The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed. You can configure dispositions with a BackedEnum via `->useDisposition(YourEnum::class)`. If you omit the enum, the package will use the default `Padmission\Tickets\Enums\Disposition` enum.
-
-```php
-use Padmission\Tickets\TicketPlugin;
-use App\Enums\YourDisposition;
-
-TicketPlugin::make()
-    ->useDisposition(YourDisposition::class);
-```
+The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed. 
+You can configure dispositions within each panel using hte DispositionResource.
 
 ### Chat Widget
 

@@ -31,11 +31,15 @@ class TicketDisposition extends Model
         });
 
         static::saved(function ($model) {
-            Cache::forget(static::getPanelCacheKey());
+            $panel = $model->panel ? $model->panel : Filament::getCurrentPanel()?->getId();
+            $cacheKey = 'TicketDisposition::'.($panel ? $panel : '');
+            Cache::forget($cacheKey);
         });
 
         static::deleted(function ($model) {
-            Cache::forget(static::getPanelCacheKey());
+            $panel = $model->panel ? $model->panel : Filament::getCurrentPanel()?->getId();
+            $cacheKey = 'TicketDisposition::'.($panel ? $panel : '');
+            Cache::forget($cacheKey);
         });
 
         static::addGlobalScope('panel', function (Builder $builder) {
@@ -44,24 +48,5 @@ class TicketDisposition extends Model
                 $builder->where('panel', $panel->getId());
             }
         });
-    }
-
-    /**
-     * @return Attribute<array,never>
-     */
-    protected function colorPalette(): Attribute
-    {
-        return Attribute::make(
-            get: fn ($value) => Color::{$this->color},
-        );
-    }
-
-    public static function getPanelCacheKey(?Panel $panel = null): string
-    {
-        if (! $panel) {
-            $panel = Filament::getCurrentPanel();
-        }
-
-        return __METHOD__.'::'.($panel ? $panel->getId() : '');
     }
 }

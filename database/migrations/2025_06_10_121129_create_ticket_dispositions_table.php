@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->string('panel');
             $table->string('display_name');
-            $table->string('color');
             $table->unsignedInteger('order')->default(99);
             $table->timestamps();
             $table->softDeletes();
