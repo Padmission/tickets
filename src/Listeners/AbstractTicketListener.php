@@ -15,13 +15,13 @@ abstract class AbstractTicketListener
 {
     public function handle(TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event): void
     {
-        collect([$event->ticket->assignee,$event->ticket->submitter])
+        collect([$event->ticket->assignee, $event->ticket->submitter])
             ->unique()
-            ->map(function(Authorizable $user) use ($event) {
+            ->map(function (Authorizable $user) use ($event) {
 
                 $type = strtolower(Str::chopStart(class_basename(get_class($event)), 'Ticket'));
 
-                if (!$type) {
+                if (! $type) {
                     return;
                 }
 
@@ -29,7 +29,6 @@ abstract class AbstractTicketListener
                  * Send them the notification from the email that is debounced.
                  */
                 $strategy = $user->ticketNotificationStrategy ?? 'debounced';
-
 
                 if ($strategy === 'immediate') {
                     NotificationJob::dispatch($user, $event->ticket, $type);

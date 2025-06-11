@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Padmission\Tickets\Models\Traits;
 
 trait HasNotificationStrategy
@@ -18,6 +17,7 @@ trait HasNotificationStrategy
     public function notificationSettings()
     {
         dd(__LINE__);
+
         return $this->hasMany(\YourVendor\NotificationPackage\Models\NotificationSetting::class);
     }
 

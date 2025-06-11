@@ -8,8 +8,6 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
-use Padmission\Tickets\TicketPlugin;
-
 
 abstract class AbstractTicketHistoryNotification extends Notification
 {
@@ -49,13 +47,13 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ->get()
             ->map(function (TicketActivity $message) use ($notifiable) {
                 $message->side = match (true) {
-                $message->sender === ActivitySender::System => 'system',
-                $message->sender === $notifiable => 'me',
-                default => 'other',
-            };
+                    $message->sender === ActivitySender::System => 'system',
+                    $message->sender === $notifiable => 'me',
+                    default => 'other',
+                };
 
-            return $message;
-        });
+                return $message;
+            });
 
         if ($lastNotification) {
             $lastNotification->update([
@@ -70,7 +68,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
         $message = (new MailMessage)
             ->subject(__('padmission-tickets::notifications.ticket-created.subject'));
 
-        foreach($activities as $activity) {
+        foreach ($activities as $activity) {
             /**
              * TODO: These need to be built out.
              */
@@ -80,9 +78,8 @@ abstract class AbstractTicketHistoryNotification extends Notification
         /**
          * TODO: Talk with Dennis to see how he wants to get anchors to the chat.
          */
-//        dd($this->ticket->panel);
+        //        dd($this->ticket->panel);
         //      ->action(__('padmission-tickets::notifications.ticket-created.action'), TicketResource::getUrl('view', ['record' => $this->ticket]));
-
 
         return $message;
     }

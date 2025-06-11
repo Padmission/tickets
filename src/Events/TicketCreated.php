@@ -11,7 +11,5 @@ class TicketCreated
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Ticket $ticket) {
-
-    }
+    public function __construct(public Ticket $ticket) {}
 }

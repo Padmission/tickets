@@ -11,10 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
 
-class NotificationJob implements ShouldQueue, ShouldBeUnique
+class NotificationJob implements ShouldBeUnique, ShouldQueue
 {
     use Debounceable;
     use Dispatchable;
@@ -23,7 +22,9 @@ class NotificationJob implements ShouldQueue, ShouldBeUnique
     use SerializesModels;
 
     protected string|int $userId;
+
     protected string $modelType;
+
     protected string|int $modelId;
 
     public function __construct(
@@ -45,7 +46,7 @@ class NotificationJob implements ShouldQueue, ShouldBeUnique
         try {
             $notificationClass = $this->getNotificationClass();
 
-            if (!$notificationClass) {
+            if (! $notificationClass) {
                 return;
             }
 
@@ -56,28 +57,31 @@ class NotificationJob implements ShouldQueue, ShouldBeUnique
 
             $user->notify(new $notificationClass($record));
 
-            logger("Debounced job executed: ".$this->uniqueId());
+            logger('Debounced job executed: '.$this->uniqueId());
         } catch (\Exception $e) {
 
         }
 
     }
 
-    protected function getNotificationClass() : string|null {
+    protected function getNotificationClass(): ?string
+    {
         $notifications = config('padmission-tickets.notifications', []);
-        if (!array_key_exists($this->notificationType, $notifications)) {
+        if (! array_key_exists($this->notificationType, $notifications)) {
             return null;
         }
-        if (!$notifications[$this->notificationType]) {
+        if (! $notifications[$this->notificationType]) {
             return null;
         }
+
         return $notifications[$this->notificationType];
     }
 
     /**
      * Get the unique ID for the job.
      */
-    public function uniqueId(): string {
+    public function uniqueId(): string
+    {
         return $this->modelType.'-'.$this->modelId.'-'.$this->userId;
     }
 }

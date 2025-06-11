@@ -63,5 +63,5 @@ return [
         'assigned' => Padmission\Tickets\Notifications\TicketAssignedNotification::class,
         'closed' => Padmission\Tickets\Notifications\TicketClosedNotification::class,
         'created' => Padmission\Tickets\Notifications\TicketCreatedNotification::class,
-    ]
+    ],
 ];

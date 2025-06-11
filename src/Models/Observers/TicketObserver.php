@@ -43,7 +43,6 @@ class TicketObserver
         // $assignmentStrategy->assign($ticket);
     }
 
-
     protected function handlePriorityTransition(Ticket $ticket): void
     {
         if ($ticket->isDirty('priority_id')) {
@@ -78,10 +77,10 @@ class TicketObserver
         }
     }
 
-    public function saving(Ticket $ticket): void {
+    public function saving(Ticket $ticket): void {}
 
-    }
-    public function saved(Ticket $ticket): void {
+    public function saved(Ticket $ticket): void
+    {
         if ($ticket->wasChanged('assignee_id')) {
             $old = $ticket->getOriginal('assignee_id');
             $new = $ticket->assignee_id;

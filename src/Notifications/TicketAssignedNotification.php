@@ -2,5 +2,4 @@
 
 namespace Padmission\Tickets\Notifications;
 
-class TicketAssignedNotification extends AbstractTicketHistoryNotification {
-}
+class TicketAssignedNotification extends AbstractTicketHistoryNotification {}

@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets;
 
-use App\Models\User;
 use Dotenv\Dotenv;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
@@ -66,7 +65,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         $this->app->alias(NotificationManager::class, 'notification-strategies');
     }
 
-        private function registerCssFiles(): void
+    private function registerCssFiles(): void
     {
         $files = [
             __DIR__.'/../resources/css/chat-component.css',

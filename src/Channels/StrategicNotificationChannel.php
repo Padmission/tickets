@@ -2,15 +2,12 @@
 
 namespace Padmission\Tickets\Channels;
 
-
 use Illuminate\Notifications\Notification;
 use Padmission\Tickets\Managers\NotificationManager;
 
 class StrategicNotificationChannel
 {
-    public function __construct(protected NotificationManager $manager)
-    {
-    }
+    public function __construct(protected NotificationManager $manager) {}
 
     public function send($notifiable, Notification $notification)
     {
@@ -29,6 +26,7 @@ class StrategicNotificationChannel
     {
         if (str_contains($strategy, ':')) {
             [$driver, $params] = explode(':', $strategy, 2);
+
             return [$driver, $params];
         }
 
