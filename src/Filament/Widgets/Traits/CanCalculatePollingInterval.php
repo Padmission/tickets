@@ -6,6 +6,10 @@ use Carbon\CarbonInterval;
 
 trait CanCalculatePollingInterval
 {
+    public function getMaxPollingIntervalInSeconds() : int {
+        return min(10, $this->getPollingIntervalInSeconds());
+    }
+
     public function getPollingIntervalInSeconds(): ?int
     {
         return once(function () {
@@ -22,17 +26,6 @@ trait CanCalculatePollingInterval
                     return $interval > 0 ? (int) $interval : null;
                 case 'string':
                     $str = strtolower(trim($interval));
-                    if (in_array($str, ['infinite', 'never', 'none', 'off'], true)) {
-                        return null;
-                    }
-                    try {
-                        if (str_starts_with($str, 'p')) {
-                            $carbonInterval = CarbonInterval::fromString(strtoupper($str));
-
-                            return $carbonInterval->totalSeconds > 0 ? (int) ceil($carbonInterval->totalSeconds) : null;
-                        }
-                    } catch (\Exception $e) {
-                    }
                     if (preg_match('/^(\d+(?:\.\d+)?)\s*([a-z]+)$/', $str, $matches)) {
                         $value = (float) $matches[1];
                         $unit = $matches[2];

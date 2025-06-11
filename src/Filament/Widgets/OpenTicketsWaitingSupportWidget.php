@@ -17,7 +17,7 @@ class OpenTicketsWaitingSupportWidget extends BaseWidget
     {
 
         $metricsService = app(TicketMetricsService::class);
-        $metricsService->setCacheTime($this->getPollingIntervalInSeconds());
+        $metricsService->setCacheTime($this->getMaxPollingIntervalInSeconds());
         $count = $metricsService->getOpenTicketsWaitingOnSupportCount();
 
         return [

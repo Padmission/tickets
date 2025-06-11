@@ -75,7 +75,7 @@ class TicketMetricsWidget extends BaseWidget implements HasForms
         $timeRangePeriod = $this->timeRange === 0 ? null : $this->timeRange;
 
         $metricsService = app(TicketMetricsService::class);
-        $metricsService->setCacheTime($this->getPollingIntervalInSeconds());
+        $metricsService->setCacheTime($this->getMaxPollingIntervalInSeconds());
         $metrics = $metricsService->getAverageCloseTime($timeRangePeriod);
         $detailedMetrics = $metricsService->getCloseTimeMetrics($timeRangePeriod);
 

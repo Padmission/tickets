@@ -19,7 +19,7 @@ class TicketTimeToCloseWidget extends BaseWidget
         $timeRangePeriod = 0;
 
         $metricsService = app(TicketMetricsService::class);
-        $metricsService->setCacheTime($this->getPollingIntervalInSeconds());
+        $metricsService->setCacheTime($this->getMaxPollingIntervalInSeconds());
         $metrics = $metricsService->getAverageCloseTime($timeRangePeriod);
 
         return [

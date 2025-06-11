@@ -15,7 +15,7 @@ class TicketMetricsService
 
     public function setCacheTime(int $seconds): self
     {
-        $this->cacheTimeInSeconds = $seconds ? $seconds : 5;
+        $this->cacheTimeInSeconds = $seconds ?: 5;
 
         return $this;
     }
@@ -74,10 +74,10 @@ class TicketMetricsService
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
-                ->whereNotNull('closed_at');
-            if ($days !== null) {
-                $query->where('created_at', '>=', Carbon::now()->subDays($days));
-            }
+                ->whereNotNull('closed_at')
+                ->when($days, function($sub) use ($days) {
+                    $sub->where('created_at', '>=', Carbon::now()->subDays($days));
+                });
             $result = $query->select([
                 DB::raw('COUNT(*) as total_tickets'),
                 DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
@@ -94,28 +94,9 @@ class TicketMetricsService
         });
     }
 
-    /**
-     * Format a time span in seconds to a human-readable format.
-     * If we plan on selling this, we need to make it i18n compatible.
-     */
     public function formatTimespan(float $seconds): string
     {
-        if ($seconds < 60) {
-            return round($seconds).' seconds';
-        }
-        if ($seconds < 3600) {
-            $minutes = round($seconds / 60, 1);
-
-            return $minutes.' '.($minutes == 1 ? 'minute' : 'minutes');
-        }
-        if ($seconds < 86400) {
-            $hours = round($seconds / 3600, 1);
-
-            return $hours.' '.($hours == 1 ? 'hour' : 'hours');
-        }
-        $days = round($seconds / 86400, 1);
-
-        return $days.' '.($days == 1 ? 'day' : 'days');
+        return now()->subSeconds($seconds)->diffForHumans(syntax: true);
     }
 
     /**
