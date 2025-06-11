@@ -8,7 +8,6 @@ use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
-use Padmission\Tickets\TicketPlugin;
 
 class CloseTicketAction extends Action
 {

@@ -1,6 +1,5 @@
 <?php
 
-use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Dispositions\Pages\ListDispositions;
 use Padmission\Tickets\Models\TicketDisposition;
@@ -44,7 +43,7 @@ it('can create disposition', function () {
         ])
         ->assertHasActionErrors(['display_name'])
         ->callAction('create', [
-            'display_name' => 'New Disposition'
+            'display_name' => 'New Disposition',
         ])
         ->assertHasNoActionErrors();
 

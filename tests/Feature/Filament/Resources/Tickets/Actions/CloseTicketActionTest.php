@@ -1,14 +1,13 @@
 <?php
 
-use Filament\Facades\Filament;
-use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketDisposition;
-use Padmission\Tickets\Models\TicketStatus;
-use Padmission\Tickets\TicketPlugin;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\TicketPlugin;
 
 it('closes ticket', function () {
 
@@ -47,4 +46,3 @@ it('hides action when ticket is closed', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertActionHidden(CloseTicketAction::class);
 });
-

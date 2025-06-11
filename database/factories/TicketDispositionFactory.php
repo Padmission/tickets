@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Database\Factories;
 
-use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Padmission\Tickets\Models\TicketDisposition;
 
