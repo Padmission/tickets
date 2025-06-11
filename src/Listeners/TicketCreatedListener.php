@@ -2,10 +2,4 @@
 
 namespace Padmission\Tickets\Listeners;
 
-use Padmission\Tickets\Events\TicketActivity;
-use Padmission\Tickets\Events\TicketAssigned;
-use Padmission\Tickets\Events\TicketClosed;
-use Padmission\Tickets\Events\TicketCreated;
-
-class TicketCreatedListener extends AbstractTicketListener {
-}
+class TicketCreatedListener extends AbstractTicketListener {}
