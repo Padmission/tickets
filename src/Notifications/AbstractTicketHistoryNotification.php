@@ -22,17 +22,12 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        /**
-         * Determine the last time this user looked at this ticket......
-         */
         $lastNotification = $this->ticket
             ->ticketNotifications()
             ->where('user_id', $notifiable->getKey())
-            ->latest();
+            ->latest()
+            ->first();
 
-        /**
-         * Now load any history since then.
-         */
         $maxEvents = 10;
         $maxDays = 7;
 
@@ -41,7 +36,9 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ->with('user')
             ->where('created_at', '>', now()->subDays($maxDays))
             ->where('created_at', '<=', now())
-            ->where('id', '>', $lastNotification->first()?->id ?? 0)
+            ->when($lastNotification, function($sub) use ($lastNotification) {
+                $sub->where('created_at','>',$lastNotification->created_at)
+            })
             ->orderBy('created_at', 'asc')
             ->limit($maxEvents)
             ->get()
