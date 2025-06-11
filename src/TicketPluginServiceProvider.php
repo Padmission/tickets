@@ -6,10 +6,7 @@ use Dotenv\Dotenv;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
-use Padmission\Tickets\Models\Policies\TicketPolicy;
-use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -27,18 +24,15 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasTranslations()
             ->hasRoutes('api')
-            // TODO: Refactor into install command. For now keep this during development.
-            ->discoversMigrations()
-            ->runsMigrations();
-        //
-        // Gate::policy(
-        //     Ticket::class,
-        //     TicketPolicy::class
-        // );
+            ->discoversMigrations();
     }
 
     public function bootingPackage(): void
     {
+        if (config('padmission-tickets.run_migrations', true)) {
+            $this->package->runsMigrations();
+        }
+
         if ($this->isDevMode()) {
             $this->devConfig = Dotenv::parse(file_get_contents(__DIR__.'/../.env'));
         }
