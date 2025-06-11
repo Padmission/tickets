@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Connection;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Exceptions\DriverNameResolutionException;
@@ -170,7 +171,7 @@ class TicketMetricsService
         });
     }
 
-    protected function getDriverName(Connection $connection): string
+    protected function getDriverName(ConnectionInterface $connection): string
     {
         if (method_exists($connection, 'getDriverName')) {
             return $connection->getDriverName();
