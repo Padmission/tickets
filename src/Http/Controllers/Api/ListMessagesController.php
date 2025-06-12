@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 
@@ -51,7 +52,7 @@ class ListMessagesController
                 'status' => $ticket->status->display_name,
                 'is_closed' => $ticket->isClosed,
             ],
-            'messages' => $messages->values(),
+            'messages' => $messages->values()->map(fn ($message) => TicketActivityMapper::map($message)),
         ];
     }
 

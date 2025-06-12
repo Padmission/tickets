@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Http\DataMappers\TicketMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
@@ -41,9 +42,6 @@ class CreateTicketController
             ],
         ]);
 
-        return [
-            'id' => $ticket->id,
-            'subject' => $ticket->subject,
-        ];
+        return TicketMapper::map($ticket);
     }
 }

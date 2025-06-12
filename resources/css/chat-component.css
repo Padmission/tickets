@@ -36,6 +36,7 @@
 	);
 
 	display: block !important;
+    height: 100%;
 }
 
 .sr-only {
@@ -183,9 +184,14 @@
 			font-style: italic;
 			font-size: 0.875rem;
 		}
+
+        .message__sender {
+            display: none;
+        }
 	}
 
 	.message__content {
+        font-size: 1rem;
 		border-radius: 0.5rem;
 		padding: 0.25rem 0.75rem;
 		word-break: break-word;
@@ -193,7 +199,7 @@
 
 	.message__sender {
 		font-size: 0.75rem;
-		margin-top: 0.25rem;
+		margin-top: 0.1rem;
 		opacity: 0.8;
 	}
 }

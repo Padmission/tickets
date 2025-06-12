@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Http\Controllers\Api;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Padmission\Tickets\Http\DataMappers\TicketMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -24,14 +25,7 @@ class ListTicketsController
             ->get();
 
         return [
-            'tickets' => $tickets
-                ->map(fn ($ticket) => [
-                    'id' => $ticket->id,
-                    'subject' => $ticket->subject,
-                    'latest_message' => str($ticket->latestMessage?->content)->stripTags()->words(20),
-                    'updated_at' => $ticket->updated_at->diffForHumans(),
-                    'is_closed' => $ticket->isClosed,
-                ]),
+            'tickets' => $tickets->map(fn ($ticket) => TicketMapper::map($ticket)),
         ];
     }
 }

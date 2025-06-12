@@ -9,6 +9,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\TicketPlugin;
@@ -32,7 +33,7 @@ class CreateMessageController
 
         $ticket = $ticketModel::findOrFail($ticket);
 
-        $messages = [];
+        $messages = collect();
         $content = (new Editor)->sanitize($validated['content']);
 
         $isFirstActivity = ! $ticket->ticketActivities()->exists();
@@ -46,21 +47,21 @@ class CreateMessageController
             'sender' => $request->user()->id === $ticket->submitter_id
                 ? ActivitySender::User
                 : ActivitySender::Supporter,
-
             'content' => $content,
         ]);
 
         $activity->side = ActivitySide::Me;
-        $messages[] = $activity;
+
+        $messages->push($activity);
 
         $this->handleTurnChange($ticket, $activity, $validated['lock_turn']);
 
         if ($isFirstActivity) {
-            $messages[] = $this->createAutoResponse($ticket);
+            $messages->push($this->createAutoResponse($ticket));
         }
 
         return [
-            'messages' => $messages,
+            'messages' => $messages->map(fn ($message) => TicketActivityMapper::map($message)),
         ];
     }
 

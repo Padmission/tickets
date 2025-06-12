@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models;
 
+use Filament\Models\Contracts\HasName;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -35,6 +36,15 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->user_id ??= auth()->user()?->id;
+        });
+    }
+
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(
@@ -47,6 +57,34 @@ class TicketActivity extends Model
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(Authenticatable::class)
         );
+    }
+
+    /**
+     * @return Attribute<string,never>
+     */
+    protected function userName(): Attribute
+    {
+        return Attribute::get(function () {
+            if ($this->side === ActivitySide::Me) {
+                return __('padmission-tickets::tickets.side_you');
+            }
+
+            $user = $this->user;
+
+            if (method_exists($user, 'getSupportName')) {
+                return $user->getSupportName();
+            }
+
+            if ($user instanceof HasName) {
+                return $user->getFilamentName();
+            }
+
+            if (isset($user->name)) {
+                return $user->name;
+            }
+
+            return '';
+        });
     }
 
     /**

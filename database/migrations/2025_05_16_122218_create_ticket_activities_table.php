@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('ticket_activities', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id');
+            $table->foreignId('user_id')->nullable();
 
             $table->string('sender');
             $table->string('type');
