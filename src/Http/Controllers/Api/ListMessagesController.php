@@ -19,11 +19,14 @@ class ListMessagesController
 
     public function __invoke(Request $request, Ticket $ticket)
     {
-        $this->authorize('view', $ticket);
-
         $currentSender = $request->user()->id === $ticket->submitter_id
             ? ActivitySender::User
             : ActivitySender::Supporter;
+
+        $isAuthorized = $currentSender !== ActivitySender::User
+            || auth()->user()->can('manage', $ticket);
+
+        abort_unless($isAuthorized, 403);
 
         $messages = $ticket
             ->ticketActivities()

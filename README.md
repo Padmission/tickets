@@ -109,19 +109,22 @@ Gate::policy(
     Ticket::class,
     YourTicketPolicy::class
 );
-
+```
 
 The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
 
 ### Chat Widget
 
-Users can create tickets via a chat widget. To enable the widget in a panel, use the `->showChatWidget()` method:
+Users can create tickets via a chat widget. To enable the widget in a panel, use the `->showChatWidget()` method. You can configure the chat widget via `ChatWidgetConfig`
 
 ```php
-use Padmission\Tickets\TicketPlugin;
+use Filament\Support\Colors\Color;use Padmission\Tickets\ChatWidgetConfig;use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
-    ->showChatWidget();
+    ->showChatWidget(config: ChatWidgetConfig::make()
+        ->introMessage('Welcome to the support chat.')
+        ->primaryColor(Color::Cyan)
+    );
 ```
 
 If you want to render the chat widget outside a Filament panel add the Blade component at the end of your body tag:

@@ -79,17 +79,17 @@ customElements.define(
 			this.initTipTapEditor();
 			this.initIntersectionObserver();
 
-			if (this.defaultMessage) {
-				this.renderMessages([
-					{
-						content: this.defaultMessage,
-						side: "other",
-						created_at: new Date().toISOString(),
-					},
-				]);
-			}
-
 			if (!this.ticketId) {
+                if (this.defaultMessage) {
+                    this.renderMessages([
+                        {
+                            content: this.defaultMessage,
+                            side: "system",
+                            created_at: new Date().toISOString(),
+                        },
+                    ]);
+                }
+
 				return;
 			}
 
@@ -395,11 +395,13 @@ customElements.define(
 				this.messageContent = "";
 				this.editor.commands.clearContent();
 
-				const message = data.message;
-				this.lastMessageId = message.id;
-				this.lastTimestamp = message.created_at;
+				const messages = data.messages;
+                const lastMessage = messages[messages.length - 1]
 
-				this.renderMessages([message]);
+				this.lastMessageId = lastMessage.id;
+				this.lastTimestamp = lastMessage.created_at;
+
+				this.renderMessages(messages);
 				this.scrollToBottom();
 			} catch (error) {
 				console.error("Error sending message:", error);

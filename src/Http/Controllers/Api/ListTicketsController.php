@@ -28,7 +28,7 @@ class ListTicketsController
                 ->map(fn ($ticket) => [
                     'id' => $ticket->id,
                     'subject' => $ticket->subject,
-                    'latest_message' => str($ticket->latestMessage->content)->stripTags()->words(20),
+                    'latest_message' => str($ticket->latestMessage?->content)->stripTags()->words(20),
                     'updated_at' => $ticket->updated_at->diffForHumans(),
                     'is_closed' => $ticket->isClosed,
                 ]),
