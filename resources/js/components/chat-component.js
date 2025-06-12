@@ -80,15 +80,15 @@ customElements.define(
 			this.initIntersectionObserver();
 
 			if (!this.ticketId) {
-                if (this.defaultMessage) {
-                    this.renderMessages([
-                        {
-                            content: this.defaultMessage,
-                            side: "system",
-                            created_at: new Date().toISOString(),
-                        },
-                    ]);
-                }
+				if (this.defaultMessage) {
+					this.renderMessages([
+						{
+							content: this.defaultMessage,
+							side: "system",
+							created_at: new Date().toISOString(),
+						},
+					]);
+				}
 
 				return;
 			}
@@ -396,7 +396,7 @@ customElements.define(
 				this.editor.commands.clearContent();
 
 				const messages = data.messages;
-                const lastMessage = messages[messages.length - 1]
+				const lastMessage = messages[messages.length - 1];
 
 				this.lastMessageId = lastMessage.id;
 				this.lastTimestamp = lastMessage.created_at;
