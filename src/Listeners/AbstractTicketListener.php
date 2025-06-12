@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Listeners;
 
 use Illuminate\Contracts\Auth\Access\Authorizable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Mpbarlow\LaravelQueueDebouncer\Facade\Debouncer;
 use Padmission\Tickets\Events\TicketActivity;
@@ -35,6 +36,14 @@ abstract class AbstractTicketListener
                 } else {
                     $debounceTime = config('padmission-tickets.notification-debounce', 300);
                     $job = new NotificationJob($user, $event->ticket, $type);
+
+                    $jobId = $job->uniqueId();
+
+                    if (Cache::has($jobId)) {
+                        return;
+                    }
+                    Cache::put($jobId, true, 1);
+
                     Debouncer::usingCacheKeyProvider(fn () => $job->uniqueId())
                         ->debounce($job, $debounceTime);
                 }
