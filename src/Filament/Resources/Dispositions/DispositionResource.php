@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Resources\Dispositions;
 
+use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -10,40 +11,33 @@ use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
+use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\TicketPlugin;
 
 class DispositionResource extends Resource
 {
+    use HasResourceConfiguration;
+
     protected static ?string $slug = 'dispositions';
 
-    public static function getModel(): string
-    {
-        return TicketPlugin::resolveModelClass(TicketDisposition::class);
-    }
+    protected static ?string $model = TicketDisposition::class;
 
-    public static function getModelLabel(): string
+    public static function canAccess(): bool
     {
-        return __('padmission-tickets::tickets.resources.dispositions.model_label');
-    }
+        if (! Gate::getPolicyFor(TicketDisposition::class)) {
+            return Filament::auth()->user()->can('viewAny', TicketPlugin::resolveModelClass(Ticket::class));
+        }
 
-    public static function getPluralModelLabel(): string
-    {
-        return __('padmission-tickets::tickets.resources.dispositions.plural_model_label');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('padmission-tickets::tickets.resources.navigation_group');
-    }
-
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-clipboard';
+        return parent::canAccess();
     }
 
     public static function form(Form $form): Form
@@ -53,8 +47,13 @@ class DispositionResource extends Resource
             ->schema([
                 TextInput::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.dispositions.display_name'))
+                    ->columnSpanFull()
                     ->required(),
 
+                ColorSelect::make('color')
+                    ->label(__('padmission-tickets::tickets.resources.dispositions.color'))
+                    ->columnSpanFull()
+                    ->required(),
             ]);
     }
 
@@ -64,6 +63,10 @@ class DispositionResource extends Resource
             ->reorderable('order')
             ->defaultSort('order', 'asc')
             ->columns([
+                ColorColumn::make('color')
+                    ->label(__('padmission-tickets::tickets.resources.dispositions.color'))
+                    ->getStateUsing(fn (TicketDisposition $record) => 'rgb('.$record->colorPalette[600].')'),
+
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.dispositions.display_name')),
             ])

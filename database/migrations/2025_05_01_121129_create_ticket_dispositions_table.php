@@ -10,8 +10,21 @@ return new class extends Migration
     {
         Schema::create('ticket_dispositions', function (Blueprint $table) {
             $table->id();
+
+            if (config('padmission-tickets.tenancy.enabled', false)) {
+                $tenantKey = config('padmission-tickets.tenancy.foreign_key', 'tenant_id');
+                $tenantKeyType = config('padmission-tickets.tenancy.foreign_key_type', 'id');
+
+                match (strtolower($tenantKeyType)) {
+                    'ulid' => $table->foreignUlid($tenantKey)->constrained(),
+                    'uuid' => $table->foreignUuid($tenantKey)->constrained(),
+                    default => $table->foreignId($tenantKey)->constrained(),
+                };
+            }
+
             $table->string('panel');
             $table->string('display_name');
+            $table->string('color');
             $table->unsignedInteger('order')->default(99);
             $table->timestamps();
             $table->softDeletes();

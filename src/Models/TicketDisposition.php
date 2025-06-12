@@ -3,13 +3,14 @@
 namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
+use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Database\Factories\TicketDispositionFactory;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[UseFactory(TicketDispositionFactory::class)]
 class TicketDisposition extends Model
@@ -17,33 +18,26 @@ class TicketDisposition extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'ticket_dispositions';
+    protected string $table = 'ticket_dispositions';
 
-    protected $guarded = [];
+    protected array $guarded = ['id'];
 
-    protected static function booted()
+    protected static function booted(): void
     {
+        static::addGlobalScope(CurrentPanelScope::class);
+
         static::creating(function ($model) {
             $model->panel ??= Filament::getCurrentPanel()->getId();
         });
+    }
 
-        static::saved(function ($model) {
-            $panel = $model->panel ? $model->panel : Filament::getCurrentPanel()?->getId();
-            $cacheKey = 'TicketDisposition::'.($panel ? $panel : '');
-            Cache::forget($cacheKey);
-        });
-
-        static::deleted(function ($model) {
-            $panel = $model->panel ? $model->panel : Filament::getCurrentPanel()?->getId();
-            $cacheKey = 'TicketDisposition::'.($panel ? $panel : '');
-            Cache::forget($cacheKey);
-        });
-
-        static::addGlobalScope('panel', function (Builder $builder) {
-            $panel = Filament::getCurrentPanel();
-            if ($panel) {
-                $builder->where('panel', $panel->getId());
-            }
-        });
+    /**
+     * @return Attribute<array,never>
+     */
+    protected function colorPalette(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => Color::{$this->color},
+        );
     }
 }

@@ -30,9 +30,9 @@ class Ticket extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected array $guarded = ['id'];
 
-    protected $casts = [
+    protected array $casts = [
         'data' => 'array',
         'turn' => Turn::class,
         'submitter_data' => SubmitterData::class,

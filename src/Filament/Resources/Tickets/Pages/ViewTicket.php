@@ -68,6 +68,7 @@ class ViewTicket extends ViewRecord
 
                         TextEntry::make('disposition.display_name')
                             ->badge()
+                            ->color(fn (Ticket $record) => $record->disposition?->colorPalette)
                             ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
                             ->hidden(fn (Ticket $record) => ! $record->disposition_id),
 

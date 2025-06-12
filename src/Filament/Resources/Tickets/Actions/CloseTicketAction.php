@@ -5,7 +5,6 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
-use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
 
@@ -51,11 +50,7 @@ class CloseTicketAction extends Action
 
     protected function dispositionsExist(): bool
     {
-        $panel = Filament::getCurrentPanel();
-        $cacheKey = 'TicketDisposition::'.($panel ? $panel->getId() : '');
-
-        return Cache::rememberForever($cacheKey, function () {
-            return TicketDisposition::exists();
-        });
+        $dispositionModel = \Padmission\Tickets\TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\TicketDisposition::class);
+        return $dispositionModel::query()->exists();
     }
 }

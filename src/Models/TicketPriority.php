@@ -18,14 +18,12 @@ class TicketPriority extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'ticket_priorities';
+    protected string $table = 'ticket_priorities';
 
-    protected $guarded = [];
+    protected array $guarded = ['id'];
 
-    protected static function boot()
+    protected static function booted(): void
     {
-        parent::boot();
-
         static::addGlobalScope(CurrentPanelScope::class);
 
         static::creating(function ($model) {

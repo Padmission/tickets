@@ -25,21 +25,19 @@ class TicketActivity extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'ticket_activities';
+    protected string $table = 'ticket_activities';
 
-    protected $guarded = [];
+    protected array $guarded = ['id'];
 
-    protected $casts = [
+    protected array $casts = [
         'data' => 'array',
         'type' => ActivityType::class,
         'sender' => ActivitySender::class,
         'created_at' => 'immutable_datetime',
     ];
 
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
-
         static::creating(function ($model) {
             $model->user_id ??= auth()->user()?->id;
         });
