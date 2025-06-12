@@ -7,7 +7,10 @@ use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Padmission\Tickets\Models\Policies\TicketPolicy;
+use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -46,9 +49,13 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     private function ensurePolicyIsRegistered(): void
     {
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
         $policy = Gate::getPolicyFor(TicketPlugin::resolveModelClass(Ticket::class));
 
-        if ($policy::class === TicketPolicy::class) {
+        if ($policy === null || $policy::class === TicketPolicy::class) {
             throw new Exception('Provide a TicketPolicy via Gate::policy() facade');
         }
 

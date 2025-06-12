@@ -8,6 +8,8 @@ use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\TicketPriority;
 
 it('lists priorities', function () {
+    $this->login();
+
     TicketPriority::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
     TicketPriority::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
     TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
@@ -22,6 +24,8 @@ it('lists priorities', function () {
 });
 
 it('only shows priorities from current panel', function () {
+    $this->login();
+
     TicketPriority::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
     TicketPriority::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);
 
@@ -29,6 +33,8 @@ it('only shows priorities from current panel', function () {
 });
 
 it('can reorder priorities', function () {
+    $this->login();
+
     TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
     TicketPriority::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
     TicketPriority::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
@@ -44,6 +50,8 @@ it('can reorder priorities', function () {
 });
 
 it('can create priority', function () {
+    $this->login();
+
     Livewire::test(ListPriorities::class)
         ->callAction('create', [
             'display_name' => '',
@@ -64,6 +72,8 @@ it('can create priority', function () {
 });
 
 it('can edit priority', function () {
+    $this->login();
+
     $priority = TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
@@ -82,6 +92,8 @@ it('can edit priority', function () {
 });
 
 it('can delete status', function () {
+    $this->login();
+
     $priority = TicketPriority::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListPriorities::class)
@@ -112,7 +124,7 @@ it('uses ticket viewAny as fallback', function () {
         ->get(PriorityResource::getUrl())
         ->assertForbidden();
 
-    class TestPolicy
+    class PriorityResourceTestPolicy
     {
         public function viewAny(): bool
         {
@@ -120,7 +132,7 @@ it('uses ticket viewAny as fallback', function () {
         }
     }
 
-    Gate::policy(TicketPriority::class, TestPolicy::class);
+    Gate::policy(TicketPriority::class, PriorityResourceTestPolicy::class);
 
     $this
         ->get(PriorityResource::getUrl())
