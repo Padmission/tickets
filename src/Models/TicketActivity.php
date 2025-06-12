@@ -15,7 +15,6 @@ use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Events\TicketActivity as TicketActivityEvent;
-use Padmission\Tickets\Events\TicketClosed;
 use Padmission\Tickets\TicketPlugin;
 
 /**

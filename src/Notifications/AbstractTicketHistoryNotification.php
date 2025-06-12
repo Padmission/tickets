@@ -78,13 +78,14 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 'hasMoreActivities' => $activities->count() >= $maxEvents,
                 'maxDays' => $maxDays,
                 'maxEvents' => $maxEvents,
-                'styles' => $styles
+                'styles' => $styles,
             ]);
 
         return $message;
     }
 
-    protected function getStyles() : string {
+    protected function getStyles(): string
+    {
         $styles = '';
         $basePath = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
         if (file_exists($basePath)) {
@@ -93,6 +94,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
         $styles .= '.inner-body {
             margin-top: 1.25rem;
         }';
+
         return $styles;
     }
 }
