@@ -5,25 +5,32 @@ namespace Padmission\Tickets\Database\Seeders;
 use Filament\Facades\Filament;
 use Illuminate\Database\Seeder;
 use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketDispositionSeeder extends Seeder
 {
     public function run(): void
     {
-        if (TicketDisposition::exists()) {
+        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+
+        if ($dispositionModel::query()->exists()) {
             return;
         }
 
         foreach (Filament::getPanels() as $panel) {
             Filament::setCurrentPanel($panel);
 
-            TicketDisposition::insert([
-                ['display_name' => __('padmission-tickets::dispositions.resolved'), 'panel' => $panel->getId()],
-                ['display_name' => __('padmission-tickets::dispositions.abandoned'), 'panel' => $panel->getId()],
-                ['display_name' => __('padmission-tickets::dispositions.unresolvable'), 'panel' => $panel->getId()],
-                ['display_name' => __('padmission-tickets::dispositions.withdrawn'), 'panel' => $panel->getId()],
-                ['display_name' => __('padmission-tickets::dispositions.testing_training'), 'panel' => $panel->getId()],
-            ]);
+            $data = [
+                ['display_name' => 'Resolved', 'panel' => $panel->getId(), 'order' => 1],
+                ['display_name' => 'Abandoned', 'panel' => $panel->getId(), 'order' => 2],
+                ['display_name' => 'Unresolvable', 'panel' => $panel->getId(), 'order' => 3],
+                ['display_name' => 'Withdrawn', 'panel' => $panel->getId(), 'order' => 4],
+                ['display_name' => 'Testing/Training', 'panel' => $panel->getId(), 'order' => 5],
+            ];
+
+            foreach ($data as $row) {
+                $dispositionModel::create($row);
+            }
         }
     }
 }
