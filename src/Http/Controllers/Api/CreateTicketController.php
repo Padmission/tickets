@@ -35,6 +35,10 @@ class CreateTicketController
             'turn' => Turn::User,
             'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::first()->id,
             'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::first()->id,
+            'data' => [
+                'url' => request()->input('url'),
+                'ip_address' => request()->ip(),
+            ],
         ]);
 
         return [

@@ -356,9 +356,14 @@ customElements.define(
 				.replace(/(<([^>]+)>)/gi, "") // Strip HTML tags
 				.substring(0, 40);
 
+            const url = window.location.origin + window.location.pathname;
+
 			const data = await fetchJson(
 				`/padmission-tickets/api/tickets/`,
-				{ subject },
+				{
+                        subject,
+                        url,
+                    },
 				"POST",
 			);
 
@@ -375,7 +380,6 @@ customElements.define(
 				return;
 			}
 
-			console.log("Ticket:", this.ticketId, !this.ticketId);
 			if (!this.ticketId) {
 				this.ticketId = await this.createTicket();
 				console.log("Created new ticket with ID:", this.ticketId);
