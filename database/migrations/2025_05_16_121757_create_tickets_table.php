@@ -24,16 +24,16 @@ return new class extends Migration
 
             $table->string('escalation_level')->default('default');
             $table->string('subject');
-            $table->foreignId('status_id');
-            $table->foreignId('priority_id');
-            $table->foreignId('disposition_id')->nullable();
-            $table->foreignId('assignee_id')->nullable();
-            $table->unsignedInteger('submitter_id')->nullable();
+            $table->foreignId('status_id')->constrained();
+            $table->foreignId('priority_id')->constrained();
+            $table->foreignId('disposition_id')->nullable()->constrained('ticket_dispositions')->nullOnDelete();
+            $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('submitter_id')->nullable()->constrained('users')->nullOnDelete();
             $table->json('submitter_data')->nullable();
             $table->string('turn');
             $table->json('data')->nullable();
             $table->dateTime('closed_at')->nullable();
-            $table->foreignId('closed_by')->nullable();
+            $table->foreignId('closed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });
