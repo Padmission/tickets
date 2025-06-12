@@ -2,7 +2,8 @@
     :actionUrl="$actionUrl"
     :actionText="$actionText"
     :introLines="$introLines"
-    :outroLines="$outroLines">
+    :outroLines="$outroLines"
+    :styles="$styles">
 
     @if($activities->count())
     <x-slot name="activity">

@@ -30,19 +30,11 @@
         }
     </style>
     {{-- Include Laravel's default mail CSS --}}
+@if(isset($styles))
     <style>
-        <?php
-
-/**
-* TODO: Improve this.
- */
-?>
-{!! file_get_contents(base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css')) !!}
-
-    .inner-body {
-            margin-top: 1.25rem;
-        }
+        {!! $styles !!}
     </style>
+    @endif
     {!! $head ?? '' !!}
 </head>
 <body>
@@ -108,7 +100,16 @@
                                 style="border: hidden !important;">
                                 <table class="inner-body" align="center" width="570" cellpadding="0" cellspacing="0"
                                        role="presentation">
+<tr>
+    <td>
 
+        @if(isset($actionUrl))
+            <x-mail::html.button :url="$actionUrl" class="button test1">
+                {{ $actionText ? $actionText :__('padmission-tickets::emails.ticket-history.action') }}
+            </x-mail::html.button>
+        @endif
+    </td>
+</tr>
                                     @foreach ($outroLines as $line)
                                         <!-- Body content -->
                                         <tr align="center">

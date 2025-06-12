@@ -63,11 +63,14 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ]);
         }
 
+        $styles = $this->getStyles();
+
         $message = (new MailMessage)
             ->subject(__('padmission-tickets::notifications.ticket-created.subject'))
             ->line(__('padmission-tickets::emails.ticket-history.intro'))
             ->action(__('padmission-tickets::notifications.ticket-created.action'), url('/#test'))
             ->line(__('padmission-tickets::emails.ticket-history.outro'))
+
             ->view('padmission-tickets::emails.ticket-history', [
                 'ticket' => $this->ticket,
                 'activitiesHeader' => __('padmission-tickets::emails.ticket-history.activities-header'),
@@ -77,8 +80,21 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 'hasMoreActivities' => $activities->count() >= $maxEvents,
                 'maxDays' => $maxDays,
                 'maxEvents' => $maxEvents,
+                'styles' => $styles
             ]);
 
         return $message;
+    }
+
+    protected function getStyles() : string {
+        $styles = '';
+        $basePath = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
+        if (file_exists($basePath)) {
+            $styles = file_get_contents($basePath);
+        }
+        $styles .= '.inner-body {
+            margin-top: 1.25rem;
+        }';
+        return $styles;
     }
 }
