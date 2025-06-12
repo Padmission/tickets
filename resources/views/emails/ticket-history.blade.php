@@ -68,7 +68,6 @@
                     </tr>
                 </table>
             @endif
-            <br />
         @endforeach
     </x-slot>
     @endif

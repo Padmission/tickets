@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Events\TicketAssigned;
 use Padmission\Tickets\Events\TicketCreated;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
@@ -84,8 +85,7 @@ class TicketObserver
         if ($ticket->wasChanged('assignee_id')) {
             $old = $ticket->getOriginal('assignee_id');
             $new = $ticket->assignee_id;
-            dd($old, $new);
-            // Fire your event here
+            event(new TicketAssigned($ticket));
         }
     }
 }

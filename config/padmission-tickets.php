@@ -63,8 +63,7 @@ return [
             \Padmission\Tickets\Listeners\TicketClosedListener::class,
         ],
         \Padmission\Tickets\Events\TicketCreated::class => [
-            \Padmission\Tickets\Listeners\TicketCreatedListener::class,
-            \Padmission\Tickets\Listeners\TicketCreatedInitialMessageListener::class,
+            \Padmission\Tickets\Listeners\TicketCreatedListener::class
         ],
     ],
     'notifications' => [
@@ -73,4 +72,5 @@ return [
         'closed' => Padmission\Tickets\Notifications\TicketClosedNotification::class,
         'created' => Padmission\Tickets\Notifications\TicketCreatedNotification::class,
     ],
+    'notification-debounce' => 300
 ];

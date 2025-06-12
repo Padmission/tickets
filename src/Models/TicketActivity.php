@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,11 +16,14 @@ use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Events\TicketActivity as TicketActivityEvent;
+use Padmission\Tickets\Models\Observers\TicketActivityObserver;
 use Padmission\Tickets\TicketPlugin;
 
 /**
  * @property ActivitySide $side
  */
+
+#[ObservedBy(TicketActivityObserver::class)]
 #[UseFactory(TicketActivityFactory::class)]
 class TicketActivity extends Model
 {

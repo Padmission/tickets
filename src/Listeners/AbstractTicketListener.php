@@ -33,9 +33,10 @@ abstract class AbstractTicketListener
                 if ($strategy === 'immediate') {
                     NotificationJob::dispatch($user, $event->ticket, $type);
                 } else {
+                    $debounceTime = config('padmission-tickets.notification-debounce', 300);
                     $job = new NotificationJob($user, $event->ticket, $type);
                     Debouncer::usingCacheKeyProvider(fn () => $job->uniqueId())
-                        ->debounce($job, 5);
+                        ->debounce($job, $debounceTime);
                 }
             });
     }
