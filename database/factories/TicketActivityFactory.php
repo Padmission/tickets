@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Database\Factories;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
@@ -13,10 +14,16 @@ class TicketActivityFactory extends Factory
 {
     protected $model = TicketActivity::class;
 
+    public function getModel(): string
+    {
+        return TicketPlugin::resolveModelClass($this->model);
+    }
+
     public function definition(): array
     {
         return [
             'ticket_id' => TicketPlugin::resolveModelClass(Ticket::class)::factory(),
+            'user_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
 
             'sender' => ActivitySender::System,
             'type' => ActivityType::Message,

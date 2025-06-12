@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Http\DataMappers\TicketMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
@@ -35,11 +36,12 @@ class CreateTicketController
             'turn' => Turn::User,
             'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::first()->id,
             'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::first()->id,
+            'data' => [
+                'url' => request()->input('url'),
+                'ip_address' => request()->ip(),
+            ],
         ]);
 
-        return [
-            'id' => $ticket->id,
-            'subject' => $ticket->subject,
-        ];
+        return TicketMapper::map($ticket);
     }
 }

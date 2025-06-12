@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'side_you' => 'You',
+
     'enums' => [
         'turn' => [
             'user' => 'User',

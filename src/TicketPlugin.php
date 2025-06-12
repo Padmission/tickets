@@ -26,6 +26,8 @@ final class TicketPlugin implements Plugin
 
     protected bool $shouldShowChatWidget = false;
 
+    protected ?ChatWidgetConfig $chatWidgetConfig = null;
+
     public static function make(): static
     {
         return new self;
@@ -133,11 +135,17 @@ final class TicketPlugin implements Plugin
         return $this->shouldRegisterResources;
     }
 
-    public function showChatWidget(bool $shouldShow = true): static
+    public function showChatWidget(bool $shouldShow = true, ?ChatWidgetConfig $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;
+        $this->chatWidgetConfig = $config;
 
         return $this;
+    }
+
+    public function getChatWidgetConfig(): ChatWidgetConfig
+    {
+        return $this->chatWidgetConfig ?? new ChatWidgetConfig;
     }
 
     public function shouldShowChatWidget(): bool

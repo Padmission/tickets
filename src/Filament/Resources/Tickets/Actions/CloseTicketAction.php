@@ -25,7 +25,7 @@ class CloseTicketAction extends Action
             ->modalHeading(__('padmission-tickets::tickets.actions.close.modal_heading'))
             ->button()
             ->color('gray')
-            ->hidden(fn (Ticket $record): bool => $record->isClosed)
+            ->hidden(fn ($record): bool => $record->isClosed)
             ->requiresConfirmation()
             ->icon('heroicon-o-check-circle');
 

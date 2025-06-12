@@ -30,7 +30,9 @@ class TicketSeeder extends Seeder
 
             $tickets = [];
 
-            $tickets[] = Ticket::factory()
+            $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+
+            $tickets[] = $ticketModel::factory()
                 ->recycle($statuses)
                 ->recycle($priorities)
                 ->recycle($users)
@@ -39,7 +41,7 @@ class TicketSeeder extends Seeder
                     'turn' => Turn::User,
                 ]);
 
-            $tickets[] = Ticket::factory()
+            $tickets[] = $ticketModel::factory()
                 ->recycle($statuses)
                 ->recycle($priorities)
                 ->recycle($users)
@@ -48,7 +50,7 @@ class TicketSeeder extends Seeder
                     'turn' => Turn::Supporter,
                 ]);
 
-            $tickets[] = Ticket::factory()
+            $tickets[] = $ticketModel::factory()
                 ->recycle($statuses)
                 ->recycle($priorities)
                 ->recycle($users)
@@ -58,7 +60,7 @@ class TicketSeeder extends Seeder
                     'turn' => Turn::Supporter,
                 ]);
 
-            $tickets[] = Ticket::factory()
+            $tickets[] = $ticketModel::factory()
                 ->recycle($statuses)
                 ->recycle($priorities)
                 ->recycle($users)
@@ -69,66 +71,90 @@ class TicketSeeder extends Seeder
                 ]);
 
             foreach ($tickets as $ticket) {
-                $this->addActivities($ticket);
+                $this->addActivities($ticket, $users);
             }
         }
     }
 
-    protected function addActivities(Ticket $ticket): void
+    /**
+     * @param  Ticket  $ticket
+     */
+    protected function addActivities($ticket, $users): void
     {
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'type' => ActivityType::Opened,
-            'content' => null,
-        ]);
+        $ticketActivityModel = TicketPlugin::resolveModelClass(TicketActivity::class);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::Supporter,
-            'content' => str()->markdown("# Welcome to Support\nHello there! I'm Sarah from the support team. How can I assist you today?"),
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::User,
-            'content' => str()->markdown("Hi Sarah, thanks for the quick response! I'm having trouble with the app's login feature. When I try to sign in, I keep getting an **\"Invalid Credentials\"** error, even though I'm *certain* my password is correct."),
-        ]);
+            ->create([
+                'ticket_id' => $ticket->id,
+                'type' => ActivityType::Opened,
+                'content' => null,
+            ]);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::Supporter,
-            'content' => str()->markdown("I understand how frustrating that can be. Let's troubleshoot this together:\n\n1. First, please try resetting your password using the \"Forgot Password\" link\n2. Make sure caps lock is turned off\n3. Clear your browser cache and cookies\n\nCould you try these steps and let me know if they help?"),
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::Supporter,
+                'content' => str()->markdown("# Welcome to Support\nHello there! I'm Sarah from the support team. How can I assist you today?"),
+            ]);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::User,
-            'content' => str()->markdown("I've just tried resetting my password and it worked! I can log in now. I think the issue might have been that I recently changed my email address, but the system was still trying to use my old credentials.\n\nThank you for your help!"),
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::User,
+                'content' => str()->markdown("Hi Sarah, thanks for the quick response! I'm having trouble with the app's login feature. When I try to sign in, I keep getting an **\"Invalid Credentials\"** error, even though I'm *certain* my password is correct."),
+            ]);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::Supporter,
-            'content' => str()->markdown("Excellent! I'm glad to hear that the password reset solved your issue. That's a common occurrence when email addresses are changed.\n\n> **TIP:** Remember to update your email address in all connected services to avoid similar issues in the future.\n\nIs there anything else I can help you with today?"),
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::Supporter,
+                'content' => str()->markdown("I understand how frustrating that can be. Let's troubleshoot this together:\n\n1. First, please try resetting your password using the \"Forgot Password\" link\n2. Make sure caps lock is turned off\n3. Clear your browser cache and cookies\n\nCould you try these steps and let me know if they help?"),
+            ]);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::User,
-            'content' => str()->markdown("No, that's all for now. Thanks for the quick and effective support!"),
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::User,
+                'content' => str()->markdown("I've just tried resetting my password and it worked! I can log in now. I think the issue might have been that I recently changed my email address, but the system was still trying to use my old credentials.\n\nThank you for your help!"),
+            ]);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::Supporter,
-            'content' => str()->markdown("You're very welcome! If you have any other questions in the future, don't hesitate to reach out to us. Have a great day! 😊"),
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::Supporter,
+                'content' => str()->markdown("Excellent! I'm glad to hear that the password reset solved your issue. That's a common occurrence when email addresses are changed.\n\n> **TIP:** Remember to update your email address in all connected services to avoid similar issues in the future.\n\nIs there anything else I can help you with today?"),
+            ]);
 
-        TicketActivity::factory()->create([
-            'ticket_id' => $ticket->id,
-            'sender' => ActivitySender::System,
-            'type' => ActivityType::Closed,
-            'content' => null,
-        ]);
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::User,
+                'content' => str()->markdown("No, that's all for now. Thanks for the quick and effective support!"),
+            ]);
+
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::Supporter,
+                'content' => str()->markdown("You're very welcome! If you have any other questions in the future, don't hesitate to reach out to us. Have a great day! 😊"),
+            ]);
+
+        $ticketActivityModel::factory()
+            ->recycle($users)
+            ->create([
+                'ticket_id' => $ticket->id,
+                'sender' => ActivitySender::System,
+                'type' => ActivityType::Closed,
+                'content' => null,
+            ]);
     }
 }

@@ -11,10 +11,9 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
@@ -22,34 +21,11 @@ use Padmission\Tickets\TicketPlugin;
 
 class TicketResource extends Resource
 {
+    use HasResourceConfiguration;
+
     protected static ?string $slug = 'tickets';
 
-    public static function getModel(): string
-    {
-        return TicketPlugin::resolveModelClass(Ticket::class);
-    }
-
-    public static function getModelLabel(): string
-    {
-        return __('padmission-tickets::tickets.resources.tickets.model_label');
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return __('padmission-tickets::tickets.resources.tickets.plural_model_label');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('padmission-tickets::tickets.resources.navigation_group');
-    }
-
-    public static function getNavigationIcon(): string|Htmlable|null
-    {
-        return new HtmlString(<<<'HTML'
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-headset-icon lucide-headset"><path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/><path d="M21 16v2a4 4 0 0 1-4 4h-5"/></svg>
-        HTML);
-    }
+    protected static ?string $model = Ticket::class;
 
     public static function table(Table $table): Table
     {
@@ -143,8 +119,6 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $plugin = TicketPlugin::get();
-
-        return parent::getEloquentQuery()->where('escalation_level', $plugin->getEscalationLevel());
+        return parent::getEloquentQuery();
     }
 }

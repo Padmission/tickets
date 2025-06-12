@@ -3,15 +3,17 @@
 namespace Padmission\Tickets;
 
 use Dotenv\Dotenv;
+use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
-use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+
+define('TICKET_PLUGIN_DIR', __DIR__.'/..');
 
 class TicketPluginServiceProvider extends PackageServiceProvider
 {
@@ -25,24 +27,59 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasTranslations()
             ->hasRoutes('api')
-            // TODO: Refactor into install command. For now keep this during development.
-            ->discoversMigrations()
-            ->runsMigrations();
-        //
-        // Gate::policy(
-        //     Ticket::class,
-        //     TicketPolicy::class
-        // );
+            ->discoversMigrations();
     }
 
     public function bootingPackage(): void
     {
+        if (config('padmission-tickets.run_migrations', true)) {
+            $this->package->runsMigrations();
+        }
+
+        $this->ensurePolicyIsRegistered();
+
         if ($this->isDevMode()) {
             $this->devConfig = Dotenv::parse(file_get_contents(__DIR__.'/../.env'));
         }
 
         $this->registerCssFiles();
         $this->registerBrowserSync();
+    }
+
+    private function ensurePolicyIsRegistered(): void
+    {
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
+        $policy = Gate::getPolicyFor(
+            TicketPlugin::resolveModelClass(Ticket::class)
+        );
+
+        if ($policy === null) {
+            throw new Exception('Register a TicketPolicy via Gate::policy() facade in a ServiceProvider::register() method.');
+        }
+
+        /*
+         * We want to make sure users register a policy with certain methods.
+         * Because PHPs parameter types are contravariant we don't want to
+         * provide a class or interface to implement because we cannot provide
+         * type hints like `Authenticatable` in the methods leading to devs not
+         * able to define their own type hints as well.
+         */
+        $requiredMethods = [
+            'viewAny',
+            'create',
+            'manage',
+            'escalate',
+            'delete',
+        ];
+
+        foreach ($requiredMethods as $method) {
+            if (! method_exists($policy, $method)) {
+                throw new Exception("The policy should implement '$method()' method");
+            }
+        }
     }
 
     private function registerCssFiles(): void
