@@ -99,16 +99,6 @@
                                 style="border: hidden !important;">
                                 <table class="inner-body" align="center" width="570" cellpadding="0" cellspacing="0"
                                        role="presentation">
-<tr>
-    <td>
-
-        @if(isset($actionUrl))
-            <x-mail::html.button :url="$actionUrl" class="button test1">
-                {{ $actionText ? $actionText :__('padmission-tickets::emails.ticket-history.action') }}
-            </x-mail::html.button>
-        @endif
-    </td>
-</tr>
                                     @foreach ($outroLines as $line)
                                         <!-- Body content -->
                                         <tr align="center">
