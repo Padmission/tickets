@@ -40,26 +40,33 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ]);
         }
 
+        $hasMoreActivities = $activities->count() >= $maxEvents;
+
         $styles = $this->getStyles();
 
         $message = (new MailMessage)
             ->subject($this->getEmailSubject())
             ->line(__('padmission-tickets::notifications.ticket-history.intro'))
-            ->action(__('padmission-tickets::notifications.ticket-history.action'), $this->getActionUrl())
-            ->line(__('padmission-tickets::notifications.ticket-history.outro'))
+            ->action(__('padmission-tickets::notifications.ticket-history.action'), $this->getActionUrl());
+
+        if ($hasMoreActivities) {
+            $message->line(__('padmission-tickets::notifications.ticket-history.more-activities'));
+        }
+
+        $message->line(__('padmission-tickets::notifications.ticket-history.outro'));
+
+        return $message
             ->view($this->getEmailView(), [
                 'ticket' => $this->ticket,
                 'activitiesHeader' => __('padmission-tickets::notifications.ticket-history.activities-header'),
                 'activities' => $activities,
                 'lastNotificationDate' => $lastNotification?->created_at,
                 'totalActivities' => $activities->count(),
-                'hasMoreActivities' => $activities->count() >= $maxEvents,
+                'hasMoreActivities' => $hasMoreActivities,
                 'maxDays' => $maxDays,
                 'maxEvents' => $maxEvents,
                 'styles' => $styles,
             ]);
-
-        return $message;
     }
 
     public function getLastNotification($notifiable) {
@@ -114,15 +121,19 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     protected function addHash(string $url, string $hash): string
     {
-        // Validate URL
         validator(['url' => $url], ['url' => 'required|url'])->validate();
 
-        // Remove existing hash and add new one
         $baseUrl = Str::before($url, '#');
         $cleanHash = Str::start(ltrim($hash, '#'), '#');
 
         return $baseUrl . $cleanHash;
     }
+
+    /**
+     * TODO: This needs to be drastically refactored.  I'm not sure of how we should handle this. We have to bring
+     * Laravel's default styles in to our own view, so it's a starting point to get the MVP out for training.
+     * @return string
+     */
 
     protected function getStyles(): string
     {
