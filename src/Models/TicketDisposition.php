@@ -18,9 +18,9 @@ class TicketDisposition extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected string $table = 'ticket_dispositions';
+    protected $table = 'ticket_dispositions';
 
-    protected array $guarded = ['id'];
+    protected $guarded = ['id'];
 
     protected static function booted(): void
     {

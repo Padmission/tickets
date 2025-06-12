@@ -18,9 +18,9 @@ class TicketPriority extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected string $table = 'ticket_priorities';
+    protected $table = 'ticket_priorities';
 
-    protected array $guarded = ['id'];
+    protected $guarded = ['id'];
 
     protected static function booted(): void
     {

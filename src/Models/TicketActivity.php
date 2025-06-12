@@ -25,11 +25,11 @@ class TicketActivity extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected string $table = 'ticket_activities';
+    protected $table = 'ticket_activities';
 
-    protected array $guarded = ['id'];
+    protected $guarded = ['id'];
 
-    protected array $casts = [
+    protected $casts = [
         'data' => 'array',
         'type' => ActivityType::class,
         'sender' => ActivitySender::class,
