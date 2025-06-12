@@ -13,6 +13,11 @@ class TicketActivityFactory extends Factory
 {
     protected $model = TicketActivity::class;
 
+    public function getModel(): string
+    {
+        return TicketPlugin::resolveModelClass($this->model);
+    }
+
     public function definition(): array
     {
         return [
