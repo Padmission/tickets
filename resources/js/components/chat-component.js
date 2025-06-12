@@ -356,14 +356,14 @@ customElements.define(
 				.replace(/(<([^>]+)>)/gi, "") // Strip HTML tags
 				.substring(0, 40);
 
-            const url = window.location.origin + window.location.pathname;
+			const url = window.location.origin + window.location.pathname;
 
 			const data = await fetchJson(
 				`/padmission-tickets/api/tickets/`,
 				{
-                        subject,
-                        url,
-                    },
+					subject,
+					url,
+				},
 				"POST",
 			);
 

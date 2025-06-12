@@ -34,28 +34,28 @@ customElements.define(
 				this.changeView(viewName, attributes);
 			});
 
-            this.openTicketByHash()
+			this.openTicketByHash();
 		}
 
-        openTicketByHash() {
-            const hash = window.location.hash
+		openTicketByHash() {
+			const hash = window.location.hash;
 
-            if (! hash || ! hash.startsWith('#ticket-')) {
-                return
-            }
+			if (!hash || !hash.startsWith("#ticket-")) {
+				return;
+			}
 
-            const ticketId =  hash.substring(8);
+			const ticketId = hash.substring(8);
 
-            if (! ticketId) {
-                return
-            }
+			if (!ticketId) {
+				return;
+			}
 
-            this.changeView('chat-view-ticket', {
-                ticketId: ticketId,
-            })
+			this.changeView("chat-view-ticket", {
+				ticketId: ticketId,
+			});
 
-            this.shadowRoot.querySelector("dialog").show();
-        }
+			this.shadowRoot.querySelector("dialog").show();
+		}
 
 		changeView(viewName, attributes = {}) {
 			const view = document.createElement(viewName);
