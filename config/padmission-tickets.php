@@ -72,5 +72,7 @@ return [
         'closed' => Padmission\Tickets\Notifications\TicketClosedNotification::class,
         'created' => Padmission\Tickets\Notifications\TicketCreatedNotification::class,
     ],
-    'notification-debounce' => 300
+    'notification-debounce' => 300,
+    'notification-max-days' => 7,
+    'notification-max-events' => 10,
 ];

@@ -26,8 +26,8 @@ abstract class AbstractTicketHistoryNotification extends Notification
     {
         $lastNotification = $this->getLastNotification($notifiable);
 
-        $maxEvents = 10;
-        $maxDays = 7;
+        $maxEvents = config('padmission-tickets.notification-max-days',7);
+        $maxDays = config('padmission-tickets.notification-max-events',7);
 
         $activities = $this->getUnreadActions($notifiable, $maxEvents, $maxDays);
 
