@@ -254,7 +254,7 @@ customElements.define(
 			this.observeMessages();
 		}
 
-    startPolling() {
+		startPolling() {
 			this.pollingInterval = setInterval(
 				() => this.loadMessages(),
 				this.pollingIntervalMs,
