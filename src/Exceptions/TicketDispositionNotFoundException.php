@@ -6,28 +6,15 @@ use Exception;
 
 class TicketDispositionNotFoundException extends Exception
 {
-    /**
-     * Contextual data about the error (e.g., attempted disposition ID or input).
-     *
-     * @var mixed
-     */
-    protected $context;
+    protected mixed $context;
 
-    /**
-     * @param  mixed  $context
-     */
-    public function __construct($context = null)
+    public function __construct(mixed $context = null)
     {
         parent::__construct('Ticket Disposition not found.');
         $this->context = $context;
     }
 
-    /**
-     * Get the context for this exception.
-     *
-     * @return mixed
-     */
-    public function getContext()
+    public function getContext(): mixed
     {
         return $this->context;
     }
