@@ -105,7 +105,7 @@ class TicketResource extends Resource
                     ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
                     ->tooltip(fn (?CarbonImmutable $state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
                     ->sortable(),
-                TextColumn::make('panel')
+                TextColumn::make('panel'),
             ])
             ->filters([
                 SelectFilter::make('status')

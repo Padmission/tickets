@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models\Scopes;
 
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Database\Query\Builder;
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 
