@@ -4,6 +4,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Config;
 
 return [
+    'run_migrations' => true,
+
     /**
      * Swap package models (left) with your own model (right).
      * Your models should extend the package models to ensure type safety.
@@ -17,6 +19,12 @@ return [
         Padmission\Tickets\Models\TicketNotification::class => Padmission\Tickets\Models\TicketNotification::class,
         Padmission\Tickets\Models\TicketPriority::class => Padmission\Tickets\Models\TicketPriority::class,
         Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
+    ],
+
+    'tenancy' => [
+        'enabled' => false,
+        'foreign_key' => 'tenant_id',
+        'foreign_key_type' => 'id', // options: 'id', 'ulid', 'uuid'
     ],
 
     'levels' => [

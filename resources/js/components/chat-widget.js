@@ -33,6 +33,28 @@ customElements.define(
 
 				this.changeView(viewName, attributes);
 			});
+
+			this.openTicketByHash();
+		}
+
+		openTicketByHash() {
+			const hash = window.location.hash;
+
+			if (!hash || !hash.startsWith("#ticket-")) {
+				return;
+			}
+
+			const ticketId = hash.substring(8);
+
+			if (!ticketId) {
+				return;
+			}
+
+			this.changeView("chat-view-ticket", {
+				ticketId: ticketId,
+			});
+
+			this.shadowRoot.querySelector("dialog").show();
 		}
 
 		changeView(viewName, attributes = {}) {

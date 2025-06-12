@@ -8,9 +8,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\Facades\Blade;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketPriority;
-use Padmission\Tickets\Models\TicketStatus;
 
 class EditTicketAction extends EditAction
 {
@@ -27,7 +24,7 @@ class EditTicketAction extends EditAction
             ->slideOver()
             ->modalWidth(MaxWidth::Medium)
             ->closeModalByClickingAway(false)
-            ->hidden(fn (Ticket $record): bool => $record->isClosed)
+            ->hidden(fn ($record): bool => $record->isClosed)
             ->form([
                 TextInput::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
@@ -39,7 +36,7 @@ class EditTicketAction extends EditAction
                     ->allowHtml()
                     ->native(false)
                     ->relationship('status', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
-                    ->getOptionLabelFromRecordUsing(function (TicketStatus $status) {
+                    ->getOptionLabelFromRecordUsing(function ($record) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
                                 <x-filament::badge
@@ -50,7 +47,7 @@ class EditTicketAction extends EditAction
                                 </x-filament::badge>
                             </div>
                         HTML, [
-                            'status' => $status,
+                            'status' => $record,
                         ]);
                     })
                     ->required(),
@@ -60,7 +57,7 @@ class EditTicketAction extends EditAction
                     ->allowHtml()
                     ->native(false)
                     ->relationship('priority', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
-                    ->getOptionLabelFromRecordUsing(function (TicketPriority $priority) {
+                    ->getOptionLabelFromRecordUsing(function ($record) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
                                 <x-filament::badge :color="$priority->colorPalette" size="sm">
@@ -68,7 +65,7 @@ class EditTicketAction extends EditAction
                                 </x-filament::badge>
                             </div>
                         HTML, [
-                            'priority' => $priority,
+                            'priority' => $record,
                         ]);
                     })
                     ->required(),

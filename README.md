@@ -71,7 +71,7 @@ $panel->plugin(TicketPlugin::make());
 
 ### Resources
 
-The package comes with a set of Filament resources to manage tickets. If you want to to manage tickets via this Filament panel, you can use `->registerResources()`` method:
+The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use `->registerResources()` method:
 
 ```php
 use Padmission\Tickets\TicketPlugin;
@@ -80,15 +80,51 @@ TicketPlugin::make()
     ->registerResources();
 ```
 
-### Chat Widget
-
-Users can create tickets via a chat widget. To enable the widget in a panel, use the `->showChatWidget()` method:
+For each resource you can easily overwrite it's label, navigation group, and navigation icon:
 
 ```php
-use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;class YourServiceProvider {
+    public function boot() {
+        TicketResource::configure(
+            modelLabel: 'Your Label',
+            pluralModelLabel: fn () => __('your.model'),
+            navigationGroup: 'New Group',
+            navigationIcon: 'heroicon-o-tag' 
+        );
+    }
+}
+```
+
+### Authentication
+
+As it's hard to predict your authentication requirements, we don't define any for you. You *must* bring your own `TicketPolicy` and define scopes for Users and Ticket.
+
+```php
+use Filament\Facades\Filament;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;\Illuminate\Support\Facades\Gate;
+
+// Define your policy, which extends from `TicketPolicy`
+Gate::policy(
+    Ticket::class,
+    YourTicketPolicy::class
+);
+```
+
+The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
+
+### Chat Widget
+
+Users can create tickets via a chat widget. To enable the widget in a panel, use the `->showChatWidget()` method. You can configure the chat widget via `ChatWidgetConfig`
+
+```php
+use Filament\Support\Colors\Color;use Padmission\Tickets\ChatWidgetConfig;use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
-    ->showChatWidget();
+    ->showChatWidget(config: ChatWidgetConfig::make()
+        ->introMessage('Welcome to the support chat.')
+        ->primaryColor(Color::Cyan)
+    );
 ```
 
 If you want to render the chat widget outside a Filament panel add the Blade component at the end of your body tag:

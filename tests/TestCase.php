@@ -17,9 +17,12 @@ use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\Concerns\InteractsWithViews;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\TicketPluginServiceProvider;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
@@ -61,6 +64,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
     protected function defineEnvironment($app): void
     {
         config()->set('padmission-tickets.models.'.Authenticatable::class, \Padmission\Tickets\Tests\User::class);
+
+        Gate::policy(Ticket::class, TestTicketPolicy::class);
 
         Filament::registerPanel(fn () => Panel::make()
             ->default()

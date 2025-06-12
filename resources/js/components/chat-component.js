@@ -79,17 +79,17 @@ customElements.define(
 			this.initTipTapEditor();
 			this.initIntersectionObserver();
 
-			if (this.defaultMessage) {
-				this.renderMessages([
-					{
-						content: this.defaultMessage,
-						side: "other",
-						created_at: new Date().toISOString(),
-					},
-				]);
-			}
-
 			if (!this.ticketId) {
+				if (this.defaultMessage) {
+					this.renderMessages([
+						{
+							content: this.defaultMessage,
+							side: "system",
+							created_at: new Date().toISOString(),
+						},
+					]);
+				}
+
 				return;
 			}
 
@@ -356,9 +356,14 @@ customElements.define(
 				.replace(/(<([^>]+)>)/gi, "") // Strip HTML tags
 				.substring(0, 40);
 
+			const url = window.location.origin + window.location.pathname;
+
 			const data = await fetchJson(
 				`/padmission-tickets/api/tickets/`,
-				{ subject },
+				{
+					subject,
+					url,
+				},
 				"POST",
 			);
 
@@ -375,7 +380,6 @@ customElements.define(
 				return;
 			}
 
-			console.log("Ticket:", this.ticketId, !this.ticketId);
 			if (!this.ticketId) {
 				this.ticketId = await this.createTicket();
 				console.log("Created new ticket with ID:", this.ticketId);
@@ -395,11 +399,13 @@ customElements.define(
 				this.messageContent = "";
 				this.editor.commands.clearContent();
 
-				const message = data.message;
-				this.lastMessageId = message.id;
-				this.lastTimestamp = message.created_at;
+				const messages = data.messages;
+				const lastMessage = messages[messages.length - 1];
 
-				this.renderMessages([message]);
+				this.lastMessageId = lastMessage.id;
+				this.lastTimestamp = lastMessage.created_at;
+
+				this.renderMessages(messages);
 				this.scrollToBottom();
 			} catch (error) {
 				console.error("Error sending message:", error);
@@ -409,6 +415,12 @@ customElements.define(
 		render() {
 			// biome-ignore format: preserve template formatting
 			return render(`
+                <style>
+                    :host {
+                        display: none;
+                    }
+                </style>
+
                 <div class="chat">
                     <div class="message-list" data-chat-messages>
 

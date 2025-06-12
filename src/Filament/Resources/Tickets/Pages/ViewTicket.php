@@ -11,6 +11,7 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
@@ -29,7 +30,7 @@ class ViewTicket extends ViewRecord
          */
         $ticket = $this->record;
 
-        return $ticket->subject;
+        return new HtmlString($ticket->subject);
     }
 
     protected function getHeaderActions(): array
