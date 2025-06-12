@@ -3,6 +3,8 @@
 use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Statuses\Pages\ListStatuses;
+use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
+use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\TicketStatus;
 
 it('lists statuses', function () {
@@ -90,4 +92,40 @@ it('can delete status', function () {
     $this->assertSoftDeleted(TicketStatus::class, [
         'id' => $status->id,
     ]);
+});
+
+it('uses ticket viewAny as fallback', function () {
+    $this->login();
+
+    $this
+        ->partialMock(TicketPolicy::class)
+        ->shouldReceive('viewAny')
+        ->andReturn(true);
+
+    $this
+        ->get(StatusResource::getUrl())
+        ->assertOk();
+
+    $this
+        ->partialMock(TicketPolicy::class)
+        ->shouldReceive('viewAny')
+        ->andReturn(false);
+
+    $this
+        ->get(StatusResource::getUrl())
+        ->assertForbidden();
+
+    class TestPolicy
+    {
+        public function viewAny(): bool
+        {
+            return true;
+        }
+    }
+
+    Gate::policy(TicketStatus::class, TestPolicy::class);
+
+    $this
+        ->get(StatusResource::getUrl())
+        ->assertOk();
 });

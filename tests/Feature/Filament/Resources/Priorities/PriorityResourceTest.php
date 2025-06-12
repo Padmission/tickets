@@ -3,6 +3,8 @@
 use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Priorities\Pages\ListPriorities;
+use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
+use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\TicketPriority;
 
 it('lists priorities', function () {
@@ -87,4 +89,40 @@ it('can delete status', function () {
         ->assertHasNoErrors();
 
     $this->assertSoftDeleted(TicketPriority::class, ['id' => $priority->id]);
+});
+
+it('uses ticket viewAny as fallback', function () {
+    $this->login();
+
+    $this
+        ->partialMock(TicketPolicy::class)
+        ->shouldReceive('viewAny')
+        ->andReturn(true);
+
+    $this
+        ->get(PriorityResource::getUrl())
+        ->assertOk();
+
+    $this
+        ->partialMock(TicketPolicy::class)
+        ->shouldReceive('viewAny')
+        ->andReturn(false);
+
+    $this
+        ->get(PriorityResource::getUrl())
+        ->assertForbidden();
+
+    class TestPolicy
+    {
+        public function viewAny(): bool
+        {
+            return true;
+        }
+    }
+
+    Gate::policy(TicketPriority::class, TestPolicy::class);
+
+    $this
+        ->get(PriorityResource::getUrl())
+        ->assertOk();
 });
