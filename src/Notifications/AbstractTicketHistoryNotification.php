@@ -5,8 +5,6 @@ namespace Padmission\Tickets\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Padmission\Tickets\Enums\ActivitySender;
-use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\MailHelpers\ChatRight;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 

@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -23,8 +24,6 @@ use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
-
-use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 
 #[ObservedBy(TicketObserver::class)]
 #[ScopedBy([CurrentPanelScope::class])]

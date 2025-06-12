@@ -10,11 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketActivityFactory;
-use Padmission\Tickets\Events\TicketActivity as TicketActivityEvent;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Events\TicketActivity as TicketActivityEvent;
 use Padmission\Tickets\Events\TicketClosed;
 use Padmission\Tickets\TicketPlugin;
 
@@ -37,7 +37,8 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
-    public static function booted() : void {
+    public static function booted(): void
+    {
         static::saved(function (TicketActivity $activity) {
             event(new TicketActivityEvent($activity->ticket, $activity->type->value, null));
         });
