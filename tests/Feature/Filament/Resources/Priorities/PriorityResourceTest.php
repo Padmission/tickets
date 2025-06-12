@@ -4,8 +4,8 @@ use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Priorities\Pages\ListPriorities;
 use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
-use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 
 it('lists priorities', function () {
     $this->login();
@@ -107,7 +107,7 @@ it('uses ticket viewAny as fallback', function () {
     $this->login();
 
     $this
-        ->partialMock(TicketPolicy::class)
+        ->partialMock(TestTicketPolicy::class)
         ->shouldReceive('viewAny')
         ->andReturn(true);
 
@@ -116,7 +116,7 @@ it('uses ticket viewAny as fallback', function () {
         ->assertOk();
 
     $this
-        ->partialMock(TicketPolicy::class)
+        ->partialMock(TestTicketPolicy::class)
         ->shouldReceive('viewAny')
         ->andReturn(false);
 

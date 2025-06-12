@@ -4,8 +4,8 @@ use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Statuses\Pages\ListStatuses;
 use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
-use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 
 it('lists statuses', function () {
     $this->login();
@@ -109,8 +109,10 @@ it('can delete status', function () {
 it('uses ticket viewAny as fallback', function () {
     $this->login();
 
+    Gate::policy(TicketStatus::class, null);
+
     $this
-        ->partialMock(TicketPolicy::class)
+        ->partialMock(TestTicketPolicy::class)
         ->shouldReceive('viewAny')
         ->andReturn(true);
 
@@ -119,7 +121,7 @@ it('uses ticket viewAny as fallback', function () {
         ->assertOk();
 
     $this
-        ->partialMock(TicketPolicy::class)
+        ->partialMock(TestTicketPolicy::class)
         ->shouldReceive('viewAny')
         ->andReturn(false);
 

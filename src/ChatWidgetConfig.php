@@ -72,6 +72,6 @@ final class ChatWidgetConfig
             $color = $color();
         }
 
-        return 'rgb('.FilamentColor::processColor($color)['600'].')';
+        return 'rgb('.FilamentColor::processColor($color)[600].')';
     }
 }
