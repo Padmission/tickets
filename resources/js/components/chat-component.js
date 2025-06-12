@@ -409,6 +409,12 @@ customElements.define(
 		render() {
 			// biome-ignore format: preserve template formatting
 			return render(`
+                <style>
+                    :host {
+                        display: none;
+                    }
+                </style>
+
                 <div class="chat">
                     <div class="message-list" data-chat-messages>
 
