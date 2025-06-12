@@ -6,7 +6,6 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketDisposition;
 
 class CloseTicketAction extends Action
 {
@@ -51,6 +50,7 @@ class CloseTicketAction extends Action
     protected function dispositionsExist(): bool
     {
         $dispositionModel = \Padmission\Tickets\TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\TicketDisposition::class);
+
         return $dispositionModel::query()->exists();
     }
 }
