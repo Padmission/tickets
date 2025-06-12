@@ -9,7 +9,6 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
-use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -53,14 +52,33 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             return;
         }
 
-        $policy = Gate::getPolicyFor(TicketPlugin::resolveModelClass(Ticket::class));
+        $policy = Gate::getPolicyFor(
+            TicketPlugin::resolveModelClass(Ticket::class)
+        );
 
-        if ($policy === null || $policy::class === TicketPolicy::class) {
-            throw new Exception('Provide a TicketPolicy via Gate::policy() facade');
+        if ($policy === null) {
+            throw new Exception('Register a TicketPolicy via Gate::policy() facade in a ServiceProvider::register() method.');
         }
 
-        if (! ($policy instanceof TicketPolicy)) {
-            throw new Exception('Your policy should extend Padmission\Models\Policies\TicketPolicy');
+        /*
+         * We want to make sure users register a policy with certain methods.
+         * Because PHPs parameter types are contravariant we don't want to
+         * provide a class or interface to implement because we cannot provide
+         * type hints like `Authenticatable` in the methods leading to devs not
+         * able to define their own type hints as well.
+         */
+        $requiredMethods = [
+            'viewAny',
+            'create',
+            'manage',
+            'escalate',
+            'delete',
+        ];
+
+        foreach ($requiredMethods as $method) {
+            if (! method_exists($policy, $method)) {
+                throw new Exception("The policy should implement '$method()' method");
+            }
         }
     }
 
