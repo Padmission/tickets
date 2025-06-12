@@ -1,5 +1,7 @@
 @php
-    view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
+    if (!view()->getFinder()->hasNamespace('mail')) {
+        view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
+    }
 @endphp
 
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"

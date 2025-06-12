@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketNotification;
 
 abstract class AbstractTicketHistoryNotification extends Notification
 {
@@ -69,9 +70,9 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ]);
     }
 
-    public function getLastNotification($notifiable) {
+    public function getLastNotification($notifiable) : ?TicketNotification {
         return once(function() use ($notifiable) {
-            return$this->ticket
+            return $this->ticket
                 ->ticketNotifications()
                 ->where('user_id', $notifiable->getKey())
                 ->latest()

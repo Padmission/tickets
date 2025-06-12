@@ -10,8 +10,6 @@ use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
-use Padmission\Tickets\Components\Email;
-use Padmission\Tickets\Managers\NotificationManager;
 use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -54,19 +52,11 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     {
         $this->bootEventListeners();
 
-        // Register your package's anonymous components (this is done automatically by Spatie package tools)
-        // Your email component will be available as <x-tickets::email>
     }
 
     public function packageRegistered(): void
     {
-        // Register the notification manager
-        $this->app->singleton(NotificationManager::class, function ($app) {
-            return new NotificationManager($app);
-        });
 
-        // Register the facade alias
-        $this->app->alias(NotificationManager::class, 'notification-strategies');
     }
 
     private function ensurePolicyIsRegistered(): void
