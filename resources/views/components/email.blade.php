@@ -1,5 +1,4 @@
 @php
-    // Register Laravel's mail view namespace at runtime (safe to call multiple times)
     view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
 @endphp
 

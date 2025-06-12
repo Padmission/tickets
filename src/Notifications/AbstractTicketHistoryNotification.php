@@ -92,7 +92,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
         }
         $styles .= '.inner-body {
             margin-top: 1.25rem;
-        }';
+        } .button { color: #fff; }';
         return $styles;
     }
 }
