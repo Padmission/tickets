@@ -12,12 +12,16 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketNotification;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Throwable;
 
 abstract class AbstractTicketHistoryNotification extends Notification
 {
     public function __construct(
         public Ticket $ticket,
-    ) {}
+    )
+    {
+    }
 
     public function via($notifiable): array
     {
@@ -76,18 +80,18 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ]);
     }
 
-    public function getLastNotification($notifiable) : ?TicketNotification {
-        return once(function() use ($notifiable) {
-            return $this->ticket
-                ->ticketNotifications()
-                ->where('user_id', $notifiable->getKey())
-                ->latest()
-                ->first();
-        });
+    public function getLastNotification($notifiable): ?TicketNotification
+    {
+        return $this->ticket
+            ->ticketNotifications()
+            ->where('user_id', $notifiable->getKey())
+            ->latest()
+            ->first();
     }
 
-    public function getUnreadActions($notifiable, int $maxEvents, int $maxDays) : Collection {
-        return once(function() use ($notifiable, $maxEvents, $maxDays){
+    public function getUnreadActions($notifiable, int $maxEvents, int $maxDays): Collection
+    {
+        return once(function () use ($notifiable, $maxEvents, $maxDays) {
             $lastNotification = $this->getLastNotification($notifiable);
             return $this->ticket
                 ->ticketActivities()
@@ -112,7 +116,8 @@ abstract class AbstractTicketHistoryNotification extends Notification
         });
     }
 
-    public function getActionUrl() : string {
+    public function getActionUrl(): string
+    {
         $data = (array)$this->ticket->data;
 
         $basis = null;
@@ -123,7 +128,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
             $basis = url('/');
         }
 
-        return $this->addHash($basis, 'ticket-'.$this->ticket->id);
+        return $this->addHash($basis, 'ticket-' . $this->ticket->id);
     }
 
     protected function addHash(string $url, string $hash): string
@@ -163,24 +168,43 @@ abstract class AbstractTicketHistoryNotification extends Notification
     ';
     }
 
-    public function getEmailSubject() : string {
+    public function getEmailSubject(): string
+    {
         return __('padmission-tickets::notifications.ticket-history.subject');
     }
 
-    public function getEmailView() : string {
+    public function getEmailView(): string
+    {
         return 'padmission-tickets::emails.ticket-history';
     }
 
-    public function getEmailLogo() : ?string {
+    public function getEmailLogo(): ?string
+    {
         if ($panel = $this->ticket->panel) {
             if ($tenant = Filament::getTenant()) {
+                if (method_exists($panel, 'getLogo')) {
+                    try {
+                        $logo = $panel->getLogo();
+                        if ($logo instanceof Media) {
+                            $logo = $logo->getUrl();
+                        }
+                        if (is_string($logo)) {
+                            if (filter_var($logo, FILTER_VALIDATE_URL)) {
+                                return sprintf('<img src="%s" />', $logo);
+                            }
 
+                            return $logo;
+                        }
+                    } catch (Throwable $e) {
+
+                    }
+                }
             }
             if ($panel = Filament::getPanel($panel)) {
                 if ($logo = $panel->getBrandLogo()) {
                     $height = $panel->getBrandLogoHeight();
 
-                    if(filter_var($logo, FILTER_VALIDATE_URL)) {
+                    if (filter_var($logo, FILTER_VALIDATE_URL)) {
                         return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
                     }
 

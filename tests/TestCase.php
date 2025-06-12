@@ -24,8 +24,10 @@ use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketNotification;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
+use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\TicketPluginServiceProvider;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
@@ -46,6 +48,9 @@ class TestCase extends \Orchestra\Testbench\TestCase
     {
         return [
             LivewireServiceProvider::class,
+            
+            // Add the Queue Debouncer Service Provider
+            \Mpbarlow\LaravelQueueDebouncer\ServiceProvider::class,
 
             FilamentServiceProvider::class,
             FormsServiceProvider::class,
@@ -70,14 +75,36 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         Gate::policy(Ticket::class, TestTicketPolicy::class);
 
-        Filament::registerPanel(fn () => Panel::make()
+        $panel = Panel::make()
             ->default()
             ->id('test')
             ->path('test')
             ->plugin(
                 TicketPlugin::make()->registerResources()
-            ),
-        );
+            );
+
+        Filament::registerPanel(fn () => $panel);
+
+        // Set the panel as current for testing
+        Filament::setCurrentPanel($panel);
+
+
+        // Configure debouncer for testing
+        $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider::class, function () {
+            return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider {
+                public function getKey($job): string {
+                    return 'test_key_' . md5(serialize($job));
+                }
+            };
+        });
+
+        $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider::class, function () {
+            return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider {
+                public function getIdentifier(): string {
+                    return 'test_identifier_' . uniqid();
+                }
+            };
+        });
     }
 
     // Helper methods
