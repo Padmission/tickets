@@ -130,25 +130,26 @@ abstract class AbstractTicketHistoryNotification extends Notification
         return $baseUrl . $cleanHash;
     }
 
-    /**
-     * TODO: This needs to be drastically refactored.  I'm not sure of how we should handle this. We have to bring
-     * Laravel's default styles in to our own view, so it's a starting point to get the MVP out for training.
-     * @return string
-     */
-
     protected function getStyles(): string
     {
-        $styles = '';
-        $basePath = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
-        if (file_exists($basePath)) {
-            $styles = file_get_contents($basePath);
-        }
-        $styles .= '.inner-body {
-            margin-top: 1.25rem;
-        }a.button-blue,
-a.button-primary { color: #fff; }';
+        return $this->getCoreMailStyles() . $this->getTicketCustomStyles();
+    }
 
-        return $styles;
+    private function getCoreMailStyles(): string
+    {
+        $path = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
+        return file_exists($path) ? file_get_contents($path) : '';
+    }
+
+    private function getTicketCustomStyles(): string
+    {
+        return '
+        .inner-body { margin-top: 1.25rem; }
+        a.button-blue, a.button-primary { color: #fff; }
+        .ticket-activity { margin-bottom: 1rem; padding: 1rem; border-left: 4px solid #e5e7eb; }
+        .activity-meta { font-size: 0.9em; color: #666; margin-bottom: 0.5rem; }
+        .activity-content { line-height: 1.5; }
+    ';
     }
 
     public function getEmailSubject() : string {
