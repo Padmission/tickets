@@ -4,6 +4,8 @@ namespace Padmission\Tickets\Notifications;
 
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
@@ -21,35 +23,12 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $lastNotification = $this->ticket
-            ->ticketNotifications()
-            ->where('user_id', $notifiable->getKey())
-            ->latest()
-            ->first();
+        $lastNotification = $this->getLastNotification($notifiable);
 
         $maxEvents = 10;
         $maxDays = 7;
 
-        $activities = $this->ticket
-            ->ticketActivities()
-            ->with('user')
-            ->where('created_at', '>', now()->subDays($maxDays))
-            ->where('created_at', '<=', now())
-            ->when($lastNotification, function ($sub) use ($lastNotification) {
-                $sub->where('created_at', '>', $lastNotification->created_at);
-            })
-            ->orderBy('created_at', 'asc')
-            ->limit($maxEvents)
-            ->get()
-            ->map(function (TicketActivity $message) use ($notifiable) {
-                $message->side = match (true) {
-                    $message->sender === ActivitySender::System => 'system',
-                    $message->sender === $notifiable => 'me',
-                    default => 'other',
-                };
-
-                return $message;
-            });
+        $activities = $this->getUnreadActions($notifiable, $maxEvents, $maxDays);
 
         if ($lastNotification) {
             $lastNotification->update([
@@ -64,14 +43,13 @@ abstract class AbstractTicketHistoryNotification extends Notification
         $styles = $this->getStyles();
 
         $message = (new MailMessage)
-            ->subject(__('padmission-tickets::notifications.ticket-created.subject'))
-            ->line(__('padmission-tickets::emails.ticket-history.intro'))
-            ->action(__('padmission-tickets::notifications.ticket-created.action'), url('/#test'))
-            ->line(__('padmission-tickets::emails.ticket-history.outro'))
-
-            ->view('padmission-tickets::emails.ticket-history', [
+            ->subject($this->getEmailSubject())
+            ->line(__('padmission-tickets::notifications.ticket-history.intro'))
+            ->action(__('padmission-tickets::notifications.ticket-history.action'), $this->getActionUrl())
+            ->line(__('padmission-tickets::notifications.ticket-history.outro'))
+            ->view($this->getEmailView(), [
                 'ticket' => $this->ticket,
-                'activitiesHeader' => __('padmission-tickets::emails.ticket-history.activities-header'),
+                'activitiesHeader' => __('padmission-tickets::notifications.ticket-history.activities-header'),
                 'activities' => $activities,
                 'lastNotificationDate' => $lastNotification?->created_at,
                 'totalActivities' => $activities->count(),
@@ -84,6 +62,68 @@ abstract class AbstractTicketHistoryNotification extends Notification
         return $message;
     }
 
+    public function getLastNotification($notifiable) {
+        return once(function() use ($notifiable) {
+            return$this->ticket
+                ->ticketNotifications()
+                ->where('user_id', $notifiable->getKey())
+                ->latest()
+                ->first();
+        });
+    }
+
+    public function getUnreadActions($notifiable, int $maxEvents, int $maxDays) : Collection {
+        return once(function() use ($notifiable, $maxEvents, $maxDays){
+            $lastNotification = $this->getLastNotification($notifiable);
+            return $this->ticket
+                ->ticketActivities()
+                ->with('user')
+                ->where('created_at', '>', now()->subDays($maxDays))
+                ->where('created_at', '<=', now())
+                ->when($lastNotification, function ($sub) use ($lastNotification) {
+                    $sub->where('created_at', '>', $lastNotification->created_at);
+                })
+                ->orderBy('created_at', 'asc')
+                ->limit($maxEvents)
+                ->get()
+                ->map(function (TicketActivity $message) use ($notifiable) {
+                    $message->side = match (true) {
+                        $message->sender === ActivitySender::System => 'system',
+                        $message->sender === $notifiable => 'me',
+                        default => 'other',
+                    };
+
+                    return $message;
+                });
+        });
+    }
+
+    public function getActionUrl() : string {
+        $data = (array)$this->ticket->data;
+
+        $basis = null;
+
+        if (array_key_exists('url', $data) && $data['url']) {
+            $basis = $data['url'];
+        } else {
+            $basis = url('/');
+        }
+
+        return $this->addHash($basis, 'ticket-'.$this->ticket->id);
+    }
+
+    protected function addHash(string $url, string $hash): string
+    {
+        // Validate URL
+        validator(['url' => $url], ['url' => 'required|url'])->validate();
+
+        // Remove existing hash and add new one
+        $baseUrl = Str::before($url, '#');
+        $cleanHash = Str::start(ltrim($hash, '#'), '#');
+
+        return $baseUrl . $cleanHash;
+    }
+
     protected function getStyles(): string
     {
         $styles = '';
@@ -93,8 +133,17 @@ abstract class AbstractTicketHistoryNotification extends Notification
         }
         $styles .= '.inner-body {
             margin-top: 1.25rem;
-        }';
+        }a.button-blue,
+a.button-primary { color: #fff; }';
 
         return $styles;
+    }
+
+    public function getEmailSubject() : string {
+        return __('padmission-tickets::notifications.ticket-history.subject');
+    }
+
+    public function getEmailView() : string {
+        return 'padmission-tickets::emails.ticket-history';
     }
 }
