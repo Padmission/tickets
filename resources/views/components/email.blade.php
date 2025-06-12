@@ -1,5 +1,12 @@
 @php
-    if (!view()->getFinder()->hasNamespace('mail')) {
+    // Safely add the mail namespace - Laravel handles duplicates gracefully
+    try {
+        $hints = view()->getFinder()->getHints();
+        if (!array_key_exists('mail', $hints)) {
+            view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
+        }
+    } catch (Exception $e) {
+        // Fallback: just add it, Laravel will handle duplicates
         view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
     }
 @endphp
@@ -45,9 +52,13 @@
         <td align="center">
             <table class="content" width="100%" cellpadding="0" cellspacing="0" role="presentation">
 
-                @component('mail::html.header', ['url' => config('app.url')])
-                    {{ config('app.name') }}
-                @endcomponent
+                <x-mail::html.header :url="config('app.url')">
+                    @if(isset($logo) && $logo)
+                        {!! $logo !!}
+                    @else
+                        {{ config('app.name') }}
+                    @endif
+                </x-mail::html.header>
 
                 @if(isset($introLines))
                     <tr>

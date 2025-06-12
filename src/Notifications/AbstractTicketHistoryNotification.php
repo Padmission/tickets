@@ -2,10 +2,12 @@
 
 namespace Padmission\Tickets\Notifications;
 
+use Filament\Facades\Filament;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
@@ -24,10 +26,11 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     public function toMail($notifiable): MailMessage
     {
+
         $lastNotification = $this->getLastNotification($notifiable);
 
-        $maxEvents = config('padmission-tickets.notification-max-days',7);
-        $maxDays = config('padmission-tickets.notification-max-events',7);
+        $maxEvents = config('padmission-tickets.notification-max-events', 10);
+        $maxDays = config('padmission-tickets.notification-max-days', 7);
 
         $activities = $this->getUnreadActions($notifiable, $maxEvents, $maxDays);
 
@@ -42,6 +45,8 @@ abstract class AbstractTicketHistoryNotification extends Notification
         }
 
         $hasMoreActivities = $activities->count() >= $maxEvents;
+
+        $logo = $this->getEmailLogo();
 
         $styles = $this->getStyles();
 
@@ -62,6 +67,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 'activitiesHeader' => __('padmission-tickets::notifications.ticket-history.activities-header'),
                 'activities' => $activities,
                 'lastNotificationDate' => $lastNotification?->created_at,
+                'logo' => $logo,
                 'totalActivities' => $activities->count(),
                 'hasMoreActivities' => $hasMoreActivities,
                 'maxDays' => $maxDays,
@@ -122,7 +128,12 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     protected function addHash(string $url, string $hash): string
     {
-        validator(['url' => $url], ['url' => 'required|url'])->validate();
+        try {
+            validator(['url' => $url], ['url' => 'required|url'])->validate();
+        } catch (ValidationException $e) {
+            // Fallback to app URL if ticket URL is invalid
+            $url = config('app.url');
+        }
 
         $baseUrl = Str::before($url, '#');
         $cleanHash = Str::start(ltrim($hash, '#'), '#');
@@ -158,5 +169,25 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     public function getEmailView() : string {
         return 'padmission-tickets::emails.ticket-history';
+    }
+
+    public function getEmailLogo() : ?string {
+        if ($panel = $this->ticket->panel) {
+            if ($tenant = Filament::getTenant()) {
+
+            }
+            if ($panel = Filament::getPanel($panel)) {
+                if ($logo = $panel->getBrandLogo()) {
+                    $height = $panel->getBrandLogoHeight();
+
+                    if(filter_var($logo, FILTER_VALIDATE_URL)) {
+                        return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
+                    }
+
+                    return $logo;
+                }
+            }
+        }
+        return null;
     }
 }

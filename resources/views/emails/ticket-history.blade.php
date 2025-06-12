@@ -2,6 +2,7 @@
     :actionUrl="$actionUrl"
     :actionText="$actionText"
     :introLines="$introLines"
+    :logo="$logo"
     :outroLines="$outroLines"
     :styles="$styles">
 
