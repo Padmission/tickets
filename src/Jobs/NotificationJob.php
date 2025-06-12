@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Jobs;
 
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -12,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
+use Padmission\Tickets\TicketPlugin;
 
 class NotificationJob implements ShouldBeUnique, ShouldQueue
 {
@@ -39,10 +39,6 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(): void
     {
-        /**
-         * TODO: I didn't want to keep all of the models serialized to help us with our queue memory.
-         * We need to move these to use the correct models.
-         */
         try {
             $notificationClass = $this->getNotificationClass();
 
@@ -50,18 +46,23 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $user = User::find($this->userId);
+            $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+            $user = $userModel::find($this->userId);
+
+            if (!$user) {
+                return;
+            }
 
             $model = $this->modelType;
             $record = $model::find($this->modelId);
 
+            if (!$record) {
+                return;
+            }
+
             $user->notify(new $notificationClass($record));
-
-            logger('Debounced job executed: '.$this->uniqueId());
         } catch (\Exception $e) {
-
         }
-
     }
 
     protected function getNotificationClass(): ?string
@@ -77,9 +78,6 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         return $notifications[$this->notificationType];
     }
 
-    /**
-     * Get the unique ID for the job.
-     */
     public function uniqueId(): string
     {
         return $this->modelType.'-'.$this->modelId.'-'.$this->userId;

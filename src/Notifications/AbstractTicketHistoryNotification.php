@@ -153,8 +153,10 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     private function getCoreMailStyles(): string
     {
-        $path = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
-        return file_exists($path) ? file_get_contents($path) : '';
+        return Cache::remember(__METHOD__, 3600, function() {
+            $path = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
+            return file_exists($path) ? file_get_contents($path) : '';
+        });
     }
 
     private function getTicketCustomStyles(): string

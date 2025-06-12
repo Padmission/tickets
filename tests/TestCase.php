@@ -85,11 +85,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         Filament::registerPanel(fn () => $panel);
 
-        // Set the panel as current for testing
         Filament::setCurrentPanel($panel);
 
-
-        // Configure debouncer for testing
         $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider::class, function () {
             return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider {
                 public function getKey($job): string {
