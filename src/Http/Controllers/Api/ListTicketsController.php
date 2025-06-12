@@ -16,9 +16,11 @@ class ListTicketsController
 
     public function __invoke(Request $request)
     {
-        $this->authorize('create', Ticket::class);
+        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        $tickets = TicketPlugin::resolveModelClass(Ticket::class)::query()
+        $this->authorize('create', $ticketModel);
+
+        $tickets = $ticketModel::query()
             ->with('latestMessage')
             ->where('submitter_id', $request->user()->id)
             ->orderBy('updated_at', 'desc')

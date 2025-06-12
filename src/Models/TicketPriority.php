@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[UseFactory(TicketPriorityFactory::class)]
 class TicketPriority extends Model
@@ -24,6 +25,8 @@ class TicketPriority extends Model
     protected static function boot()
     {
         parent::boot();
+
+        static::addGlobalScope(CurrentPanelScope::class);
 
         static::creating(function ($model) {
             $model->panel ??= Filament::getCurrentPanel()->getId();
