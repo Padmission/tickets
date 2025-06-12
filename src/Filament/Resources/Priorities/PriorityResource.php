@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Resources\Priorities;
 
+use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -15,10 +16,13 @@ use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\TicketPlugin;
 
 class PriorityResource extends Resource
 {
@@ -27,6 +31,15 @@ class PriorityResource extends Resource
     protected static ?string $slug = 'priorities';
 
     protected static ?string $model = TicketPriority::class;
+
+    public static function canAccess(): bool
+    {
+        if (! Gate::getPolicyFor(TicketPriority::class)) {
+            return Filament::auth()->user()->can('viewAny', TicketPlugin::resolveModelClass(Ticket::class));
+        }
+
+        return parent::canAccess();
+    }
 
     public static function form(Form $form): Form
     {

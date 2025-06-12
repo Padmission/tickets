@@ -3,9 +3,13 @@
 use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Statuses\Pages\ListStatuses;
+use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
+use Padmission\Tickets\Models\Policies\TicketPolicy;
 use Padmission\Tickets\Models\TicketStatus;
 
 it('lists statuses', function () {
+    $this->login();
+
     TicketStatus::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3, 'panel' => 'test']);
     TicketStatus::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2,  'panel' => 'test']);
     TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1, 'panel' => 'test']);
@@ -21,6 +25,8 @@ it('lists statuses', function () {
 });
 
 it('only shows statuses from current panel', function () {
+    $this->login();
+
     TicketStatus::factory()->create(['display_name' => 'Panel 1', 'panel' => 'test']);
     TicketStatus::factory()->create(['display_name' => 'Panel 2', 'panel' => 'panel2']);
 
@@ -28,6 +34,8 @@ it('only shows statuses from current panel', function () {
 });
 
 it('can reorder statuses', function () {
+    $this->login();
+
     TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
     TicketStatus::factory()->create(['display_name' => 'Medium', 'color' => 'Blue', 'order' => 2]);
     TicketStatus::factory()->create(['display_name' => 'High', 'color' => 'Red', 'order' => 3]);
@@ -43,6 +51,8 @@ it('can reorder statuses', function () {
 });
 
 it('can create status', function () {
+    $this->login();
+
     Livewire::test(ListStatuses::class)
         ->callAction('create', [
             'display_name' => '',
@@ -63,6 +73,8 @@ it('can create status', function () {
 });
 
 it('can edit status', function () {
+    $this->login();
+
     $status = TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListStatuses::class)
@@ -81,6 +93,8 @@ it('can edit status', function () {
 });
 
 it('can delete status', function () {
+    $this->login();
+
     $status = TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListStatuses::class)
@@ -90,4 +104,40 @@ it('can delete status', function () {
     $this->assertSoftDeleted(TicketStatus::class, [
         'id' => $status->id,
     ]);
+});
+
+it('uses ticket viewAny as fallback', function () {
+    $this->login();
+
+    $this
+        ->partialMock(TicketPolicy::class)
+        ->shouldReceive('viewAny')
+        ->andReturn(true);
+
+    $this
+        ->get(StatusResource::getUrl())
+        ->assertOk();
+
+    $this
+        ->partialMock(TicketPolicy::class)
+        ->shouldReceive('viewAny')
+        ->andReturn(false);
+
+    $this
+        ->get(StatusResource::getUrl())
+        ->assertForbidden();
+
+    class StatusResourceTestPolicy
+    {
+        public function viewAny(): bool
+        {
+            return true;
+        }
+    }
+
+    Gate::policy(TicketStatus::class, StatusResourceTestPolicy::class);
+
+    $this
+        ->get(StatusResource::getUrl())
+        ->assertOk();
 });

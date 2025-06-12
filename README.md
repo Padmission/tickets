@@ -93,8 +93,25 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;class YourServi
         );
     }
 }
-
 ```
+
+### Authentication
+
+As it's hard to predict your authentication requirements, we don't define any for you. You *must* bring your own `TicketPolicy` and define scopes for Users and Ticket.
+
+```php
+use Filament\Facades\Filament;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;\Illuminate\Support\Facades\Gate;
+
+// Define your policy, which extends from `TicketPolicy`
+Gate::policy(
+    Ticket::class,
+    YourTicketPolicy::class
+);
+
+
+The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
 
 ### Chat Widget
 

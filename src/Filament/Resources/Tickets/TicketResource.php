@@ -119,8 +119,6 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $plugin = TicketPlugin::get();
-
-        return parent::getEloquentQuery()->where('escalation_level', $plugin->getEscalationLevel());
+        return parent::getEloquentQuery();
     }
 }
