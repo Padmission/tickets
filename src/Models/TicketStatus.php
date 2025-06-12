@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
+
+#[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketStatusFactory::class)]
 class TicketStatus extends Model
 {

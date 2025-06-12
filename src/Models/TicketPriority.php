@@ -10,7 +10,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
+
+#[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketPriorityFactory::class)]
 class TicketPriority extends Model
 {

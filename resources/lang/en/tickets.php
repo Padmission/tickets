@@ -54,4 +54,11 @@ return [
             'color' => 'Color',
         ],
     ],
+
+    'notifications' => [
+        'ticket-created' => [
+            'subject' => 'Your ticket has been updated',
+            'action' => 'View Ticket',
+        ],
+    ],
 ];

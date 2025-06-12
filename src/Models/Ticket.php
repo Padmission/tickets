@@ -20,11 +20,15 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Events\TicketClosed;
 use Padmission\Tickets\Models\Observers\TicketObserver;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
-#[UseFactory(TicketFactory::class)]
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
+
 #[ObservedBy(TicketObserver::class)]
+#[ScopedBy([CurrentPanelScope::class])]
+#[UseFactory(TicketFactory::class)]
 class Ticket extends Model
 {
     use HasFactory;

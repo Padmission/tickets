@@ -5,7 +5,8 @@ namespace Padmission\Tickets\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Padmission\Tickets\Enums\ActivitySender;
-use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\MailHelpers\ChatRight;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 
@@ -63,20 +64,20 @@ abstract class AbstractTicketHistoryNotification extends Notification
         }
 
         $message = (new MailMessage)
-            ->subject(__('padmission-tickets::notifications.ticket-created.subject'));
-
-        foreach ($activities as $activity) {
-            /**
-             * TODO: These need to be built out.
-             */
-            $message->line($activity->content);
-        }
-
-        /**
-         * TODO: Talk with Dennis to see how he wants to get anchors to the chat.
-         */
-        //        dd($this->ticket->panel);
-        //      ->action(__('padmission-tickets::notifications.ticket-created.action'), TicketResource::getUrl('view', ['record' => $this->ticket]));
+            ->subject(__('padmission-tickets::notifications.ticket-created.subject'))
+            ->line(__('padmission-tickets::emails.ticket-history.intro'))
+            ->action(__('padmission-tickets::notifications.ticket-created.action'), url('/#test'))
+            ->line(__('padmission-tickets::emails.ticket-history.outro'))
+            ->view('padmission-tickets::emails.ticket-history', [
+                'ticket' => $this->ticket,
+                'activitiesHeader' => __('padmission-tickets::emails.ticket-history.activities-header'),
+                'activities' => $activities,
+                'lastNotificationDate' => $lastNotification?->created_at,
+                'totalActivities' => $activities->count(),
+                'hasMoreActivities' => $activities->count() >= $maxEvents,
+                'maxDays' => $maxDays,
+                'maxEvents' => $maxEvents,
+            ]);
 
         return $message;
     }
