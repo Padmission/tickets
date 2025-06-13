@@ -5,7 +5,6 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
-use Padmission\Tickets\Models\Ticket;
 
 class CloseTicketAction extends Action
 {

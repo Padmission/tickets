@@ -25,7 +25,6 @@ class TicketResource extends Resource
 
     protected static ?string $slug = 'tickets';
 
-
     public static function getModel(): string
     {
         return TicketPlugin::resolveModelClass(Ticket::class);
