@@ -70,8 +70,15 @@ abstract class AbstractTicketListener
      */
     protected function getNotificationType($event): ?string
     {
-        $type = strtolower(Str::chopStart(class_basename(get_class($event)), 'Ticket'));
-
+        $type = strtolower(
+            Str::chopEnd(               // remove trailing 'Event'
+                Str::chopStart(          // remove leading 'Ticket'
+                    class_basename($event::class),
+                    'Ticket'
+                ),
+                'Event'
+            )
+        );
         return $type ?: null;
     }
 

@@ -96,7 +96,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 ->where('created_at', '>', now()->subDays($maxDays))
                 ->where('created_at', '<=', now())
                 ->when($lastNotification, function ($sub) use ($lastNotification) {
-                    $sub->where('created_at', '>', $lastNotification->created_at);
+                    $sub->where('created_at', '>', $lastNotification->updated_at);
                 })
                 ->orderBy('created_at', 'asc')
                 ->limit($maxEvents)
