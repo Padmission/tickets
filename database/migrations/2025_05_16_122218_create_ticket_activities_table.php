@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('ticket_activities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ticket_id');
-            $table->foreignId('user_id')->nullable();
+            $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
 
             $table->string('sender');
             $table->string('type');

@@ -1,14 +1,5 @@
 @php
-    // Safely add the mail namespace - Laravel handles duplicates gracefully
-    try {
-        $hints = view()->getFinder()->getHints();
-        if (!array_key_exists('mail', $hints)) {
-            view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
-        }
-    } catch (Exception $e) {
-        // Fallback: just add it, Laravel will handle duplicates
-        view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
-    }
+    view()->addNamespace('mail', base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views'));
 @endphp
 
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"

@@ -1,6 +1,6 @@
 <?php
 
-namespace Padmission\Tickets\Filament\Resources\Statuses;
+namespace Padmission\Tickets\Filament\Resources\Dispositions;
 
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -19,20 +19,20 @@ use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\TicketPlugin;
 
-class StatusResource extends Resource
+class DispositionResource extends Resource
 {
     use HasResourceConfiguration;
 
-    protected static ?string $slug = 'statuses';
+    protected static ?string $slug = 'dispositions';
 
-    protected static ?string $model = TicketStatus::class;
+    protected static ?string $model = TicketDisposition::class;
 
     public static function canAccess(): bool
     {
-        if (! Gate::getPolicyFor(TicketStatus::class)) {
+        if (! Gate::getPolicyFor(TicketDisposition::class)) {
             return Filament::auth()->user()->can('viewAny', TicketPlugin::resolveModelClass(Ticket::class));
         }
 
@@ -45,13 +45,14 @@ class StatusResource extends Resource
             ->columns(1)
             ->schema([
                 TextInput::make('display_name')
-                    ->label(__('padmission-tickets::tickets.resources.statuses.display_name'))
+                    ->label(__('padmission-tickets::tickets.resources.dispositions.display_name'))
+                    ->columnSpanFull()
                     ->required(),
 
                 ColorSelect::make('color')
-                    ->label(__('padmission-tickets::tickets.resources.statuses.color'))
+                    ->label(__('padmission-tickets::tickets.resources.dispositions.color'))
+                    ->columnSpanFull()
                     ->required(),
-
             ]);
     }
 
@@ -62,11 +63,11 @@ class StatusResource extends Resource
             ->defaultSort('order', 'asc')
             ->columns([
                 ColorColumn::make('color')
-                    ->label(__('padmission-tickets::tickets.resources.statuses.color'))
-                    ->getStateUsing(fn (TicketStatus $record) => 'rgb('.$record->colorPalette[600].')'),
+                    ->label(__('padmission-tickets::tickets.resources.dispositions.color'))
+                    ->getStateUsing(fn (TicketDisposition $record) => 'rgb('.$record->colorPalette[600].')'),
 
                 TextColumn::make('display_name')
-                    ->label(__('padmission-tickets::tickets.resources.statuses.display_name')),
+                    ->label(__('padmission-tickets::tickets.resources.dispositions.display_name')),
             ])
             ->actions([
                 EditAction::make()->slideOver()->modalWidth(MaxWidth::Medium),
@@ -82,7 +83,7 @@ class StatusResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListStatuses::route('/'),
+            'index' => Pages\ListDispositions::route('/'),
         ];
     }
 

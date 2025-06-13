@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Http\Controllers\Api;
 
-use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -11,6 +10,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\TicketPlugin;
 

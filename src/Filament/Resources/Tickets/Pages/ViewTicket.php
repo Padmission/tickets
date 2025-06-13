@@ -66,6 +66,12 @@ class ViewTicket extends ViewRecord
                             ->color(fn (Ticket $record) => $record->priority->colorPalette)
                             ->label(__('padmission-tickets::tickets.resources.tickets.priority')),
 
+                        TextEntry::make('disposition.display_name')
+                            ->badge()
+                            ->color(fn (Ticket $record) => $record->disposition?->colorPalette)
+                            ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
+                            ->hidden(fn (Ticket $record) => ! $record->disposition_id),
+
                         SubmitterEntry::make('submitter')
                             ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
                             ->columnSpanFull(),

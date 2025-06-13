@@ -26,7 +26,7 @@ use Padmission\Tickets\TicketPlugin;
 #[UseFactory(TicketActivityFactory::class)]
 class TicketActivity extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'ticket_activities';
 
@@ -34,8 +34,10 @@ class TicketActivity extends Model
 
     protected $casts = [
         'data' => 'array',
+        'side' => ActivitySide::class,
         'type' => ActivityType::class,
         'sender' => ActivitySender::class,
+        'turn' => Turn::class,
         'created_at' => 'immutable_datetime',
     ];
 

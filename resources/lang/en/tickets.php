@@ -19,6 +19,9 @@ return [
         'close' => [
             'label' => 'Close',
             'modal_heading' => 'Close Ticket',
+            'disposition' => [
+                'label' => 'Disposition',
+            ],
         ],
     ],
 
@@ -28,7 +31,6 @@ return [
         'tickets' => [
             'model_label' => 'Ticket',
             'plural_model_label' => 'Tickets',
-
             'display_name' => 'Display Name',
             'turn' => 'Turn',
             'status' => 'Status',
@@ -38,6 +40,7 @@ return [
             'submitter' => 'Submitter',
             'last_message' => 'Last Message',
             'closed_at' => 'Closed At',
+            'disposition' => 'Disposition',
         ],
 
         'statuses' => [
@@ -52,6 +55,13 @@ return [
             'model_label' => 'Priority',
             'plural_model_label' => 'Priorities',
 
+            'display_name' => 'Display Name',
+            'color' => 'Color',
+        ],
+
+        'dispositions' => [
+            'model_label' => 'Disposition',
+            'plural_model_label' => 'Dispositions',
             'display_name' => 'Display Name',
             'color' => 'Color',
         ],
