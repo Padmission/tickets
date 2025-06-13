@@ -6,10 +6,10 @@ use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Mpbarlow\LaravelQueueDebouncer\Facade\Debouncer;
-use Padmission\Tickets\Events\TicketActivity;
-use Padmission\Tickets\Events\TicketAssigned;
-use Padmission\Tickets\Events\TicketClosed;
-use Padmission\Tickets\Events\TicketCreated;
+use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Events\TicketClosedEvent;
+use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 
 abstract class AbstractTicketListener
@@ -17,10 +17,10 @@ abstract class AbstractTicketListener
     /**
      * Handle the ticket event and dispatch notifications.
      *
-     * @param TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event
+     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
      * @return void
      */
-    public function handle(TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event): void
+    public function handle(TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event): void
     {
         $recipients = $this->getNotificationRecipients($event);
 
@@ -32,7 +32,7 @@ abstract class AbstractTicketListener
     /**
      * Get the list of users who should receive notifications for this event.
      *
-     * @param TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event
+     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
      * @return \Illuminate\Support\Collection<Authorizable>
      */
     protected function getNotificationRecipients($event): \Illuminate\Support\Collection
@@ -48,7 +48,7 @@ abstract class AbstractTicketListener
      * Send notification to a specific user.
      *
      * @param Authorizable $user
-     * @param TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event
+     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
      * @return void
      */
     protected function sendNotificationToUser(Authorizable $user, $event): void
@@ -71,7 +71,7 @@ abstract class AbstractTicketListener
     /**
      * Get notification type from event class name.
      *
-     * @param TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event
+     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
      * @return string|null
      */
     protected function getNotificationType($event): ?string

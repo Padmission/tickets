@@ -4,8 +4,8 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Events\TicketAssigned;
-use Padmission\Tickets\Events\TicketCreated;
+use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -19,7 +19,7 @@ class TicketObserver
 
     public function created(Ticket $ticket): void
     {
-        event(new TicketCreated($ticket));
+        event(new TicketCreatedEvent($ticket));
     }
 
     public function updating(Ticket $ticket): void
@@ -85,7 +85,7 @@ class TicketObserver
         if ($ticket->wasChanged('assignee_id')) {
             $old = $ticket->getOriginal('assignee_id');
             $new = $ticket->assignee_id;
-            event(new TicketAssigned($ticket));
+            event(new TicketAssignedEvent($ticket));
         }
     }
 }

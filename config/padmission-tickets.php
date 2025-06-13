@@ -53,16 +53,16 @@ return [
     ],
 
     'event-listeners' => [
-        \Padmission\Tickets\Events\TicketActivity::class => [
+        \Padmission\Tickets\Events\TicketActivityEvent::class => [
             \Padmission\Tickets\Listeners\TicketActivityListener::class,
         ],
-        \Padmission\Tickets\Events\TicketAssigned::class => [
+        \Padmission\Tickets\Events\TicketAssignedEvent::class => [
             \Padmission\Tickets\Listeners\TicketAssignedListener::class,
         ],
-        \Padmission\Tickets\Events\TicketClosed::class => [
+        \Padmission\Tickets\Events\TicketClosedEvent::class => [
             \Padmission\Tickets\Listeners\TicketClosedListener::class,
         ],
-        \Padmission\Tickets\Events\TicketCreated::class => [
+        \Padmission\Tickets\Events\TicketCreatedEvent::class => [
             \Padmission\Tickets\Listeners\TicketCreatedListener::class,
         ],
     ],

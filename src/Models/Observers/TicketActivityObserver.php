@@ -2,7 +2,7 @@
 
 namespace Padmission\Tickets\Models\Observers;
 
-use Padmission\Tickets\Events\TicketActivity as TicketActivityEvent;
+use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Models\TicketActivity;
 
 class TicketActivityObserver

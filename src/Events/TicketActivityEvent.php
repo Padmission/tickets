@@ -8,7 +8,7 @@ use Illuminate\Queue\SerializesModels;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 
-class TicketActivity
+class TicketActivityEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

@@ -7,7 +7,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Padmission\Tickets\Models\Ticket;
 
-class TicketClosed
+class TicketAssignedEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
