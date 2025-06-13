@@ -27,6 +27,8 @@ class TicketPriority extends Model
     {
         parent::boot();
 
+        static::addGlobalScope(CurrentPanelScope::class);
+
         static::creating(function ($model) {
             $model->panel ??= Filament::getCurrentPanel()->getId();
         });

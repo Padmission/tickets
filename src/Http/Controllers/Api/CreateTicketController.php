@@ -6,6 +6,8 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Http\DataMappers\TicketMapper;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
@@ -19,7 +21,9 @@ class CreateTicketController
 
     public function __invoke(Request $request)
     {
-        $this->authorize('create', Ticket::class);
+        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+
+        $this->authorize('create', $ticketModel);
 
         $request->validate([
             'subject' => 'required|string|max:255',
@@ -29,21 +33,28 @@ class CreateTicketController
             ->setContent($request->input('subject'))
             ->getText();
 
-        $ticket = TicketPlugin::resolveModelClass(Ticket::class)::create([
+        $defaultStatusId = TicketPlugin::resolveModelClass(TicketStatus::class)::query()
+            ->tap(new CurrentPanelScope)
+            ->first()
+            ->id;
+
+        $defaultPriorityId = TicketPlugin::resolveModelClass(TicketPriority::class)::query()
+            ->tap(new CurrentPanelScope)
+            ->first()
+            ->id;
+
+        $ticket = $ticketModel::create([
             'subject' => $subject,
             'submitter_id' => $request->user()->id,
             'turn' => Turn::User,
-            'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::first()->id,
-            'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::first()->id,
+            'status_id' => $defaultStatusId,
+            'priority_id' => $defaultPriorityId,
             'data' => [
                 'url' => request()->input('url'),
                 'ip_address' => request()->ip(),
             ],
         ]);
 
-        return [
-            'id' => $ticket->id,
-            'subject' => $ticket->subject,
-        ];
+        return TicketMapper::map($ticket);
     }
 }

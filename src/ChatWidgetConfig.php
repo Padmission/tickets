@@ -31,7 +31,7 @@ final class ChatWidgetConfig
         return $this;
     }
 
-    public function getIntroMessage(): string|Htmlable
+    public function getIntroMessage(): string|Htmlable|null
     {
         return value($this->introMessage);
     }
@@ -46,7 +46,7 @@ final class ChatWidgetConfig
         return $this;
     }
 
-    public function getAutoResponse(): string|Htmlable
+    public function getAutoResponse(): string|Htmlable|null
     {
         return value($this->autoResponse);
     }

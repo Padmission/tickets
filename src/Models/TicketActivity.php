@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models;
 
+use Filament\Models\Contracts\HasName;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -39,13 +40,6 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
-    public static function booted(): void
-    {
-        static::saved(function (TicketActivity $activity) {
-            event(new TicketActivityEvent($activity->ticket, $activity->type->value, null));
-        });
-    }
-
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(
@@ -60,8 +54,41 @@ class TicketActivity extends Model
         );
     }
 
+    /**
+     * @return Attribute<string,never>
+     */
+    protected function userName(): Attribute
+    {
+        return Attribute::get(function () {
+            if ($this->side === ActivitySide::Me) {
+                return __('padmission-tickets::tickets.side_you');
+            }
+
+            $user = $this->user;
+
+            if (method_exists($user, 'getSupportName')) {
+                return $user->getSupportName();
+            }
+
+            if ($user instanceof HasName) {
+                return $user->getFilamentName();
+            }
+
+            if (isset($user->name)) {
+                return $user->name;
+            }
+
+            return '';
+        });
+    }
+
+    /**
+     * @return Attribute<string,never>
+     */
     protected function content(): Attribute
     {
+        // TODO: Cache status, priority and make the notifications configurable
+
         return Attribute::get(fn ($value) => match ($this->type) {
             ActivityType::Opened => __('padmission-tickets::activities.opened'),
             ActivityType::Closed => __('padmission-tickets::activities.closed'),

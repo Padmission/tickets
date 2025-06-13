@@ -229,7 +229,7 @@ customElements.define(
 				const renderedHtml = render(`
                     ${
                         hasDateChanged
-                            ? ` <time datetime="${absoluteDate}" class="message-date">${absoluteDate} </time>`
+                            ? ` <time datetime="${absoluteDate}" class="message-date">${absoluteDate}</time>`
                             : ""
                     }
 
@@ -240,6 +240,9 @@ customElements.define(
                     >
                         <div class="message__content markdown">
                             ${message.content}
+                        </div>
+                        <div class="message__sender">
+                            ${message.user_name}
                         </div>
                     </div>
                 `);
