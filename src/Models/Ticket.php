@@ -126,7 +126,8 @@ class Ticket extends Model
             ->latestOfMany();
     }
 
-    public function ticketNotifications() : HasMany {
+    public function ticketNotifications(): HasMany
+    {
         return $this
             ->hasMany(TicketPlugin::resolveModelClass(TicketNotification::class), 'ticket_id');
     }
