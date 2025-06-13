@@ -11,6 +11,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -58,6 +59,7 @@ class TicketSeeder extends Seeder
 
             $statuses = TicketPlugin::resolveModelClass(TicketStatus::class)::getOpenStatuses();
             $priorities = TicketPlugin::resolveModelClass(TicketPriority::class)::all();
+            $dispositions = TicketPlugin::resolveModelClass(TicketDisposition::class)::all();
 
             // Create users with tenant data if tenancy is enabled
             $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
@@ -69,14 +71,13 @@ class TicketSeeder extends Seeder
 
             $users = $userFactory->create();
 
-            $tickets = [];
-
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
             // Create ticket factory base with tenant data if needed
             $baseTicketFactory = $ticketModel::factory()
                 ->recycle($statuses)
                 ->recycle($priorities)
+                ->recycle($dispositions)
                 ->recycle($users);
 
             if ($tenantId && $tenantKey) {

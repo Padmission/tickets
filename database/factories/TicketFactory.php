@@ -31,6 +31,7 @@ class TicketFactory extends Factory
             'data' => [],
 
             'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::factory(),
+            'disposition_id' => TicketPlugin::resolveModelClass(TicketDisposition::class)::factory(),
             'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::factory(),
             'assignee_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
         ];
