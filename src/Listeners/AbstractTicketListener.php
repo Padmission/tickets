@@ -16,9 +16,6 @@ abstract class AbstractTicketListener
 {
     /**
      * Handle the ticket event and dispatch notifications.
-     *
-     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
-     * @return void
      */
     public function handle(TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event): void
     {
@@ -32,7 +29,7 @@ abstract class AbstractTicketListener
     /**
      * Get the list of users who should receive notifications for this event.
      *
-     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
+     * @param  TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent  $event
      * @return \Illuminate\Support\Collection<Authorizable>
      */
     protected function getNotificationRecipients($event): \Illuminate\Support\Collection
@@ -47,9 +44,7 @@ abstract class AbstractTicketListener
     /**
      * Send notification to a specific user.
      *
-     * @param Authorizable $user
-     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
-     * @return void
+     * @param  TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent  $event
      */
     protected function sendNotificationToUser(Authorizable $user, $event): void
     {
@@ -71,8 +66,7 @@ abstract class AbstractTicketListener
     /**
      * Get notification type from event class name.
      *
-     * @param TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
-     * @return string|null
+     * @param  TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent  $event
      */
     protected function getNotificationType($event): ?string
     {
@@ -84,10 +78,7 @@ abstract class AbstractTicketListener
     /**
      * Dispatch a debounced notification job.
      *
-     * @param Authorizable $user
-     * @param \Padmission\Tickets\Models\Ticket $ticket
-     * @param string $type
-     * @return void
+     * @param  \Padmission\Tickets\Models\Ticket  $ticket
      */
     protected function dispatchDebouncedNotification(Authorizable $user, $ticket, string $type): void
     {
@@ -108,9 +99,6 @@ abstract class AbstractTicketListener
 
     /**
      * Get the notification strategy for a user.
-     *
-     * @param Authorizable $user
-     * @return string
      */
     protected function getUserNotificationStrategy(Authorizable $user): string
     {

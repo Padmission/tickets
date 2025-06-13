@@ -10,7 +10,8 @@ namespace Padmission\Tickets\Notifications;
  *
  * @see AbstractTicketHistoryNotification
  */
-class TicketClosedNotification extends AbstractTicketHistoryNotification {
+class TicketClosedNotification extends AbstractTicketHistoryNotification
+{
     public function getEmailSubject(): string
     {
         return __('padmission-tickets::notifications.ticket-closed.subject', [

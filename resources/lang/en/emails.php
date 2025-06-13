@@ -10,5 +10,5 @@ return [
     'activity' => [
         'sender-you' => 'You',
         'sender-support' => 'Support',
-    ]
+    ],
 ];

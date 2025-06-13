@@ -10,7 +10,8 @@ namespace Padmission\Tickets\Notifications;
  *
  * @see AbstractTicketHistoryNotification
  */
-class TicketAssignedNotification extends AbstractTicketHistoryNotification {
+class TicketAssignedNotification extends AbstractTicketHistoryNotification
+{
     public function getEmailSubject(): string
     {
         return __('padmission-tickets::notifications.ticket-assigned.subject', [
@@ -18,5 +19,4 @@ class TicketAssignedNotification extends AbstractTicketHistoryNotification {
             'ticket_id' => $this->ticket->id,
         ]);
     }
-
 }

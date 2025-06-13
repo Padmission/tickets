@@ -7,7 +7,8 @@ use Padmission\Tickets\Models\TicketActivity;
 
 class TicketActivityObserver
 {
-    public function creating(TicketActivity $activity) : void {
+    public function creating(TicketActivity $activity): void
+    {
         $activity->user_id ??= auth()->user()?->id;
     }
 

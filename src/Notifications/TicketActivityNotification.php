@@ -10,7 +10,8 @@ namespace Padmission\Tickets\Notifications;
  *
  * @see AbstractTicketHistoryNotification
  */
-class TicketActivityNotification extends AbstractTicketHistoryNotification {
+class TicketActivityNotification extends AbstractTicketHistoryNotification
+{
     public function getEmailSubject(): string
     {
         return __('padmission-tickets::notifications.ticket-activity.subject', [
