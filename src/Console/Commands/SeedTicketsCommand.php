@@ -41,8 +41,7 @@ class SeedTicketsCommand extends Command
 
                 // Get all tenants
                 $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
-                $tenantModel = new $tenantModelClass;
-                $tenants = $tenantModel::all();
+                $tenants = $tenantModelClass::all();
 
                 if ($tenants->isEmpty()) {
                     $this->warn('No tenants found. Please create tenants first.');
@@ -54,7 +53,6 @@ class SeedTicketsCommand extends Command
             }
         }
 
-        // Determine which seeders to run
         $seedersToRun = $this->determineSeedersToRun($only);
 
         if (empty($seedersToRun)) {
@@ -65,11 +63,11 @@ class SeedTicketsCommand extends Command
 
         // Run the seeders
         foreach ($seedersToRun as $seederName => $seederClass) {
-            $this->info("Running {$seederName}...");
+            $this->info("Seeding {$seederName}...");
 
             try {
                 if ($force) {
-                    // If forced, we might need to handle existing data differently
+                    // TODO: If forced, we might need to handle existing data differently
                     $this->warn('Force flag is set - this may create duplicate data');
                 }
 
@@ -98,40 +96,21 @@ class SeedTicketsCommand extends Command
     protected function determineSeedersToRun(?string $only): array
     {
         $allSeeders = [
-            'TicketDispositionSeeder' => TicketDispositionSeeder::class,
-            'TicketPrioritySeeder' => TicketPrioritySeeder::class,
-            'TicketStatusSeeder' => TicketStatusSeeder::class,
-            'TicketSeeder' => TicketSeeder::class,
+            'dispositions' => TicketDispositionSeeder::class,
+            'priorities' => TicketPrioritySeeder::class,
+            'statuses' => TicketStatusSeeder::class,
+            'tickets' => TicketSeeder::class,
         ];
 
         if (! $only) {
             return $allSeeders;
         }
 
-        $requestedTypes = array_map('trim', explode(',', $only));
-        $seedersToRun = [];
+        $requestedTypes = array_map(trim(...), explode(',', $only));
 
-        foreach ($requestedTypes as $type) {
-            switch (strtolower($type)) {
-                case 'dispositions':
-                    $seedersToRun['TicketDispositionSeeder'] = TicketDispositionSeeder::class;
-                    break;
-                case 'priorities':
-                    $seedersToRun['TicketPrioritySeeder'] = TicketPrioritySeeder::class;
-                    break;
-                case 'statuses':
-                    $seedersToRun['TicketStatusSeeder'] = TicketStatusSeeder::class;
-                    break;
-                case 'tickets':
-                    $seedersToRun['TicketSeeder'] = TicketSeeder::class;
-                    break;
-                default:
-                    $this->warn("Unknown seeder type: {$type}");
-                    break;
-            }
-        }
-
-        return $seedersToRun;
+        return collect($allSeeders)
+            ->filter(fn ($value, $key) => in_array($key, $requestedTypes))
+            ->toArray();
     }
 
     protected function showPanelInfo(): void
