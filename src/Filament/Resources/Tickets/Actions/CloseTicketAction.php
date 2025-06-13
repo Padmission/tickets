@@ -39,8 +39,8 @@ class CloseTicketAction extends Action
             ]);
         }
 
-        $this->action(function (Ticket $ticket, $data) {
-            $ticket->close(
+        $this->action(function ($record, $data) {
+            $record->close(
                 disposition: $data['disposition'] ?? null,
                 closedBy: Filament::auth()->id()
             );

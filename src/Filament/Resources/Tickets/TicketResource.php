@@ -25,7 +25,11 @@ class TicketResource extends Resource
 
     protected static ?string $slug = 'tickets';
 
-    protected static ?string $model = Ticket::class;
+
+    public static function getModel(): string
+    {
+        return TicketPlugin::resolveModelClass(Ticket::class);
+    }
 
     public static function table(Table $table): Table
     {
@@ -64,7 +68,7 @@ class TicketResource extends Resource
 
                 IconColumn::make('turn')
                     ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
-                    ->tooltip(fn (Ticket $record) => $record->turn->getLabel())
+                    ->tooltip(fn ($record) => $record->turn->getLabel())
                     ->sortable(),
 
                 TextColumn::make('subject')
