@@ -102,7 +102,8 @@ As it's hard to predict your authentication requirements, we don't define any fo
 ```php
 use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;\Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\TicketPlugin;
+use Illuminate\Support\Facades\Gate;
 
 // Define your policy, which extends from `TicketPolicy`
 Gate::policy(

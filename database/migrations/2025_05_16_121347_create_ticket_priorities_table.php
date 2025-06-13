@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -12,11 +13,13 @@ return new class extends Migration
             $table->id();
 
             if (config('padmission-tickets.tenancy.enabled', false)) {
-                $tenantKey = config('padmission-tickets.tenancy.foreign_key', 'tenant_id');
-                $tenantKeyType = config('padmission-tickets.tenancy.foreign_key_type', 'id');
+                $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
+                $tenantModel = new $tenantModelClass;
+                $tenantKey = Str::snake(class_basename($tenantModelClass)) . '_id';
+                $tenantKeyType = $tenantModel->getKeyType();
 
                 match (strtolower($tenantKeyType)) {
-                    'ulid' => $table->foreignUlid($tenantKey)->constrained(),
+                    'string' => $table->foreignUlid($tenantKey)->constrained(),
                     'uuid' => $table->foreignUuid($tenantKey)->constrained(),
                     default => $table->foreignId($tenantKey)->constrained(),
                 };

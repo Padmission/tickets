@@ -24,8 +24,8 @@ return new class extends Migration
 
             $table->string('escalation_level')->default('default');
             $table->string('subject');
-            $table->foreignId('status_id')->constrained();
-            $table->foreignId('priority_id')->constrained();
+            $table->foreignId('status_id')->constrained('ticket_statuses');
+            $table->foreignId('priority_id')->constrained('ticket_priorities');
             $table->foreignId('disposition_id')->nullable()->constrained('ticket_dispositions')->nullOnDelete();
             $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
             $table->unsignedInteger('submitter_id')->nullable()->constrained('users')->nullOnDelete();

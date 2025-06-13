@@ -23,8 +23,7 @@ return [
 
     'tenancy' => [
         'enabled' => false,
-        'foreign_key' => 'tenant_id',
-        'foreign_key_type' => 'id', // options: 'id', 'ulid', 'uuid'
+        'tenancy_model' => App\Models\Tenant::class,
     ],
 
     'levels' => [
