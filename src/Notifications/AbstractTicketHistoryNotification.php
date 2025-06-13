@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -103,16 +104,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 })
                 ->orderBy('created_at', 'asc')
                 ->limit($maxEvents)
-                ->get()
-                ->map(function (TicketActivity $message) use ($notifiable) {
-                    $message->side = match (true) {
-                        $message->sender === ActivitySender::System => 'system',
-                        $message->sender === $notifiable => 'me',
-                        default => 'other',
-                    };
-
-                    return $message;
-                });
+                ->get();
         });
     }
 
