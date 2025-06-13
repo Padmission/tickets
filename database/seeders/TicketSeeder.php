@@ -21,18 +21,19 @@ class TicketSeeder extends Seeder
     {
         // Get tenancy configuration
         $tenancyEnabled = config('padmission-tickets.tenancy.enabled', false);
-        
-        if (!$tenancyEnabled) {
+
+        if (! $tenancyEnabled) {
             // No tenancy - seed normally
             $this->seedForTenant(null);
+
             return;
         }
 
         // Get tenant model and determine foreign key
         $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
         $tenantModel = new $tenantModelClass;
-        $tenantKey = Str::snake(class_basename($tenantModelClass)) . '_id';
-        
+        $tenantKey = Str::snake(class_basename($tenantModelClass)).'_id';
+
         if ($tenantId !== null) {
             // Seed for specific tenant
             $this->seedForTenant($tenantId, $tenantKey);
@@ -49,7 +50,7 @@ class TicketSeeder extends Seeder
     {
         foreach (Filament::getPanels() as $panel) {
             // Skip panels where TicketPlugin is not registered
-            if (!TicketPlugin::isRegisteredOnPanel($panel)) {
+            if (! TicketPlugin::isRegisteredOnPanel($panel)) {
                 continue;
             }
 
@@ -61,11 +62,11 @@ class TicketSeeder extends Seeder
             // Create users with tenant data if tenancy is enabled
             $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
             $userFactory = $userModel::factory()->count(3);
-            
+
             if ($tenantId && $tenantKey) {
                 $userFactory = $userFactory->state([$tenantKey => $tenantId]);
             }
-            
+
             $users = $userFactory->create();
 
             $tickets = [];
@@ -77,7 +78,7 @@ class TicketSeeder extends Seeder
                 ->recycle($statuses)
                 ->recycle($priorities)
                 ->recycle($users);
-                
+
             if ($tenantId && $tenantKey) {
                 $baseTicketFactory = $baseTicketFactory->state([$tenantKey => $tenantId]);
             }
@@ -90,17 +91,17 @@ class TicketSeeder extends Seeder
                 ['subject' => 'Non-user submitter', 'turn' => Turn::Supporter, 'withSubmitterData' => true],
             ])->map(function ($ticketData) use ($baseTicketFactory) {
                 $factory = clone $baseTicketFactory;
-                
+
                 if (isset($ticketData['closed'])) {
                     $factory = $factory->closed();
                     unset($ticketData['closed']);
                 }
-                
+
                 if (isset($ticketData['withSubmitterData'])) {
                     $factory = $factory->withSubmitterData();
                     unset($ticketData['withSubmitterData']);
                 }
-                
+
                 return $factory->create($ticketData);
             });
 
@@ -119,7 +120,7 @@ class TicketSeeder extends Seeder
 
         // Create base factory for activities
         $baseActivityFactory = $ticketActivityModel::factory()->recycle($users);
-        
+
         if ($tenantId && $tenantKey) {
             $baseActivityFactory = $baseActivityFactory->state([$tenantKey => $tenantId]);
         }

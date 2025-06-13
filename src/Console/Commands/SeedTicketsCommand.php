@@ -2,9 +2,8 @@
 
 namespace Padmission\Tickets\Console\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 use Filament\Facades\Filament;
+use Illuminate\Console\Command;
 use Padmission\Tickets\Database\Seeders\TicketDispositionSeeder;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketSeeder;
@@ -32,7 +31,7 @@ class SeedTicketsCommand extends Command
         // Show panel information
         $this->showPanelInfo();
 
-        if (!$tenancyEnabled) {
+        if (! $tenancyEnabled) {
             $this->info('Tenancy is not enabled. Seeding without tenant context.');
         } else {
             if ($tenantId) {
@@ -47,6 +46,7 @@ class SeedTicketsCommand extends Command
 
                 if ($tenants->isEmpty()) {
                     $this->warn('No tenants found. Please create tenants first.');
+
                     return self::FAILURE;
                 }
 
@@ -59,6 +59,7 @@ class SeedTicketsCommand extends Command
 
         if (empty($seedersToRun)) {
             $this->error('No valid seeders specified.');
+
             return self::FAILURE;
         }
 
@@ -69,16 +70,16 @@ class SeedTicketsCommand extends Command
             try {
                 if ($force) {
                     // If forced, we might need to handle existing data differently
-                    $this->warn("Force flag is set - this may create duplicate data");
+                    $this->warn('Force flag is set - this may create duplicate data');
                 }
 
                 $seeder = new $seederClass;
-                $seeder->run($tenantId ? (int)$tenantId : null);
+                $seeder->run($tenantId ? (int) $tenantId : null);
 
                 $this->line("✅ {$seederName} completed successfully");
 
             } catch (\Exception $e) {
-                $this->error("❌ {$seederName} failed: " . $e->getMessage());
+                $this->error("❌ {$seederName} failed: ".$e->getMessage());
 
                 if ($this->option('verbose')) {
                     $this->error($e->getTraceAsString());
@@ -103,7 +104,7 @@ class SeedTicketsCommand extends Command
             'TicketSeeder' => TicketSeeder::class,
         ];
 
-        if (!$only) {
+        if (! $only) {
             return $allSeeders;
         }
 
@@ -147,12 +148,12 @@ class SeedTicketsCommand extends Command
             }
         }
 
-        if (!empty($panelsWithPlugin)) {
-            $this->info('Panels with TicketPlugin registered: ' . implode(', ', $panelsWithPlugin));
+        if (! empty($panelsWithPlugin)) {
+            $this->info('Panels with TicketPlugin registered: '.implode(', ', $panelsWithPlugin));
         }
 
-        if (!empty($panelsWithoutPlugin)) {
-            $this->comment('Panels without TicketPlugin (will be skipped): ' . implode(', ', $panelsWithoutPlugin));
+        if (! empty($panelsWithoutPlugin)) {
+            $this->comment('Panels without TicketPlugin (will be skipped): '.implode(', ', $panelsWithoutPlugin));
         }
 
         $this->newLine();

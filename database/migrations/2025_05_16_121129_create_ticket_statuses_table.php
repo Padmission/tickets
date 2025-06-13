@@ -15,7 +15,7 @@ return new class extends Migration
             if (config('padmission-tickets.tenancy.enabled', false)) {
                 $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
                 $tenantModel = new $tenantModelClass;
-                $tenantKey = Str::snake(class_basename($tenantModelClass)) . '_id';
+                $tenantKey = Str::snake(class_basename($tenantModelClass)).'_id';
                 $tenantKeyType = $tenantModel->getKeyType();
 
                 match (strtolower($tenantKeyType)) {

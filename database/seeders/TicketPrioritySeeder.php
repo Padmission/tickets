@@ -20,18 +20,19 @@ class TicketPrioritySeeder extends Seeder
 
         // Get tenancy configuration
         $tenancyEnabled = config('padmission-tickets.tenancy.enabled', false);
-        
-        if (!$tenancyEnabled) {
+
+        if (! $tenancyEnabled) {
             // No tenancy - seed normally
             $this->seedForTenant(null);
+
             return;
         }
 
         // Get tenant model and determine foreign key
         $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
         $tenantModel = new $tenantModelClass;
-        $tenantKey = Str::snake(class_basename($tenantModelClass)) . '_id';
-        
+        $tenantKey = Str::snake(class_basename($tenantModelClass)).'_id';
+
         if ($tenantId !== null) {
             // Seed for specific tenant
             $this->seedForTenant($tenantId, $tenantKey);
@@ -50,7 +51,7 @@ class TicketPrioritySeeder extends Seeder
 
         foreach (Filament::getPanels() as $panel) {
             // Skip panels where TicketPlugin is not registered
-            if (!TicketPlugin::isRegisteredOnPanel($panel)) {
+            if (! TicketPlugin::isRegisteredOnPanel($panel)) {
                 continue;
             }
 
@@ -66,6 +67,7 @@ class TicketPrioritySeeder extends Seeder
             if ($tenantId && $tenantKey) {
                 $data = $data->map(function ($row) use ($tenantId, $tenantKey) {
                     $row[$tenantKey] = $tenantId;
+
                     return $row;
                 });
             }

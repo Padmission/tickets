@@ -77,6 +77,7 @@ final class TicketPlugin implements Plugin
     {
         try {
             $plugin = $panel->getPlugin(static::$id);
+
             return $plugin !== null;
         } catch (\Exception $e) {
             return false;
