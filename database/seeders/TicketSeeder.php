@@ -5,10 +5,12 @@ namespace Padmission\Tickets\Database\Seeders;
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
+use Padmission\Tickets\Database\Seeders\Concerns\SeedForPanels;
+use Padmission\Tickets\Database\Seeders\Concerns\SeedForTenants;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketDisposition;
@@ -18,113 +20,94 @@ use Padmission\Tickets\TicketPlugin;
 
 class TicketSeeder extends Seeder
 {
+    use SeedForPanels;
+    use SeedForTenants;
+
     public function run(?int $tenantId = null): void
     {
-        // Get tenancy configuration
-        $tenancyEnabled = config('padmission-tickets.tenancy.enabled', false);
+        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        if (! $tenancyEnabled) {
-            // No tenancy - seed normally
-            $this->seedForTenant(null);
-
+        if ($ticketModel::query()->exists()) {
             return;
         }
 
-        // Get tenant model and determine foreign key
-        $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
-        $tenantModel = new $tenantModelClass;
-        $tenantKey = Str::snake(class_basename($tenantModelClass)).'_id';
+        foreach ($this->getTenants($tenantId) as $tenantId) {
+            foreach ($this->getPanels() as $panel) {
+                Filament::setCurrentPanel($panel);
 
-        if ($tenantId !== null) {
-            // Seed for specific tenant
-            $this->seedForTenant($tenantId, $tenantKey);
-        } else {
-            // Seed for all tenants
-            $tenants = $tenantModel::all();
-            foreach ($tenants as $tenant) {
-                $this->seedForTenant($tenant->getKey(), $tenantKey);
-            }
-        }
-    }
+                $tenantKey = $this->getTenantKey();
+                $scopeToTenant = fn ($query) => $query->where($tenantKey, $tenantId);
 
-    protected function seedForTenant(?int $tenantId, ?string $tenantKey = null): void
-    {
-        foreach (Filament::getPanels() as $panel) {
-            // Skip panels where TicketPlugin is not registered
-            if (! $panel->hasPlugin(TicketPlugin::$id)) {
-                continue;
-            }
+                $statuses = TicketPlugin::resolveModelClass(TicketStatus::class)::query()
+                    ->tap(new CurrentPanelScope)
+                    ->tap($scopeToTenant)
+                    ->orderBy('order')
+                    ->get()
+                    ->tap(fn ($collection) => $collection->pop());
 
-            Filament::setCurrentPanel($panel);
+                $priorities = TicketPlugin::resolveModelClass(TicketPriority::class)::query()
+                    ->tap($scopeToTenant)
+                    ->get();
 
-            $statuses = TicketPlugin::resolveModelClass(TicketStatus::class)::getOpenStatuses();
-            $priorities = TicketPlugin::resolveModelClass(TicketPriority::class)::all();
-            $dispositions = TicketPlugin::resolveModelClass(TicketDisposition::class)::all();
+                $dispositions = TicketPlugin::resolveModelClass(TicketDisposition::class)::query()
+                    ->tap($scopeToTenant)
+                    ->get();
 
-            // Create users with tenant data if tenancy is enabled
-            $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
-            $userFactory = $userModel::factory()->count(3);
+                // Create users with tenant data if tenancy is enabled
+                $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+                $userFactory = $userModel::factory()->count(3);
 
-            if ($tenantId && $tenantKey) {
-                $userFactory = $userFactory->state([$tenantKey => $tenantId]);
-            }
-
-            $users = $userFactory->create();
-
-            $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-
-            // Create ticket factory base with tenant data if needed
-            $baseTicketFactory = $ticketModel::factory()
-                ->recycle($statuses)
-                ->recycle($priorities)
-                ->recycle($dispositions)
-                ->recycle($users);
-
-            if ($tenantId && $tenantKey) {
-                $baseTicketFactory = $baseTicketFactory->state([$tenantKey => $tenantId]);
-            }
-
-            // Create different types of tickets using collection
-            $tickets = collect([
-                ['subject' => 'Users Turn', 'turn' => Turn::User],
-                ['subject' => 'Supporters Turn', 'turn' => Turn::Supporter],
-                ['subject' => 'Closed Ticket', 'turn' => Turn::Supporter, 'closed' => true],
-                ['subject' => 'Non-user submitter', 'turn' => Turn::Supporter, 'withSubmitterData' => true],
-            ])->map(function ($ticketData) use ($baseTicketFactory) {
-                $factory = clone $baseTicketFactory;
-
-                if (isset($ticketData['closed'])) {
-                    $factory = $factory->closed();
-                    unset($ticketData['closed']);
+                if ($tenantId) {
+                    $userFactory = $userFactory->state([$this->getTenantKey() => $tenantId]);
                 }
 
-                if (isset($ticketData['withSubmitterData'])) {
-                    $factory = $factory->withSubmitterData();
-                    unset($ticketData['withSubmitterData']);
+                $users = $userFactory->create();
+
+                $baseTicketFactory = $ticketModel::factory()
+                    ->recycle($statuses)
+                    ->recycle($priorities)
+                    ->recycle($dispositions)
+                    ->recycle($users);
+
+                if ($tenantId) {
+                    $baseTicketFactory = $baseTicketFactory->state([$this->getTenantKey() => $tenantId]);
                 }
 
-                return $factory->create($ticketData);
-            });
+                $tickets = collect([
+                    ['subject' => 'Users Turn', 'turn' => Turn::User],
+                    ['subject' => 'Supporters Turn', 'turn' => Turn::Supporter],
+                    ['subject' => 'Closed Ticket', 'turn' => Turn::Supporter, 'closed' => true],
+                    ['subject' => 'Non-user submitter', 'turn' => Turn::Supporter, 'withSubmitterData' => true],
+                ])->map(function ($ticketData) use ($baseTicketFactory) {
+                    $factory = clone $baseTicketFactory;
 
-            $tickets->each(function ($ticket) use ($users, $tenantId, $tenantKey) {
-                $this->addActivities($ticket, $users, $tenantId, $tenantKey);
-            });
+                    if (isset($ticketData['closed'])) {
+                        // $factory = $factory->closed();
+                        unset($ticketData['closed']);
+                    }
+
+                    if (isset($ticketData['withSubmitterData'])) {
+                        // $factory = $factory->withSubmitterData();
+                        unset($ticketData['withSubmitterData']);
+                    }
+
+                    return $factory->create($ticketData);
+                });
+
+                foreach ($tickets as $ticket) {
+                    $this->addActivities($ticket, $users);
+                }
+            }
         }
     }
 
     /**
      * @param  Ticket  $ticket
      */
-    protected function addActivities($ticket, $users, ?int $tenantId = null, ?string $tenantKey = null): void
+    protected function addActivities($ticket, $users): void
     {
         $ticketActivityModel = TicketPlugin::resolveModelClass(TicketActivity::class);
-
-        // Create base factory for activities
         $baseActivityFactory = $ticketActivityModel::factory()->recycle($users);
-
-        if ($tenantId && $tenantKey) {
-            $baseActivityFactory = $baseActivityFactory->state([$tenantKey => $tenantId]);
-        }
 
         $baseActivityFactory->create([
             'ticket_id' => $ticket->id,
