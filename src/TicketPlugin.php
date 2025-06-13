@@ -73,17 +73,6 @@ final class TicketPlugin implements Plugin
         return $plugin;
     }
 
-    public static function isRegisteredOnPanel(Panel $panel): bool
-    {
-        try {
-            $plugin = $panel->getPlugin(static::$id);
-
-            return $plugin !== null;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
     /**
      * @template T of Model
      *

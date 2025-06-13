@@ -50,8 +50,7 @@ class TicketDispositionSeeder extends Seeder
         $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
 
         foreach (Filament::getPanels() as $panel) {
-            // Skip panels where TicketPlugin is not registered
-            if (! TicketPlugin::isRegisteredOnPanel($panel)) {
+            if (! $panel->hasPlugin(TicketPlugin::$id)) {
                 continue;
             }
 
