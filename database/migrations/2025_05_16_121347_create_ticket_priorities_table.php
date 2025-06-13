@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,13 +16,12 @@ return new class extends Migration
 
             if (config('padmission-tickets.tenancy.enabled', false)) {
                 $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
-                $tenantModel = new $tenantModelClass;
                 $tenantKey = Str::snake(class_basename($tenantModelClass)).'_id';
-                $tenantKeyType = $tenantModel->getKeyType();
+                $traits = class_uses_recursive($tenantModelClass);
 
-                match (strtolower($tenantKeyType)) {
-                    'string' => $table->foreignUlid($tenantKey)->constrained(),
-                    'uuid' => $table->foreignUuid($tenantKey)->constrained(),
+                match (true) {
+                    in_array(HasUlids::class, $traits) => $table->foreignUlid($tenantKey)->constrained(),
+                    in_array(HasUuids::class, $traits) => $table->foreignUuid($tenantKey)->constrained(),
                     default => $table->foreignId($tenantKey)->constrained(),
                 };
             }
