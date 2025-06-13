@@ -32,7 +32,7 @@
                             <table width="80%" align="left" cellpadding="0" cellspacing="0" role="presentation">
                                 <tr>
                                     <td align="left" style="padding:12px;background:#edf2f7;">
-                                        {!! $activity->content !!}
+                                        {!! strip_tags($activity->content) !!}
                                     </td>
                                 </tr>
                             </table>
