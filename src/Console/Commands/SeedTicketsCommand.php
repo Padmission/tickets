@@ -12,7 +12,7 @@ use Padmission\Tickets\TicketPlugin;
 
 class SeedTicketsCommand extends Command
 {
-    protected $signature = 'tickets:seed 
+    protected $signature = 'tickets:seed
                             {--tenant= : Specific tenant ID to seed for (optional)}
                             {--only= : Seed only specific types (comma-separated): dispositions,priorities,statuses,tickets}
                             {--force : Force seeding even if data already exists}';
@@ -141,7 +141,7 @@ class SeedTicketsCommand extends Command
         $panelsWithoutPlugin = [];
 
         foreach ($allPanels as $panel) {
-            if (TicketPlugin::isRegisteredOnPanel($panel)) {
+            if ($panel->hasPlugin(TicketPlugin::$id)) {
                 $panelsWithPlugin[] = $panel->getId();
             } else {
                 $panelsWithoutPlugin[] = $panel->getId();
