@@ -66,13 +66,52 @@ return [
             \Padmission\Tickets\Listeners\TicketCreatedListener::class,
         ],
     ],
+
+    /**
+     * Notification configuration
+     *
+     * @var array<string, class-string|null>
+     */
     'notifications' => [
         'activity' => Padmission\Tickets\Notifications\TicketActivityNotification::class,
         'assigned' => Padmission\Tickets\Notifications\TicketAssignedNotification::class,
         'closed' => Padmission\Tickets\Notifications\TicketClosedNotification::class,
         'created' => Padmission\Tickets\Notifications\TicketCreatedNotification::class,
     ],
+
+    /**
+     * Default notification strategy when user doesn't define one
+     * Options: 'immediate', 'debounced'
+     *
+     * @var string
+     */
+    'default-notification-strategy' => 'debounced',
+
+    /**
+     * Debounce time in seconds for grouped notifications
+     *
+     * @var int
+     */
     'notification-debounce' => 300,
-    'notification-max-days' => 7,
+
+    /**
+     * Maximum days to look back for activities in notification emails
+     *
+     * @var int
+     */
+    'notification-max-days' => 10,
+
+    /**
+     * Maximum number of activities to include in a single notification
+     *
+     * @var int
+     */
     'notification-max-events' => 10,
+
+    /**
+     * Cache TTL for notification job deduplication (seconds)
+     *
+     * @var int
+     */
+    'notification-cache-ttl' => 300,
 ];

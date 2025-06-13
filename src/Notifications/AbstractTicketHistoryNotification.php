@@ -34,7 +34,6 @@ abstract class AbstractTicketHistoryNotification extends Notification
         $maxDays = config('padmission-tickets.notification-max-days', 7);
 
         $activities = $this->getUnreadActions($notifiable, $maxEvents, $maxDays);
-
         if ($lastNotification) {
             $lastNotification->update([
                 'updated_at' => now(),
@@ -162,7 +161,10 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     public function getEmailSubject(): string
     {
-        return __('padmission-tickets::notifications.ticket-history.subject');
+        return __('padmission-tickets::notifications.ticket-history.subject', [
+            'subject' => $this->ticket->subject,
+            'ticket_id' => $this->ticket->id,
+        ]);
     }
 
     public function getEmailView(): string
@@ -195,6 +197,9 @@ abstract class AbstractTicketHistoryNotification extends Notification
             if ($panel = Filament::getPanel($panel)) {
                 if ($logo = $panel->getBrandLogo()) {
                     $height = $panel->getBrandLogoHeight();
+
+                    $logo = 'https://www.padmission.com/wp-content/uploads/2024/07/pm-journey-logo.png';
+
 
                     if (filter_var($logo, FILTER_VALIDATE_URL)) {
                         return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
