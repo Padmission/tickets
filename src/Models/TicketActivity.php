@@ -30,7 +30,7 @@ class TicketActivity extends Model
 
     protected $table = 'ticket_activities';
 
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'data' => 'array',

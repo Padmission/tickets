@@ -12,13 +12,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
@@ -37,7 +35,6 @@ class Ticket extends Model
 
     protected $casts = [
         'data' => 'array',
-        'turn' => Turn::class,
         'submitter_data' => SubmitterData::class,
         'closed_at' => 'datetime',
     ];
@@ -51,17 +48,7 @@ class Ticket extends Model
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(TicketStatus::class)
-        )->withTrashed();
-    }
-
-    /**
-     * @return BelongsTo<TicketPriority, $this>
-     */
-    public function priority(): BelongsTo
-    {
-        return $this->belongsTo(
-            TicketPlugin::resolveModelClass(TicketPriority::class)
-        )->withTrashed();
+        );
     }
 
     /**
@@ -87,11 +74,14 @@ class Ticket extends Model
     }
 
     /**
-     * @return HasMany<TicketActivity, $this>
+     * @return HasMany<TicketActivity>
      */
     public function ticketActivities(): HasMany
     {
-        return $this->hasMany(TicketPlugin::resolveModelClass(TicketActivity::class), 'ticket_id');
+        return $this->hasMany(
+            TicketPlugin::resolveModelClass(TicketActivity::class),
+            'ticket_id'
+        );
     }
 
     /**
@@ -153,17 +143,14 @@ class Ticket extends Model
             return;
         }
 
-        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
-        $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
+        $closedStatus = $this->getClosedStatus();
 
         DB::beginTransaction();
 
         $this->ticketActivities()->create([
             'type' => ActivityType::Closed,
             'sender' => ActivitySender::System,
-            'data' => [
-                'closed_by' => $closedBy,
-            ],
+            'user_id' => $closedBy,
         ]);
 
         $this->update([
@@ -175,5 +162,11 @@ class Ticket extends Model
         DB::commit();
 
         event(new TicketClosedEvent($this));
+    }
+
+    private function getClosedStatus()
+    {
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        return $statusModel::query()->orderBy('order', 'DESC')->first();
     }
 }
