@@ -5,6 +5,8 @@ use Padmission\Tickets\Filament\Resources\Dispositions\Pages\ListDispositions;
 use Padmission\Tickets\Models\TicketDisposition;
 
 it('lists dispositions', function () {
+    $this->login();
+
     TicketDisposition::factory()->create(['display_name' => 'Follow Up', 'color' => 'Blue', 'order' => 3, 'panel' => 'test']);
     TicketDisposition::factory()->create(['display_name' => 'Escalated', 'color' => 'Red', 'order' => 2,  'panel' => 'test']);
     TicketDisposition::factory()->create(['display_name' => 'Resolved', 'color' => 'Green', 'order' => 1, 'panel' => 'test']);
@@ -15,6 +17,8 @@ it('lists dispositions', function () {
 });
 
 it('only shows dispositions from current panel', function () {
+    $this->login();
+
     TicketDisposition::factory()->create(['display_name' => 'Panel 1', 'color' => 'Blue', 'panel' => 'test']);
     TicketDisposition::factory()->create(['display_name' => 'Panel 2', 'color' => 'Red', 'panel' => 'panel2']);
 
@@ -22,6 +26,8 @@ it('only shows dispositions from current panel', function () {
 });
 
 it('can reorder dispositions', function () {
+    $this->login();
+
     TicketDisposition::factory()->create(['display_name' => 'Resolved', 'color' => 'Green', 'order' => 1]);
     TicketDisposition::factory()->create(['display_name' => 'Escalated', 'color' => 'Red', 'order' => 2]);
     TicketDisposition::factory()->create(['display_name' => 'Follow Up', 'color' => 'Blue', 'order' => 3]);
@@ -37,6 +43,8 @@ it('can reorder dispositions', function () {
 });
 
 it('can create disposition', function () {
+    $this->login();
+
     Livewire::test(ListDispositions::class)
         ->callAction('create', [
             'display_name' => '',
