@@ -16,9 +16,11 @@ abstract class AbstractTicketListener
 {
     public function handle(TicketActivity|TicketAssigned|TicketClosed|TicketCreated $event): void
     {
-        collect([$event->ticket?->assignee, $event->ticket?->submitter])
+        $recipients = collect([$event->ticket?->assignee, $event->ticket?->submitter])
             ->filter() // Remove null values
-            ->unique()
+            ->unique(function ($user) {
+                return $user->getKey();
+            })
             ->each(function (Authorizable $user) use ($event) {
 
                 $type = strtolower(Str::chopStart(class_basename(get_class($event)), 'Ticket'));

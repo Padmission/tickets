@@ -61,13 +61,8 @@ class TicketActivity extends Model
         );
     }
 
-    /**
-     * @return Attribute<string,never>
-     */
     protected function content(): Attribute
     {
-        // TODO: Cache status, priority and make the notifications configurable
-
         return Attribute::get(fn ($value) => match ($this->type) {
             ActivityType::Opened => __('padmission-tickets::activities.opened'),
             ActivityType::Closed => __('padmission-tickets::activities.closed'),
