@@ -63,7 +63,7 @@ return [
             \Padmission\Tickets\Listeners\TicketClosedListener::class,
         ],
         \Padmission\Tickets\Events\TicketCreated::class => [
-            \Padmission\Tickets\Listeners\TicketCreatedListener::class
+            \Padmission\Tickets\Listeners\TicketCreatedListener::class,
         ],
     ],
     'notifications' => [

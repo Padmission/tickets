@@ -6,7 +6,6 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
-use Padmission\Tickets\Models\TicketNotification;
 use Padmission\Tickets\Notifications\AbstractTicketHistoryNotification;
 use Padmission\Tickets\Tests\User;
 
@@ -29,8 +28,8 @@ beforeEach(function () {
     Event::fake();
 
     // Disable model observers that trigger notifications
-//    Ticket::unsetEventDispatcher();
-  //  TicketActivity::unsetEventDispatcher();
+    //    Ticket::unsetEventDispatcher();
+    //  TicketActivity::unsetEventDispatcher();
 });
 
 test('notification can be instantiated', function () {

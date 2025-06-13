@@ -54,10 +54,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     }
 
-    public function packageRegistered(): void
-    {
-
-    }
+    public function packageRegistered(): void {}
 
     private function ensurePolicyIsRegistered(): void
     {

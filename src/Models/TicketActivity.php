@@ -22,7 +22,6 @@ use Padmission\Tickets\TicketPlugin;
 /**
  * @property ActivitySide $side
  */
-
 #[ObservedBy(TicketActivityObserver::class)]
 #[UseFactory(TicketActivityFactory::class)]
 class TicketActivity extends Model

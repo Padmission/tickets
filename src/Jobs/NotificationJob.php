@@ -49,14 +49,14 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
             $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
             $user = $userModel::find($this->userId);
 
-            if (!$user) {
+            if (! $user) {
                 return;
             }
 
             $model = $this->modelType;
             $record = $model::find($this->modelId);
 
-            if (!$record) {
+            if (! $record) {
                 return;
             }
 

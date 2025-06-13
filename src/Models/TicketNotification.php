@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

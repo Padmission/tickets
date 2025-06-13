@@ -9,9 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketNotification;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
@@ -20,9 +18,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
 {
     public function __construct(
         public Ticket $ticket,
-    )
-    {
-    }
+    ) {}
 
     public function via($notifiable): array
     {
@@ -94,6 +90,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
     {
         return once(function () use ($notifiable, $maxEvents, $maxDays) {
             $lastNotification = $this->getLastNotification($notifiable);
+
             return $this->ticket
                 ->ticketActivities()
                 ->with('user')
@@ -110,7 +107,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
 
     public function getActionUrl(): string
     {
-        $data = (array)$this->ticket->data;
+        $data = (array) $this->ticket->data;
 
         $basis = null;
 
@@ -120,7 +117,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
             $basis = url('/');
         }
 
-        return $this->addHash($basis, 'ticket-' . $this->ticket->id);
+        return $this->addHash($basis, 'ticket-'.$this->ticket->id);
     }
 
     protected function addHash(string $url, string $hash): string
@@ -135,18 +132,19 @@ abstract class AbstractTicketHistoryNotification extends Notification
         $baseUrl = Str::before($url, '#');
         $cleanHash = Str::start(ltrim($hash, '#'), '#');
 
-        return $baseUrl . $cleanHash;
+        return $baseUrl.$cleanHash;
     }
 
     protected function getStyles(): string
     {
-        return $this->getCoreMailStyles() . $this->getTicketCustomStyles();
+        return $this->getCoreMailStyles().$this->getTicketCustomStyles();
     }
 
     private function getCoreMailStyles(): string
     {
-        return Cache::remember(__METHOD__, 3600, function() {
+        return Cache::remember(__METHOD__, 3600, function () {
             $path = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
+
             return file_exists($path) ? file_get_contents($path) : '';
         });
     }
@@ -206,6 +204,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 }
             }
         }
+
         return null;
     }
 }
