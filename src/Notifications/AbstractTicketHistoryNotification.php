@@ -198,9 +198,6 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 if ($logo = $panel->getBrandLogo()) {
                     $height = $panel->getBrandLogoHeight();
 
-                    $logo = 'https://www.padmission.com/wp-content/uploads/2024/07/pm-journey-logo.png';
-
-
                     if (filter_var($logo, FILTER_VALIDATE_URL)) {
                         return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
                     }
