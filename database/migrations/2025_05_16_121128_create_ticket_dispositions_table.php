@@ -11,7 +11,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ticket_priorities', function (Blueprint $table) {
+        Schema::create('ticket_dispositions', function (Blueprint $table) {
             $table->id();
 
             if (config('padmission-tickets.tenancy.enabled', false)) {
@@ -37,6 +37,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('ticket_priorities');
+        Schema::dropIfExists('ticket_dispositions');
     }
 };

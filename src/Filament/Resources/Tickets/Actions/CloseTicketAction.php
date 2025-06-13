@@ -4,6 +4,8 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Padmission\Tickets\Models\Ticket;
 
 class CloseTicketAction extends Action
 {
@@ -23,9 +25,32 @@ class CloseTicketAction extends Action
             ->color('gray')
             ->hidden(fn ($record): bool => $record->isClosed)
             ->requiresConfirmation()
-            ->icon('heroicon-o-check-circle')
-            ->action(function ($record) {
-                $record->close(closedBy: Filament::auth()->id());
-            });
+            ->icon('heroicon-o-check-circle');
+
+        $hasDispositions = $this->dispositionsExist();
+
+        if ($hasDispositions) {
+            $this->form([
+                Select::make('disposition')
+                    ->label(__('padmission-tickets::tickets.actions.close.disposition.label'))
+                    ->relationship('disposition', 'display_name')
+                    ->lazy()
+                    ->required(),
+            ]);
+        }
+
+        $this->action(function (Ticket $ticket, $data) {
+            $ticket->close(
+                disposition: $data['disposition'] ?? null,
+                closedBy: Filament::auth()->id()
+            );
+        });
+    }
+
+    protected function dispositionsExist(): bool
+    {
+        $dispositionModel = \Padmission\Tickets\TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\TicketDisposition::class);
+
+        return $dispositionModel::query()->exists();
     }
 }

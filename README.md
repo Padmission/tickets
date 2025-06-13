@@ -71,7 +71,7 @@ $panel->plugin(TicketPlugin::make());
 
 ### Resources
 
-The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use `->registerResources()` method:
+The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use the `->registerResources()` method:
 
 ```php
 use Padmission\Tickets\TicketPlugin;
@@ -102,7 +102,8 @@ As it's hard to predict your authentication requirements, we don't define any fo
 ```php
 use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;\Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\TicketPlugin;
+use Illuminate\Support\Facades\Gate;
 
 // Define your policy, which extends from `TicketPolicy`
 Gate::policy(
@@ -112,6 +113,11 @@ Gate::policy(
 ```
 
 The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
+
+### Dispositions
+
+The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed.
+You can configure dispositions within each panel using the DispositionResource.
 
 ### Chat Widget
 

@@ -9,6 +9,7 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
 use Padmission\Tickets\Models\Ticket;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -27,6 +28,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasTranslations()
             ->hasRoutes('api')
+            ->hasCommand(SeedTicketsCommand::class)
             ->discoversMigrations();
     }
 

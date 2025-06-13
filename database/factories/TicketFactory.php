@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -22,6 +23,11 @@ class TicketFactory extends Factory
 
     public function definition(): array
     {
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+        $priorityModel = TicketPlugin::resolveModelClass(TicketPriority::class);
+        $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+
         return [
             'subject' => $this->faker->word(),
             'escalation_level' => 'default',
@@ -29,9 +35,10 @@ class TicketFactory extends Factory
             'turn' => Turn::User,
             'data' => [],
 
-            'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::factory(),
-            'priority_id' => TicketPlugin::resolveModelClass(TicketPriority::class)::factory(),
-            'assignee_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
+            'status_id' => $this->getRandomRecycledModel($statusModel) ?? $statusModel::factory(),
+            'disposition_id' => $this->getRandomRecycledModel($dispositionModel) ?? $dispositionModel::factory(),
+            'priority_id' => $this->getRandomRecycledModel($priorityModel) ?? $priorityModel::factory(),
+            'assignee_id' => $this->getRandomRecycledModel($userModel) ?? $userModel::factory(),
         ];
     }
 
@@ -48,10 +55,14 @@ class TicketFactory extends Factory
 
     public function closed(): static
     {
+        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+        $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+
         return $this->state([
             'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus(),
+            'disposition_id' => $this->getRandomRecycledModel($dispositionModel) ?? $dispositionModel::factory(),
             'closed_at' => now(),
-            'closed_by' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
+            'closed_by' => $this->getRandomRecycledModel($userModel) ?? $userModel::factory(),
         ]);
     }
 }

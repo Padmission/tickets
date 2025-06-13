@@ -18,6 +18,7 @@ use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Exceptions\TicketDispositionNotFoundException;
 use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
@@ -29,7 +30,7 @@ class Ticket extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'data' => 'array',
@@ -39,6 +40,16 @@ class Ticket extends Model
     ];
 
     /* Relations */
+
+    /**
+     * @return BelongsTo<TicketDisposition, $this>
+     */
+    public function disposition(): BelongsTo
+    {
+        return $this->belongsTo(
+            TicketPlugin::resolveModelClass(TicketDisposition::class)
+        )->withTrashed();
+    }
 
     /**
      * @return BelongsTo<TicketStatus, $this>
@@ -138,7 +149,7 @@ class Ticket extends Model
     }
 
     /* Business Logic */
-    public function close(?int $closedBy = null): void
+    public function close(Model|int|null $disposition = null, ?int $closedBy = null): void
     {
         if ($this->isClosed) {
             return;
@@ -148,6 +159,18 @@ class Ticket extends Model
         $closedStatus = $statusModel::query()->orderBy('order', 'DESC')->first();
 
         DB::beginTransaction();
+
+        if ($disposition) {
+            if (! is_object($disposition)) {
+                $context = $disposition;
+                $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+                $disposition = $dispositionModel::find($disposition);
+                if (! $disposition) {
+                    throw new TicketDispositionNotFoundException($context);
+                }
+            }
+            $this->disposition()->associate($disposition);
+        }
 
         $this->ticketActivities()->create([
             'type' => ActivityType::Closed,
@@ -159,6 +182,7 @@ class Ticket extends Model
 
         $this->update([
             'status_id' => $closedStatus->getKey(),
+            'disposition_id' => $disposition ? $disposition->getKey() : null,
             'closed_at' => now(),
             'closed_by' => $closedBy,
         ]);

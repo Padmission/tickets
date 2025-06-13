@@ -27,7 +27,7 @@ class TicketActivity extends Model
 
     protected $table = 'ticket_activities';
 
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'data' => 'array',
@@ -36,10 +36,8 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
-
         static::creating(function ($model) {
             $model->user_id ??= auth()->user()?->id;
         });

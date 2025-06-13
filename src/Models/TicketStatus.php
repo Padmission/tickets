@@ -21,12 +21,10 @@ class TicketStatus extends Model
 
     protected $table = 'ticket_statuses';
 
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
-    protected static function boot()
+    protected static function booted(): void
     {
-        parent::boot();
-
         static::addGlobalScope(CurrentPanelScope::class);
 
         static::creating(function ($model) {
