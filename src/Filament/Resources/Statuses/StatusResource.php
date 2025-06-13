@@ -18,7 +18,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -89,7 +88,6 @@ class StatusResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->tap(new CurrentPanelScope);
+        return parent::getEloquentQuery();
     }
 }
