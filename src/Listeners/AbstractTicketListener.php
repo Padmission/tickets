@@ -79,6 +79,7 @@ abstract class AbstractTicketListener
                 'Event'
             )
         );
+
         return $type ?: null;
     }
 

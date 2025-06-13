@@ -167,6 +167,7 @@ class Ticket extends Model
     private function getClosedStatus()
     {
         $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+
         return $statusModel::query()->orderBy('order', 'DESC')->first();
     }
 }
