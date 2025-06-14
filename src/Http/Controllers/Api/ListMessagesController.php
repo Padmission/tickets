@@ -28,8 +28,8 @@ class ListMessagesController
             ? ActivitySender::User
             : ActivitySender::Supporter;
 
-        $isAuthorized = $currentSender !== ActivitySender::User
-            || auth()->user()->can('manage', $ticket);
+        $isAuthorized = $currentSender === ActivitySender::User
+            || $request->user()->can('manage', $ticket);
 
         abort_unless($isAuthorized, 403);
 
