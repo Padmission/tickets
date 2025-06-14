@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
