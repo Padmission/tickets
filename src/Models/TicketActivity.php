@@ -15,6 +15,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
 use Padmission\Tickets\TicketPlugin;
 
@@ -66,18 +67,26 @@ class TicketActivity extends Model
 
             $user = $this->user;
 
-            if (method_exists($user, 'getSupportName')) {
-                return $user->getSupportName();
+            if (! $user) {
+                return '';
             }
 
+            // Check if user implements the interface for custom display names
+            if ($user instanceof HasTicketDisplayName) {
+                return $user->getNameForTickets();
+            }
+
+            // Fallback to Filament's HasName interface
             if ($user instanceof HasName) {
                 return $user->getFilamentName();
             }
 
+            // Fallback to common name attributes
             if (isset($user->name)) {
                 return $user->name;
             }
 
+            // Last resort fallback
             return '';
         });
     }

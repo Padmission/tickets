@@ -67,6 +67,34 @@ use Padmission\Tickets\TicketPlugin;
 $panel->plugin(TicketPlugin::make());
 ```
 
+**Step 5:** Implement the display name interface on your User model:
+
+For better ticket activity messages, implement the `HasTicketDisplayName` interface on your User model:
+
+```php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
+
+class User extends Authenticatable implements HasTicketDisplayName
+{
+    // ... your existing code ...
+
+    /**
+     * Get the display name for ticket activities and notifications
+     */
+    public function getNameForTickets(): string
+    {
+        return $this->name ?? $this->email ?? "User {$this->id}";
+    }
+}
+```
+
+> **Note:** If you don't implement this interface, the package will automatically fall back to using the `name` attribute, then `email`, and finally "user {id}" as the display name.
+
 ## Configuration
 
 ### Resources

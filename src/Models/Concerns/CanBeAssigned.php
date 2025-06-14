@@ -7,19 +7,58 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 use Padmission\Tickets\TicketPlugin;
 
 trait CanBeAssigned
 {
+    /**
+     * Get display name for a user in ticket activities
+     */
+    protected function getUserDisplayName(?int $userId): string
+    {
+        if (! $userId) {
+            return 'unassigned';
+        }
+
+        $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+        $user = $userModel::find($userId);
+
+        if (! $user) {
+            return "user {$userId}";
+        }
+
+        // Check if user implements the interface for custom display names
+        if ($user instanceof HasTicketDisplayName) {
+            return $user->getNameForTickets();
+        }
+
+        // Fallback to common name attributes
+        if (isset($user->name)) {
+            return $user->name;
+        }
+
+        if (isset($user->email)) {
+            return $user->email;
+        }
+
+        // Last resort fallback
+        return "user {$userId}";
+    }
+
     /**
      * Handle assignment transition business logic (called by observer)
      */
     public function handleAssignmentTransitionLogic(?int $oldAssigneeId, ?int $newAssigneeId, ?int $userId = null): void
     {
         if ($oldAssigneeId !== $newAssigneeId) {
+            $assignmentMessage = $newAssigneeId
+                ? "Assigned to {$this->getUserDisplayName($newAssigneeId)}"
+                : 'Unassigned';
+
             $this->addActivity(
                 ActivityType::AssigneeChanged,
-                $newAssigneeId ? "Assigned to user {$newAssigneeId}" : 'Unassigned',
+                $assignmentMessage,
                 ActivitySender::System,
                 $userId
             );
@@ -38,9 +77,13 @@ trait CanBeAssigned
         $this->update(['assignee_id' => $userId]);
 
         if ($oldAssigneeId !== $userId) {
+            $assignmentMessage = $userId
+                ? "Assigned to {$this->getUserDisplayName($userId)}"
+                : 'Unassigned';
+
             $this->addActivity(
                 ActivityType::AssigneeChanged,
-                $userId ? "Assigned to user {$userId}" : 'Unassigned',
+                $assignmentMessage,
                 ActivitySender::System
             );
 

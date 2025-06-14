@@ -9,9 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Padmission\Tickets\Models\Concerns\HasAssignedTickets;
+use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 
 #[UseFactory(UserFactory::class)]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasTicketDisplayName
 {
     use HasAssignedTickets;
     use HasFactory;
@@ -27,5 +28,10 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         return true;
+    }
+
+    public function getNameForTickets(): string
+    {
+        return $this->name ?? $this->email ?? "User {$this->id}";
     }
 }
