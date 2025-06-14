@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketDispositionFactory;
+use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
 use Padmission\Tickets\Models\Observers\TicketDispositionObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
+
 
 #[ObservedBy(TicketDispositionObserver::class)]
 #[UseFactory(TicketDispositionFactory::class)]

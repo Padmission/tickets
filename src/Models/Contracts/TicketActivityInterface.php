@@ -8,5 +8,4 @@ interface TicketActivityInterface
 {
     public function ticket(): BelongsTo;
     public function user(): BelongsTo;
-
 }
