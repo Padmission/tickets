@@ -1,30 +1,52 @@
 :host {
-	--font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-		Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-		"Segoe UI Symbol";
-	--color-primary: oklch(55% 0.215 260deg);
-	--color-primary-hover: oklch(
-		from var(--color-primary) calc(l - 0.08) calc(c - 0.05) h
-	);
-	--color-text: oklch(21% 0.00588 285deg);
+	--font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-	--box-shadow-primary-outline: 0 0 0 3px
-		oklch(from var(--color-primary) l c h / 0.3);
+	/* Blue Primary Colors */
+	--color-primary: #3b82f6;
+	--color-primary-light: #dbeafe;
 
-	--dialog-min-height: 35em;
-	--dialog-max-height: 50svh;
+	/* Tailwind Gray Scale */
+	--color-gray-50: #f9fafb;
+	--color-gray-100: #f3f4f6;
+	--color-gray-200: #e5e7eb;
+	--color-gray-300: #d1d5db;
+	--color-gray-400: #9ca3af;
+	--color-gray-500: #6b7280;
+	--color-gray-600: #4b5563;
+	--color-gray-700: #374151;
+	--color-gray-800: #1f2937;
+	--color-gray-900: #111827;
 
-	--header-border: light-dark(
-		oklch(from var(--color-primary) 20% 0.1 h / 0.1),
-		oklch(from var(--color-primary) 80% 0.1 h / 0.1)
-	);
-	--header-bg: light-dark(
-		oklch(from var(--color-primary) l c h / 1),
-		oklch(from var(--color-primary) 10% 0.1 h / 0.1)
-	);
+	/* Light mode (default) */
+	--color-bg: #ffffff;
+	--color-surface: #ffffff;
+	--color-surface-secondary: #f9fafb;
+	--color-border: #e5e7eb;
+	--color-border-light: #f3f4f6;
+	--color-text-primary: #111827;
+	--color-text-secondary: #6b7280;
+	--color-text-muted: #9ca3af;
+
+	/* Shadows */
+	--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px
+		rgba(0, 0, 0, 0.1);
+	--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px
+		rgba(0, 0, 0, 0.1);
+	--shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px
+		rgba(0, 0, 0, 0.1);
+	--shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+	/* Focus ring */
+	--focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.3);
+
+	--dialog-min-height: 41em;
+	--dialog-max-height: 60svh;
 
 	display: block !important;
-	color: var(--color-text);
+	color: var(--color-text-primary);
+	background-color: var(--color-surface);
 
 	button {
 		pointer-events: all;
@@ -35,17 +57,37 @@
 	}
 }
 
+/* Dark mode - Filament uses .dark class */
+:host-context(.dark) {
+	--color-bg: #1e293b;
+	--color-surface: #2a3441;
+	--color-surface-secondary: #334155;
+	--color-border: #475569;
+	--color-border-light: #64748b;
+	--color-text-primary: #f1f5f9;
+	--color-text-secondary: #cbd5e1;
+	--color-text-muted: #94a3b8;
+
+	/* Darker shadows for dark mode */
+	--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px
+		rgba(0, 0, 0, 0.3);
+	--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px
+		rgba(0, 0, 0, 0.4);
+	--shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px
+		rgba(0, 0, 0, 0.5);
+	--shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
 .sr-only {
 	position: absolute;
 	width: 1px;
 	height: 1px;
 	padding: 0;
 	margin: -1px;
-
 	overflow: hidden;
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
-
 	border-width: 0;
 }
 
@@ -54,18 +96,19 @@ h3 {
 	font-weight: 600;
 	color: inherit;
 	letter-spacing: -0.025em;
+	margin: 0;
 }
 
 h2 {
-	margin-top: 0;
 	font-size: 1.5rem;
 	line-height: 2rem;
 }
 
 h3 {
-	margin-top: 2em;
+	margin-top: 2rem;
 	font-size: 1.125rem;
 	line-height: 1.75rem;
+	color: var(--color-text-primary);
 }
 
 button {
@@ -94,23 +137,28 @@ button:has(span:not(.sr-only) + svg) {
 	font-weight: 500;
 	line-height: 1.25rem;
 	border: none;
-	border-radius: 0.375rem;
+	border-radius: 0.5rem;
 	text-align: center;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-	transition: background-color 0.2s ease;
+	box-shadow: var(--shadow-sm);
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transform: translateY(0);
 
 	&:focus-visible,
 	&:hover {
-		background-color: var(--color-primary-hover);
+		background-color: #2563eb; /* Fallback for browsers without color-mix support */
+		background-color: color-mix(in srgb, var(--color-primary) 85%, black);
+		box-shadow: var(--shadow-md);
+		transform: translateY(-1px);
 	}
 
 	&:focus-visible {
 		outline: none;
-		box-shadow: var(--box-shadow-primary-outline);
+		box-shadow: var(--focus-ring);
 	}
 
 	&:active {
-		transform: translateY(1px);
+		transform: translateY(0px);
+		transition-duration: 0.1s;
 	}
 
 	svg {
@@ -124,13 +172,15 @@ button:has(span:not(.sr-only) + svg) {
 	place-items: center;
 	width: 2rem;
 	height: 2rem;
-	border-radius: 0.375rem;
+	border-radius: 0.5rem;
 	background-color: transparent;
-	transition: background-color 0.2s ease;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transform: translateY(0);
 
 	&:focus-visible,
 	&:hover {
-		background-color: oklch(from var(--color-text) 98% 5% h / 1);
+		background-color: var(--color-gray-100);
+		transform: translateY(-1px);
 	}
 
 	&:focus-visible {
@@ -145,23 +195,25 @@ button:has(span:not(.sr-only) + svg) {
 	right: 1rem;
 	z-index: 1000;
 
-	width: 3rem;
-	height: 3rem;
+	width: 3.5rem;
+	height: 3.5rem;
 	border-radius: 50%;
 	background-color: var(--color-primary);
-	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px
-		rgba(0, 0, 0, 0.05);
+	box-shadow: var(--shadow-xl);
 
 	font-size: 1.5em;
 	color: white;
 	cursor: pointer;
 
-	transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s
-		ease;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transform: scale(1);
 
 	&:focus-visible,
 	&:hover {
-		background-color: var(--color-primary-hover);
+		background-color: #2563eb; /* Fallback for browsers without color-mix support */
+		background-color: color-mix(in srgb, var(--color-primary) 85%, black);
+		box-shadow: var(--shadow-2xl);
+		transform: scale(1.05) translateY(-2px);
 	}
 }
 
@@ -181,14 +233,26 @@ dialog {
 	overflow-y: auto;
 	z-index: calc(infinity);
 
-	background-color: hsl(0 0% 100%);
-	border: 1px solid hsl(240 5.9% 90%);
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-border);
 	border-radius: 0.75rem;
-	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px
-		rgba(0, 0, 0, 0.05);
+	box-shadow: var(--shadow-2xl);
+
+	animation: slideInUp 0.2s ease-out;
 
 	&::backdrop {
 		display: none;
+	}
+}
+
+@keyframes slideInUp {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }
 
@@ -216,30 +280,34 @@ dialog {
 	padding: 1rem;
 	margin-inline: -1rem;
 	width: calc(100% + 2rem);
+	border-radius: 0.5rem;
 
 	outline-offset: -2px;
-	outline-color: oklch(from var(--color-primary) l c h / 0.3);
+	outline-color: rgba(59, 130, 246, 0.3);
 
-	transition: background-color 0.4s ease, box-shadow 0.4s ease;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transform: translateY(0);
 
 	&:focus-visible,
 	&:hover {
-		background-color: oklch(from var(--color-primary) 99% 1% h);
-		/*box-shadow: 0 1px 3px oklch(0 0 0 / 0.05);*/
+		background-color: var(--color-gray-50);
+		box-shadow: var(--shadow-sm);
+		transform: translateY(-1px);
 	}
 
 	.ticket__id {
 		display: inline-block;
-		padding: 0.15rem 0.375rem;
-		background-color: oklch(from var(--color-primary) l c h / 0.1);
-		border: 1px solid oklch(from var(--color-primary) l c h / 0.1);
-		border-radius: 0.25rem;
+		padding: 0.125rem 0.375rem;
+		background-color: var(--color-gray-100);
+		border: 1px solid var(--color-gray-200);
+		border-radius: 0.375rem;
 
 		font-size: 0.75rem;
 		font-weight: 500;
 		text-transform: uppercase;
-		font-family: monospace;
-		color: oklch(from var(--color-primary) calc(l - 0.1) c h);
+		font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+			"Liberation Mono", "Courier New", monospace;
+		color: var(--color-gray-700);
 	}
 
 	.ticket__header {
@@ -255,12 +323,12 @@ dialog {
 		max-height: 3lh;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		color: hsl(240 5.9% 40%);
+		color: var(--color-text-secondary);
 		font-size: 0.875rem;
 	}
 
 	.ticket__date {
-		color: hsl(240 5.9% 50%);
+		color: var(--color-text-muted);
 		font-size: 0.75rem;
 		flex-shrink: 0;
 		margin-left: auto;
@@ -275,7 +343,7 @@ dialog {
 		text-overflow: ellipsis;
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: hsl(240 5.9% 10%);
+		color: var(--color-text-primary);
 	}
 
 	button {
@@ -286,12 +354,26 @@ dialog {
 		cursor: pointer;
 		opacity: 0;
 		outline-offset: 0.25rem;
+		border-radius: 0.5rem;
 	}
 
 	button:focus-visible {
 		opacity: 0.1;
-		outline: 2px solid hsl(221.2 83.2% 53.3%);
-		border-radius: 0.5rem;
+		outline: 2px solid var(--color-primary);
+	}
+}
+
+:host-context(.dark) .ticket {
+	&:focus-visible,
+	&:hover {
+		background-color: var(--color-gray-800);
+		transform: translateY(-1px);
+	}
+
+	.ticket__id {
+		background-color: var(--color-gray-800);
+		border-color: var(--color-gray-700);
+		color: var(--color-gray-300);
 	}
 }
 
@@ -301,7 +383,7 @@ dialog {
 	gap: 1rem;
 
 	line-height: 1.5;
-	color: var(--color-text);
+	color: var(--color-text-primary);
 
 	label {
 		display: block;
@@ -317,15 +399,21 @@ dialog {
 		font-size: 0.875rem;
 		line-height: 1.25rem;
 		padding: 0.5rem 0.75rem;
-		border: 1px solid hsl(240 5.9% 90%);
-		border-radius: 0.375rem;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		background-color: var(--color-surface);
+		color: var(--color-text-primary);
+		box-shadow: var(--shadow-sm);
+		transition: all 0.15s ease-in-out;
 
 		&:focus {
 			outline: none;
-			border-color: hsl(221.2 83.2% 53.3%);
-			box-shadow: 0 0 0 3px hsla(221.2 83.2% 53.3% / 0.1);
+			border-color: var(--color-primary);
+			box-shadow: var(--box-shadow-primary-outline);
+		}
+
+		&::placeholder {
+			color: var(--color-text-muted);
 		}
 	}
 }
@@ -366,16 +454,19 @@ header {
 		inset-block-start: 0;
 		width: 100%;
 		padding: 1em;
-		background-color: var(--header-bg);
+		background-color: var(--color-primary);
 		color: white;
+		border-top-left-radius: 0.75rem;
+		border-top-right-radius: 0.75rem;
 
 		.button-icon {
 			&:focus-visible,
 			&:hover {
-				background-color: oklch(from var(--color-text) 98% 5% h / 0.1);
+				background-color: rgba(255, 255, 255, 0.1);
 			}
 		}
 	}
+
 	h2 {
 		font-size: 1rem;
 		white-space: nowrap;
@@ -399,5 +490,28 @@ chat-component {
 	.chat__messages {
 		flex: 1 1 0;
 		overflow-y: auto;
+	}
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+	dialog {
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		max-height: 100%;
+		border-radius: 0;
+		margin: 0;
+	}
+
+	.button-icon[data-open-dialog] {
+		bottom: 1.5rem;
+		right: 1.5rem;
+		width: 4rem;
+		height: 4rem;
+	}
+
+	.chat-view-ticket header {
+		border-radius: 0;
 	}
 }
