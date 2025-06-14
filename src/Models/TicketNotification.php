@@ -8,11 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Database\Factories\TicketNotificationFactory;
-use Padmission\Tickets\Models\Contracts\TicketNotificationInterface;
 use Padmission\Tickets\TicketPlugin;
 
 #[UseFactory(TicketNotificationFactory::class)]
-class TicketNotification extends Model implements TicketNotificationInterface
+class TicketNotification extends Model
 {
     use HasFactory;
 

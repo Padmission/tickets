@@ -199,26 +199,36 @@ TicketPlugin::make()
 
 ### Using Custom Models
 
-This package provides interfaces for all models to ensure consistent behavior when extending or replacing the default models:
+This package uses a **trait-based approach** for all models to provide maximum flexibility and composability. All models use concerns/traits for their core functionality instead of interfaces.
 
-- `TicketInterface` → Required methods for `Ticket` models
-- `TicketActivityInterface` → Required methods for `TicketActivity` models
-- `TicketNotificationInterface` → Required methods for `TicketNotification` models
-- `TicketStatusInterface` → Required methods for `TicketStatus` models
-- `TicketPriorityInterface` → Required methods for `TicketPriority` models
-- `TicketDispositionInterface` → Required methods for `TicketDisposition` models
+If you create your own models, you should:
+1. Use the provided concerns/traits for core functionality
+2. Register the corresponding observer for each model
+3. Configure the package to use your custom models
 
-If you create your own models that do not extend our base models, you should:
-1. Implement the appropriate interface
-2. Register the corresponding observer
+### Ticket Model Example
+
+The `Ticket` model uses multiple traits for its functionality:
 
 ```php
-// Your custom model
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+// Your custom ticket model
+use Padmission\Tickets\Models\Concerns\CanBeAssigned;
+use Padmission\Tickets\Models\Concerns\CanBeClosed;
+use Padmission\Tickets\Models\Concerns\HasTicketActivities;
+use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
+use Padmission\Tickets\Models\Concerns\ManagesPriority;
+use Padmission\Tickets\Models\Concerns\ManagesStatus;
 
-class CustomTicket extends Model implements TicketInterface
+class CustomTicket extends Model
 {
-    // Implement all required methods from the interface
+    use CanBeAssigned;
+    use CanBeClosed;
+    use HasTicketActivities;
+    use InteractsWithNotifications;
+    use ManagesPriority;
+    use ManagesStatus;
+    
+    // Your custom functionality
 }
 
 // In your AppServiceProvider or dedicated provider
@@ -228,8 +238,32 @@ public function boot()
     CustomTicket::observe(\Padmission\Tickets\Models\Observers\TicketObserver::class);
     
     // Configure the package to use your model
-    TicketPlugin::resolveModelUsing(TicketInterface::class, CustomTicket::class);
+    TicketPlugin::resolveModelUsing(\Padmission\Tickets\Models\Ticket::class, CustomTicket::class);
 }
+```
+
+### Other Model Examples
+
+For other models, simply extend the base models or create your own with the appropriate observers:
+
+```php
+// Custom TicketActivity
+class CustomTicketActivity extends Model
+{
+    // Your custom functionality
+}
+
+// Register observer
+CustomTicketActivity::observe(\Padmission\Tickets\Models\Observers\TicketActivityObserver::class);
+
+// Custom TicketStatus  
+class CustomTicketStatus extends Model
+{
+    // Your custom functionality
+}
+
+// Register observer
+CustomTicketStatus::observe(\Padmission\Tickets\Models\Observers\TicketStatusObserver::class);
 ```
 
 ### Observer Pattern

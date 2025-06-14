@@ -2,12 +2,12 @@
 
 namespace Padmission\Tickets\NotificationStrategies;
 
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 
 interface NotificationStrategy
 {
     /**
      * Send notifications for a ticket
      */
-    public function notify(TicketInterface $ticket): void;
+    public function notify(Ticket $ticket): void;
 }

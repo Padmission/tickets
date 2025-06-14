@@ -11,14 +11,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
-use Padmission\Tickets\Models\Contracts\TicketPriorityInterface;
 use Padmission\Tickets\Models\Observers\TicketPriorityObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[ObservedBy([TicketPriorityObserver::class])]
 #[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketPriorityFactory::class)]
-class TicketPriority extends Model implements TicketPriorityInterface
+class TicketPriority extends Model
 {
     use HasFactory;
     use SoftDeletes;

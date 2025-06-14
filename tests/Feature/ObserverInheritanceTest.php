@@ -6,9 +6,6 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
-use Padmission\Tickets\Models\Contracts\TicketActivityInterface;
-use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
-use Padmission\Tickets\Models\Contracts\TicketStatusInterface;
 use Padmission\Tickets\TicketPlugin;
 
 uses(RefreshDatabase::class);
@@ -184,7 +181,6 @@ it('ensures CustomTicketActivity inherits TicketActivityObserver', function () {
         return $event->ticket->id === $ticket->id;
     });
 
-    expect($activity)->toBeInstanceOf(TicketActivityInterface::class);
     expect($activity)->toBeInstanceOf(CustomTicketActivity::class);
 });
 
@@ -198,7 +194,6 @@ it('ensures CustomTicketDisposition inherits TicketDispositionObserver', functio
 
     // Verify observer set the panel
     expect($disposition->fresh()->panel)->toBe('test'); // Package TestCase sets panel to 'test'
-    expect($disposition)->toBeInstanceOf(TicketDispositionInterface::class);
     expect($disposition)->toBeInstanceOf(CustomTicketDisposition::class);
 });
 
@@ -219,8 +214,8 @@ it('ensures TicketStatus static methods work with custom models', function () {
     expect($openStatuses->first()->id)->toBe($this->status->id);
     expect($closedStatusResult->id)->toBe($closedStatus->id);
 
-    expect($openStatuses->first())->toBeInstanceOf(TicketStatusInterface::class);
-    expect($closedStatusResult)->toBeInstanceOf(TicketStatusInterface::class);
+    expect($openStatuses->first())->toBeInstanceOf(CustomTicketStatus::class);
+    expect($closedStatusResult)->toBeInstanceOf(CustomTicketStatus::class);
 });
 
 it('ensures model resolution works with custom models', function () {

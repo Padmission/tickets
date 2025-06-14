@@ -9,10 +9,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Padmission\Tickets\Models\Concerns\HasAssignedTickets;
-use Padmission\Tickets\Models\Contracts\CanBeAssignedTickets;
 
 #[UseFactory(UserFactory::class)]
-class User extends Authenticatable implements CanBeAssignedTickets, FilamentUser
+class User extends Authenticatable implements FilamentUser
 {
     use HasAssignedTickets;
     use HasFactory;
