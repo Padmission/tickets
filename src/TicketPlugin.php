@@ -10,6 +10,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Filament\Resources;
+use Padmission\Tickets\Filament\Widgets;
 use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
@@ -17,6 +18,8 @@ final class TicketPlugin implements Plugin
     public static string $id = 'padmission-tickets';
 
     protected bool $shouldRegisterResources = false;
+
+    protected bool $shouldRegisterWidgets = false;
 
     protected string $escalationLevel = 'default';
 
@@ -46,6 +49,15 @@ final class TicketPlugin implements Plugin
                 Resources\Statuses\StatusResource::class,
                 Resources\Dispositions\DispositionResource::class,
                 Resources\Priorities\PriorityResource::class,
+            ]);
+        }
+
+        if ($this->shouldRegisterWidgets()) {
+            $panel->widgets([
+                Widgets\OpenTicketsWidget::class,
+                Widgets\OpenSupporterTickets::class,
+                Widgets\TicketCloseTimeWidget::class,
+                Widgets\TicketBurndownChartWidget::class,
             ]);
         }
 
@@ -123,9 +135,10 @@ final class TicketPlugin implements Plugin
         return $this->notificationStrategy;
     }
 
-    public function registerResources(bool $shouldRegister = true): static
+    public function registerResources(bool $shouldRegister = true, bool $shouldRegisterWidgets = true): static
     {
         $this->shouldRegisterResources = $shouldRegister;
+        $this->shouldRegisterWidgets = $shouldRegisterWidgets;
 
         return $this;
     }
@@ -133,6 +146,11 @@ final class TicketPlugin implements Plugin
     public function shouldRegisterResources(): bool
     {
         return $this->shouldRegisterResources;
+    }
+
+    public function shouldRegisterWidgets(): bool
+    {
+        return $this->shouldRegisterWidgets;
     }
 
     public function showChatWidget(bool $shouldShow = true, ?ChatWidgetConfig $config = null): static
