@@ -51,5 +51,5 @@ interface TicketInterface
     public function ticketNotifications(): HasMany;
 
     // Business logic
-    public function close(TicketInterface|int|null $disposition = null, ?int $closedBy = null): void;
+    public function close(TicketDispositionInterface|int|null $disposition = null, ?int $closedBy = null): void;
 }

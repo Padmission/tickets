@@ -19,6 +19,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Exceptions\TicketDispositionNotFoundException;
+use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
 use Padmission\Tickets\Models\Contracts\TicketInterface;
 use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\TicketPlugin;
@@ -159,7 +160,7 @@ class Ticket extends Model implements TicketInterface
     }
 
     /* Business Logic */
-    public function close(TicketInterface|int|null $disposition = null, ?int $closedBy = null): void
+    public function close(TicketDispositionInterface|int|null $disposition = null, ?int $closedBy = null): void
     {
         if ($this->isClosed) {
             return;
