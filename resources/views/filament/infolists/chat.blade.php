@@ -1,23 +1,32 @@
-@use(Filament\Facades\Filament)
-@use(Filament\Support\Facades\FilamentAsset)
-<div wire:ignore style="height: 60vh">
+@php
+    use Filament\Facades\Filament;
+    use Filament\Support\Facades\FilamentAsset;
+
+    $primaryColor = data_get(Filament::getCurrentPanel()->getColors(), 'primary.600');
+@endphp
+<div
+    class="pad-ti-chat-wrapper"
+    wire:ignore
+>
     <style>
-        .pad-ti-section-chat .fi-section-content {
+        .pad-ti-chat-section .fi-section-content {
             padding: 0;
         }
-    </style>
 
-    @php
-        $primaryColor = data_get(Filament::getCurrentPanel()->getColors(), 'primary.600');
-    @endphp
+        .pad-ti-chat-wrapper {
+            height: 90svh;
 
-    @if ($primaryColor)
-        <style>
+            @media (width > 40rem) {
+                height: 60svh;
+            }
+        }
+
+        @if ($primaryColor)
             chat-component {
                 --color-primary: rgb({{ $primaryColor }});
             }
-        </style>
-    @endif
+        @endif
+    </style>
 
     <chat-component
         ticket-id="{{ $this->record->id }}"
