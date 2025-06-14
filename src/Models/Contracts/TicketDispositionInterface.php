@@ -2,6 +2,4 @@
 
 namespace Padmission\Tickets\Models\Contracts;
 
-interface TicketDispositionInterface
-{
-}
+interface TicketDispositionInterface {}

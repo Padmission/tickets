@@ -2,6 +2,4 @@
 
 namespace Padmission\Tickets\Models\Contracts;
 
-interface TicketPriorityInterface
-{
-}
+interface TicketPriorityInterface {}

@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketStatusFactory;
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Contracts\TicketStatusInterface;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketStatusFactory::class)]

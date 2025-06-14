@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -14,7 +13,6 @@ use Padmission\Tickets\Database\Factories\TicketDispositionFactory;
 use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
 use Padmission\Tickets\Models\Observers\TicketDispositionObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-
 
 #[ObservedBy(TicketDispositionObserver::class)]
 #[UseFactory(TicketDispositionFactory::class)]

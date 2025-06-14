@@ -75,12 +75,12 @@ class TicketObserver
             $isClosedStatus = (int) $ticket->status_id === $closedStatus->getKey();
 
             // If changing to closed status and ticket isn't already closed, set the closing fields
-            if ($isClosedStatus && !$ticket->isClosed && !$ticket->isDirty('closed_at')) {
+            if ($isClosedStatus && ! $ticket->isClosed && ! $ticket->isDirty('closed_at')) {
                 // Set the closed_at and closed_by fields directly on the model
                 // This will be saved as part of the current update operation
                 $ticket->closed_at = now();
                 $ticket->closed_by = auth()->id();
-                
+
                 // Create the close activity
                 $ticket->ticketActivities()->create([
                     'type' => ActivityType::Closed,
