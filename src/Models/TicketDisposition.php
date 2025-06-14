@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Support\Colors\Color;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +16,7 @@ use Padmission\Tickets\Models\Observers\TicketDispositionObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[ObservedBy(TicketDispositionObserver::class)]
+#[ScopedBy(CurrentPanelScope::class)]
 #[UseFactory(TicketDispositionFactory::class)]
 class TicketDisposition extends Model implements TicketDispositionInterface
 {
@@ -24,11 +26,6 @@ class TicketDisposition extends Model implements TicketDispositionInterface
     protected $table = 'ticket_dispositions';
 
     protected $guarded = ['id'];
-
-    protected static function booted(): void
-    {
-        static::addGlobalScope(CurrentPanelScope::class);
-    }
 
     /**
      * @return Attribute<array,never>

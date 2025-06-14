@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -13,8 +14,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Contracts\TicketStatusInterface;
+use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
+#[ObservedBy([TicketStatusObserver::class])]
 #[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketStatusFactory::class)]
 class TicketStatus extends Model implements TicketStatusInterface
@@ -25,15 +28,6 @@ class TicketStatus extends Model implements TicketStatusInterface
     protected $table = 'ticket_statuses';
 
     protected $guarded = ['id'];
-
-    protected static function booted(): void
-    {
-        static::addGlobalScope(CurrentPanelScope::class);
-
-        static::creating(function ($model) {
-            $model->panel ??= Filament::getCurrentPanel()->getId();
-        });
-    }
 
     /**
      * @return Attribute<array,never>
