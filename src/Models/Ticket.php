@@ -172,12 +172,19 @@ class Ticket extends Model implements TicketInterface
         DB::beginTransaction();
 
         if ($disposition) {
-            if (! is_object($disposition)) {
+            if (!is_object($disposition)) {
                 $context = $disposition;
                 $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
                 $disposition = $dispositionModel::find($disposition);
-                if (! $disposition) {
+                if (!$disposition) {
                     throw new TicketDispositionNotFoundException($context);
+                }
+            } elseif (!$disposition instanceof \Padmission\Tickets\Models\TicketDisposition) {
+                // It's an object, but not the concrete model
+                $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+                $disposition = $dispositionModel::find($disposition->getKey());
+                if (!$disposition) {
+                    throw new TicketDispositionNotFoundException();
                 }
             }
             $this->disposition()->associate($disposition);
