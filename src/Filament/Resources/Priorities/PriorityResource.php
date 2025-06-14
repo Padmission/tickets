@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Resources\Priorities;
 
+use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -14,43 +15,29 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Filament\Forms\Components\ColorSelect;
-use Padmission\Tickets\Models\Priority;
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\TicketPlugin;
 
 class PriorityResource extends Resource
 {
+    use HasResourceConfiguration;
+
     protected static ?string $slug = 'priorities';
 
-    public static function getModel(): string
-    {
-        return TicketPlugin::resolveModelClass(Priority::class);
-    }
+    protected static ?string $model = TicketPriority::class;
 
-    public static function getModelLabel(): string
+    public static function canAccess(): bool
     {
-        return __('padmission-tickets::tickets.resources.priorities.model_label');
-    }
+        if (! Gate::getPolicyFor(TicketPriority::class)) {
+            return Filament::auth()->user()->can('viewAny', TicketPlugin::resolveModelClass(Ticket::class));
+        }
 
-    public static function getPluralModelLabel(): string
-    {
-        return __('padmission-tickets::tickets.resources.priorities.plural_model_label');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('padmission-tickets::tickets.resources.navigation_group');
-    }
-
-    public static function getNavigationIcon(): string|Htmlable|null
-    {
-        return new HtmlString(<<<'HTML'
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flag-icon lucide-flag"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
-        HTML);
+        return parent::canAccess();
     }
 
     public static function form(Form $form): Form
@@ -78,7 +65,7 @@ class PriorityResource extends Resource
             ->columns([
                 ColorColumn::make('color')
                     ->label(__('padmission-tickets::tickets.resources.priorities.color'))
-                    ->getStateUsing(fn (Priority $record) => 'rgb('.Color::{$record->color}[600].')'),
+                    ->getStateUsing(fn (TicketPriority $record) => 'rgb('.Color::{$record->color}[600].')'),
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.priorities.display_name')),
@@ -103,7 +90,6 @@ class PriorityResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->tap(new CurrentPanelScope);
+        return parent::getEloquentQuery();
     }
 }
