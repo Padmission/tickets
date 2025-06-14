@@ -20,7 +20,7 @@ class ListTickets extends ListRecords
         return [
             Widgets\OpenTicketsWidget::class,
             Widgets\OpenSupporterTickets::class,
-            Widgets\TicketClosingTimeWidget::class,
+            Widgets\TicketCloseTimeWidget::class,
         ];
     }
 

@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Widgets;
 
-use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentColor;
@@ -24,11 +23,6 @@ class TicketBurndownChartWidget extends ChartWidget
         return __('padmission-tickets::widgets.burndown.heading');
     }
 
-    protected function formatChartDate(CarbonInterface $date): string
-    {
-        return $date->translatedFormat('M j');
-    }
-
     public static function getColors(): array
     {
         $colors = Filament::getCurrentPanel()->getColors();
@@ -41,40 +35,15 @@ class TicketBurndownChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $raw = resolve(TicketMetricsService::class)
+        [
+            'labels' => $labels,
+            'openCounts' => $openCounts,
+            'closedCounts' => $closedCounts,
+        ] = resolve(TicketMetricsService::class)
             ->setCacheTime($this->getPollingInterval())
-            ->getBurndownData($this->days);
+            ->getBurndownChartData($this->days);
 
         [$colorA, $colorB] = static::getColors();
-
-        $labels = [];
-        $openCounts = [];
-        $closedCounts = [];
-
-        $cumulativeOpened = 0;
-        $cumulativeClosed = 0;
-
-        $openAtStart = $raw['openAtStart'];
-        $opened = $raw['opened'];
-        $closed = $raw['closed'];
-
-        $startDate = $raw['startDate']->copy();
-        $days = $startDate->diffInDays($raw['endDate']) + 1;
-
-        for ($i = 0; $i < $days; $i++) {
-            $date = $startDate->copy()->addDays($i);
-            $dateString = $date->toDateString();
-            $labels[] = $this->formatChartDate($date);
-
-            $openedToday = $opened[$dateString] ?? 0;
-            $closedToday = $closed[$dateString] ?? 0;
-
-            $cumulativeOpened += $openedToday;
-            $cumulativeClosed += $closedToday;
-
-            $openCounts[] = $openAtStart + $cumulativeOpened - $cumulativeClosed;
-            $closedCounts[] = $closedToday;
-        }
 
         return [
             'labels' => $labels,

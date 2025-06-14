@@ -56,7 +56,7 @@ final class TicketPlugin implements Plugin
             $panel->widgets([
                 Widgets\OpenTicketsWidget::class,
                 Widgets\OpenSupporterTickets::class,
-                Widgets\TicketClosingTimeWidget::class,
+                Widgets\TicketCloseTimeWidget::class,
                 Widgets\TicketBurndownChartWidget::class,
             ]);
         }

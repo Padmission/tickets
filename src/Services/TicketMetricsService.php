@@ -4,8 +4,8 @@ namespace Padmission\Tickets\Services;
 
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
-use Carbon\CarbonInterface;
 use Carbon\CarbonInterval;
+use Carbon\CarbonPeriod;
 use Exception;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
@@ -29,9 +29,35 @@ class TicketMetricsService
         return $this;
     }
 
+    public function getOpenTicketsCount(): int
+    {
+        $cacheKey = __METHOD__;
+
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
+            return TicketPlugin::resolveModelClass(Ticket::class)::query()
+                ->whereNull('closed_at')
+                ->count();
+        });
+    }
+
+    public function getOpenTicketsWaitingOnSupportCount(): int
+    {
+        $cacheKey = __METHOD__;
+
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
+            return TicketPlugin::resolveModelClass(Ticket::class)::query()
+                ->where('turn', Turn::Supporter)
+                ->whereNull('closed_at')
+                ->count();
+        });
+    }
+
     /**
      * @param  int|null  $days  Number of days to look back (null for all time)
-     * @return array Returns average time and count of tickets analyzed
+     * @return array{
+     *     averageSeconds: int,
+     *     totalClosed: int
+     * }
      */
     public function getAverageCloseTime(?int $days = 30): array
     {
@@ -52,43 +78,70 @@ class TicketMetricsService
 
             $totalClosedTickets = $result->total_tickets ?? 0;
             $avgSeconds = $result->avg_seconds ?? 0;
-            $avgTime = $this->formatTimespan($avgSeconds);
 
             return [
-                'average_close_time' => $avgTime,
-                'average_seconds' => $avgSeconds,
-                'total_closed_tickets' => $totalClosedTickets,
+                'averageSeconds' => (int) $avgSeconds,
+                'totalClosed' => $totalClosedTickets,
             ];
         });
     }
 
     /**
-     * Get the number of tickets waiting on support (open tickets)
+     * @return array{
+     *     labels: list<string>,
+     *     openCounts: list<int>,
+     *     closedCounts: list<int>,
+     * }
      */
-    public function getOpenTicketsWaitingOnSupportCount(): int
+    public function getBurndownChartData(int $days): array
     {
-        $cacheKey = __METHOD__;
+        $startDate = CarbonImmutable::today()->subDays($days - 1);
 
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
-            return TicketPlugin::resolveModelClass(Ticket::class)::query()
-                ->where('turn', Turn::Supporter)
-                ->whereNull('closed_at')
-                ->count();
-        });
+        [
+            'openAtStart' => $openAtStart,
+            'opened' => $opened,
+            'closed' => $closed,
+        ] = $this->getBurndownData($days);
+
+        $labels = [];
+        $openCounts = [];
+        $closedCounts = [];
+
+        $cumulativeOpened = 0;
+        $cumulativeClosed = 0;
+
+        $period = CarbonPeriod::start($startDate)->setRecurrences($days);
+
+        foreach ($period as $date) {
+            $dateString = $date->toDateString();
+            $labels[] = $date->translatedFormat('M j');
+
+            $openedToday = (int) ($opened[$dateString] ?? 0);
+            $closedToday = (int) ($closed[$dateString] ?? 0);
+
+            $cumulativeOpened += $openedToday;
+            $cumulativeClosed += $closedToday;
+
+            $openCounts[] = $openAtStart + $cumulativeOpened - $cumulativeClosed;
+            $closedCounts[] = $closedToday;
+        }
+
+        return [
+            'labels' => $labels,
+            'openCounts' => $openCounts,
+            'closedCounts' => $closedCounts,
+        ];
     }
 
-    public function getOpenTicketsCount(): int
-    {
-        $cacheKey = __METHOD__;
-
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
-            return TicketPlugin::resolveModelClass(Ticket::class)::query()
-                ->where('turn', Turn::Supporter)
-                ->whereNull('closed_at')
-                ->count();
-        });
-    }
-
+    /**
+     * @return array{
+     *     opened: int,
+     *     closed: int,
+     *     openAtStart: int,
+     *     startDate: Carbon,
+     *     endDate: Carbon
+     * }
+     */
     public function getBurndownData(int $days): array
     {
         $cacheKey = __METHOD__.'-'.$days;
@@ -130,11 +183,6 @@ class TicketMetricsService
                 'endDate' => $endDate,
             ];
         });
-    }
-
-    protected function formatTimespan(float $seconds): string
-    {
-        return now()->subSeconds($seconds)->diffForHumans(syntax: CarbonInterface::DIFF_ABSOLUTE);
     }
 
     protected function getDurationExpression(ConnectionInterface $connection, string $startColumn, string $endColumn): string
