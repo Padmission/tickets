@@ -16,6 +16,7 @@ use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
+use Padmission\Tickets\Models\Contracts\TicketActivityInterface;
 use Padmission\Tickets\TicketPlugin;
 
 /**
@@ -23,7 +24,7 @@ use Padmission\Tickets\TicketPlugin;
  */
 #[ObservedBy(TicketActivityObserver::class)]
 #[UseFactory(TicketActivityFactory::class)]
-class TicketActivity extends Model
+class TicketActivity extends Model implements TicketActivityInterface
 {
     use HasFactory;
 

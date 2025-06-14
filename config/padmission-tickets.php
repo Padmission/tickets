@@ -8,7 +8,8 @@ return [
 
     /**
      * Swap package models (left) with your own model (right).
-     * Your models should extend the package models to ensure type safety.
+     * Your models should extend the package base models to inherit observers automatically.
+     * Example: class CustomTicket extends \Padmission\Tickets\Models\Ticket { }
      *
      * @var array<class-string, class-string>
      */

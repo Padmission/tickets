@@ -13,10 +13,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Contracts\TicketStatusInterface;
 
 #[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketStatusFactory::class)]
-class TicketStatus extends Model
+class TicketStatus extends Model implements TicketStatusInterface
 {
     use HasFactory;
     use SoftDeletes;

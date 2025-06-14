@@ -11,10 +11,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Contracts\TicketPriorityInterface;
 
 #[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketPriorityFactory::class)]
-class TicketPriority extends Model
+class TicketPriority extends Model implements TicketPriorityInterface
 {
     use HasFactory;
     use SoftDeletes;

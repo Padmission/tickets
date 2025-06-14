@@ -4,16 +4,20 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketDispositionFactory;
+use Padmission\Tickets\Models\Observers\TicketDispositionObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
 
+#[ObservedBy(TicketDispositionObserver::class)]
 #[UseFactory(TicketDispositionFactory::class)]
-class TicketDisposition extends Model
+class TicketDisposition extends Model implements TicketDispositionInterface
 {
     use HasFactory;
     use SoftDeletes;
@@ -25,10 +29,6 @@ class TicketDisposition extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(CurrentPanelScope::class);
-
-        static::creating(function ($model) {
-            $model->panel ??= Filament::getCurrentPanel()->getId();
-        });
     }
 
     /**
