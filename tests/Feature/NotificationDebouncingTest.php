@@ -1,10 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Cache;
-use Mpbarlow\LaravelQueueDebouncer\Facade\Debouncer;
-use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Jobs\NotificationJob;

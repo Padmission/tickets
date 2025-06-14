@@ -80,7 +80,7 @@ class TicketNotificationListener
 
     /**
      * Dispatch a debounced notification
-     * 
+     *
      * This method uses the Laravel Queue Debouncer to ensure that:
      * 1. If no notification job exists for this user-ticket combination, schedule one for 5 minutes
      * 2. If a job already exists, cancel it and schedule a new one (resets the timer)
@@ -94,7 +94,7 @@ class TicketNotificationListener
 
         // Use dependency injection to get the debouncer and customize the cache key provider
         $debouncer = app(\Mpbarlow\LaravelQueueDebouncer\Debouncer::class);
-        
+
         $debouncer
             ->usingCacheKeyProvider(fn () => $job->uniqueId())
             ->debounce($job, $debounceTime);
