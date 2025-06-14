@@ -171,8 +171,8 @@ describe('getBurndownData()', function () {
         expect($data)
             ->closed->toHaveCount(2)
             ->toEqual([
-                $start->toDateString() => 1,
-                $start->addDay()->toDateString() => 2,
+                $start->toDateString() => 2,
+                $start->addDay()->toDateString() => 1,
             ]);
     });
 });
