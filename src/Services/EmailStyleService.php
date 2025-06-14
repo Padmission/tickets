@@ -20,9 +20,17 @@ class EmailStyleService
     protected function getCoreMailStyles(): string
     {
         return Cache::remember(__METHOD__, 3600, function () {
-            $path = base_path('vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css');
+            $path = base_path(
+                'vendor/laravel/framework/src/Illuminate/Mail/resources/views/html/themes/default.css'
+            );
 
-            return file_exists($path) ? file_get_contents($path) : '';
+            if (! file_exists($path)) {
+                return '';
+            }
+
+            $contents = file_get_contents($path);
+
+            return is_string($contents) ? $contents : '';
         });
     }
 
