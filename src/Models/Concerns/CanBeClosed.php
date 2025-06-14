@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models\Concerns;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
@@ -85,20 +86,19 @@ trait CanBeClosed
         event(new TicketClosedEvent($this));
     }
 
-    /**
-     * Check if the ticket is closed
-     */
-    public function isClosed(): bool
-    {
-        return $this->closed_at !== null;
-    }
+    /* Attributes */
 
     /**
-     * Check if the ticket is open
+     * @return Attribute<bool, never>
      */
-    public function isOpen(): bool
+    protected function isClosed(): Attribute
     {
-        return ! $this->isClosed();
+        return Attribute::get(fn () => $this->closed_at !== null);
+    }
+
+    public function isOpen(): Attribute
+    {
+        return Attribute::get(fn () => $this->closed_at === null);
     }
 
     /**

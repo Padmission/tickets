@@ -74,7 +74,7 @@ trait ManagesStatus
         $isClosedStatus = $newStatusId === $closedStatus->getKey();
 
         // If changing to closed status and ticket isn't already closed
-        if ($isClosedStatus && $this->isOpen()) {
+        if ($isClosedStatus && $this->isOpen) {
             $this->close(closedBy: $userId);
         }
     }
