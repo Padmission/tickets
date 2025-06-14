@@ -3,7 +3,7 @@
 namespace Padmission\Tickets\Services;
 
 use Illuminate\Support\Collection;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketNotification;
 
 class TicketActivityService
@@ -12,7 +12,7 @@ class TicketActivityService
      * Get unread activities for a ticket within the specified time range
      */
     public function getUnreadActivities(
-        TicketInterface $ticket,
+        Ticket $ticket,
         $notifiable,
         int $maxEvents,
         int $maxDays
@@ -35,7 +35,7 @@ class TicketActivityService
     /**
      * Get the last notification record for a user and ticket
      */
-    public function getLastNotification(TicketInterface $ticket, $notifiable): ?TicketNotification
+    public function getLastNotification(Ticket $ticket, $notifiable): ?TicketNotification
     {
         /** @var \Padmission\Tickets\Models\TicketNotification|null $notification */
         $notification = $ticket
@@ -50,7 +50,7 @@ class TicketActivityService
     /**
      * Mark notification as updated or create a new notification record
      */
-    public function markNotificationUpdated(TicketInterface $ticket, $notifiable): void
+    public function markNotificationUpdated(Ticket $ticket, $notifiable): void
     {
         $lastNotification = $this->getLastNotification($ticket, $notifiable);
 

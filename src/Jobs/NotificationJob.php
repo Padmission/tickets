@@ -10,7 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class NotificationJob implements ShouldBeUnique, ShouldQueue
@@ -29,7 +29,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         Authenticatable $user,
-        TicketInterface $model,
+        Ticket $model,
         public string $notificationType
     ) {
         $this->userId = $user->getKey();

@@ -11,7 +11,7 @@ use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\NotificationRecipientService;
 
 class TicketNotificationListener
@@ -73,7 +73,7 @@ class TicketNotificationListener
     /**
      * Dispatch a debounced notification
      */
-    protected function dispatchDebouncedNotification(Authorizable $user, TicketInterface $ticket, string $type): void
+    protected function dispatchDebouncedNotification(Authorizable $user, Ticket $ticket, string $type): void
     {
         $debounceTime = config('padmission-tickets.notification-debounce', 300);
         $job = new NotificationJob($user, $ticket, $type);

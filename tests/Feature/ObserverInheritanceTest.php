@@ -8,9 +8,6 @@ use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Models\Contracts\TicketActivityInterface;
 use Padmission\Tickets\Models\Contracts\TicketDispositionInterface;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
-use Padmission\Tickets\Models\Contracts\TicketNotificationInterface;
-use Padmission\Tickets\Models\Contracts\TicketPriorityInterface;
 use Padmission\Tickets\Models\Contracts\TicketStatusInterface;
 use Padmission\Tickets\TicketPlugin;
 
@@ -120,7 +117,6 @@ it('ensures CustomTicket inherits TicketObserver and fires events', function () 
         return $event->ticket->id === $ticket->id;
     });
 
-    expect($ticket)->toBeInstanceOf(TicketInterface::class);
     expect($ticket)->toBeInstanceOf(CustomTicket::class);
 });
 
@@ -227,22 +223,6 @@ it('ensures TicketStatus static methods work with custom models', function () {
     expect($closedStatusResult)->toBeInstanceOf(TicketStatusInterface::class);
 });
 
-it('ensures all custom models implement their interfaces', function () {
-    $ticket = new CustomTicket;
-    $activity = new CustomTicketActivity;
-    $disposition = new CustomTicketDisposition;
-    $status = new CustomTicketStatus;
-    $priority = new CustomTicketPriority;
-    $notification = new CustomTicketNotification;
-
-    expect($ticket)->toBeInstanceOf(TicketInterface::class);
-    expect($activity)->toBeInstanceOf(TicketActivityInterface::class);
-    expect($disposition)->toBeInstanceOf(TicketDispositionInterface::class);
-    expect($status)->toBeInstanceOf(TicketStatusInterface::class);
-    expect($priority)->toBeInstanceOf(TicketPriorityInterface::class);
-    expect($notification)->toBeInstanceOf(TicketNotificationInterface::class);
-});
-
 it('ensures model resolution works with custom models', function () {
     expect(TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\Ticket::class))
         ->toBe(CustomTicket::class);
@@ -317,5 +297,4 @@ it('ensures custom models can add their own functionality', function () {
 
     expect($customModel->customMethod())->toBe('custom functionality');
     expect($customModel->custom)->toBe('custom attribute');
-    expect($customModel)->toBeInstanceOf(TicketInterface::class);
 });

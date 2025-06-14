@@ -2,14 +2,14 @@
 
 namespace Padmission\Tickets\Services;
 
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 
 class EmailLogoService
 {
     /**
      * Get the email logo for a ticket
      */
-    public function getEmailLogo(TicketInterface $ticket): ?string
+    public function getEmailLogo(Ticket $ticket): ?string
     {
         $panelId = $ticket->panel;
         if (! $panelId) {

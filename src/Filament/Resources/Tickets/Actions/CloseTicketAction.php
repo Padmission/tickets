@@ -23,7 +23,7 @@ class CloseTicketAction extends Action
             ->modalHeading(__('padmission-tickets::tickets.actions.close.modal_heading'))
             ->button()
             ->color('gray')
-            ->hidden(fn (Ticket $record): bool => $record->isClosed)
+            ->hidden(fn ($record): bool => $record->isClosed)
             ->requiresConfirmation()
             ->icon('heroicon-o-check-circle');
 
@@ -41,7 +41,7 @@ class CloseTicketAction extends Action
 
         $this->action(function (Ticket $record, $data) {
             $record->close(
-                disposition: $data['disposition'] ?? null,
+                dispositionId: $data['disposition'] ?? null,
                 closedBy: Filament::auth()->id()
             );
         });

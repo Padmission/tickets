@@ -4,14 +4,14 @@ namespace Padmission\Tickets\Services;
 
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 
 class TicketUrlService
 {
     /**
      * Get the action URL for a ticket
      */
-    public function getActionUrl(TicketInterface $ticket): string
+    public function getActionUrl(Ticket $ticket): string
     {
         $data = (array) $ticket->data;
         $basis = $data['url'] ?? url('/');

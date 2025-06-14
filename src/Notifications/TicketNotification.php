@@ -4,7 +4,7 @@ namespace Padmission\Tickets\Notifications;
 
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\EmailLogoService;
 use Padmission\Tickets\Services\EmailStyleService;
 use Padmission\Tickets\Services\TicketActivityService;
@@ -13,7 +13,7 @@ use Padmission\Tickets\Services\TicketUrlService;
 class TicketNotification extends Notification
 {
     public function __construct(
-        protected TicketInterface $ticket,
+        protected Ticket $ticket,
         protected string $notificationType,
         protected ?TicketActivityService $activityService = null,
         protected ?EmailLogoService $logoService = null,

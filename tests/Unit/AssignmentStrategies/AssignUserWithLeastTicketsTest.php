@@ -1,26 +1,29 @@
 <?php
 
 use Padmission\Tickets\AssignmentStrategies\AssignUserWithLeastTickets;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Tests\User;
 
 it('it assigns ticket to user with least tickets', function () {
+    (new TicketStatusSeeder)->run();
+
     [$userA, $userB] = User::factory()->count(2)->create();
 
+    // userA has 1 OPEN ticket
     Ticket::factory()
         ->recycle($userA)
         ->for($userA, 'assignee')
-        ->create([
-            'closed_at' => null,
-        ]);
+        ->open()
+        ->create();
 
+    // userB has 2 CLOSED tickets
     Ticket::factory()
         ->recycle($userB)
         ->for($userB, 'assignee')
+        ->closed()
         ->count(2)
-        ->create([
-            'closed_at' => now(),
-        ]);
+        ->create();
 
     $newTicket = Ticket::factory()
         ->recycle($userB)

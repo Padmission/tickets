@@ -64,9 +64,9 @@ it('executes notification strategy while creating', function () {
 })->skip('feature needs refactoring');
 
 test('open/close scopes', function () {
-    $ticket = Ticket::factory()->create([
-        'closed_at' => null,
-    ]);
+    (new TicketStatusSeeder)->run();
+
+    $ticket = Ticket::factory()->open()->create();
 
     expect(Ticket::query()->open()->count())->toEqual(1);
     expect(Ticket::query()->closed()->count())->toEqual(0);
@@ -80,7 +80,7 @@ test('open/close scopes', function () {
 it('can be closed', function () {
     (new TicketStatusSeeder)->run();
 
-    $ticket = Ticket::factory()->create();
+    $ticket = Ticket::factory()->open()->create();
     $user = User::factory()->create();
 
     $this->actingAs($user);

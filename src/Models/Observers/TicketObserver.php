@@ -4,103 +4,147 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
-use Padmission\Tickets\Models\Contracts\TicketInterface;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketObserver
 {
-    public function creating(TicketInterface $ticket): void
+    public function creating(Ticket $ticket): void
     {
-        $this->addAssignee($ticket);
+        // Only infrastructure concerns
+        // Panel context would need panel column in database migration
+        // For now, we focus on the core functionality
     }
 
-    public function created(TicketInterface $ticket): void
+    public function created(Ticket $ticket): void
     {
         event(new TicketCreatedEvent($ticket));
     }
 
-    public function updating(TicketInterface $ticket): void
+    public function updating(Ticket $ticket): void
     {
-        $this->handleStatusTransition($ticket);
+        // Skip status transition logic if close() method is being called explicitly
+        if (! $ticket->isExplicitCloseCall()) {
+            $this->handleStatusTransition($ticket);
+        }
+
         $this->handlePriorityTransition($ticket);
+        $this->handleAssignmentChange($ticket);
     }
 
-    protected function addAssignee(TicketInterface $ticket): void
+    public function saving(Ticket $ticket): void
     {
-        // TODO: Make this independent from panel
-
-        // $panel = $ticket->panel;
-        //
-        // $plugin = TicketPlugin::get($panel);
-        // $assignmentStrategy = $plugin->getAssignmentStrategy();
-        //
-        // if ($assignmentStrategy === null) {
-        //     return;
-        // }
-        //
-        // $assignmentStrategy->assign($ticket);
-    }
-
-    protected function handlePriorityTransition(TicketInterface $ticket): void
-    {
-        if ($ticket->isDirty('priority_id')) {
-            $ticket->ticketActivities()->create([
-                'type' => ActivityType::PriorityChanged,
-                'sender' => ActivitySender::System,
-                'data' => [
-                    'from' => $ticket->getOriginal('priority_id'),
-                    'to' => $ticket->priority_id,
-                ],
-            ]);
+        // Skip observer closure logic if close() method is being called explicitly
+        if ($ticket->isDirty('status_id') && ! $ticket->isExplicitCloseCall()) {
+            $this->handleStatusClosureAttributesOnly($ticket);
         }
     }
 
-    protected function handleStatusTransition(TicketInterface $ticket): void
+    public function saved(Ticket $ticket): void
+    {
+        // Skip observer closure logic if close() method was called explicitly
+        if ($ticket->wasChanged('status_id') && ! $ticket->isExplicitCloseCall()) {
+            $this->handleStatusClosureActivitiesAndEvents($ticket);
+        }
+    }
+
+    protected function handleStatusTransition(Ticket $ticket): void
     {
         if ($ticket->isDirty('status_id')) {
-            $ticket->ticketActivities()->create([
-                'type' => ActivityType::StatusChanged,
-                'sender' => ActivitySender::System,
-                'data' => [
-                    'from' => $ticket->getOriginal('status_id'),
-                    'to' => $ticket->status_id,
-                ],
-            ]);
+            $oldStatusId = $ticket->getOriginal('status_id');
+            $newStatusId = $ticket->status_id;
 
-            $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
-            $isClosedStatus = (int) $ticket->status_id === $closedStatus->getKey();
-
-            // If changing to closed status and ticket isn't already closed, set the closing fields
-            if ($isClosedStatus && ! $ticket->isClosed && ! $ticket->isDirty('closed_at')) {
-                // Set the closed_at and closed_by fields directly on the model
-                // This will be saved as part of the current update operation
-                $ticket->closed_at = now();
-                $ticket->closed_by = auth()->id();
-
-                // Create the close activity
-                $ticket->ticketActivities()->create([
-                    'type' => ActivityType::Closed,
-                    'sender' => ActivitySender::System,
-                    'data' => [
-                        'closed_by' => auth()->id(),
-                    ],
-                ]);
-            }
+            // Only handle activities and events - closure logic is in saving event
+            $ticket->handleStatusTransitionLogic($oldStatusId, $newStatusId, auth()->id());
         }
     }
 
-    public function saving(TicketInterface $ticket): void {}
-
-    public function saved(TicketInterface $ticket): void
+    protected function handleStatusClosureAttributesOnly(Ticket $ticket): void
     {
-        if ($ticket->wasChanged('assignee_id')) {
-            $old = $ticket->getOriginal('assignee_id');
-            $new = $ticket->assignee_id;
-            event(new TicketAssignedEvent($ticket));
+        $newStatusId = $ticket->status_id;
+        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+        $isClosedStatus = $newStatusId === $closedStatus->getKey();
+
+        // If changing to closed status and ticket isn't already closed
+        if ($isClosedStatus && $ticket->closed_at === null) {
+            $userId = auth()->id();
+            $ticket->closed_by = $userId;
+            $ticket->closed_at = now();
+        }
+
+        // If changing from closed status to open status
+        if (! $isClosedStatus && $ticket->closed_at !== null) {
+            $ticket->closed_at = null;
+            $ticket->closed_by = null;
+            $ticket->disposition_id = null;
+        }
+    }
+
+    /**
+     * Handle status-based closure activities and events after save
+     */
+    protected function handleStatusClosureActivitiesAndEvents(Ticket $ticket): void
+    {
+        $oldStatusId = $ticket->getOriginal('status_id');
+        $newStatusId = $ticket->status_id;
+        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+        $isClosedStatus = $newStatusId === $closedStatus->getKey();
+        $wasClosedStatus = $oldStatusId === $closedStatus->getKey();
+
+        // If changed to closed status (and wasn't already closed)
+        if ($isClosedStatus && ! $wasClosedStatus) {
+            $userId = $ticket->closed_by;
+
+            $ticket->addActivity(
+                ActivityType::Closed,
+                'Ticket closed',
+                ActivitySender::System,
+                $userId,
+                ['closed_by' => $userId]
+            );
+
+            event(new TicketClosedEvent($ticket));
+        }
+
+        // If changed from closed to open status
+        if (! $isClosedStatus && $wasClosedStatus) {
+            $userId = auth()->id();
+
+            $ticket->addActivity(
+                ActivityType::Reopened,
+                'Ticket reopened',
+                ActivitySender::System,
+                $userId
+            );
+        }
+    }
+
+    /**
+     * Handle priority transitions by calling the ManagesPriority concern
+     */
+    protected function handlePriorityTransition(Ticket $ticket): void
+    {
+        if ($ticket->isDirty('priority_id')) {
+            $oldPriorityId = $ticket->getOriginal('priority_id');
+            $newPriorityId = $ticket->priority_id;
+
+            // Use the concern's change method - but avoid double update
+            // Since we're in updating, the priority_id is already changed
+            // We just need to handle the business logic
+            $ticket->handlePriorityTransitionLogic($oldPriorityId, $newPriorityId, auth()->id());
+        }
+    }
+
+    protected function handleAssignmentChange(Ticket $ticket): void
+    {
+        if ($ticket->isDirty('assignee_id')) {
+            $oldAssigneeId = $ticket->getOriginal('assignee_id');
+            $newAssigneeId = $ticket->assignee_id;
+
+            $ticket->handleAssignmentTransitionLogic($oldAssigneeId, $newAssigneeId, auth()->id());
         }
     }
 }
