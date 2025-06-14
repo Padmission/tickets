@@ -77,11 +77,6 @@ trait ManagesStatus
         if ($isClosedStatus && $this->isOpen()) {
             $this->close(closedBy: $userId);
         }
-
-        // If changing from closed status to open status
-        if (! $isClosedStatus && $this->isClosed()) {
-            $this->reopen($userId);
-        }
     }
 
     /**

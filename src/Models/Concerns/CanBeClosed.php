@@ -86,31 +86,6 @@ trait CanBeClosed
     }
 
     /**
-     * Reopen the ticket
-     */
-    public function reopen(?int $reopenedBy = null): void
-    {
-        if (! $this->isClosed()) {
-            return;
-        }
-
-        $reopenedBy ??= auth()->id();
-
-        $this->update([
-            'closed_at' => null,
-            'closed_by' => null,
-            'disposition_id' => null,
-        ]);
-
-        $this->addActivity(
-            ActivityType::Reopened,
-            'Ticket reopened',
-            ActivitySender::System,
-            $reopenedBy
-        );
-    }
-
-    /**
      * Check if the ticket is closed
      */
     public function isClosed(): bool

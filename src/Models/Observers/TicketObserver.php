@@ -108,18 +108,6 @@ class TicketObserver
 
             event(new TicketClosedEvent($ticket));
         }
-
-        // If changed from closed to open status
-        if (! $isClosedStatus && $wasClosedStatus) {
-            $userId = auth()->id();
-
-            $ticket->addActivity(
-                ActivityType::Reopened,
-                'Ticket reopened',
-                ActivitySender::System,
-                $userId
-            );
-        }
     }
 
     /**
