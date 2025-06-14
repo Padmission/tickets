@@ -95,6 +95,11 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;class YourServi
 }
 ```
 
+## Widgets
+This package comes with multiple Filamnet widgets that can be added to your dashboard. You can find the widgets in the `Padmission\Tickets\Filament\Widgets` namespace. They are registered automatically when using `->registerResources()`. You can disable this by using `->registerResources(shouldRegisterWidgets: false)`.
+
+By default, it will show the `TicketStatsWidget` on the `ListTickets` page.
+
 ### Authentication
 
 As it's hard to predict your authentication requirements, we don't define any for you. You *must* bring your own `TicketPolicy` and define scopes for Users and Ticket.
@@ -192,26 +197,6 @@ TicketPlugin::make()
     ->notificationStrategy(
         new NotifyEmail(['info@example.com'])
     );
-```
-
-## Filament Widgets
-This package comes with multiple widgets that can be added to your dashboard. You can find the widgets in the `Padmission\Tickets\Filament\Widgets` namespace.
-
-To view any of them, add these classes to your plugins([]) section of your Panel Provider.  
-
-```php
-use Padmission\Tickets\Filament\Widgets\OpenTicketsWaitingSupportWidget;
-use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
-use Padmission\Tickets\Filament\Widgets\OpenVsClosedByDayChartWidget;
-use Padmission\Tickets\Filament\Widgets\TicketTimeToCloseWidget;
-
-
-->plugins([
-    OpenTicketsWaitingSupportWidget,
-    OpenTicketsWidget,
-    OpenVsClosedByDayChartWidget,
-    TicketTimeToCloseWidget
-]);
 ```
 
 ## Support

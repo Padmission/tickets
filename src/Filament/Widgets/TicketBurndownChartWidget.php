@@ -10,19 +10,21 @@ use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
 use Padmission\Tickets\Services\TicketMetricsService;
 
-class OpenVsClosedByDayChartWidget extends ChartWidget
+class TicketBurndownChartWidget extends ChartWidget
 {
     use CanCalculatePollingInterval;
 
     protected static ?string $pollingInterval = '60s';
 
-    protected static ?string $maxHeight = '300px';
+    protected static ?string $maxHeight = '12.5rem';
+
+    protected int|string|array $columnSpan = 'full';
 
     public int $days = 14;
 
     public function getHeading(): string
     {
-        return __('padmission-tickets::tickets.widgets.open_vs_closed_tickets_by_day');
+        return __('padmission-tickets::widgets.burndown.heading');
     }
 
     public static function getCurrentSwatch(): array
@@ -98,7 +100,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
                 'labels' => $labels,
                 'datasets' => [
                     [
-                        'label' => __('padmission-tickets::tickets.widgets.open_at_end_of_day'),
+                        'label' => __('padmission-tickets::widgets.burndown.open_at_end_of_day'),
                         'data' => $openCounts,
                         'borderColor' => $colorA,
                         'backgroundColor' => $colorA,
@@ -108,7 +110,7 @@ class OpenVsClosedByDayChartWidget extends ChartWidget
                         'fill' => false,
                     ],
                     [
-                        'label' => __('padmission-tickets::tickets.widgets.closed_that_day'),
+                        'label' => __('padmission-tickets::widgets.burndown.closed_that_day'),
                         'data' => $closedCounts,
                         'borderColor' => $colorB,
                         'backgroundColor' => $colorB,

@@ -13,16 +13,22 @@ class OpenTicketsWidget extends BaseWidget
 
     protected static ?string $pollingInterval = '60s';
 
+    protected int|string|array $columnSpan = 4;
+
+    protected function getColumns(): int
+    {
+        return 1;
+    }
+
     public function getStats(): array
     {
-
-        $metricsService = app(TicketMetricsService::class);
+        $metricsService = resolve(TicketMetricsService::class);
         $metricsService->setCacheTime($this->getMaxPollingIntervalInSeconds());
         $count = $metricsService->getOpenTicketsCount();
 
         return [
-            Stat::make(__('padmission-tickets::tickets.widgets.tickets_open'), $count)
-                ->description(__('padmission-tickets::tickets.widgets.tickets_with_open_status'))
+            Stat::make(__('padmission-tickets::widgets.open_tickets.label'), $count)
+                ->description(__('padmission-tickets::widgets.open_tickets.description'))
                 ->descriptionIcon('heroicon-m-inbox')
                 ->color('warning'),
         ];
