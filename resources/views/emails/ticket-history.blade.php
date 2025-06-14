@@ -37,7 +37,7 @@
                                 <tr>
                                     <td align="left" style="padding:4px 12px 12px 12px;background:#edf2f7; font-size:8px; font-style:italic;">
                                         @if($activity->user)
-                                            - {{ $activity->user->name }}
+                                            - {{ $activity->userName }}
                                         @else
                                             - {{ __('padmission-tickets::emails.activity.sender-you') }}
                                         @endif
@@ -62,7 +62,7 @@
                                 <tr>
                                     <td align="right" style="padding:4px 12px 12px 12px;background:#edf2f7; font-size:8px; font-style:italic;">
                                         @if($activity->user)
-                                            - {{ $activity->user->name }}
+                                            - {{ $activity->userName }}
                                         @else
                                             - {{ __('padmission-tickets::emails.activity.sender-support') }}
                                         @endif

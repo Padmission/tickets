@@ -6,22 +6,8 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
-use Padmission\Tickets\Notifications\AbstractTicketHistoryNotification;
+use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Tests\User;
-
-// Create a concrete test implementation
-class TestTicketHistoryNotification extends AbstractTicketHistoryNotification
-{
-    public function getEmailSubject(): string
-    {
-        return 'Test Ticket Notification';
-    }
-
-    public function getEmailView(): string
-    {
-        return 'padmission-tickets::emails.ticket-history';
-    }
-}
 
 beforeEach(function () {
     // Disable events AND observers to prevent notification system from triggering
@@ -34,32 +20,33 @@ beforeEach(function () {
 
 test('notification can be instantiated', function () {
     $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
+    $notification = new TicketNotification($ticket, 'history');
 
-    expect($notification)->toBeInstanceOf(AbstractTicketHistoryNotification::class);
-    expect($notification->ticket->id)->toBe($ticket->id);
+    expect($notification)->toBeInstanceOf(TicketNotification::class);
 });
 
 test('notification returns correct email subject', function () {
-    $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->create([
+        'subject' => 'Test Subject',
+        'id' => 123,
+    ]);
+    $notification = new TicketNotification($ticket, 'created');
 
-    expect($notification->getEmailSubject())->toBe('Test Ticket Notification');
-});
-
-test('notification returns correct email view', function () {
-    $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
-
-    expect($notification->getEmailView())->toBe('padmission-tickets::emails.ticket-history');
+    $mailMessage = $notification->toMail($user);
+    
+    expect($mailMessage->subject)->toContain('Test Subject')
+        ->and($mailMessage->subject)->toContain('123');
 });
 
 test('returns null when user has no previous notifications for ticket', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
+    $notification = new TicketNotification($ticket, 'history');
 
-    $lastNotification = $notification->getLastNotification($user);
+    // Use the activity service to get the last notification
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $lastNotification = $activityService->getLastNotification($ticket, $user);
 
     expect($lastNotification)->toBeNull();
 });
@@ -67,7 +54,7 @@ test('returns null when user has no previous notifications for ticket', function
 test('gets last notification for specific user and ticket', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
+    $notification = new TicketNotification($ticket, 'history');
 
     // Create a notification record
     $notificationRecord = $ticket->ticketNotifications()->create([
@@ -75,7 +62,9 @@ test('gets last notification for specific user and ticket', function () {
         'created_at' => now()->subHour(),
     ]);
 
-    $lastNotification = $notification->getLastNotification($user);
+    // Use the activity service to get the last notification
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $lastNotification = $activityService->getLastNotification($ticket, $user);
 
     expect($lastNotification)
         ->not->toBeNull()
@@ -86,7 +75,7 @@ test('gets last notification for specific user and ticket', function () {
 test('gets unread actions when no previous notification exists', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
+    $notification = new TicketNotification($ticket, 'history');
 
     // Create some activities using the factory
     $activity1 = TicketActivity::factory()->create([
@@ -105,7 +94,9 @@ test('gets unread actions when no previous notification exists', function () {
         'created_at' => now()->subHour(),
     ]);
 
-    $activities = $notification->getUnreadActions($user, 10, 7);
+    // Use the activity service to get unread activities
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $activities = $activityService->getUnreadActivities($ticket, $user, 10, 7);
 
     expect($activities)
         ->toHaveCount(2)
@@ -119,7 +110,7 @@ test('respects debounce time window', function () {
 
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new TestTicketHistoryNotification($ticket);
+    $notification = new TicketNotification($ticket, 'history');
 
     // Send first notification
     $firstMail = $notification->toMail($user);
@@ -142,7 +133,7 @@ test('respects debounce time window', function () {
     ]);
 
     // Create a NEW notification instance to avoid memoization issues
-    $secondNotification = new TestTicketHistoryNotification($ticket);
+    $secondNotification = new TicketNotification($ticket, 'history');
 
     // Send another notification (simulating debounce behavior)
     $secondMail = $secondNotification->toMail($user);
@@ -177,8 +168,11 @@ test('respects max events configuration', function () {
         ]);
     }
 
-    $notification = new TestTicketHistoryNotification($ticket);
-    $activities = $notification->getUnreadActions($user, 2, 7);
+    $notification = new TicketNotification($ticket, 'history');
+    
+    // Use the activity service to get unread activities
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $activities = $activityService->getUnreadActivities($ticket, $user, 2, 7);
 
     expect($activities)->toHaveCount(2); // Should limit to 2
 });
@@ -201,8 +195,11 @@ test('respects max days configuration', function () {
         'created_at' => now()->subDays(3),
     ]);
 
-    $notification = new TestTicketHistoryNotification($ticket);
-    $activities = $notification->getUnreadActions($user, 10, 7);
+    $notification = new TicketNotification($ticket, 'history');
+    
+    // Use the activity service to get unread activities
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $activities = $activityService->getUnreadActivities($ticket, $user, 10, 7);
 
     expect($activities)
         ->toHaveCount(1)
@@ -214,7 +211,7 @@ test('notifications are isolated per user', function () {
     $user2 = User::factory()->create();
     $ticket = Ticket::factory()->create();
 
-    $notification = new TestTicketHistoryNotification($ticket);
+    $notification = new TicketNotification($ticket, 'history');
 
     // Send notification to user1
     $notification->toMail($user1);
