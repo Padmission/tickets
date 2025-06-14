@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
+use Padmission\Tickets\Models\Ticket;
 
 class CloseTicketAction extends Action
 {
@@ -22,7 +23,7 @@ class CloseTicketAction extends Action
             ->modalHeading(__('padmission-tickets::tickets.actions.close.modal_heading'))
             ->button()
             ->color('gray')
-            ->hidden(fn ($record): bool => $record->isClosed)
+            ->hidden(fn (Ticket $record): bool => $record->isClosed)
             ->requiresConfirmation()
             ->icon('heroicon-o-check-circle');
 
@@ -38,7 +39,7 @@ class CloseTicketAction extends Action
             ]);
         }
 
-        $this->action(function ($record, $data) {
+        $this->action(function (Ticket $record, $data) {
             $record->close(
                 disposition: $data['disposition'] ?? null,
                 closedBy: Filament::auth()->id()
