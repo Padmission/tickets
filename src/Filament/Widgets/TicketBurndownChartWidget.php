@@ -2,7 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Widgets;
 
-use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentColor;
@@ -24,7 +24,7 @@ class TicketBurndownChartWidget extends ChartWidget
         return __('padmission-tickets::widgets.burndown.heading');
     }
 
-    protected function formatChartDate(Carbon $date): string
+    protected function formatChartDate(CarbonInterface $date): string
     {
         return $date->translatedFormat('M j');
     }

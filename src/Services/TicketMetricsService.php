@@ -3,12 +3,14 @@
 namespace Padmission\Tickets\Services;
 
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Carbon\CarbonInterval;
+use Exception;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Exceptions\DriverNameResolutionException;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -43,20 +45,10 @@ class TicketMetricsService
                 $query->where('created_at', '>=', Carbon::now()->subDays($days));
             }
 
-            $connection = $query->getConnection();
-            $driver = $this->getDriverName($connection);
-
-            if ($driver === 'sqlite') {
-                $result = $query->select([
-                    DB::raw('COUNT(*) as total_tickets'),
-                    DB::raw("AVG(strftime('%s', closed_at) - strftime('%s', created_at)) as avg_seconds"),
-                ])->first();
-            } else {
-                $result = $query->select([
-                    DB::raw('COUNT(*) as total_tickets'),
-                    DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
-                ])->first();
-            }
+            $result = $query->select([
+                DB::raw('COUNT(*) as total_tickets'),
+                DB::raw($this->getDurationExpression($query->getConnection(), 'created_at', 'closed_at')),
+            ])->first();
 
             $totalClosedTickets = $result->total_tickets ?? 0;
             $avgSeconds = $result->avg_seconds ?? 0;
@@ -68,11 +60,6 @@ class TicketMetricsService
                 'total_closed_tickets' => $totalClosedTickets,
             ];
         });
-    }
-
-    public function formatTimespan(float $seconds): string
-    {
-        return now()->subSeconds($seconds)->diffForHumans(syntax: true);
     }
 
     /**
@@ -108,8 +95,8 @@ class TicketMetricsService
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-            $startDate = now()->subDays($days - 1)->startOfDay();
-            $endDate = now()->endOfDay();
+            $startDate = CarbonImmutable::today()->subDays($days - 1);
+            $endDate = CarbonImmutable::today()->endOfDay();
 
             $opened = $ticketModel::query()
                 ->whereBetween('created_at', [$startDate, $endDate])
@@ -129,7 +116,8 @@ class TicketMetricsService
             $openAtStart = $ticketModel::query()
                 ->where('created_at', '<', $startDate)
                 ->where(function ($query) use ($startDate) {
-                    $query->whereNull('closed_at')
+                    $query
+                        ->whereNull('closed_at')
                         ->orWhere('closed_at', '>=', $startDate);
                 })
                 ->count();
@@ -144,16 +132,23 @@ class TicketMetricsService
         });
     }
 
-    protected function getDriverName(ConnectionInterface $connection): string
+    protected function formatTimespan(float $seconds): string
     {
-        if (method_exists($connection, 'getDriverName')) {
-            return $connection->getDriverName();
-        } elseif (method_exists($connection, 'getConfig')) {
-            $config = $connection->getConfig();
-            if (is_array($config) && array_key_exists('driver', $config)) {
-                return $config['driver'];
-            }
+        return now()->subSeconds($seconds)->diffForHumans(syntax: CarbonInterface::DIFF_ABSOLUTE);
+    }
+
+    protected function getDurationExpression(ConnectionInterface $connection, string $startColumn, string $endColumn): string
+    {
+        if (! method_exists($connection, 'getDriverName')) {
+            throw new Exception('Unsupported DB driver for TicketMetrics.');
         }
-        throw new DriverNameResolutionException;
+
+        return match ($connection->getDriverName()) {
+            'sqlite' => "AVG(strftime('%s', $endColumn) - strftime('%s', $startColumn)) as avg_seconds",
+            'mysql', 'mariadb' => "AVG(TIMESTAMPDIFF(SECOND, $startColumn, $endColumn)) as avg_seconds",
+            'pgsql' => "AVG(EXTRACT(EPOCH FROM ($endColumn - $startColumn))) as avg_seconds",
+            'sqlsrv' => "AVG(DATEDIFF(SECOND, $startColumn, $endColumn)) as avg_seconds",
+            default => throw new Exception("Unsupported DB driver for TicketMetrics: {$connection->getDriverName()}"),
+        };
     }
 }
