@@ -3,9 +3,7 @@
 namespace Padmission\Tickets\Listeners;
 
 use Illuminate\Contracts\Auth\Access\Authorizable;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
-use Mpbarlow\LaravelQueueDebouncer\Facade\Debouncer;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
@@ -82,6 +80,11 @@ class TicketNotificationListener
 
     /**
      * Dispatch a debounced notification
+     * 
+     * This method uses the Laravel Queue Debouncer to ensure that:
+     * 1. If no notification job exists for this user-ticket combination, schedule one for 5 minutes
+     * 2. If a job already exists, cancel it and schedule a new one (resets the timer)
+     * 3. This ensures active conversations don't trigger emails until 5 minutes of silence
      */
     protected function dispatchDebouncedNotification(Authorizable $user, Ticket $ticket, string $type): void
     {
@@ -89,15 +92,11 @@ class TicketNotificationListener
         $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
         $job = new $jobClass($user, $ticket, $type);
 
-        $jobId = $job->uniqueId();
-
-        if (Cache::has($jobId)) {
-            return;
-        }
-
-        Cache::put($jobId, true, now()->addSeconds($debounceTime));
-
-        Debouncer::usingCacheKeyProvider(fn () => $job->uniqueId())
+        // Use dependency injection to get the debouncer and customize the cache key provider
+        $debouncer = app(\Mpbarlow\LaravelQueueDebouncer\Debouncer::class);
+        
+        $debouncer
+            ->usingCacheKeyProvider(fn () => $job->uniqueId())
             ->debounce($job, $debounceTime);
     }
 }

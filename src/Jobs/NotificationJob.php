@@ -129,10 +129,14 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     /**
      * Build the unique ID for this job (can be overridden for custom logic)
+     * 
+     * Note: We only use ticket-user combination for the unique ID to ensure
+     * that new activities for the same ticket-user pair will replace existing
+     * debounced notifications, which is exactly what we want for debouncing.
      */
     protected function buildUniqueId(): string
     {
-        return $this->modelType.'-'.$this->modelId.'-'.$this->userId;
+        return "notification-{$this->modelType}-{$this->modelId}-{$this->userId}";
     }
 
     /**
