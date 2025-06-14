@@ -49,7 +49,7 @@ class ViewTicket extends ViewRecord
             ->schema([
                 Section::make()
                     ->columnSpan(2)
-                    ->extraAttributes(['class' => 'pad-ti-section-chat'])
+                    ->extraAttributes(['class' => 'pad-ti-chat-section'])
                     ->schema([
                         ViewEntry::make('chat')->view('padmission-tickets::filament.infolists.chat'),
                     ]),
