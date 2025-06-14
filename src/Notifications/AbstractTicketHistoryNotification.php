@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Notifications;
 
-use Filament\Facades\Filament;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
@@ -12,7 +11,6 @@ use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketNotification;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use Throwable;
 
 abstract class AbstractTicketHistoryNotification extends Notification
 {
@@ -77,8 +75,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
     }
 
     /**
-     * @param mixed $notifiable
-     * @return \Padmission\Tickets\Models\TicketNotification|null
+     * @param  mixed  $notifiable
      */
     public function getLastNotification($notifiable): ?TicketNotification
     {
@@ -180,8 +177,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
     }
 
     /**
-     * @param mixed $logo  // Could be Media object, SVG string, URL, etc.
-     * @return string|null
+     * @param  mixed  $logo  // Could be Media object, SVG string, URL, etc.
      */
     protected function resolveLogo(mixed $logo): ?string
     {
@@ -200,15 +196,17 @@ abstract class AbstractTicketHistoryNotification extends Notification
             if (stripos($logo, '<svg') === 0) {
                 return $logo; // raw SVG
             }
+
             return $logo;
         }
+
         return null;
     }
 
     public function getEmailLogo(): ?string
     {
         $panelId = $this->ticket->panel;
-        if (!$panelId) {
+        if (! $panelId) {
             return null;
         }
 
@@ -222,6 +220,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
                     if (filter_var($resolved, FILTER_VALIDATE_URL)) {
                         return sprintf('<img src="%s" />', $resolved);
                     }
+
                     return $resolved; // SVG or other string
                 }
             } catch (\Throwable $e) {
@@ -236,6 +235,7 @@ abstract class AbstractTicketHistoryNotification extends Notification
                 if (filter_var($logo, FILTER_VALIDATE_URL)) {
                     return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
                 }
+
                 return $logo;
             }
         }

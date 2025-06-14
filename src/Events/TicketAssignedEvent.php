@@ -6,7 +6,6 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Padmission\Tickets\Models\Contracts\TicketInterface;
-use Padmission\Tickets\Models\Ticket;
 
 class TicketAssignedEvent
 {

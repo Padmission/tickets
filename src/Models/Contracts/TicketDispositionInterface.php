@@ -2,11 +2,11 @@
 
 namespace Padmission\Tickets\Models\Contracts;
 
-
 /**
  * @template TModel of \Illuminate\Database\Eloquent\Model
  *
  * @property ?string $panel
+ *
  * @method int|string getKey()
  */
 interface TicketDispositionInterface
@@ -15,9 +15,11 @@ interface TicketDispositionInterface
         $key,
         $value
     );
+
     public function __get(
         $key
     );
+
     public function __isset(
         $key
     );

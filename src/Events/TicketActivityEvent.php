@@ -7,7 +7,6 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Contracts\TicketInterface;
-use Padmission\Tickets\Models\Ticket;
 
 class TicketActivityEvent
 {

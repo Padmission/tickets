@@ -16,7 +16,6 @@ use Padmission\Tickets\Models\Contracts\TicketStatusInterface;
 use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
-
 /**
  * @mixin \Illuminate\Database\Eloquent\Model
  */
@@ -42,9 +41,6 @@ class TicketStatus extends Model implements TicketStatusInterface
         );
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public static function getOpenStatuses(): Collection
     {
         return self::query()

@@ -8,9 +8,6 @@ interface NotificationStrategy
 {
     /**
      * Send notifications for a ticket
-     *
-     * @param TicketInterface $ticket
-     * @return void
      */
     public function notify(TicketInterface $ticket): void;
 }

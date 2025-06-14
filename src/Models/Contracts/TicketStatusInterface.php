@@ -11,16 +11,12 @@ use Illuminate\Database\Eloquent\Collection;
  */
 interface TicketStatusInterface
 {
-
     public function __set($key, $value);
 
     public function __get($key);
 
     public function __isset($key);
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public static function getOpenStatuses(): Collection;
 
     /**

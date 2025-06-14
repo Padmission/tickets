@@ -85,10 +85,7 @@ abstract class AbstractTicketListener
     }
 
     /**
-     * @param Authorizable $user
-     * @param TicketInterface $ticket
-     * @param string $type
-     * @return void
+     * @param  TicketInterface  $ticket
      */
     protected function dispatchDebouncedNotification(Authorizable $user, $ticket, string $type): void
     {

@@ -126,13 +126,10 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ]);
-        
+
         return $notification;
     }
 
-    /**
-     * @return TicketActivity
-     */
     public function createTicketActivity(Ticket $ticket, ActivityType $type, Carbon $timestamp): TicketActivity
     {
         /** @var TicketActivity $activity */
@@ -143,7 +140,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             'content' => 'Test activity',
             'created_at' => $timestamp,
         ]);
-        
+
         return $activity;
     }
 }

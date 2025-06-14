@@ -2,8 +2,6 @@
 
 namespace Padmission\Tickets\Models\Contracts;
 
-use Filament\Panel;
-
 /**
  * @template TModel of \Illuminate\Database\Eloquent\Model
  *

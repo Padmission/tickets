@@ -2,10 +2,8 @@
 
 namespace Padmission\Tickets\Models\Contracts;
 
-use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivityType;
-use Padmission\Tickets\Models\Ticket;
 
 /**
  * @template TModel of \Illuminate\Database\Eloquent\Model
