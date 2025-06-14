@@ -7,7 +7,7 @@ use Filament\Panel;
 /**
  * @template TModel of \Illuminate\Database\Eloquent\Model
  *
- * @property ?Panel $panel
+ * @property ?string $panel
  */
 interface TicketPriorityInterface
 {

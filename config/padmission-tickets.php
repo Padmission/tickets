@@ -17,6 +17,7 @@ return [
         Authenticatable::class => App\Models\User::class,
         Padmission\Tickets\Models\Ticket::class => Padmission\Tickets\Models\Ticket::class,
         Padmission\Tickets\Models\TicketActivity::class => Padmission\Tickets\Models\TicketActivity::class,
+        Padmission\Tickets\Models\TicketDisposition::class => Padmission\Tickets\Models\TicketDisposition::class,
         Padmission\Tickets\Models\TicketNotification::class => Padmission\Tickets\Models\TicketNotification::class,
         Padmission\Tickets\Models\TicketPriority::class => Padmission\Tickets\Models\TicketPriority::class,
         Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
