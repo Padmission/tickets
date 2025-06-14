@@ -2,7 +2,7 @@
 
 [![Premium Package](https://img.shields.io/badge/package-premium-gold?style=flat-square)](https://tickets.padmission.com)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue?style=flat-square)](composer.json)
-[![Laravel Version](https://img.shields.io/badge/laravel-%3E%3D10.0-red?style=flat-square)](composer.json)
+[![Laravel Version](https://img.shields.io/badge/laravel-%3E%3D11.0-red?style=flat-square)](composer.json)
 [![Filament Version](https://img.shields.io/badge/filament-v3.x-purple?style=flat-square)](composer.json)
 
 ## Introduction
@@ -193,6 +193,65 @@ TicketPlugin::make()
         new NotifyEmail(['info@example.com'])
     );
 ```
+
+
+## Custom Models & Observers
+
+### Using Custom Models
+
+This package provides interfaces for all models to ensure consistent behavior when extending or replacing the default models:
+
+- `TicketInterface` → Required methods for `Ticket` models
+- `TicketActivityInterface` → Required methods for `TicketActivity` models
+- `TicketNotificationInterface` → Required methods for `TicketNotification` models
+- `TicketStatusInterface` → Required methods for `TicketStatus` models
+- `TicketPriorityInterface` → Required methods for `TicketPriority` models
+- `TicketDispositionInterface` → Required methods for `TicketDisposition` models
+
+If you create your own models that do not extend our base models, you should:
+1. Implement the appropriate interface
+2. Register the corresponding observer
+
+```php
+// Your custom model
+use Padmission\Tickets\Models\Contracts\TicketInterface;
+
+class CustomTicket extends Model implements TicketInterface
+{
+    // Implement all required methods from the interface
+}
+
+// In your AppServiceProvider or dedicated provider
+public function boot()
+{
+    // Register the observer to maintain consistent behavior
+    CustomTicket::observe(\Padmission\Tickets\Models\Observers\TicketObserver::class);
+    
+    // Configure the package to use your model
+    TicketPlugin::resolveModelUsing(TicketInterface::class, CustomTicket::class);
+}
+```
+
+### Observer Pattern
+
+The package uses the Laravel Observer pattern for model events. Each model has a corresponding observer:
+
+- `Ticket` → `TicketObserver`
+- `TicketActivity` → `TicketActivityObserver`
+- `TicketDisposition` → `TicketDispositionObserver`
+- `TicketNotification` → `TicketNotificationObserver`
+- `TicketStatus` → `TicketStatusObserver`
+- `TicketPriority` → `TicketPriorityObserver`
+
+These observers handle important functionality like:
+- Ticket assignment
+- Status transitions
+- Activity tracking
+- Notifications
+- Event dispatching
+
+**Important:** If you replace our models with your own implementations, make sure to register the appropriate observers to maintain the expected behavior.
+
 
 ## Support
 
