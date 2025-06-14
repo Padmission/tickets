@@ -23,6 +23,17 @@ return [
         Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
     ],
 
+    /**
+     * Swap package job classes (left) with your own job classes (right).
+     * Your jobs should extend the package base jobs to inherit the same behavior.
+     * Example: class CustomNotificationJob extends \Padmission\Tickets\Jobs\NotificationJob { }
+     *
+     * @var array<class-string, class-string>
+     */
+    'jobs' => [
+        Padmission\Tickets\Jobs\NotificationJob::class => Padmission\Tickets\Jobs\NotificationJob::class,
+    ],
+
     'tenancy' => [
         'enabled' => false,
         'tenancy_model' => App\Models\Tenant::class,

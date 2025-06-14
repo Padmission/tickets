@@ -266,6 +266,93 @@ class CustomTicketStatus extends Model
 CustomTicketStatus::observe(\Padmission\Tickets\Models\Observers\TicketStatusObserver::class);
 ```
 
+### Custom Jobs
+
+The package also supports extending job classes for custom functionality. This is particularly useful for adding tenant-specific logic or custom notification handling.
+
+#### Extending NotificationJob
+
+To add custom properties like `tenantId` to the notification job:
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models\Ticket;
+
+class CustomNotificationJob extends NotificationJob
+{
+    public ?int $tenantId = null;
+
+    /**
+     * Override to add custom initialization
+     */
+    protected function initializeJob(Authenticatable $user, Ticket $model): void
+    {
+        // Add your custom logic here
+        $this->tenantId = $user->tenant_id ?? null;
+        
+        // Set custom queue, delay, etc.
+        $this->onQueue('tenant-' . $this->tenantId);
+    }
+
+    /**
+     * Override unique ID generation to include tenant
+     */
+    protected function buildUniqueId(): string
+    {
+        return parent::buildUniqueId() . '-tenant-' . $this->tenantId;
+    }
+
+    /**
+     * Override notification sending for tenant-specific logic
+     */
+    protected function sendNotification(Authenticatable $user, Ticket $record, string $notificationClass): void
+    {
+        // Add tenant-specific notification logic
+        if ($this->shouldSendNotification($user, $record)) {
+            parent::sendNotification($user, $record, $notificationClass);
+        }
+    }
+
+    /**
+     * Custom logic to determine if notification should be sent
+     */
+    protected function shouldSendNotification(Authenticatable $user, Ticket $record): bool
+    {
+        // Add your business logic here
+        return $user->tenant_id === $record->tenant_id;
+    }
+
+    /**
+     * Override error handling
+     */
+    protected function handleException(\Exception $e): void
+    {
+        // Log errors with tenant context
+        \Log::error('Notification job failed', [
+            'tenant_id' => $this->tenantId,
+            'ticket_id' => $this->getModelId(),
+            'user_id' => $this->getUserId(),
+            'error' => $e->getMessage(),
+        ]);
+    }
+}
+```
+
+#### Register Custom Job
+
+Configure the package to use your custom job in your `config/padmission-tickets.php`:
+
+```php
+'jobs' => [
+    \Padmission\Tickets\Jobs\NotificationJob::class => \App\Jobs\CustomNotificationJob::class,
+],
+```
+
 ### Observer Pattern
 
 The package uses the Laravel Observer pattern for model events. Each model has a corresponding observer:

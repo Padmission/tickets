@@ -13,6 +13,7 @@ use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\NotificationRecipientService;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketNotificationListener
 {
@@ -64,10 +65,19 @@ class TicketNotificationListener
         $strategy = $this->recipientService->getUserNotificationStrategy($user);
 
         if ($strategy === 'immediate') {
-            NotificationJob::dispatch($user, $event->ticket, $type);
+            $this->dispatchNotificationJob($user, $event->ticket, $type);
         } else {
             $this->dispatchDebouncedNotification($user, $event->ticket, $type);
         }
+    }
+
+    /**
+     * Dispatch a notification job
+     */
+    protected function dispatchNotificationJob(Authorizable $user, Ticket $ticket, string $type): void
+    {
+        $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
+        $jobClass::dispatch($user, $ticket, $type);
     }
 
     /**
@@ -76,7 +86,8 @@ class TicketNotificationListener
     protected function dispatchDebouncedNotification(Authorizable $user, Ticket $ticket, string $type): void
     {
         $debounceTime = config('padmission-tickets.notification-debounce', 300);
-        $job = new NotificationJob($user, $ticket, $type);
+        $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
+        $job = new $jobClass($user, $ticket, $type);
 
         $jobId = $job->uniqueId();
 

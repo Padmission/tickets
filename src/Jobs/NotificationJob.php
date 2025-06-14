@@ -35,6 +35,16 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         $this->userId = $user->getKey();
         $this->modelType = get_class($model);
         $this->modelId = $model->getKey();
+
+        $this->initializeJob($user, $model);
+    }
+
+    /**
+     * Override this method to add custom initialization logic
+     */
+    protected function initializeJob(Authenticatable $user, Ticket $model): void
+    {
+        // Override in child classes for custom initialization
     }
 
     public function handle(): void
@@ -46,25 +56,57 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
-
-            /** @var object $user */
-            $user = $userModel::find($this->userId);
-
+            $user = $this->resolveUser();
             if (! $user) {
                 return;
             }
 
-            $model = $this->modelType;
-            $record = $model::find($this->modelId);
-
+            $record = $this->resolveModel();
             if (! $record) {
                 return;
             }
 
-            $user->notify(new $notificationClass($record, $this->notificationType));
+            $this->sendNotification($user, $record, $notificationClass);
         } catch (\Exception $e) {
+            $this->handleException($e);
         }
+    }
+
+    /**
+     * Resolve the user model
+     */
+    protected function resolveUser(): ?Authenticatable
+    {
+        $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+
+        return $userModel::find($this->userId);
+    }
+
+    /**
+     * Resolve the ticket model
+     */
+    protected function resolveModel(): ?Ticket
+    {
+        $model = $this->modelType;
+
+        return $model::find($this->modelId);
+    }
+
+    /**
+     * Send the notification
+     */
+    protected function sendNotification(Authenticatable $user, Ticket $record, string $notificationClass): void
+    {
+        $user->notify(new $notificationClass($record, $this->notificationType));
+    }
+
+    /**
+     * Handle exceptions that occur during job execution
+     */
+    protected function handleException(\Exception $e): void
+    {
+        // Override in child classes for custom error handling
+        // Default behavior is to silently continue
     }
 
     protected function getNotificationClass(): ?string
@@ -82,6 +124,38 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     public function uniqueId(): string
     {
+        return $this->buildUniqueId();
+    }
+
+    /**
+     * Build the unique ID for this job (can be overridden for custom logic)
+     */
+    protected function buildUniqueId(): string
+    {
         return $this->modelType.'-'.$this->modelId.'-'.$this->userId;
+    }
+
+    /**
+     * Get the user ID
+     */
+    protected function getUserId(): string|int
+    {
+        return $this->userId;
+    }
+
+    /**
+     * Get the model type
+     */
+    protected function getModelType(): string
+    {
+        return $this->modelType;
+    }
+
+    /**
+     * Get the model ID
+     */
+    protected function getModelId(): string|int
+    {
+        return $this->modelId;
     }
 }
