@@ -62,7 +62,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $user->notify(new $notificationClass($record));
+            $user->notify(new $notificationClass($record, $this->notificationType));
         } catch (\Exception $e) {
         }
     }

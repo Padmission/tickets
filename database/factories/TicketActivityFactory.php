@@ -28,7 +28,7 @@ class TicketActivityFactory extends Factory
             'sender' => ActivitySender::System,
             'type' => ActivityType::Message,
 
-            'content' => $this->faker->words(),
+            'content' => $this->faker->sentence(),
         ];
     }
 }

@@ -55,16 +55,16 @@ return [
 
     'event-listeners' => [
         \Padmission\Tickets\Events\TicketActivityEvent::class => [
-            \Padmission\Tickets\Listeners\TicketActivityListener::class,
+            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
         ],
         \Padmission\Tickets\Events\TicketAssignedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketAssignedListener::class,
+            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
         ],
         \Padmission\Tickets\Events\TicketClosedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketClosedListener::class,
+            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
         ],
         \Padmission\Tickets\Events\TicketCreatedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketCreatedListener::class,
+            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
         ],
     ],
 
@@ -74,10 +74,10 @@ return [
      * @var array<string, class-string|null>
      */
     'notifications' => [
-        'activity' => Padmission\Tickets\Notifications\TicketActivityNotification::class,
-        'assigned' => Padmission\Tickets\Notifications\TicketAssignedNotification::class,
-        'closed' => Padmission\Tickets\Notifications\TicketClosedNotification::class,
-        'created' => Padmission\Tickets\Notifications\TicketCreatedNotification::class,
+        'activity' => Padmission\Tickets\Notifications\TicketNotification::class,
+        'assigned' => Padmission\Tickets\Notifications\TicketNotification::class,
+        'closed' => Padmission\Tickets\Notifications\TicketNotification::class,
+        'created' => Padmission\Tickets\Notifications\TicketNotification::class,
     ],
 
     /**

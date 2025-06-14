@@ -56,7 +56,22 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     }
 
-    public function packageRegistered(): void {}
+    public function packageRegistered(): void
+    {
+        $this->registerServices();
+    }
+
+    /**
+     * Register services with the container
+     */
+    protected function registerServices(): void
+    {
+        $this->app->singleton(\Padmission\Tickets\Services\TicketActivityService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\EmailLogoService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\EmailStyleService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\TicketUrlService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\NotificationRecipientService::class);
+    }
 
     private function ensurePolicyIsRegistered(): void
     {
