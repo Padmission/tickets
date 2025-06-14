@@ -70,37 +70,6 @@ class TicketMetricsService
         });
     }
 
-    /**
-     * Get metrics for ticket closure times (min, max, average)
-     *
-     * @param  int|null  $days  Number of days to look back
-     */
-    public function getCloseTimeMetrics(?int $days = 30): array
-    {
-        $cacheKey = __METHOD__.'-'.$days;
-
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
-            $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
-                ->whereNotNull('closed_at')
-                ->when($days, function ($sub) use ($days) {
-                    $sub->where('created_at', '>=', Carbon::now()->subDays($days));
-                });
-            $result = $query->select([
-                DB::raw('COUNT(*) as total_tickets'),
-                DB::raw('AVG(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as avg_seconds'),
-                DB::raw('MIN(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as min_seconds'),
-                DB::raw('MAX(TIMESTAMPDIFF(SECOND, created_at, closed_at)) as max_seconds'),
-            ])->first();
-
-            return [
-                'average' => $this->formatTimespan($result->avg_seconds ?? 0),
-                'minimum' => $this->formatTimespan($result->min_seconds ?? 0),
-                'maximum' => $this->formatTimespan($result->max_seconds ?? 0),
-                'total_closed_tickets' => $result->total_tickets ?? 0,
-            ];
-        });
-    }
-
     public function formatTimespan(float $seconds): string
     {
         return now()->subSeconds($seconds)->diffForHumans(syntax: true);
