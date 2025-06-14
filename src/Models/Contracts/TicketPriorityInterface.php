@@ -2,4 +2,18 @@
 
 namespace Padmission\Tickets\Models\Contracts;
 
-interface TicketPriorityInterface {}
+use Filament\Panel;
+
+/**
+ * @template TModel of \Illuminate\Database\Eloquent\Model
+ *
+ * @property ?Panel $panel
+ */
+interface TicketPriorityInterface
+{
+    public function __set($key, $value);
+
+    public function __get($key);
+
+    public function __isset($key);
+}

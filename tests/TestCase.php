@@ -120,21 +120,30 @@ class TestCase extends \Orchestra\Testbench\TestCase
     // In TestCase.php
     public function createNotificationHistory(Ticket $ticket, User $user, Carbon $timestamp): TicketNotification
     {
-        return $ticket->ticketNotifications()->create([
+        /** @var TicketNotification $notification */
+        $notification = $ticket->ticketNotifications()->create([
             'user_id' => $user->getKey(),
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ]);
+        
+        return $notification;
     }
 
+    /**
+     * @return TicketActivity
+     */
     public function createTicketActivity(Ticket $ticket, ActivityType $type, Carbon $timestamp): TicketActivity
     {
-        return $ticket->ticketActivities()->create([
+        /** @var TicketActivity $activity */
+        $activity = $ticket->ticketActivities()->create([
             'type' => $type,
             'sender' => ActivitySender::User,
             'user_id' => 1,
             'content' => 'Test activity',
             'created_at' => $timestamp,
         ]);
+        
+        return $activity;
     }
 }

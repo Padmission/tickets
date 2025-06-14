@@ -24,6 +24,9 @@ use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
+/**
+ * @mixin \Illuminate\Database\Eloquent\Model
+ */
 #[UseFactory(TicketFactory::class)]
 #[ObservedBy(TicketObserver::class)]
 class Ticket extends Model implements TicketInterface

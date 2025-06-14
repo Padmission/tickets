@@ -11,6 +11,7 @@ use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models\Contracts\TicketInterface;
 
 abstract class AbstractTicketListener
 {
@@ -84,9 +85,10 @@ abstract class AbstractTicketListener
     }
 
     /**
-     * Dispatch a debounced notification job.
-     *
-     * @param  \Padmission\Tickets\Models\Ticket  $ticket
+     * @param Authorizable $user
+     * @param TicketInterface $ticket
+     * @param string $type
+     * @return void
      */
     protected function dispatchDebouncedNotification(Authorizable $user, $ticket, string $type): void
     {

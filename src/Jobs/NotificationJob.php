@@ -8,9 +8,11 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
+use Padmission\Tickets\Models\Contracts\TicketInterface;
 use Padmission\Tickets\TicketPlugin;
 
 class NotificationJob implements ShouldBeUnique, ShouldQueue
@@ -29,7 +31,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         Authenticatable $user,
-        Model $model,
+        TicketInterface $model,
         public string $notificationType
     ) {
         $this->userId = $user->getKey();
@@ -47,6 +49,8 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
             }
 
             $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+
+            /** @var object $user */
             $user = $userModel::find($this->userId);
 
             if (! $user) {

@@ -76,13 +76,20 @@ abstract class AbstractTicketHistoryNotification extends Notification
             ]);
     }
 
+    /**
+     * @param mixed $notifiable
+     * @return \Padmission\Tickets\Models\TicketNotification|null
+     */
     public function getLastNotification($notifiable): ?TicketNotification
     {
-        return $this->ticket
+        /** @var \Padmission\Tickets\Models\TicketNotification|null $notification */
+        $notification = $this->ticket
             ->ticketNotifications()
             ->where('user_id', $notifiable->getKey())
             ->latest()
             ->first();
+
+        return $notification;
     }
 
     public function getUnreadActions($notifiable, int $maxEvents, int $maxDays): Collection
@@ -172,38 +179,64 @@ abstract class AbstractTicketHistoryNotification extends Notification
         return 'padmission-tickets::emails.ticket-history';
     }
 
+    /**
+     * @param mixed $logo  // Could be Media object, SVG string, URL, etc.
+     * @return string|null
+     */
+    protected function resolveLogo(mixed $logo): ?string
+    {
+        if (is_object($logo)) {
+            if (method_exists($logo, 'getLogo')) {
+                return $logo->getLogo();
+            }
+            if (method_exists($logo, 'getUrl')) {
+                return $logo->getUrl();
+            }
+        }
+
+        // If it's a string, check if it's an SVG or a URL
+        if (is_string($logo)) {
+            // Simple SVG check (starts with <svg)
+            if (stripos($logo, '<svg') === 0) {
+                return $logo; // raw SVG
+            }
+            return $logo;
+        }
+        return null;
+    }
+
     public function getEmailLogo(): ?string
     {
-        if ($panel = $this->ticket->panel) {
-            if ($tenant = Filament::getTenant()) {
-                if (method_exists($panel, 'getLogo')) {
-                    try {
-                        $logo = $panel->getLogo();
-                        if ($logo instanceof Media) {
-                            $logo = $logo->getUrl();
-                        }
-                        if (is_string($logo)) {
-                            if (filter_var($logo, FILTER_VALIDATE_URL)) {
-                                return sprintf('<img src="%s" />', $logo);
-                            }
+        $panelId = $this->ticket->panel;
+        if (!$panelId) {
+            return null;
+        }
 
-                            return $logo;
-                        }
-                    } catch (Throwable $e) {
+        $tenant = \Filament\Facades\Filament::getTenant();
+        if ($tenant && method_exists($tenant, 'getLogo')) {
+            try {
+                $logo = $tenant->getLogo();
+                $resolved = $this->resolveLogo($logo);
 
+                if (is_string($resolved)) {
+                    if (filter_var($resolved, FILTER_VALIDATE_URL)) {
+                        return sprintf('<img src="%s" />', $resolved);
                     }
+                    return $resolved; // SVG or other string
                 }
+            } catch (\Throwable $e) {
+                // Optionally log or ignore
             }
-            if ($panel = Filament::getPanel($panel)) {
-                if ($logo = $panel->getBrandLogo()) {
-                    $height = $panel->getBrandLogoHeight();
+        }
 
-                    if (filter_var($logo, FILTER_VALIDATE_URL)) {
-                        return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
-                    }
-
-                    return $logo;
+        // Fallback: get the panel's brand logo
+        if ($panel = \Filament\Facades\Filament::getPanel($panelId)) {
+            if ($logo = $panel->getBrandLogo()) {
+                $height = $panel->getBrandLogoHeight();
+                if (filter_var($logo, FILTER_VALIDATE_URL)) {
+                    return sprintf('<img src="%s" style="height: %s;" />', $logo, $height);
                 }
+                return $logo;
             }
         }
 
