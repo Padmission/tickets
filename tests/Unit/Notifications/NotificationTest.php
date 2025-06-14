@@ -34,7 +34,7 @@ test('notification returns correct email subject', function () {
     $notification = new TicketNotification($ticket, 'created');
 
     $mailMessage = $notification->toMail($user);
-    
+
     expect($mailMessage->subject)->toContain('Test Subject')
         ->and($mailMessage->subject)->toContain('123');
 });
@@ -169,7 +169,7 @@ test('respects max events configuration', function () {
     }
 
     $notification = new TicketNotification($ticket, 'history');
-    
+
     // Use the activity service to get unread activities
     $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
     $activities = $activityService->getUnreadActivities($ticket, $user, 2, 7);
@@ -196,7 +196,7 @@ test('respects max days configuration', function () {
     ]);
 
     $notification = new TicketNotification($ticket, 'history');
-    
+
     // Use the activity service to get unread activities
     $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
     $activities = $activityService->getUnreadActivities($ticket, $user, 10, 7);
