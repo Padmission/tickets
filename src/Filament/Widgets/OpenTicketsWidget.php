@@ -4,13 +4,10 @@ namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
 use Padmission\Tickets\Services\TicketMetricsService;
 
 class OpenTicketsWidget extends BaseWidget
 {
-    use CanCalculatePollingInterval;
-
     protected static ?string $pollingInterval = '60s';
 
     protected int|string|array $columnSpan = 4;
@@ -23,7 +20,7 @@ class OpenTicketsWidget extends BaseWidget
     public function getStats(): array
     {
         $metricsService = resolve(TicketMetricsService::class);
-        $metricsService->setCacheTime($this->getMaxPollingIntervalInSeconds());
+        $metricsService->setCacheTime($this->getPollingInterval());
         $count = $metricsService->getOpenTicketsCount();
 
         return [

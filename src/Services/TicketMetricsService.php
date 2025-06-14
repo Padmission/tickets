@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Services;
 
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,11 +14,15 @@ use Padmission\Tickets\TicketPlugin;
 
 class TicketMetricsService
 {
-    protected int $cacheTimeInSeconds = 5;
+    protected int $cacheTimeInSeconds = 10;
 
-    public function setCacheTime(int $seconds): self
+    public function setCacheTime(int|string $duration): self
     {
-        $this->cacheTimeInSeconds = $seconds ?: 5;
+        $seconds = is_string($duration)
+            ? CarbonInterval::make($duration)->totalSeconds
+            : $duration;
+
+        $this->cacheTimeInSeconds = min(10, $seconds);
 
         return $this;
     }
@@ -128,7 +133,7 @@ class TicketMetricsService
         });
     }
 
-    public function getOpenVsClosedByDayChartData(int $days): array
+    public function getBurndownData(int $days): array
     {
         $cacheKey = __METHOD__.'-'.$days;
 

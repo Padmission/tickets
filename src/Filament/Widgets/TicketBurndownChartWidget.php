@@ -5,15 +5,12 @@ namespace Padmission\Tickets\Filament\Widgets;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentColor;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\Cache;
-use Padmission\Tickets\Filament\Widgets\Traits\CanCalculatePollingInterval;
 use Padmission\Tickets\Services\TicketMetricsService;
 
 class TicketBurndownChartWidget extends ChartWidget
 {
-    use CanCalculatePollingInterval;
-
     protected static ?string $pollingInterval = '60s';
 
     protected static ?string $maxHeight = '12.5rem';
@@ -27,101 +24,83 @@ class TicketBurndownChartWidget extends ChartWidget
         return __('padmission-tickets::widgets.burndown.heading');
     }
 
-    public static function getCurrentSwatch(): array
-    {
-        $panel = Filament::getCurrentPanel()
-            ?? Filament::getDefaultPanel();
-
-        $panelColors = $panel->getColors();
-
-        return [
-            'primary' => static::normalizeColor($panelColors['primary'] ?? Color::Blue, Color::Blue),
-            'secondary' => static::normalizeColor($panelColors['secondary'] ?? Color::Gray, Color::Gray),
-        ];
-    }
-
-    protected static function normalizeColor($color, array $fallback): array
-    {
-        if (is_array($color) && isset($color[500])) {
-            return $color;
-        }
-        if (is_string($color)) {
-            return [500 => $color];
-        }
-
-        return $fallback;
-    }
-
     protected function formatChartDate(Carbon $date): string
     {
         return $date->translatedFormat('M j');
     }
 
+    public static function getColors(): array
+    {
+        $colors = Filament::getCurrentPanel()->getColors();
+
+        return [
+            'rgb('.FilamentColor::processColor($colors['primary'] ?? Color::Blue)[600].')',
+            'rgb('.FilamentColor::processColor($colors['secondary'] ?? Color::Gray)[600].')',
+        ];
+    }
+
     protected function getData(): array
     {
-        return Cache::remember(__METHOD__.'-'.$this->days, $this->getMaxPollingIntervalInSeconds(), function () {
+        $raw = resolve(TicketMetricsService::class)
+            ->setCacheTime($this->getPollingInterval())
+            ->getBurndownData($this->days);
 
-            $service = app(TicketMetricsService::class);
-            $raw = $service->getOpenVsClosedByDayChartData($this->days);
+        [$colorA, $colorB] = static::getColors();
 
-            $colors = static::getCurrentSwatch();
-            $colorA = $colors['primary'] ? $colors['primary'][500] : '#3b82f6';
-            $colorB = $colors['secondary'] ? $colors['secondary'][500] : '#10b981';
-            $colorA = strpos($colorA, '#') === 0 ? $colorA : 'rgb('.$colorA.')';
-            $colorB = strpos($colorB, '#') === 0 ? $colorB : 'rgb('.$colorB.')';
+        $labels = [];
+        $openCounts = [];
+        $closedCounts = [];
 
-            $labels = [];
-            $openCounts = [];
-            $closedCounts = [];
-            $cumulativeOpened = 0;
-            $cumulativeClosed = 0;
-            $openAtStart = $raw['openAtStart'];
-            $opened = $raw['opened'];
-            $closed = $raw['closed'];
-            $startDate = $raw['startDate']->copy();
-            $days = $startDate->diffInDays($raw['endDate']) + 1;
+        $cumulativeOpened = 0;
+        $cumulativeClosed = 0;
 
-            for ($i = 0; $i < $days; $i++) {
-                $date = $startDate->copy()->addDays($i);
-                $dateStr = $date->toDateString();
-                $labels[] = $this->formatChartDate($date);
+        $openAtStart = $raw['openAtStart'];
+        $opened = $raw['opened'];
+        $closed = $raw['closed'];
 
-                $openedToday = $opened[$dateStr] ?? 0;
-                $closedToday = $closed[$dateStr] ?? 0;
+        $startDate = $raw['startDate']->copy();
+        $days = $startDate->diffInDays($raw['endDate']) + 1;
 
-                $cumulativeOpened += $openedToday;
-                $cumulativeClosed += $closedToday;
+        for ($i = 0; $i < $days; $i++) {
+            $date = $startDate->copy()->addDays($i);
+            $dateString = $date->toDateString();
+            $labels[] = $this->formatChartDate($date);
 
-                $openCounts[] = $openAtStart + $cumulativeOpened - $cumulativeClosed;
-                $closedCounts[] = $closedToday;
-            }
+            $openedToday = $opened[$dateString] ?? 0;
+            $closedToday = $closed[$dateString] ?? 0;
 
-            return [
-                'labels' => $labels,
-                'datasets' => [
-                    [
-                        'label' => __('padmission-tickets::widgets.burndown.open_at_end_of_day'),
-                        'data' => $openCounts,
-                        'borderColor' => $colorA,
-                        'backgroundColor' => $colorA,
-                        'pointBackgroundColor' => $colorA,
-                        'tension' => 0.4,
-                        'pointRadius' => 3,
-                        'fill' => false,
-                    ],
-                    [
-                        'label' => __('padmission-tickets::widgets.burndown.closed_that_day'),
-                        'data' => $closedCounts,
-                        'borderColor' => $colorB,
-                        'backgroundColor' => $colorB,
-                        'pointBackgroundColor' => $colorB,
-                        'tension' => 0.4,
-                        'pointRadius' => 3,
-                        'fill' => false,
-                    ],
+            $cumulativeOpened += $openedToday;
+            $cumulativeClosed += $closedToday;
+
+            $openCounts[] = $openAtStart + $cumulativeOpened - $cumulativeClosed;
+            $closedCounts[] = $closedToday;
+        }
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => __('padmission-tickets::widgets.burndown.open_at_end_of_day'),
+                    'data' => $openCounts,
+                    'borderColor' => $colorA,
+                    'backgroundColor' => $colorA,
+                    'pointBackgroundColor' => $colorA,
+                    'tension' => 0.4,
+                    'pointRadius' => 3,
+                    'fill' => false,
                 ],
-            ];
-        });
+                [
+                    'label' => __('padmission-tickets::widgets.burndown.closed_that_day'),
+                    'data' => $closedCounts,
+                    'borderColor' => $colorB,
+                    'backgroundColor' => $colorB,
+                    'pointBackgroundColor' => $colorB,
+                    'tension' => 0.4,
+                    'pointRadius' => 3,
+                    'fill' => false,
+                ],
+            ],
+        ];
     }
 
     protected function getType(): string
