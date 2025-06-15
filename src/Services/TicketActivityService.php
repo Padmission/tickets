@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Services;
 
 use Illuminate\Support\Collection;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketNotification;
 
@@ -24,6 +25,7 @@ class TicketActivityService
             ->with('user')
             ->where('created_at', '>', now()->subDays($maxDays))
             ->where('created_at', '<=', now())
+            ->where('type', '!=', ActivityType::TurnChanged)
             ->when($lastNotification, function ($query) use ($lastNotification) {
                 $query->where('created_at', '>', $lastNotification->updated_at);
             })
