@@ -10,19 +10,6 @@ return new class extends Migration
     {
         Schema::create('ticket_notifications', function (Blueprint $table) {
             $table->id();
-
-            if (config('padmission-tickets.tenancy.enabled', false)) {
-                $tenantModelClass = config('padmission-tickets.tenancy.tenancy_model');
-                $tenantKey = Str::snake(class_basename($tenantModelClass)).'_id';
-                $traits = class_uses_recursive($tenantModelClass);
-
-                match (true) {
-                    in_array(HasUlids::class, $traits) => $table->foreignUlid($tenantKey)->constrained(),
-                    in_array(HasUuids::class, $traits) => $table->foreignUuid($tenantKey)->constrained(),
-                    default => $table->foreignId($tenantKey)->constrained(),
-                };
-            }
-
             $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->timestamps();

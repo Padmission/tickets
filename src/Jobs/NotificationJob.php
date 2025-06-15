@@ -97,7 +97,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     protected function sendNotification(Authenticatable $user, Ticket $record, string $notificationClass): void
     {
-        $user->notify(new $notificationClass($record, $this->notificationType));
+        \Illuminate\Support\Facades\Notification::send($user, new $notificationClass($record, $this->notificationType));
     }
 
     /**
