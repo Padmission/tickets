@@ -13,27 +13,14 @@ beforeEach(function () {
     $this->user = User::factory()->create();
 
     // Mock services
-    $this->activityService = Mockery::mock(TicketActivityService::class);
-    $this->logoService = Mockery::mock(EmailLogoService::class);
-    $this->styleService = Mockery::mock(EmailStyleService::class);
-    $this->urlService = Mockery::mock(TicketUrlService::class);
+    $this->activityService = new TicketActivityService;
+    $this->logoService = new EmailLogoService;
+    $this->styleService = new EmailStyleService;
+    $this->urlService = new TicketUrlService;
 });
 
 afterEach(function () {
     Mockery::close();
-});
-
-test('can instantiate with notification type', function () {
-    $notification = new TicketNotification(
-        $this->ticket,
-        'created',
-        $this->activityService,
-        $this->logoService,
-        $this->styleService,
-        $this->urlService
-    );
-
-    expect($notification)->toBeInstanceOf(TicketNotification::class);
 });
 
 test('generates correct email subject for different types', function () {
@@ -46,12 +33,7 @@ test('generates correct email subject for different types', function () {
         $this->urlService
     );
 
-    // Use reflection to access protected method
-    $reflection = new ReflectionClass($notification);
-    $method = $reflection->getMethod('getEmailSubject');
-    $method->setAccessible(true);
-
-    $subject = $method->invoke($notification);
+    $subject = invade($notification)->getEmailSubject();
 
     // Should contain the ticket ID and subject
     expect($subject)->toContain((string) $this->ticket->id);

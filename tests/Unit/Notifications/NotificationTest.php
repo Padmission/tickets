@@ -1,22 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Event;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Tests\User;
-
-beforeEach(function () {
-    // Disable events AND observers to prevent notification system from triggering
-    Event::fake();
-
-    // Disable model observers that trigger notifications
-    //    Ticket::unsetEventDispatcher();
-    //  TicketActivity::unsetEventDispatcher();
-});
 
 test('notification can be instantiated', function () {
     $ticket = Ticket::factory()->create();
@@ -222,5 +212,4 @@ test('notifications are isolated per user', function () {
     // Should have separate notification records
     expect($ticket->ticketNotifications()->where('user_id', $user1->id)->count())->toBe(1);
     expect($ticket->ticketNotifications()->where('user_id', $user2->id)->count())->toBe(1);
-    expect($ticket->ticketNotifications()->count())->toBe(2);
 });

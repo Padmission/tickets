@@ -98,7 +98,7 @@ class TicketObserver
         if ($isClosedStatus && ! $wasClosedStatus) {
             $userId = $ticket->closed_by;
 
-            $ticket->addActivity(
+            $ticket->addTicketActivity(
                 ActivityType::Closed,
                 'Ticket closed',
                 ActivitySender::System,

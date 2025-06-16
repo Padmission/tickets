@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
@@ -67,26 +68,16 @@ describe('TicketNotificationListener Unit Tests', function () {
         $recipientService->shouldReceive('getNotificationRecipients')
             ->andReturn(collect([$user]));
         $recipientService->shouldReceive('getUserNotificationStrategy')
-            ->andReturn('immediate');
+            ->andReturn(NotificationStrategy::Immediate);
 
         $event = new TicketActivityEvent($ticket, ActivityType::Message);
         $listener = new TicketNotificationListener($recipientService);
 
         $listener->handle($event);
 
-        // Should dispatch notification job immediately for immediate strategy
         Queue::assertPushed(NotificationJob::class, function ($job) use ($user, $ticket) {
-            // Use reflection to access protected methods for testing
-            $reflection = new ReflectionClass($job);
-
-            $getUserIdMethod = $reflection->getMethod('getUserId');
-            $getUserIdMethod->setAccessible(true);
-
-            $getModelIdMethod = $reflection->getMethod('getModelId');
-            $getModelIdMethod->setAccessible(true);
-
-            return $getUserIdMethod->invoke($job) === $user->id &&
-                   $getModelIdMethod->invoke($job) === $ticket->id;
+            return $job->getUserId() === $user->id &&
+                   $job->getTicketKey() === $ticket->id;
         });
     });
 

@@ -22,7 +22,6 @@ test('it resolves custom notification job class when configured', function () {
 
     expect($resolvedClass)->toBe($customJobClass);
 
-    // Reset config
     config(['padmission-tickets.jobs' => [
         NotificationJob::class => NotificationJob::class,
     ]]);
@@ -47,6 +46,6 @@ test('notification job has extensible methods', function () {
 
     // Test getter methods
     expect($reflection->hasMethod('getUserId'))->toBeTrue();
-    expect($reflection->hasMethod('getModelType'))->toBeTrue();
-    expect($reflection->hasMethod('getModelId'))->toBeTrue();
+    expect($reflection->hasMethod('getTicketClass'))->toBeTrue();
+    expect($reflection->hasMethod('getTicketKey'))->toBeTrue();
 });

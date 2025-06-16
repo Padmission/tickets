@@ -12,7 +12,7 @@ class TicketActivityObserver
         $activity->user_id ??= auth()->user()?->id;
     }
 
-    public function saved(TicketActivity $activity): void
+    public function created(TicketActivity $activity): void
     {
         event(new TicketActivityEvent($activity->ticket, $activity->type, null));
     }

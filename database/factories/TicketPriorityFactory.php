@@ -22,7 +22,6 @@ class TicketPriorityFactory extends Factory
             'display_name' => $this->faker->name(),
             'color' => ucfirst($this->faker->randomElement(array_keys(Color::all()))),
             'order' => $this->faker->randomNumber(),
-            'panel' => 'test',
         ];
     }
 }

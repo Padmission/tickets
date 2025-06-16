@@ -23,9 +23,9 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     protected string|int $userId;
 
-    protected string $modelType;
+    protected string $ticketClass;
 
-    protected string|int $modelId;
+    protected string|int $ticketKey;
 
     public function __construct(
         Authenticatable $user,
@@ -33,8 +33,8 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         public string $notificationType
     ) {
         $this->userId = $user->getKey();
-        $this->modelType = get_class($model);
-        $this->modelId = $model->getKey();
+        $this->ticketClass = get_class($model);
+        $this->ticketKey = $model->getKey();
 
         $this->initializeJob($user, $model);
     }
@@ -87,9 +87,9 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     protected function resolveModel(): ?Ticket
     {
-        $model = $this->modelType;
+        $model = $this->ticketClass;
 
-        return $model::find($this->modelId);
+        return $model::find($this->ticketKey);
     }
 
     /**
@@ -136,30 +136,21 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     protected function buildUniqueId(): string
     {
-        return "notification-{$this->modelType}-{$this->modelId}-{$this->userId}";
+        return "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}";
     }
 
-    /**
-     * Get the user ID
-     */
-    protected function getUserId(): string|int
+    public function getUserId(): string|int
     {
         return $this->userId;
     }
 
-    /**
-     * Get the model type
-     */
-    protected function getModelType(): string
+    public function getTicketClass(): string
     {
-        return $this->modelType;
+        return $this->ticketClass;
     }
 
-    /**
-     * Get the model ID
-     */
-    protected function getModelId(): string|int
+    public function getTicketKey(): string|int
     {
-        return $this->modelId;
+        return $this->ticketKey;
     }
 }

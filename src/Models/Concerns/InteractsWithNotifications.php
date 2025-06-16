@@ -11,9 +11,6 @@ use Padmission\Tickets\TicketPlugin;
 
 trait InteractsWithNotifications
 {
-    /**
-     * Get users who should receive notifications for this ticket
-     */
     public function getNotificationRecipients(): Collection
     {
         return collect([$this->assignee, $this->submitter])
@@ -23,50 +20,12 @@ trait InteractsWithNotifications
             });
     }
 
-    /**
-     * Check if notifications should be sent for this ticket
-     */
+    // Can be overridden in specific implementations to add business rules about when to send notifications
     public function shouldSendNotification(string $type): bool
     {
-        // Can be overridden in specific implementations
-        // to add business rules about when to send notifications
         return true;
     }
 
-    /**
-     * Mark that a notification was sent to a user
-     */
-    public function markNotificationSent(Authenticatable $user): TicketNotification
-    {
-        return $this->ticketNotifications()->create([
-            'user_id' => $user->getKey(),
-        ]);
-    }
-
-    /**
-     * Get the last notification sent to a user
-     */
-    public function getLastNotificationFor(Authenticatable $user): ?TicketNotification
-    {
-        return $this->ticketNotifications()
-            ->where('user_id', $user->getKey())
-            ->latest()
-            ->first();
-    }
-
-    /**
-     * Check if a user has been notified about this ticket
-     */
-    public function hasNotified(Authenticatable $user): bool
-    {
-        return $this->ticketNotifications()
-            ->where('user_id', $user->getKey())
-            ->exists();
-    }
-
-    /**
-     * Get the submitter relationship
-     */
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(
@@ -75,9 +34,6 @@ trait InteractsWithNotifications
         );
     }
 
-    /**
-     * Get the ticket notifications relationship
-     */
     public function ticketNotifications(): HasMany
     {
         return $this->hasMany(

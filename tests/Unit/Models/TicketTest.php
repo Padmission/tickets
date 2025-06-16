@@ -1,7 +1,6 @@
 <?php
 
 use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Notification;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivityType;
@@ -9,8 +8,6 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
-use Padmission\Tickets\Notifications\TicketCreatedNotification;
-use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -36,33 +33,6 @@ it('executes assignment strategy while creating', function () {
     expect($ticket->assignee_id)->toEqual(2);
 })->skip('feature needs refactoring');
 
-it('executes notification strategy while creating', function () {
-    Notification::fake();
-
-    Filament::getPanel('test')->plugin(
-        TicketPlugin::make()->notificationStrategy(
-            new class implements NotificationStrategy
-            {
-                public function notify($ticket): void
-                {
-                    Notification::send(
-                        $ticket->assignee,
-                        new TicketCreatedNotification($ticket)
-                    );
-                }
-            }
-        )
-    );
-
-    $ticket = Ticket::factory()->make([
-        'assignee_id' => 1,
-    ]);
-
-    $ticket->save();
-
-    Notification::assertCount(1);
-})->skip('feature needs refactoring');
-
 test('open/close scopes', function () {
     (new TicketStatusSeeder)->run();
 
@@ -86,7 +56,7 @@ it('can be closed', function () {
     $this->actingAs($user);
     $this->freezeSecond();
 
-    $ticket->close(closedBy: $user->id);
+    $ticket->close(closedById: $user->id);
 
     expect($ticket->refresh())
         ->isClosed->toBeTrue()
@@ -102,7 +72,7 @@ it('cannot be closed twice', function () {
 
     $this->freezeSecond();
 
-    $ticket->close(closedBy: 99);
+    $ticket->close(closedById: 99);
 
     expect($ticket->refresh())->closed_by->not->toEqual(99);
 });
@@ -135,7 +105,7 @@ it('logs status change', function () {
     $ticket = Ticket::factory()->create(['status_id' => 1]);
     $user = User::factory()->create();
 
-    $ticket->close(closedBy: $user->id);
+    $ticket->close(closedById: $user->id);
 
     $this->assertDatabaseHas(TicketActivity::class, [
         'type' => ActivityType::StatusChanged,

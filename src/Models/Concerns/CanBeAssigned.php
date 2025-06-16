@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models\Concerns;
 
+use Filament\Models\Contracts\HasName;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -12,9 +13,6 @@ use Padmission\Tickets\TicketPlugin;
 
 trait CanBeAssigned
 {
-    /**
-     * Get display name for a user in ticket activities
-     */
     protected function getUserDisplayName(?int $userId): string
     {
         if (! $userId) {
@@ -28,9 +26,12 @@ trait CanBeAssigned
             return "user {$userId}";
         }
 
-        // Check if user implements the interface for custom display names
         if ($user instanceof HasTicketDisplayName) {
             return $user->getNameForTickets();
+        }
+
+        if ($user instanceof HasName) {
+            return $user->getFilamentName();
         }
 
         // Fallback to common name attributes
@@ -56,7 +57,7 @@ trait CanBeAssigned
                 ? "Assigned to {$this->getUserDisplayName($newAssigneeId)}"
                 : 'Unassigned';
 
-            $this->addActivity(
+            $this->addTicketActivity(
                 ActivityType::AssigneeChanged,
                 $assignmentMessage,
                 ActivitySender::System,
@@ -67,57 +68,16 @@ trait CanBeAssigned
         }
     }
 
-    /**
-     * Assign the ticket to a user
-     */
-    public function assignTo(?int $userId): void
-    {
-        $oldAssigneeId = $this->assignee_id;
-
-        $this->update(['assignee_id' => $userId]);
-
-        if ($oldAssigneeId !== $userId) {
-            $assignmentMessage = $userId
-                ? "Assigned to {$this->getUserDisplayName($userId)}"
-                : 'Unassigned';
-
-            $this->addActivity(
-                ActivityType::AssigneeChanged,
-                $assignmentMessage,
-                ActivitySender::System
-            );
-
-            event(new TicketAssignedEvent($this));
-        }
-    }
-
-    /**
-     * Unassign the ticket
-     */
-    public function unassign(): void
-    {
-        $this->assignTo(null);
-    }
-
-    /**
-     * Check if the ticket is assigned
-     */
     public function isAssigned(): bool
     {
         return $this->assignee_id !== null;
     }
 
-    /**
-     * Check if the ticket is assigned to a specific user
-     */
     public function isAssignedTo(int $userId): bool
     {
         return $this->assignee_id === $userId;
     }
 
-    /**
-     * Get the assignee relationship
-     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(

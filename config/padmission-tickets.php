@@ -93,11 +93,11 @@ return [
 
     /**
      * Default notification strategy when user doesn't define one
-     * Options: 'immediate', 'debounced'
+     * Options: Padmission\Tickets\Enums\NotificationStrategy::Immediate, Padmission\Tickets\Enums\NotificationStrategy::Debounced
      *
      * @var string
      */
-    'default-notification-strategy' => 'debounced',
+    'default-notification-strategy' => Padmission\Tickets\Enums\NotificationStrategy::Debounced,
 
     /**
      * Debounce time in seconds for grouped notifications

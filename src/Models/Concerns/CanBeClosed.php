@@ -13,23 +13,14 @@ use Padmission\Tickets\TicketPlugin;
 
 trait CanBeClosed
 {
-    /**
-     * Temporary flag to indicate explicit close() call
-     */
     private bool $isExplicitCloseCall = false;
 
-    /**
-     * Check if this is an explicit close() call
-     */
     public function isExplicitCloseCall(): bool
     {
         return $this->isExplicitCloseCall;
     }
 
-    /**
-     * Close the ticket
-     */
-    public function close(?int $dispositionId = null, ?int $closedBy = null): void
+    public function close(?int $dispositionId = null, ?int $closedById = null): void
     {
         // Use direct attribute check instead of method to avoid conflicts
         if ($this->closed_at !== null) {
@@ -62,7 +53,7 @@ trait CanBeClosed
 
         // Create status change activity if status actually changed
         if ($originalStatusId !== $newStatusId) {
-            $this->addActivity(
+            $this->addTicketActivity(
                 ActivityType::StatusChanged,
                 'Status changed',
                 ActivitySender::System,
@@ -75,7 +66,7 @@ trait CanBeClosed
         }
 
         // Create closed activity
-        $this->addActivity(
+        $this->addTicketActivity(
             ActivityType::Closed,
             'Ticket closed',
             ActivitySender::System,
@@ -88,9 +79,6 @@ trait CanBeClosed
 
     /* Attributes */
 
-    /**
-     * @return Attribute<bool, never>
-     */
     protected function isClosed(): Attribute
     {
         return Attribute::get(fn () => $this->closed_at !== null);
@@ -101,9 +89,6 @@ trait CanBeClosed
         return Attribute::get(fn () => $this->closed_at === null);
     }
 
-    /**
-     * Get the disposition relationship
-     */
     public function disposition(): BelongsTo
     {
         return $this->belongsTo(

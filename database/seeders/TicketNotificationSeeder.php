@@ -12,7 +12,7 @@ class TicketNotificationSeeder extends Seeder
     {
         $model = TicketPlugin::resolveModelClass(TicketNotification::class);
 
-        if ($model::count() > 0) {
+        if (! $model::exists()) {
             return;
         }
 

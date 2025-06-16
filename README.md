@@ -375,7 +375,7 @@ class CustomNotificationJob extends NotificationJob
         // Log errors with tenant context
         \Log::error('Notification job failed', [
             'tenant_id' => $this->tenantId,
-            'ticket_id' => $this->getModelId(),
+            'ticket_id' => $this->getTicketKey(),
             'user_id' => $this->getUserId(),
             'error' => $e->getMessage(),
         ]);

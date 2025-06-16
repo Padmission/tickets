@@ -34,7 +34,6 @@ class TicketActivity extends Model
 
     protected $casts = [
         'data' => 'array',
-        'side' => ActivitySide::class,
         'type' => ActivityType::class,
         'sender' => ActivitySender::class,
         'turn' => Turn::class,

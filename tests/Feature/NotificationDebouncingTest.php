@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
@@ -63,24 +64,15 @@ describe('Debouncing Core Functionality', function () {
             ->andReturn(collect([$user]));
         $recipientService->shouldReceive('getUserNotificationStrategy')
             ->with($user)
-            ->andReturn('immediate');
+            ->andReturn(NotificationStrategy::Immediate);
 
         $listener = new TicketNotificationListener($recipientService);
         $listener->handle($event);
 
         // For immediate strategy, should dispatch job directly without debouncing
         Queue::assertPushed(NotificationJob::class, function ($job) use ($user, $ticket) {
-            // Use reflection to access protected methods for testing
-            $reflection = new ReflectionClass($job);
-
-            $getUserIdMethod = $reflection->getMethod('getUserId');
-            $getUserIdMethod->setAccessible(true);
-
-            $getModelIdMethod = $reflection->getMethod('getModelId');
-            $getModelIdMethod->setAccessible(true);
-
-            return $getUserIdMethod->invoke($job) === $user->id &&
-                   $getModelIdMethod->invoke($job) === $ticket->id;
+            return $job->getUserId() === $user->id &&
+                   $job->getTicketKey() === $ticket->id;
         });
     });
 
@@ -239,10 +231,10 @@ describe('Debouncing Logic Validation', function () {
             ->andReturn(collect([$assignee, $submitter]));
         $recipientService->shouldReceive('getUserNotificationStrategy')
             ->with($assignee)
-            ->andReturn('debounced');
+            ->andReturn(NotificationStrategy::Debounced);
         $recipientService->shouldReceive('getUserNotificationStrategy')
             ->with($submitter)
-            ->andReturn('debounced');
+            ->andReturn(NotificationStrategy::Debounced);
 
         $event = new TicketActivityEvent($ticket, ActivityType::Message);
         $listener = new TicketNotificationListener($recipientService);
@@ -362,7 +354,7 @@ describe('Recipient and Strategy Logic', function () {
         $recipientService = app(NotificationRecipientService::class);
         $user = User::factory()->create();
 
-        expect($recipientService->getUserNotificationStrategy($user))->toBe('debounced');
+        expect($recipientService->getUserNotificationStrategy($user))->toBe(NotificationStrategy::Debounced);
     });
 });
 
@@ -397,7 +389,7 @@ describe('Configuration Validation', function () {
         expect(config('padmission-tickets.notification-debounce'))->toBe(300); // 5 minutes
 
         // Test default notification strategy
-        expect(config('padmission-tickets.default-notification-strategy'))->toBe('debounced');
+        expect(config('padmission-tickets.default-notification-strategy'))->toBe(NotificationStrategy::Debounced);
 
         // Test max events and days
         expect(config('padmission-tickets.notification-max-events'))->toBe(10);
