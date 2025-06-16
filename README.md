@@ -228,80 +228,87 @@ TicketPlugin::make()
 ```
 
 
-## Custom Models & Observers
+## Custom Models & Jobs
 
 ### Using Custom Models
 
-This package uses a **trait-based approach** for all models to provide maximum flexibility and composability. All models use concerns/traits for their core functionality instead of interfaces.
+To use custom models with this package, you need to:
 
-If you create your own models, you should:
-1. Use the provided concerns/traits for core functionality
-2. Register the corresponding observer for each model
-3. Configure the package to use your custom models
+1. **Create your custom model class** by extending the base model
+2. **Update the configuration** to map the base class to your custom class
 
 ### Ticket Model Example
 
-The `Ticket` model uses multiple traits for its functionality:
+```php
+<?php
+
+namespace App\Models;
+
+use Padmission\Tickets\Models\Ticket as BaseTicket;
+
+class CustomTicket extends BaseTicket
+{
+    // Your custom functionality
+    // The observers are automatically inherited from the base class
+    
+    public function someCustomMethod()
+    {
+        // Your custom logic here
+    }
+}
+```
+
+Then update your `config/padmission-tickets.php` file:
 
 ```php
-// Your custom ticket model
-use Padmission\Tickets\Models\Concerns\CanBeAssigned;
-use Padmission\Tickets\Models\Concerns\CanBeClosed;
-use Padmission\Tickets\Models\Concerns\HasTicketActivities;
-use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
-use Padmission\Tickets\Models\Concerns\ManagesPriority;
-use Padmission\Tickets\Models\Concerns\ManagesStatus;
-
-class CustomTicket extends Model
-{
-    use CanBeAssigned;
-    use CanBeClosed;
-    use HasTicketActivities;
-    use InteractsWithNotifications;
-    use ManagesPriority;
-    use ManagesStatus;
-    
-    // Your custom functionality
-}
-
-// In your AppServiceProvider or dedicated provider
-public function boot()
-{
-    // Register the observer to maintain consistent behavior
-    CustomTicket::observe(\Padmission\Tickets\Models\Observers\TicketObserver::class);
-    
-    // Configure the package to use your model
-    TicketPlugin::resolveModelUsing(\Padmission\Tickets\Models\Ticket::class, CustomTicket::class);
-}
+'models' => [
+    // ... other models
+    \Padmission\Tickets\Models\Ticket::class => \App\Models\CustomTicket::class,
+],
 ```
 
 ### Other Model Examples
 
-For other models, simply extend the base models or create your own with the appropriate observers:
+For other models, follow the same pattern:
 
 ```php
 // Custom TicketActivity
-class CustomTicketActivity extends Model
+namespace App\Models;
+
+use Padmission\Tickets\Models\TicketActivity as BaseTicketActivity;
+
+class CustomTicketActivity extends BaseTicketActivity
 {
     // Your custom functionality
 }
-
-// Register observer
-CustomTicketActivity::observe(\Padmission\Tickets\Models\Observers\TicketActivityObserver::class);
 
 // Custom TicketStatus  
-class CustomTicketStatus extends Model
+namespace App\Models;
+
+use Padmission\Tickets\Models\TicketStatus as BaseTicketStatus;
+
+class CustomTicketStatus extends BaseTicketStatus
 {
     // Your custom functionality
 }
+```
 
-// Register observer
-CustomTicketStatus::observe(\Padmission\Tickets\Models\Observers\TicketStatusObserver::class);
+Then update the config:
+
+```php
+'models' => [
+    // ... other models
+    \Padmission\Tickets\Models\TicketActivity::class => \App\Models\CustomTicketActivity::class,
+    \Padmission\Tickets\Models\TicketStatus::class => \App\Models\CustomTicketStatus::class,
+],
 ```
 
 ### Custom Jobs
 
-The package also supports extending job classes for custom functionality. This is particularly useful for adding tenant-specific logic or custom notification handling.
+To use custom job classes, you need to:
+
+1. **Create your custom job class** by extending the base job
+2. **Update the configuration** to map the base class to your custom class
 
 #### Extending NotificationJob
 
@@ -385,27 +392,6 @@ Configure the package to use your custom job in your `config/padmission-tickets.
     \Padmission\Tickets\Jobs\NotificationJob::class => \App\Jobs\CustomNotificationJob::class,
 ],
 ```
-
-### Observer Pattern
-
-The package uses the Laravel Observer pattern for model events. Each model has a corresponding observer:
-
-- `Ticket` → `TicketObserver`
-- `TicketActivity` → `TicketActivityObserver`
-- `TicketDisposition` → `TicketDispositionObserver`
-- `TicketNotification` → `TicketNotificationObserver`
-- `TicketStatus` → `TicketStatusObserver`
-- `TicketPriority` → `TicketPriorityObserver`
-
-These observers handle important functionality like:
-- Ticket assignment
-- Status transitions
-- Activity tracking
-- Notifications
-- Event dispatching
-
-**Important:** If you replace our models with your own implementations, make sure to register the appropriate observers to maintain the expected behavior.
-
 
 ## Support
 
