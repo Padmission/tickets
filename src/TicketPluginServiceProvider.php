@@ -175,11 +175,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         $listeners = config('padmission-tickets.event-listeners', []);
 
         foreach ($listeners as $event => $eventListeners) {
-            if (! is_array($eventListeners)) {
-                $eventListeners = [$eventListeners];
-            }
-
-            foreach ($eventListeners as $listener) {
+            foreach (Arr::wrap($eventListeners) as $listener) {
                 Event::listen($event, $listener);
             }
         }
