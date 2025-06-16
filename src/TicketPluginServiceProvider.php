@@ -7,6 +7,7 @@ use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -47,13 +48,11 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
         $this->registerCssFiles();
         $this->registerBrowserSync();
-
     }
 
     public function packageBooted(): void
     {
         $this->bootEventListeners();
-
     }
 
     public function packageRegistered(): void
