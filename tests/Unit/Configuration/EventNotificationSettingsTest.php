@@ -7,11 +7,11 @@ test('can create event notification settings with arrays', function () {
         userTriggered: ['notify_user' => true, 'email_user' => true],
         supporterTriggered: ['notify_supporter' => true, 'slack_supporter' => true]
     );
-    
+
     expect($settings->userTriggered)
         ->toHaveKey('notify_user', true)
         ->toHaveKey('email_user', true);
-        
+
     expect($settings->supporterTriggered)
         ->toHaveKey('notify_supporter', true)
         ->toHaveKey('slack_supporter', true);
@@ -22,13 +22,13 @@ test('can get settings for trigger type', function () {
         userTriggered: ['notify_user' => true],
         supporterTriggered: ['notify_supporter' => true]
     );
-    
+
     expect($settings->getSettingsFor('user_triggered'))
         ->toBe(['notify_user' => true]);
-        
+
     expect($settings->getSettingsFor('supporter_triggered'))
         ->toBe(['notify_supporter' => true]);
-        
+
     expect($settings->getSettingsFor('invalid'))
         ->toBe([]);
 });
@@ -38,18 +38,18 @@ test('can merge event notification settings', function () {
         userTriggered: ['notify_user' => true],
         supporterTriggered: ['notify_supporter' => false]
     );
-    
+
     $settings2 = new EventNotificationSettings(
         userTriggered: ['email_user' => true],
         supporterTriggered: ['slack_supporter' => true]
     );
-    
+
     $merged = $settings1->merge($settings2);
-    
+
     expect($merged->userTriggered)
         ->toHaveKey('notify_user', true)
         ->toHaveKey('email_user', true);
-        
+
     expect($merged->supporterTriggered)
         ->toHaveKey('notify_supporter', false)
         ->toHaveKey('slack_supporter', true);
@@ -60,7 +60,7 @@ test('shouldNotify() works with legacy boolean format', function () {
         userTriggered: ['notify_user' => true, 'notify_supporter' => false],
         supporterTriggered: ['notify_user' => false, 'notify_supporter' => true]
     );
-    
+
     expect($settings->shouldNotify('user_triggered', 'user'))->toBeTrue();
     expect($settings->shouldNotify('user_triggered', 'supporter'))->toBeFalse();
     expect($settings->shouldNotify('supporter_triggered', 'user'))->toBeFalse();
@@ -75,7 +75,7 @@ test('shouldNotify() works with channel format', function () {
             'sms_both' => true,
         ]
     );
-    
+
     // Should return true if any channel is enabled for the recipient
     expect($settings->shouldNotify('user_triggered', 'user'))->toBeTrue();
 });
@@ -89,14 +89,14 @@ test('getChannelsFor() returns enabled channels for recipient', function () {
             'webhook_both' => true,
         ]
     );
-    
+
     $userChannels = $settings->getChannelsFor('user_triggered', 'user');
     expect($userChannels)
         ->toHaveKey('email', true)
         ->toHaveKey('webhook', true)
         ->not->toHaveKey('slack')
         ->not->toHaveKey('sms');
-        
+
     $supporterChannels = $settings->getChannelsFor('user_triggered', 'supporter');
     expect($supporterChannels)
         ->toHaveKey('slack', true)
@@ -113,7 +113,7 @@ test('isChannelEnabledFor() checks specific channel for recipient', function () 
             'sms_both' => false,
         ]
     );
-    
+
     expect($settings->isChannelEnabledFor('user_triggered', 'user', 'email'))->toBeTrue();
     expect($settings->isChannelEnabledFor('user_triggered', 'user', 'slack'))->toBeFalse();
     expect($settings->isChannelEnabledFor('user_triggered', 'supporter', 'slack'))->toBeTrue();
@@ -127,9 +127,9 @@ test('toArray() returns proper array structure', function () {
         userTriggered: ['notify_user' => true],
         supporterTriggered: ['notify_supporter' => true]
     );
-    
+
     $array = $settings->toArray();
-    
+
     expect($array)
         ->toHaveKey('user_triggered', ['notify_user' => true])
         ->toHaveKey('supporter_triggered', ['notify_supporter' => true]);
@@ -144,11 +144,11 @@ test('handles mixed legacy and channel format', function () {
             'slack_supporter' => true,      // Channel format
         ]
     );
-    
+
     // Legacy format should still work
     expect($settings->shouldNotify('user_triggered', 'user'))->toBeTrue();
     expect($settings->shouldNotify('user_triggered', 'supporter'))->toBeFalse();
-    
+
     // Channel format should also work
     expect($settings->isChannelEnabledFor('user_triggered', 'user', 'email'))->toBeTrue();
     expect($settings->isChannelEnabledFor('user_triggered', 'supporter', 'slack'))->toBeTrue();

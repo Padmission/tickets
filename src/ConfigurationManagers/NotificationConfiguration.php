@@ -5,15 +5,13 @@ namespace Padmission\Tickets\ConfigurationManagers;
 use BadMethodCallException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Str;
-use Padmission\Tickets\Configuration\Data\EventNotificationSettings;
 use Padmission\Tickets\Configuration\Context\EventConfigurationContext;
+use Padmission\Tickets\Configuration\Data\EventNotificationSettings;
 use Padmission\Tickets\ConfigurationManagers\Concerns\HasDefaultNotificationSettings;
 use Padmission\Tickets\Models\Ticket;
 use PHPUnit\Event\InvalidEventException;
 
-
 /**
- *
  * $config = NotificationConfiguration::make()
  * ->onTicketCreated(
  * userTriggered: ['notify_user' => true, 'notify_supporter' => false],
@@ -39,7 +37,6 @@ use PHPUnit\Event\InvalidEventException;
  * );
  */
 
-
 /**
  * @method static onTicketCreated(array|callable|null $userTriggered = null, array|callable|null $supporterTriggered = null, ?callable $configurator = null)
  * @method static onTicketAssigned(array|callable|null $userTriggered = null, array|callable|null $supporterTriggered = null, ?callable $configurator = null)
@@ -55,13 +52,14 @@ class NotificationConfiguration
 
     public static function make(): static
     {
-        return new static();
+        return new static;
     }
 
     public function __call(string $method, array $arguments): static
     {
         if (Str::startsWith($method, 'on') && strlen($method) > 2) {
             $event = $this->methodToEventName($method);
+
             return $this->configureEventDynamically($event, ...$arguments);
         }
 
@@ -81,7 +79,7 @@ class NotificationConfiguration
     private function getAvailableMethods(): array
     {
         return array_map(
-            fn($event) => 'on' . Str::studly($event),
+            fn ($event) => 'on'.Str::studly($event),
             array_keys($this->getDefaultSettings())
         );
     }
@@ -204,7 +202,7 @@ class NotificationConfiguration
         if (isset($this->eventCallbacks[$event])) {
             return $this->evaluateCallbackWithTicketContext($event, $this->eventCallbacks[$event], $ticket, $actor);
         }
-        
+
         return $this->getSettingsFor($event);
     }
 
@@ -213,7 +211,7 @@ class NotificationConfiguration
     {
         $settings = $this->getSettingsForTicketContext($event, $ticket, $actor);
         $triggerType = $this->getTriggerType($ticket, $actor);
-        
+
         return $settings->getSettingsFor($triggerType);
     }
 
@@ -222,22 +220,22 @@ class NotificationConfiguration
      */
     protected function getTriggerType(Ticket $ticket, ?Authenticatable $actor): string
     {
-        if (!$actor) {
+        if (! $actor) {
             return 'supporter_triggered'; // System actions default to supporter_triggered
         }
 
         $actorId = $actor->getAuthIdentifier();
-        
+
         // If actor is the submitter, use user_triggered configuration
         if ($ticket->submitter_id === $actorId) {
             return 'user_triggered';
         }
-        
-        // If actor is the assignee, use supporter_triggered configuration  
+
+        // If actor is the assignee, use supporter_triggered configuration
         if ($ticket->assignee_id === $actorId) {
             return 'supporter_triggered';
         }
-        
+
         // Default to supporter_triggered for anyone else (other staff members, etc.)
         return 'supporter_triggered';
     }
@@ -245,10 +243,10 @@ class NotificationConfiguration
     private function evaluateCallbackWithTicketContext(string $event, callable $callback, Ticket $ticket, ?Authenticatable $actor): EventNotificationSettings
     {
         $context = new EventConfigurationContext($event, $this->getDefaultSettingsFor($event));
-        
+
         $reflection = new \ReflectionFunction($callback);
         $paramCount = $reflection->getNumberOfParameters();
-        
+
         if ($paramCount === 1) {
             $callback($context);
         } elseif ($paramCount === 2) {
@@ -271,9 +269,10 @@ class NotificationConfiguration
 
     public function getSettingsFor(string $event): EventNotificationSettings
     {
-        if (!$this->isValidEvent($event)) {
+        if (! $this->isValidEvent($event)) {
             throw new InvalidEventException($event);
         }
+
         return $this->eventSettings[$event] ?? $this->getDefaultSettingsFor($event);
     }
 
@@ -282,11 +281,11 @@ class NotificationConfiguration
         // Merge configured settings with defaults
         $allEvents = array_unique([
             ...array_keys($this->eventSettings),
-            ...array_keys($this->getDefaultSettings())
+            ...array_keys($this->getDefaultSettings()),
         ]);
 
         return collect($allEvents)
-            ->mapWithKeys(fn($event) => [$event => $this->getSettingsFor($event)])
+            ->mapWithKeys(fn ($event) => [$event => $this->getSettingsFor($event)])
             ->all();
     }
 

@@ -9,13 +9,13 @@ trait HasDefaultNotificationSettings
     private array $defaultSettings = [
         'ticket_created' => [
             'userTriggered' => [
-                'notify_user' => true, 
+                'notify_user' => true,
                 'notify_supporter' => false,
                 'email_user' => true,
                 'email_supporter' => false,
             ],
             'supporterTriggered' => [
-                'notify_user' => true, 
+                'notify_user' => true,
                 'notify_supporter' => true,
                 'email_user' => true,
                 'email_supporter' => true,
@@ -29,7 +29,7 @@ trait HasDefaultNotificationSettings
                 'email_supporter' => false,
             ],
             'supporterTriggered' => [
-                'notify_user' => false, 
+                'notify_user' => false,
                 'notify_supporter' => true,
                 'email_supporter' => true,
                 'slack_supporter' => true,
@@ -37,24 +37,24 @@ trait HasDefaultNotificationSettings
         ],
         'ticket_activity' => [
             'userTriggered' => [
-                'notify_user' => false, 
+                'notify_user' => false,
                 'notify_supporter' => true,
                 'email_supporter' => true,
             ],
             'supporterTriggered' => [
-                'notify_user' => true, 
+                'notify_user' => true,
                 'notify_supporter' => false,
                 'email_user' => true,
             ],
         ],
         'ticket_closed' => [
             'userTriggered' => [
-                'notify_user' => true, 
+                'notify_user' => true,
                 'notify_supporter' => false,
                 'email_user' => true,
             ],
             'supporterTriggered' => [
-                'notify_user' => true, 
+                'notify_user' => true,
                 'notify_supporter' => false,
                 'email_user' => true,
             ],

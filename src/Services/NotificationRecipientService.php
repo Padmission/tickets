@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Services;
 
 use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
@@ -18,16 +17,16 @@ class NotificationRecipientService
     public function getNotificationRecipients(
         TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
     ): Collection {
-                $config = $this->getNotificationConfiguration();
-        
-                $eventName = $this->getEventName($event);
-        
-                $actorType = $this->getActorType($event);
-        
-                $settings = $config->getSettingsFor($eventName);
+        $config = $this->getNotificationConfiguration();
+
+        $eventName = $this->getEventName($event);
+
+        $actorType = $this->getActorType($event);
+
+        $settings = $config->getSettingsFor($eventName);
         $configuration = $settings->getSettingsFor($actorType);
-        
-                return $this->resolveRecipientsFromConfiguration($event, $configuration);
+
+        return $this->resolveRecipientsFromConfiguration($event, $configuration);
     }
 
     public function getUserNotificationStrategy(Authorizable $user): NotificationStrategy
@@ -45,6 +44,7 @@ class NotificationRecipientService
     protected function getNotificationConfiguration(): NotificationConfiguration
     {
         $plugin = TicketPlugin::get();
+
         return $plugin->getNotificationConfiguration();
     }
 
@@ -53,19 +53,20 @@ class NotificationRecipientService
      */
     protected function getActorType($event): string
     {
-        if (!$event->actor) {
+        if (! $event->actor) {
             return 'user_triggered';
         }
-        
+
         if ($event->actor->getKey() === $event->ticket->submitter_id) {
             return 'user_triggered';
         }
-        
-                if (\Gate::forUser($event->actor)->allows('update', $event->ticket)) {
+
+        if (\Gate::forUser($event->actor)->allows('update', $event->ticket)) {
             return 'supporter_triggered';
         }
-        
-        return 'user_triggered';     }
+
+        return 'user_triggered';
+    }
 
     /**
      * Convert event to configuration event name
@@ -88,34 +89,32 @@ class NotificationRecipientService
     {
         $recipients = collect();
         $ticket = $event->ticket;
-        
-                $hasNotifyUser = $configuration['notify_user'] ?? false;
+
+        $hasNotifyUser = $configuration['notify_user'] ?? false;
         $hasNotifySupporter = $configuration['notify_supporter'] ?? false;
-        
-                $hasUserChannels = collect($configuration)
-            ->filter(fn($value, $key) => 
-                !str_starts_with($key, 'notify_') && 
-                $value && 
+
+        $hasUserChannels = collect($configuration)
+            ->filter(fn ($value, $key) => ! str_starts_with($key, 'notify_') &&
+                $value &&
                 (str_ends_with($key, '_user') || str_ends_with($key, '_both'))
             )
             ->isNotEmpty();
-            
-                $hasSupporterChannels = collect($configuration)
-            ->filter(fn($value, $key) => 
-                !str_starts_with($key, 'notify_') && 
-                $value && 
+
+        $hasSupporterChannels = collect($configuration)
+            ->filter(fn ($value, $key) => ! str_starts_with($key, 'notify_') &&
+                $value &&
                 (str_ends_with($key, '_supporter') || str_ends_with($key, '_both'))
             )
             ->isNotEmpty();
-        
-                if (($hasNotifyUser || $hasUserChannels) && $ticket->submitter) {
+
+        if (($hasNotifyUser || $hasUserChannels) && $ticket->submitter) {
             $recipients->push($ticket->submitter);
         }
-        
-                if (($hasNotifySupporter || $hasSupporterChannels) && $ticket->assignee) {
+
+        if (($hasNotifySupporter || $hasSupporterChannels) && $ticket->assignee) {
             $recipients->push($ticket->assignee);
         }
-        
+
         return $recipients->unique(function ($user) {
             return $user->getKey();
         });

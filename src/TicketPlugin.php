@@ -28,7 +28,6 @@ final class TicketPlugin implements Plugin
 
     protected ?NotificationStrategy $notificationStrategy = null;
 
-
     protected ?NotificationConfiguration $notificationConfiguration = null;
 
     protected bool $shouldShowChatWidget = false;
@@ -175,23 +174,25 @@ final class TicketPlugin implements Plugin
     ): self {
         if ($configuration === null) {
             $this->notificationConfiguration = NotificationConfiguration::make();
-        } else if (is_callable($configuration)) {
+        } elseif (is_callable($configuration)) {
             $this->notificationConfiguration = $configuration(
                 $this->notificationConfiguration ?? NotificationConfiguration::make()
             );
         } else {
             $this->notificationConfiguration = $configuration;
         }
+
         return $this;
     }
 
-    public function getNotificationConfiguration() : NotificationConfiguration
+    public function getNotificationConfiguration(): NotificationConfiguration
     {
-       if (isset($this->notificationConfiguration)) {
-           return $this->notificationConfiguration;
-       }
-       $this->notificationConfiguration();
-       return $this->notificationConfiguration;
+        if (isset($this->notificationConfiguration)) {
+            return $this->notificationConfiguration;
+        }
+        $this->notificationConfiguration();
+
+        return $this->notificationConfiguration;
     }
 
     public function showChatWidget(bool $shouldShow = true, ?ChatWidgetConfig $config = null): static

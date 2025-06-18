@@ -7,6 +7,7 @@ use Padmission\Tickets\Configuration\Data\EventNotificationSettings;
 class EventConfigurationContext
 {
     private array $userTriggered;
+
     private array $supporterTriggered;
 
     public function __construct(
@@ -40,6 +41,7 @@ class EventConfigurationContext
     {
         $this->userTriggered['notify_user'] = $notify;
         $this->supporterTriggered['notify_user'] = $notify;
+
         return $this;
     }
 
@@ -47,6 +49,7 @@ class EventConfigurationContext
     {
         $this->userTriggered['notify_supporter'] = $notify;
         $this->supporterTriggered['notify_supporter'] = $notify;
+
         return $this;
     }
 
@@ -54,6 +57,7 @@ class EventConfigurationContext
     {
         $this->userTriggered = ['notify_user' => true, 'notify_supporter' => false];
         $this->supporterTriggered = ['notify_user' => true, 'notify_supporter' => false];
+
         return $this;
     }
 
@@ -61,6 +65,7 @@ class EventConfigurationContext
     {
         $this->userTriggered = ['notify_user' => false, 'notify_supporter' => true];
         $this->supporterTriggered = ['notify_user' => false, 'notify_supporter' => true];
+
         return $this;
     }
 
@@ -68,6 +73,7 @@ class EventConfigurationContext
     {
         $this->userTriggered = ['notify_user' => true, 'notify_supporter' => true];
         $this->supporterTriggered = ['notify_user' => true, 'notify_supporter' => true];
+
         return $this;
     }
 
@@ -75,6 +81,7 @@ class EventConfigurationContext
     {
         $this->userTriggered = ['notify_user' => false, 'notify_supporter' => false];
         $this->supporterTriggered = ['notify_user' => false, 'notify_supporter' => false];
+
         return $this;
     }
 
@@ -82,28 +89,28 @@ class EventConfigurationContext
     public function enableChannel(string $channel, string $recipient = 'both'): static
     {
         $key = $recipient === 'both' ? "{$channel}_both" : "{$channel}_{$recipient}";
-        
+
         if (in_array($recipient, ['user', 'both'])) {
             $this->userTriggered[$key] = true;
         }
         if (in_array($recipient, ['supporter', 'both'])) {
             $this->supporterTriggered[$key] = true;
         }
-        
+
         return $this;
     }
 
     public function disableChannel(string $channel, string $recipient = 'both'): static
     {
         $key = $recipient === 'both' ? "{$channel}_both" : "{$channel}_{$recipient}";
-        
+
         if (in_array($recipient, ['user', 'both'])) {
             $this->userTriggered[$key] = false;
         }
         if (in_array($recipient, ['supporter', 'both'])) {
             $this->supporterTriggered[$key] = false;
         }
-        
+
         return $this;
     }
 
@@ -116,7 +123,7 @@ class EventConfigurationContext
                 $this->disableChannel($channel, $recipient);
             }
         }
-        
+
         return $this;
     }
 
@@ -124,7 +131,7 @@ class EventConfigurationContext
     public function when(callable|bool $condition, callable $callback): static
     {
         $shouldApply = is_callable($condition) ? $condition() : $condition;
-        
+
         if ($shouldApply) {
             $callback($this);
         }
@@ -134,14 +141,14 @@ class EventConfigurationContext
 
     public function unless(callable|bool $condition, callable $callback): static
     {
-        return $this->when(!$condition, $callback);
+        return $this->when(! $condition, $callback);
     }
 
     public function inEnvironment(string|array $environments, callable $callback): static
     {
         $currentEnv = app()->environment();
         $targetEnvs = is_array($environments) ? $environments : [$environments];
-        
+
         return $this->when(
             in_array($currentEnv, $targetEnvs),
             $callback

@@ -38,9 +38,9 @@ class TicketNotificationListener
     protected function getNotificationType($event): ?string
     {
         $type = strtolower(
-            Str::chopEnd(                               Str::chopStart(                              class_basename($event::class),
-                    'Ticket'
-                ),
+            Str::chopEnd(Str::chopStart(class_basename($event::class),
+                'Ticket'
+            ),
                 'Event'
             )
         );
@@ -79,7 +79,7 @@ class TicketNotificationListener
         $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
         $job = new $jobClass($user, $ticket, $type);
 
-		$debouncer = app(\Mpbarlow\LaravelQueueDebouncer\Debouncer::class);
+        $debouncer = app(\Mpbarlow\LaravelQueueDebouncer\Debouncer::class);
 
         $debouncer
             ->usingCacheKeyProvider(fn () => $job->uniqueId())

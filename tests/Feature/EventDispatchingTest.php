@@ -8,20 +8,20 @@ use Padmission\Tickets\Tests\User;
 beforeEach(function () {
     // Create test users
     $this->submitter = User::factory()->create();
-    
+
     // Create required ticket dependencies
     \Padmission\Tickets\Models\TicketStatus::factory()->create([
         'display_name' => 'Open',
         'order' => 1,
         'panel' => 'test',
     ]);
-    
+
     \Padmission\Tickets\Models\TicketPriority::factory()->create([
         'display_name' => 'Normal',
         'order' => 1,
         'panel' => 'test',
     ]);
-    
+
     // Set up authentication
     $this->actingAs($this->submitter);
 });
@@ -32,17 +32,17 @@ test('TicketCreatedEvent is dispatched with current user as actor', function () 
     Event::listen(TicketCreatedEvent::class, function ($event) use (&$dispatchedEvent) {
         $dispatchedEvent = $event;
     });
-    
+
     // Create a ticket
     $status = \Padmission\Tickets\Models\TicketStatus::first();
     $priority = \Padmission\Tickets\Models\TicketPriority::first();
-    
+
     $ticket = Ticket::factory()->create([
         'submitter_id' => $this->submitter->id,
         'status_id' => $status->id,
         'priority_id' => $priority->id,
     ]);
-    
+
     // Verify the event was dispatched with the correct actor
     expect($dispatchedEvent)->not->toBeNull();
     expect($dispatchedEvent->actor?->id)->toBe($this->submitter->id);
@@ -53,23 +53,23 @@ test('ticket assignment triggers event with current user as actor', function () 
     // Create ticket first
     $status = \Padmission\Tickets\Models\TicketStatus::first();
     $priority = \Padmission\Tickets\Models\TicketPriority::first();
-    
+
     $ticket = Ticket::factory()->create([
         'submitter_id' => $this->submitter->id,
         'status_id' => $status->id,
         'priority_id' => $priority->id,
     ]);
-    
+
     // Listen for the assignment event
     $dispatchedEvent = null;
     Event::listen(\Padmission\Tickets\Events\TicketAssignedEvent::class, function ($event) use (&$dispatchedEvent) {
         $dispatchedEvent = $event;
     });
-    
+
     // Assign the ticket by updating assignee_id (this triggers the observer)
     $supporter = User::factory()->create();
     $ticket->update(['assignee_id' => $supporter->id]);
-    
+
     // Verify the event was dispatched with the correct actor
     expect($dispatchedEvent)->not->toBeNull();
     expect($dispatchedEvent->actor?->id)->toBe($this->submitter->id);

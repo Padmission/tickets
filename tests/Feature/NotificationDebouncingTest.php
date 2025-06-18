@@ -323,7 +323,7 @@ describe('Recipient and Strategy Logic', function () {
             ->onTicketActivity(
                 userTriggered: ['notify_user' => true, 'notify_supporter' => true]
             );
-        
+
         $panel = \Filament\Facades\Filament::getCurrentPanel();
         $plugin = \Padmission\Tickets\TicketPlugin::make()
             ->notificationConfiguration($config);
