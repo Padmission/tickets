@@ -4,12 +4,13 @@ namespace Padmission\Tickets\Http\Controllers\Api;
 
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
-use Padmission\Tickets\Notifications\EmailVerificationNotification;
+use Padmission\Tickets\Notifications\OtpNotification;
 use Padmission\Tickets\TicketPlugin;
 
 class RequestOtpController
@@ -28,7 +29,7 @@ class RequestOtpController
             return response()->json();
         }
 
-        $otp = str(random_int(0, 999999))
+        $otp = str((string) random_int(0, 999999))
             ->padLeft(6, '0')
             ->toString();
 
@@ -52,13 +53,13 @@ class RequestOtpController
 
         Notification::send(
             (new AnonymousNotifiable)->route('mail', $email),
-            resolve(EmailVerificationNotification::class, ['otp' => $otp])
+            resolve(OtpNotification::class, ['otp' => $otp])
         );
 
         return response()->json();
     }
 
-    protected function findUser(string $email): ?Authenticatable
+    protected function findUser(string $email): ?Model
     {
         $userClass = TicketPlugin::resolveModelClass(Authenticatable::class);
 

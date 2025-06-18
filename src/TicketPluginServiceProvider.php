@@ -7,10 +7,7 @@ use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
 use Padmission\Tickets\Models\Ticket;
@@ -42,7 +39,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         }
 
         $this->ensurePolicyIsRegistered();
-        $this->registerRateLimiter();
 
         if ($this->isDevMode()) {
             $this->devConfig = Dotenv::parse(file_get_contents(__DIR__.'/../.env'));
@@ -149,16 +145,5 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     private function isDevMode(): bool
     {
         return file_exists(__DIR__.'/../dist/.hot');
-    }
-
-    private function registerRateLimiter()
-    {
-        RateLimiter::for('padmission-tickets-otp', function () {
-            return Limit::perMinute(1)->response(function (Request $request, array $headers) {
-                return response()->json([
-                    'error' => __('padmission-tickets::chat.otp_request.errors.rate_limited', ['seconds' => $headers['Retry-After']]),
-                ], 429, $headers);
-            });
-        });
     }
 }

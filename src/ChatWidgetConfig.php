@@ -48,19 +48,9 @@ final class ChatWidgetConfig
         return value($this->allowEmailAuthentication);
     }
 
-    public function getAllowGuests(): bool
-    {
-        return value($this->getAllowGuests());
-    }
-
     public function getOtpExpiresAfterMinutes(): int
     {
         return value($this->otpExpiresAfterMinutes);
-    }
-
-    public function getSessionExpiresAfterMinutes(): int
-    {
-        return value($this->sessionExpiresAfterMinutes);
     }
 
     /**
@@ -73,9 +63,13 @@ final class ChatWidgetConfig
         return $this;
     }
 
-    public function getPlaceholder(): string|Htmlable|null
+    public function getPlaceholder(): ?string
     {
-        return value($this->placeholder);
+        $value = value($this->placeholder);
+
+        return $value instanceof Htmlable
+                    ? $value->toHtml()
+                    : $value;
     }
 
     /**
@@ -88,9 +82,13 @@ final class ChatWidgetConfig
         return $this;
     }
 
-    public function getIntroMessage(): string|Htmlable|null
+    public function getIntroMessage(): ?string
     {
-        return value($this->introMessage);
+        $value = value($this->introMessage);
+
+        return $value instanceof Htmlable
+            ? $value->toHtml()
+            : $value;
     }
 
     /**
@@ -103,9 +101,13 @@ final class ChatWidgetConfig
         return $this;
     }
 
-    public function getAutoResponse(): string|Htmlable|null
+    public function getAutoResponse(): ?string
     {
-        return value($this->autoResponse);
+        $value = value($this->autoResponse);
+
+        return $value instanceof Htmlable
+            ? $value->toHtml()
+            : $value;
     }
 
     public function primaryColor(string|array|Closure $color): self
@@ -139,7 +141,7 @@ final class ChatWidgetConfig
         return json_encode([
             'panelId' => 'panel-'.Filament::getId(),
             'userId' => $auth->getUserId(),
-            'placeholder' => $this->placeholder,
+            'placeholder' => $this->getPlaceholder(),
             'introMessage' => $this->getIntroMessage(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),
         ]);
