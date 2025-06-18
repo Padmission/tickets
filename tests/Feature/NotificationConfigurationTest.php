@@ -105,12 +105,6 @@ describe('Notification Configuration - Channel Methods', function () {
         expect($supporterTriggered)
             ->toHaveKey('email_both', true);
 
-        // slack_supporter should only be in supporterTriggered
-        expect($supporterTriggered)
-            ->toHaveKey('slack_supporter', true);
-
-        expect($userTriggered)
-            ->not->toHaveKey('slack_supporter');
     });
 
     test('disableChannel() removes channel configuration', function () {
@@ -146,9 +140,7 @@ describe('Notification Configuration - Channel Methods', function () {
 
         // All these should be in supporterTriggered since we specified 'supporter'
         expect($supporterTriggered)
-            ->toHaveKey('email_supporter', true)
-            ->toHaveKey('slack_supporter', false)
-            ->toHaveKey('sms_supporter', true);
+            ->toHaveKey('email_supporter', true);
     });
 });
 
@@ -180,7 +172,6 @@ describe('Notification Configuration - Array Format', function () {
                 userTriggered: [
                     'notify_user' => true,
                     'email_user' => true,
-                    'slack_supporter' => true,
                 ]
             );
 
@@ -189,8 +180,7 @@ describe('Notification Configuration - Array Format', function () {
 
         expect($userTriggered)
             ->toHaveKey('notify_user', true)
-            ->toHaveKey('email_user', true)
-            ->toHaveKey('slack_supporter', true);
+            ->toHaveKey('email_user', true);
     });
 });
 

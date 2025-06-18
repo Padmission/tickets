@@ -36,7 +36,6 @@ class EventConfigurationContext
         return $this;
     }
 
-    // Legacy boolean methods for backward compatibility
     public function notifyUser(bool $notify = true): static
     {
         $this->userTriggered['notify_user'] = $notify;
@@ -85,7 +84,6 @@ class EventConfigurationContext
         return $this;
     }
 
-    // Enhanced channel methods
     public function enableChannel(string $channel, string $recipient = 'both'): static
     {
         $key = $recipient === 'both' ? "{$channel}_both" : "{$channel}_{$recipient}";
@@ -127,7 +125,6 @@ class EventConfigurationContext
         return $this;
     }
 
-    // Conditional methods
     public function when(callable|bool $condition, callable $callback): static
     {
         $shouldApply = is_callable($condition) ? $condition() : $condition;

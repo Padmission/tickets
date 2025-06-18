@@ -16,12 +16,10 @@ class EmailLogoService
             return null;
         }
 
-        // Try tenant logo first
         if ($logo = $this->getTenantLogo()) {
             return $logo;
         }
 
-        // Fallback to panel brand logo
         return $this->getPanelLogo($panelId);
     }
 
@@ -78,7 +76,7 @@ class EmailLogoService
         }
 
         if (is_string($logo)) {
-            // Simple SVG check (starts with <svg)
+
             if (stripos($logo, '<svg') === 0) {
                 return $logo; // Raw SVG
             }

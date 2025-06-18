@@ -68,7 +68,7 @@ class NotificationConfiguration
 
     private function methodToEventName(string $method): string
     {
-        return Str::snake(substr($method, 2)); // onTicketCreated -> ticket_created
+        return Str::snake(substr($method, 2));
     }
 
     private function isValidEvent(string $event): bool
@@ -90,9 +90,7 @@ class NotificationConfiguration
         array|callable|null $supporterTriggered = null,
         ?callable $configurator = null
     ): static {
-        // This is your existing logic from the individual methods
         if (is_callable($userTriggered) && $supporterTriggered === null && $configurator === null) {
-            // Check if callback needs context by reflection
             $reflection = new \ReflectionFunction($userTriggered);
             if ($reflection->getNumberOfParameters() > 1) {
                 return $this->storeCallbackForLaterEvaluation($event, $userTriggered);
@@ -129,12 +127,10 @@ class NotificationConfiguration
         return $this;
     }
 
-    // Enhanced method to support context-aware configuration
     private function configureEventWithCallbackAndContext(string $event, callable $callback, $ticketContext = null, $userContext = null): static
     {
         $context = new EventConfigurationContext($event, $this->getDefaultSettingsFor($event));
 
-        // Call with additional context parameters if callback supports them
         $reflection = new \ReflectionFunction($callback);
         $paramCount = $reflection->getNumberOfParameters();
 
@@ -151,10 +147,8 @@ class NotificationConfiguration
         return $this;
     }
 
-    // Method to resolve configuration with runtime context
     public function getSettingsForWithContext(string $event, $ticketContext = null, $userContext = null): EventNotificationSettings
     {
-        // If we have a callback stored that needs context, re-evaluate it
         if (isset($this->eventCallbacks[$event])) {
             return $this->evaluateCallbackWithContext($event, $this->eventCallbacks[$event], $ticketContext, $userContext);
         }
@@ -164,12 +158,10 @@ class NotificationConfiguration
 
     private array $eventCallbacks = [];
 
-    // Store callbacks for later evaluation with context
     private function storeCallbackForLaterEvaluation(string $event, callable $callback): static
     {
         $this->eventCallbacks[$event] = $callback;
 
-        // Still store a default configuration for immediate access
         $context = new EventConfigurationContext($event, $this->getDefaultSettingsFor($event));
         $callback($context);
         $this->eventSettings[$event] = $context->build();
@@ -195,10 +187,8 @@ class NotificationConfiguration
         return $context->build();
     }
 
-    // Enhanced method specifically for ticket context
     public function getSettingsForTicketContext(string $event, Ticket $ticket, ?Authenticatable $actor = null): EventNotificationSettings
     {
-        // If we have a callback that can use ticket context, re-evaluate it
         if (isset($this->eventCallbacks[$event])) {
             return $this->evaluateCallbackWithTicketContext($event, $this->eventCallbacks[$event], $ticket, $actor);
         }
@@ -206,7 +196,6 @@ class NotificationConfiguration
         return $this->getSettingsFor($event);
     }
 
-    // Get the appropriate configuration based on who triggered the action
     public function getConfigurationForTrigger(string $event, Ticket $ticket, ?Authenticatable $actor = null): array
     {
         $settings = $this->getSettingsForTicketContext($event, $ticket, $actor);
@@ -221,22 +210,19 @@ class NotificationConfiguration
     protected function getTriggerType(Ticket $ticket, ?Authenticatable $actor): string
     {
         if (! $actor) {
-            return 'supporter_triggered'; // System actions default to supporter_triggered
-        }
+            return 'supporter_triggered';
+		}
 
         $actorId = $actor->getAuthIdentifier();
 
-        // If actor is the submitter, use user_triggered configuration
         if ($ticket->submitter_id === $actorId) {
             return 'user_triggered';
         }
 
-        // If actor is the assignee, use supporter_triggered configuration
         if ($ticket->assignee_id === $actorId) {
             return 'supporter_triggered';
         }
 
-        // Default to supporter_triggered for anyone else (other staff members, etc.)
         return 'supporter_triggered';
     }
 
@@ -278,7 +264,6 @@ class NotificationConfiguration
 
     public function getAllSettings(): array
     {
-        // Merge configured settings with defaults
         $allEvents = array_unique([
             ...array_keys($this->eventSettings),
             ...array_keys($this->getDefaultSettings()),

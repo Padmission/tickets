@@ -27,8 +27,7 @@ class TicketUrlService
         try {
             validator(['url' => $url], ['url' => 'required|url'])->validate();
         } catch (ValidationException) {
-            // Fallback to app URL if ticket URL is invalid
-            $url = config('app.url');
+			$url = config('app.url');
         }
 
         $baseUrl = Str::before($url, '#');

@@ -20,7 +20,6 @@ trait InteractsWithNotifications
             });
     }
 
-    // Can be overridden in specific implementations to add business rules about when to send notifications
     public function shouldSendNotification(string $type): bool
     {
         return true;

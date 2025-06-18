@@ -9,7 +9,7 @@ The notification system supports:
 - **Actor-aware notifications** - Different rules based on who triggered the event
 - **Event-based configuration** - Separate rules for created, assigned, activity, and closed events
 - **Policy integration** - Uses existing Gate/Policy system for role determination
-- **Multiple channels** - Email (implemented), Slack/SMS (ready for future)
+- **Multiple channels** - Email (implemented)
 
 ## Quick Start
 
@@ -85,14 +85,10 @@ Four main event types are supported:
     userTriggered: [
         'notify_user' => true,
         'notify_supporter' => false,
-        'email_user' => true,
-        'slack_supporter' => false,
     ],
     supporterTriggered: [
         'notify_user' => true,
         'notify_supporter' => true,
-        'email_user' => true,
-        'email_supporter' => true,
     ]
 )
 ```
@@ -136,9 +132,7 @@ Four main event types are supported:
 
 ```php
 ->onTicketActivity(function ($context) {
-    $context->enableChannel('email', 'both')        // Email to both
-            ->enableChannel('slack', 'supporter')   // Slack to supporter only
-            ->disableChannel('sms', 'user');        // No SMS to user
+    $context->enableChannel('email', 'both');
 })
 ```
 
@@ -202,9 +196,7 @@ NotificationConfiguration::make()
 ```php
 ->onTicketCreated(function ($context, $ticket) {
     if ($ticket->priority?->display_name === 'Urgent') {
-        $context->notifyBoth()
-                ->enableChannel('sms', 'supporter')
-                ->enableChannel('slack', 'both');
+        $context->notifyBoth();
     } else {
         $context->notifySupporter();
     }
