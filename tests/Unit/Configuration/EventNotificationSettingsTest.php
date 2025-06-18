@@ -67,7 +67,7 @@ test('shouldNotify() works with legacy boolean format', function () {
 test('shouldNotify() works with channel format', function () {
     $settings = new EventNotificationSettings(
         userTriggered: [
-            'email_user' => true
+            'email_user' => true,
         ]
     );
 

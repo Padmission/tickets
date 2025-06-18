@@ -211,7 +211,7 @@ class NotificationConfiguration
     {
         if (! $actor) {
             return 'supporter_triggered';
-		}
+        }
 
         $actorId = $actor->getAuthIdentifier();
 
