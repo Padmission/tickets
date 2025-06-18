@@ -5,7 +5,7 @@
 	/* Blue Primary Colors */
 	--color-primary: #3b82f6;
 	--color-primary-light: #dbeafe;
-    --color-error: #dc2626;
+	--color-error: #dc2626;
 
 	/* Tailwind Gray Scale */
 	--color-gray-50: #f9fafb;
@@ -258,7 +258,7 @@ dialog {
 }
 
 [data-back] {
-    margin-left: -0.5rem;
+	margin-left: -0.5rem;
 }
 
 /* Close button */
@@ -266,7 +266,7 @@ dialog {
 	position: relative;
 	z-index: 1;
 	margin-left: auto;
-    margin-right: -0.5rem;
+	margin-right: -0.5rem;
 }
 
 .ticket-list {
@@ -384,65 +384,66 @@ dialog {
 }
 
 .form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 
-    line-height: 1.5;
-    color: var(--color-text-primary);
+	line-height: 1.5;
+	color: var(--color-text-primary);
 
-    .form-field > * ~ * {
-        margin-top: 0.25rem;
-    }
+	.form-field > * ~ * {
+		margin-top: 0.25rem;
+	}
 
-    label {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 500;
-        line-height: 1.25rem;
-    }
+	label {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 500;
+		line-height: 1.25rem;
+	}
 
-    input {
-        display: flex;
-        width: 100%;
-        font-family: inherit;
-        font-size: 0.875rem;
-        line-height: 1.25rem;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid var(--color-border);
-        border-radius: 0.5rem;
-        background-color: var(--color-surface);
-        color: var(--color-text-primary);
-        box-shadow: var(--shadow-sm);
-        transition: all 0.15s ease-in-out;
+	input {
+		display: flex;
+		width: 100%;
+		font-family: inherit;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		background-color: var(--color-surface);
+		color: var(--color-text-primary);
+		box-shadow: var(--shadow-sm);
+		transition: all 0.15s ease-in-out;
 
-        &:focus {
-            outline: none;
-            border-color: var(--color-primary);
-            box-shadow: var(--focus-ring);
-        }
+		&:focus {
+			outline: none;
+			border-color: var(--color-primary);
+			box-shadow: var(--focus-ring);
+		}
 
-        &::placeholder {
-            color: var(--color-text-muted);
-        }
-    }
+		&::placeholder {
+			color: var(--color-text-muted);
+		}
+	}
 
-    .has-error {
-        label {
-            color: var(--color-error);
-        }
+	.has-error {
+		label {
+			color: var(--color-error);
+		}
 
-        input {
-            border-color: var(--color-error);
-        }
+		input {
+			border-color: var(--color-error);
+		}
 
-        .error {
-            display: block;
-        }
-    }
+		.error {
+			display: block;
+		}
+	}
 
 	.otp-input {
-		font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
+			"Liberation Mono", "Courier New", monospace;
 		font-size: 1.5rem;
 		font-weight: 600;
 		letter-spacing: 1.5rem;
@@ -452,13 +453,13 @@ dialog {
 }
 
 .error {
-    display: inline-block;
-    font-size: 0.875em;
-    color: var(--color-error);
+	display: inline-block;
+	font-size: 0.875em;
+	color: var(--color-error);
 
-    &:empty {
-        display: none;
-    }
+	&:empty {
+		display: none;
+	}
 }
 
 header {
@@ -474,10 +475,10 @@ header {
 }
 
 h2 {
-    text-wrap: balance;
-    margin-top: 0;
-    margin-inline: 0;
-    margin-bottom: 1rem;
+	text-wrap: balance;
+	margin-top: 0;
+	margin-inline: 0;
+	margin-bottom: 1rem;
 }
 
 .chat-list-tickets {
@@ -514,7 +515,7 @@ h2 {
 		white-space: nowrap;
 		text-overflow: ellipsis;
 		overflow: hidden;
-        margin: 0;
+		margin: 0;
 	}
 }
 

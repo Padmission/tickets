@@ -1,19 +1,18 @@
-class HttpError
-{
-    constructor(response) {
-        this.response = response
-    }
+class HttpError {
+	constructor(response) {
+		this.response = response;
+	}
 
-    async error(key) {
-        try {
-            const json = await this.response.json();
+	async error(key) {
+		try {
+			const json = await this.response.json();
 
-            return json.error;
-        } catch (e) {
-            console.log('json', e)
-            return 'Unknown error';
-        }
-    }
+			return json.error;
+		} catch (e) {
+			console.log("json", e);
+			return "Unknown error";
+		}
+	}
 }
 
 export default async function fetchJson(url, data = {}, method = "GET") {
