@@ -8,10 +8,10 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -56,22 +56,19 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
             $notificationClass = $this->getNotificationClass();
 
             if (! $notificationClass) {
-	            
 
-	            return;
-            }
-	        
-
-	        $user = $this->resolveUser();
-            if (! $user) {
-	            
                 return;
             }
 
-	        
+            $user = $this->resolveUser();
+            if (! $user) {
+
+                return;
+            }
+
             $record = $this->resolveModel();
             if (! $record) {
-	            
+
                 return;
             }
             $this->sendNotification($user, $record, $notificationClass);
@@ -114,7 +111,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     protected function handleException(\Exception $e): void
     {
-		Log::error($e->getMessage());
+        Log::error($e->getMessage());
         // Override in child classes for custom error handling
         // Default behavior is to silently continue
     }
