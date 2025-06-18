@@ -6,6 +6,8 @@ import fetchJson from "./helpers/fetch-json";
 
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
+import config from "./helpers/config.js"
+import __ from "./helpers/trans.js";
 
 customElements.define(
 	"chat-component",
@@ -16,6 +18,8 @@ customElements.define(
 
 		constructor() {
 			super();
+
+            console.log('config', config)
 
 			this.scrollThreshold = 100;
 			this.pollingIntervalMs = 5000;
@@ -80,10 +84,10 @@ customElements.define(
 			this.initIntersectionObserver();
 
 			if (!this.ticketId) {
-				if (this.defaultMessage) {
+				if (config.introMessage) {
 					this.renderMessages([
 						{
-							content: this.defaultMessage,
+							content: config.introMessage,
 							side: "system",
 							created_at: new Date().toISOString(),
 						},
@@ -434,7 +438,7 @@ customElements.define(
                             class="scroll-to-bottom"
                             data-chat-scroll-to-bottom
                         >
-                            <span class="chat__badge">New messages</span>
+                            <span class="chat__badge">${__('chat.new_messages')}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -453,7 +457,7 @@ customElements.define(
                                     @click="addFiles"
                                     style="display: none;"
                                 >
-                                    <span class="sr-only">Add files</span>
+                                    <span class="sr-only">${__('chat.add_files')}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
                                 </button>
 
@@ -462,7 +466,7 @@ customElements.define(
                                     type="button"
                                     @click="toggleBold"
                                 >
-                                    <span class="sr-only">Bold</span>
+                                    <span class="sr-only">${__('chat.bold')}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
                                 </button>
 
@@ -471,7 +475,7 @@ customElements.define(
                                     type="button"
                                     @click="setLink"
                                 >
-                                    <span class="sr-only">Link</span>
+                                    <span class="sr-only">${__('chat.link')}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                                 </button>
 
@@ -480,7 +484,7 @@ customElements.define(
                                     type="button"
                                     @click="toggleList"
                                 >
-                                    <span class="sr-only">Unordered List</span>
+                                    <span class="sr-only">${__('chat.unordered_list')}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
                                 </button>
 
@@ -489,19 +493,19 @@ customElements.define(
                                     type="button"
                                     @click="toggleOrderedList"
                                 >
-                                    <span class="sr-only">Ordered List</span>
+                                    <span class="sr-only">${__('chat.ordered_list')}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
                                 </button>
 
                                 <button type="submit" data-chat-submit>
-                                    <span>Send</span>
+                                    <span>${__('chat.send')}</span>
 
                                     <kbd>
-                                        <span class="sr-only">Command-Key</span>
+                                        <span class="sr-only">${__('chat.command_key')}</span>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path></svg>
                                     </kbd>
                                     <kbd>
-                                        <span class="sr-only">Enter-Key</span>
+                                        <span class="sr-only">${__('chat.enter_key')}</span>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-corner-down-left-icon lucide-corner-down-left"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>
                                     </kbd>
                                 </button>
@@ -514,7 +518,7 @@ customElements.define(
                                     <div class="composer__options">
                                         <label>
                                             <input type="checkbox" data-chat-lock-turn />
-                                            Lock turn to supporter
+                                            ${__('chat.lock_turn')}
                                         </label>
                                     </div>
                                 `

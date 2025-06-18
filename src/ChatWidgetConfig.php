@@ -7,9 +7,19 @@ use Exception;
 use Filament\Facades\Filament;
 use Filament\Support\Facades\FilamentColor;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Arr;
+use Padmission\Tickets\Services\TicketAuth;
 
 final class ChatWidgetConfig
 {
+    public bool|Closure $allowEmailAuthentication = false;
+
+    public bool|Closure $allowGuests = false;
+
+    public int|Closure $otpExpiresAfterMinutes = 10;
+
+    public string|Htmlable|Closure|null $placeholder = null;
+
     public string|Htmlable|Closure|null $introMessage = null;
 
     public string|Htmlable|Closure|null $autoResponse = null;
@@ -19,6 +29,53 @@ final class ChatWidgetConfig
     public static function make(): self
     {
         return new self;
+    }
+
+    public function allowEmailAuthentication(
+        bool|Closure $allow = true,
+        bool|Closure $allowGuests = false,
+        int|Closure $otpExpiresAfterMinutes = 10,
+    ): self {
+        $this->allowEmailAuthentication = $allow;
+        $this->allowGuests = $allowGuests;
+        $this->otpExpiresAfterMinutes = $otpExpiresAfterMinutes;
+
+        return $this;
+    }
+
+    public function getAllowEmailAuthentication(): bool
+    {
+        return value($this->allowEmailAuthentication);
+    }
+
+    public function getAllowGuests(): bool
+    {
+        return value($this->getAllowGuests());
+    }
+
+    public function getOtpExpiresAfterMinutes(): int
+    {
+        return value($this->otpExpiresAfterMinutes);
+    }
+
+    public function getSessionExpiresAfterMinutes(): int
+    {
+        return value($this->sessionExpiresAfterMinutes);
+    }
+
+    /**
+     * Message that is sent after users send their first message.
+     */
+    public function placeholder(string|Htmlable|Closure $placeholder): self
+    {
+        $this->placeholder = $placeholder;
+
+        return $this;
+    }
+
+    public function getPlaceholder(): string|Htmlable|null
+    {
+        return value($this->placeholder);
     }
 
     /**
@@ -39,9 +96,9 @@ final class ChatWidgetConfig
     /**
      * Message that is sent after users send their first message.
      */
-    public function autoResponse(string|Htmlable|Closure $reponse): self
+    public function autoResponse(string|Htmlable|Closure $response): self
     {
-        $this->autoResponse = $reponse;
+        $this->autoResponse = $response;
 
         return $this;
     }
@@ -73,5 +130,18 @@ final class ChatWidgetConfig
         }
 
         return 'rgb('.FilamentColor::processColor($color)[600].')';
+    }
+
+    public function toJs(): string
+    {
+        $auth = resolve(TicketAuth::class);
+
+        return json_encode([
+            'panelId' => 'panel-'.Filament::getId(),
+            'userId' => $auth->getUserId(),
+            'placeholder' => $this->placeholder,
+            'introMessage' => $this->getIntroMessage(),
+            'lang' => Arr::dot(__('padmission-tickets::chat')),
+        ]);
     }
 }
