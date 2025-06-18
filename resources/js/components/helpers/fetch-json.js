@@ -1,3 +1,21 @@
+class HttpError
+{
+    constructor(response) {
+        this.response = response
+    }
+
+    async error(key) {
+        try {
+            const json = await this.response.json();
+
+            return json.error;
+        } catch (e) {
+            console.log('json', e)
+            return 'Unknown error';
+        }
+    }
+}
+
 export default async function fetchJson(url, data = {}, method = "GET") {
 	if (method === "GET") {
 		url += "?" + new URLSearchParams(data).toString();
@@ -19,13 +37,7 @@ export default async function fetchJson(url, data = {}, method = "GET") {
 	});
 
 	if (!response.ok) {
-		const errorText = await response.text();
-		console.error("HTTP error response", {
-			status: response.status,
-			text: errorText,
-		});
-
-		throw new Error("HTTP Error");
+		throw new HttpError(response);
 	}
 
 	return await response.json();

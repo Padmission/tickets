@@ -4,6 +4,10 @@ return [
     'open_modal' => 'Open support chat',
     'close_modal' => 'Close modal',
 
+    'errors' => [
+        'too_many_requests' => 'Too many requests. Retry in :seconds seconds.',
+    ],
+
     'chat' => [
         'send' => 'Send',
         'new_messages' => 'New messages',
@@ -30,13 +34,24 @@ return [
 
     'otp_request' => [
         'heading' => 'Please verify your email address to open a ticket.',
+        'description' => 'If your email is registered in our system, we will send a verification code to confirm your identity.',
         'email_label' => 'Email',
         'submit_button' => 'Submit',
+
+        'errors' => [
+            'rate_limited' => 'Please retry in :seconds seconds.',
+        ],
     ],
 
     'otp_verify' => [
         'heading' => 'Please enter the code we sent you.',
+        'description' => 'Please enter the verification code we sent to your email.',
         'label' => 'Your code',
         'submit_button' => 'Submit',
+
+        'errors' => [
+            'expired' => 'Your verification code expired.',
+            'invalid_otp' => 'Invalid OTP',
+        ],
     ],
 ];

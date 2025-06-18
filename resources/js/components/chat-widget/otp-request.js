@@ -9,28 +9,26 @@ customElements.define(
 		get useShadowDom() {
 			return false;
 		}
-
         async verifyUser(event) {
             event.preventDefault();
 
             const email = this.querySelector('#email').value
 
-            const data = await fetchJson("/padmission-tickets/api/otp-request", {email}, 'POST');
-            console.log('data', data)
-
-            this.changeView("chat-otp-submit");
+            try {
+                const data = await fetchJson("/padmission-tickets/api/otp-request", {email}, 'POST');
+                console.log('data', data)
+                this.changeView("chat-otp-verify");
+            } catch (e) {
+                const formField = this.querySelector('.form-field');
+                formField.classList.add('has-error')
+                formField.querySelector('.error').innerHTML = await e.error()
+            }
         }
-
-
 		async render() {
             // biome-ignore format: preserve template formatting
             return render(`
                 <div class="chat-list-tickets">
                     <header>
-                        <h2>
-                            ${__('otp_request.heading')}
-                        </h2>
-
                         <form data-close-dialog>
                             <button
                                 class="button-icon"
@@ -43,25 +41,42 @@ customElements.define(
                         </form>
                     </header>
 
-                    <form
-                        @submit="verifyUser"
-                    >
-                        <label for="email">
-                            ${__('otp_request.email_label')}
-                        </label>
+                    <h2>
+                        ${__('otp_request.heading')}
+                    </h2>
 
-                        <input
-                            id="email"
-                            type="email"
-                            name="email"
-                            autocomplete="email"
-                            value="info@pixelarbeit.de"
+                    <div class="form-container">
+                        <p class="form-description">
+                            ${__('otp_request.description')}
+                        </p>
+
+                        <form
+                            @submit="verifyUser"
+                            class="form"
                         >
+                            <div class="form-field">
+                                <label for="email" class="form-label">
+                                    ${__('otp_request.email_label')}
+                                </label>
 
-                        <button type="submit">
-                            ${__('otp_request.submit_button')}
-                        </button>
-                    </form>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    autocomplete="email"
+                                    class="form-input"
+                                    required
+                                >
+                                <span class="error"></span>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="button button-primary">
+                                    ${__('otp_request.submit_button')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             `);
 		}

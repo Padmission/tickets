@@ -3,7 +3,7 @@
 use Padmission\Tickets\Http\Controllers\Api;
 use Padmission\Tickets\Http\Middleware\AuthenticateGuests;
 
-Route::middleware(['web', 'throttle'])
+Route::middleware(['web'])
     ->prefix('padmission-tickets/api')
     ->group(function () {
         Route::post('/otp-request', Api\RequestOtpController::class);

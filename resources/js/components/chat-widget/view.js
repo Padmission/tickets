@@ -9,18 +9,15 @@ customElements.define(
 		get useShadowDom() {
 			return false;
 		}
-
 		renderedCallback() {
 			window.addEventListener("ticket-created", (event) => {
 				this.querySelector("[data-chat-subject]").innerHTML =
 					event.detail.subject;
 			});
 		}
-
 		back() {
 			this.changeView("chat-list-tickets");
 		}
-
 		render() {
 			// biome-ignore format: preserve template formatting
 			return render(`

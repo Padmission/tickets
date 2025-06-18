@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Http\Controllers\Api;
 
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -10,7 +11,6 @@ use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Padmission\Tickets\Notifications\EmailVerificationNotification;
 use Padmission\Tickets\TicketPlugin;
-use Symfony\Component\HttpFoundation\Response;
 
 class RequestOtpController
 {
@@ -24,7 +24,9 @@ class RequestOtpController
         $email = $request->get('email');
         $user = $this->findUser($email);
 
-        abort_unless($user, Response::HTTP_NOT_FOUND);
+        if (! $user) {
+            return response()->json();
+        }
 
         $otp = str(random_int(0, 999999))
             ->padLeft(6, '0')
@@ -36,6 +38,17 @@ class RequestOtpController
             'padmission-tickets::otp.expires_at',
             now()->addMinutes($config->getOtpExpiresAfterMinutes())
         );
+
+        $limiter = resolve(RateLimiter::class);
+        $rateLimitKey = 'padmission-tickets::send-otp';
+
+        if ($limiter->tooManyAttempts($rateLimitKey, 1)) {
+            return response()->json([
+                'error' => __('padmission-tickets::chat.otp_request.errors.rate_limited', ['seconds' => $limiter->availableIn($rateLimitKey)]),
+            ], 429);
+        }
+
+        $limiter->hit($rateLimitKey, 60);
 
         Notification::send(
             (new AnonymousNotifiable)->route('mail', $email),
@@ -51,6 +64,6 @@ class RequestOtpController
 
         return $userClass::query()
             ->where('email', $email)
-            ->firstOrFail();
+            ->first();
     }
 }
