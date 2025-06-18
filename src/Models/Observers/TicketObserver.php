@@ -21,7 +21,7 @@ class TicketObserver
 
     public function created(Ticket $ticket): void
     {
-        event(new TicketCreatedEvent($ticket));
+        event(new TicketCreatedEvent($ticket, auth()->user()));
     }
 
     public function updating(Ticket $ticket): void
@@ -106,7 +106,7 @@ class TicketObserver
                 ['closed_by' => $userId]
             );
 
-            event(new TicketClosedEvent($ticket));
+            event(new TicketClosedEvent($ticket, auth()->user()));
         }
     }
 

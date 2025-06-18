@@ -185,6 +185,15 @@ final class TicketPlugin implements Plugin
         return $this;
     }
 
+    public function getNotificationConfiguration() : NotificationConfiguration
+    {
+       if (isset($this->notificationConfiguration)) {
+           return $this->notificationConfiguration;
+       }
+       $this->notificationConfiguration();
+       return $this->notificationConfiguration;
+    }
+
     public function showChatWidget(bool $shouldShow = true, ?ChatWidgetConfig $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;

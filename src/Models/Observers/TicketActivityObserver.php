@@ -14,6 +14,6 @@ class TicketActivityObserver
 
     public function created(TicketActivity $activity): void
     {
-        event(new TicketActivityEvent($activity->ticket, $activity->type, null));
+        event(new TicketActivityEvent($activity->ticket, $activity->type, auth()->user()));
     }
 }

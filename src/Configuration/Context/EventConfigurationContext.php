@@ -35,6 +35,7 @@ class EventConfigurationContext
         return $this;
     }
 
+    // Legacy boolean methods for backward compatibility
     public function notifyUser(bool $notify = true): static
     {
         $this->userTriggered['notify_user'] = $notify;
@@ -75,6 +76,76 @@ class EventConfigurationContext
         $this->userTriggered = ['notify_user' => false, 'notify_supporter' => false];
         $this->supporterTriggered = ['notify_user' => false, 'notify_supporter' => false];
         return $this;
+    }
+
+    // Enhanced channel methods
+    public function enableChannel(string $channel, string $recipient = 'both'): static
+    {
+        $key = $recipient === 'both' ? "{$channel}_both" : "{$channel}_{$recipient}";
+        
+        if (in_array($recipient, ['user', 'both'])) {
+            $this->userTriggered[$key] = true;
+        }
+        if (in_array($recipient, ['supporter', 'both'])) {
+            $this->supporterTriggered[$key] = true;
+        }
+        
+        return $this;
+    }
+
+    public function disableChannel(string $channel, string $recipient = 'both'): static
+    {
+        $key = $recipient === 'both' ? "{$channel}_both" : "{$channel}_{$recipient}";
+        
+        if (in_array($recipient, ['user', 'both'])) {
+            $this->userTriggered[$key] = false;
+        }
+        if (in_array($recipient, ['supporter', 'both'])) {
+            $this->supporterTriggered[$key] = false;
+        }
+        
+        return $this;
+    }
+
+    public function viaChannels(array $channels, string $recipient = 'both'): static
+    {
+        foreach ($channels as $channel => $enabled) {
+            if ($enabled) {
+                $this->enableChannel($channel, $recipient);
+            } else {
+                $this->disableChannel($channel, $recipient);
+            }
+        }
+        
+        return $this;
+    }
+
+    // Conditional methods
+    public function when(callable|bool $condition, callable $callback): static
+    {
+        $shouldApply = is_callable($condition) ? $condition() : $condition;
+        
+        if ($shouldApply) {
+            $callback($this);
+        }
+
+        return $this;
+    }
+
+    public function unless(callable|bool $condition, callable $callback): static
+    {
+        return $this->when(!$condition, $callback);
+    }
+
+    public function inEnvironment(string|array $environments, callable $callback): static
+    {
+        $currentEnv = app()->environment();
+        $targetEnvs = is_array($environments) ? $environments : [$environments];
+        
+        return $this->when(
+            in_array($currentEnv, $targetEnvs),
+            $callback
+        );
     }
 
     public function build(): EventNotificationSettings

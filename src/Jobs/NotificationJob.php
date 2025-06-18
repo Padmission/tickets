@@ -97,7 +97,62 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     protected function sendNotification(Authenticatable $user, Ticket $record, string $notificationClass): void
     {
-        \Illuminate\Support\Facades\Notification::send($user, new $notificationClass($record, $this->notificationType));
+                $plugin = TicketPlugin::get();
+        $config = $plugin->getNotificationConfiguration();
+        $settings = $config->getSettingsFor($this->notificationType);
+        
+                $actorType = $this->getActorType($user, $record);
+        $configuration = $settings->getSettingsFor($actorType);
+        
+                $this->sendThroughConfiguredChannels($user, $record, $notificationClass, $configuration);
+    }
+
+    /**
+     * Determine actor type for the notification recipient
+     * Note: This determines who SHOULD receive notifications based on their role,
+     * not who triggered the original event
+     */
+    protected function getActorType(Authenticatable $user, Ticket $record): string
+    {
+                if ($user->getKey() === $record->submitter_id) {
+            return 'user_triggered';
+        }
+        
+                if (\Illuminate\Support\Facades\Gate::forUser($user)->allows('update', $record)) {
+            return 'supporter_triggered';
+        }
+        
+        return 'user_triggered';     }
+
+    /**
+     * Send notifications through all configured channels
+     */
+    protected function sendThroughConfiguredChannels(Authenticatable $user, Ticket $record, string $notificationClass, array $configuration): void
+    {
+                if ($this->shouldSendEmail($configuration)) {
+            \Illuminate\Support\Facades\Notification::send($user, new $notificationClass($record, $this->notificationType));
+        }
+        
+        // Future channels can be added here
+        // if ($this->shouldSendSlack($configuration)) {
+        //     $this->sendSlackNotification($user, $record);
+        // }
+        
+        // if ($this->shouldSendSms($configuration)) {
+        //     $this->sendSmsNotification($user, $record);
+        // }
+    }
+
+    /**
+     * Determine if email should be sent based on configuration
+     */
+    protected function shouldSendEmail(array $configuration): bool
+    {
+        if (isset($configuration['notify_user']) || isset($configuration['notify_supporter'])) {
+            return $configuration['notify_user'] ?? $configuration['notify_supporter'] ?? false;
+        }
+        
+        return $configuration['email_user'] ?? $configuration['email_supporter'] ?? $configuration['email_both'] ?? false;
     }
 
     /**

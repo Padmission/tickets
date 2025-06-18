@@ -318,7 +318,19 @@ describe('Recipient and Strategy Logic', function () {
             'submitter_id' => $submitter->id,
         ]);
 
-        $event = new TicketActivityEvent($ticket, ActivityType::Message);
+        // Set up configuration that notifies both users for activity events
+        $config = \Padmission\Tickets\ConfigurationManagers\NotificationConfiguration::make()
+            ->onTicketActivity(
+                userTriggered: ['notify_user' => true, 'notify_supporter' => true]
+            );
+        
+        $panel = \Filament\Facades\Filament::getCurrentPanel();
+        $plugin = \Padmission\Tickets\TicketPlugin::make()
+            ->notificationConfiguration($config);
+        $panel->plugin($plugin);
+
+        // Create event with a user actor to trigger user_triggered config
+        $event = new TicketActivityEvent($ticket, ActivityType::Message, $submitter);
         $recipientService = app(NotificationRecipientService::class);
 
         $recipients = $recipientService->getNotificationRecipients($event);

@@ -20,8 +20,7 @@ class TicketNotification extends Notification
         protected ?EmailStyleService $styleService = null,
         protected ?TicketUrlService $urlService = null
     ) {
-        // Use app() for dependency injection if services not provided
-        $this->activityService ??= app(TicketActivityService::class);
+		$this->activityService ??= app(TicketActivityService::class);
         $this->logoService ??= app(EmailLogoService::class);
         $this->styleService ??= app(EmailStyleService::class);
         $this->urlService ??= app(TicketUrlService::class);
