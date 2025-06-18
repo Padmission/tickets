@@ -27,7 +27,17 @@ class NotificationRecipientService
         if (method_exists($user, 'ticketNotificationStrategy')) {
             return $user->ticketNotificationStrategy();
         }
-
-        return config('padmission-tickets.default-notification-strategy', NotificationStrategy::Debounced);
+	    /**
+	     * Error was here.  The config value was returning as a string.
+	     */
+		$strat = config('padmission-tickets.default-notification-strategy', NotificationStrategy::Debounced);
+		if (is_string($strat)) {
+			try {
+				$strat = NotificationStrategy::tryFrom($strat);
+			} catch (\Throwable $e) {
+				$strat = NotificationStrategy::Debounced;
+			}
+		}
+        return $strat;
     }
 }

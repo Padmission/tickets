@@ -54,10 +54,10 @@ class TicketNotificationListener
     {
         $strategy = $this->recipientService->getUserNotificationStrategy($user);
 
-        if ($strategy === NotificationStrategy::Immediate) {
-            $this->dispatchNotificationJob($user, $event->ticket, $type);
-        } else {
-            $this->dispatchDebouncedNotification($user, $event->ticket, $type);
+		if ($strategy == NotificationStrategy::Debounced) {
+			$this->dispatchDebouncedNotification($user, $event->ticket, $type);
+		} else {
+			$this->dispatchNotificationJob($user, $event->ticket, $type);
         }
     }
 
