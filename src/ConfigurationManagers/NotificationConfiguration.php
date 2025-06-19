@@ -78,14 +78,6 @@ class NotificationConfiguration
         return array_key_exists($event, $this->getDefaultSettings());
     }
 
-    private function getAvailableMethods(): array
-    {
-        return array_map(
-            fn ($event) => 'on'.Str::studly($event),
-            array_keys($this->getDefaultSettings())
-        );
-    }
-
     private function configureEventDynamically(
         string $event,
         array|callable|null $userTriggered = null,
@@ -128,27 +120,7 @@ class NotificationConfiguration
 
         return $this;
     }
-
-    private function configureEventWithCallbackAndContext(string $event, callable $callback, $ticketContext = null, $userContext = null): static
-    {
-        $context = new EventConfigurationContext($event, $this->getDefaultSettingsFor($event));
-
-        $reflection = new \ReflectionFunction($callback);
-        $paramCount = $reflection->getNumberOfParameters();
-
-        if ($paramCount === 1) {
-            $callback($context);
-        } elseif ($paramCount === 2) {
-            $callback($context, $ticketContext);
-        } elseif ($paramCount >= 3) {
-            $callback($context, $ticketContext, $userContext);
-        }
-
-        $this->eventSettings[$event] = $context->build();
-
-        return $this;
-    }
-
+	
     public function getSettingsForWithContext(string $event, $ticketContext = null, $userContext = null): EventNotificationSettings
     {
         if (isset($this->eventCallbacks[$event])) {
