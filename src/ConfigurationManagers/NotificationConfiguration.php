@@ -257,7 +257,6 @@ class NotificationConfiguration
     public function getSettingsFor(string $event): EventNotificationSettings
     {
         if (! $this->isValidEvent($event)) {
-	        dd($event);
             throw new InvalidEventException($event);
         }
 
