@@ -1,10 +1,12 @@
 <?php
 
 use Padmission\Tickets\Notifications\OtpNotification;
+use Padmission\Tickets\Tests\User;
 
 test('OtpNotification contains the OTP', function () {
     $otp = '123456';
-    $notification = new OtpNotification($otp);
+    $user = User::factory()->create();
+    $notification = new OtpNotification($user, $otp);
 
     expect($notification->otp)->toBe($otp);
 

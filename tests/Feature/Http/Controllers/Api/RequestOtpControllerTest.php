@@ -1,7 +1,6 @@
 <?php
 
 use Carbon\Carbon;
-use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Padmission\Tickets\Notifications\OtpNotification;
 use Padmission\Tickets\Tests\User;
@@ -42,18 +41,15 @@ it('does not show an error when no user with email was found', function () {
 it('sends a notification', function () {
     Notification::fake();
 
-    User::factory()->create(['email' => 'test@example.com']);
+    $user = User::factory()->create(['email' => 'test@example.com']);
 
     $this->post('/padmission-tickets/api/otp-request', [
         'email' => 'test@example.com',
     ]);
 
     Notification::assertSentTo(
-        new AnonymousNotifiable,
-        OtpNotification::class,
-        function ($notification, $channels, $notifiable) {
-            return $notifiable->routeNotificationFor('mail') === 'test@example.com';
-        }
+        $user,
+        OtpNotification::class
     );
 });
 
