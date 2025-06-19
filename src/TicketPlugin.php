@@ -8,6 +8,7 @@ use Filament\Panel;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use LogicException;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\NotificationStrategy;
@@ -187,12 +188,16 @@ final class TicketPlugin implements Plugin
 
     public function getNotificationConfiguration(): NotificationConfiguration
     {
-        if (isset($this->notificationConfiguration)) {
+        if (isset($this->notificationConfiguration) && !is_null($this->notificationConfiguration)) {
             return $this->notificationConfiguration;
         }
 
         $this->notificationConfiguration();
 
+	    if (!isset($this->notificationConfiguration) || is_null($this->notificationConfiguration)) {
+		    throw new LogicException('Notification configuration is not set.');
+	    }
+		
         return $this->notificationConfiguration;
     }
 

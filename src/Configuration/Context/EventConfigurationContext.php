@@ -6,14 +6,17 @@ use Padmission\Tickets\Configuration\Data\EventNotificationSettings;
 
 class EventConfigurationContext
 {
+	/** @phpstan-ignore-next-line */
+	protected string $event;
     private array $userTriggered;
 
     private array $supporterTriggered;
 
     public function __construct(
-        private string $event,
+        string $event,
         EventNotificationSettings $defaults
     ) {
+		$this->event = $event;
         $this->userTriggered = $defaults->userTriggered;
         $this->supporterTriggered = $defaults->supporterTriggered;
     }
