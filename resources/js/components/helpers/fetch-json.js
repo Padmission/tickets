@@ -1,20 +1,19 @@
 import __ from "./trans.js";
 
-class HttpError
-{
-    constructor(response) {
-        this.response = response
-    }
+class HttpError {
+	constructor(response) {
+		this.response = response;
+	}
 
-    async error(key) {
-        try {
-            const json = await this.response.json();
+	async error(key) {
+		try {
+			const json = await this.response.json();
 
             return json.error || __('errors.unknown');
-        } catch (e) {
+		} catch (e) {
             return __('errors.unknown');
-        }
-    }
+		}
+	}
 }
 
 export default async function fetchJson(url, data = {}, method = "GET") {

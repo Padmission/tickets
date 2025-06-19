@@ -11,29 +11,33 @@ customElements.define(
 			return false;
 		}
 
-        back() {
+		back() {
 			this.changeView("chat-otp-request");
 		}
 
-        async verifyUser(event) {
-            event.preventDefault();
+		async verifyUser(event) {
+			event.preventDefault();
 
-            const otp = this.querySelector('#otp').value
+			const otp = this.querySelector("#otp").value;
 
-            try {
-                const data = await fetchJson("/padmission-tickets/api/otp-verify", {otp}, 'POST');
-                this.changeView("chat-list-tickets");
-                config.userId = data.user_key;
-            } catch (e) {
-                const formField = this.querySelector('.form-field');
-                formField.classList.add('has-error')
-                formField.querySelector('.error').innerHTML = await e.error()
-            }
-        }
+			try {
+				const data = await fetchJson(
+					"/padmission-tickets/api/otp-verify",
+					{ otp },
+					"POST",
+				);
+				this.changeView("chat-list-tickets");
+				config.userId = data.user_key;
+			} catch (e) {
+				const formField = this.querySelector(".form-field");
+				formField.classList.add("has-error");
+				formField.querySelector(".error").innerHTML = await e.error();
+			}
+		}
 
 		async render() {
-            // biome-ignore format: preserve template formatting
-            return render(`
+			// biome-ignore format: preserve template formatting
+			return render(`
                 <div class="chat-list-tickets">
                     <header>
                         <button

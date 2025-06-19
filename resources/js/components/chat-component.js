@@ -6,7 +6,7 @@ import fetchJson from "./helpers/fetch-json";
 
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
-import config from "./helpers/config.js"
+import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
 customElements.define(
@@ -19,7 +19,7 @@ customElements.define(
 		constructor() {
 			super();
 
-            console.log('config', config)
+			console.log("config", config);
 
 			this.scrollThreshold = 100;
 			this.pollingIntervalMs = 5000;

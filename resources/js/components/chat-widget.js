@@ -14,21 +14,21 @@ customElements.define(
 		get stylesheet() {
 			return "/css/padmission-tickets/chat-widget.css";
 		}
-        beforeRender() {
-            config.setConfig(JSON.parse(this.config));
-        }
+		beforeRender() {
+			config.setConfig(JSON.parse(this.config));
+		}
 
-        renderedCallback() {
+		renderedCallback() {
 			this.shadowRoot
 				.querySelector("button")
 				.addEventListener("click", (event) => {
-                    if (! config.userId) {
-                        this.changeView("chat-otp-request");
-                    } else {
-                        this.changeView("chat-list-tickets");
-                    }
+					if (!config.userId) {
+						this.changeView("chat-otp-request");
+					} else {
+						this.changeView("chat-list-tickets");
+					}
 
-                    this.shadowRoot.querySelector("dialog").show();
+					this.shadowRoot.querySelector("dialog").show();
 				});
 
 			window.addEventListener("close-chat-widget", (event) => {
@@ -46,9 +46,9 @@ customElements.define(
 				this.changeView(viewName, attributes);
 			});
 
-            if (config.userId) {
-			    this.openTicketByHash();
-            }
+			if (config.userId) {
+				this.openTicketByHash();
+			}
 		}
 
 		openTicketByHash() {

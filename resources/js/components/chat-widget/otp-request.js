@@ -9,24 +9,28 @@ customElements.define(
 		get useShadowDom() {
 			return false;
 		}
-        async verifyUser(event) {
-            event.preventDefault();
+		async verifyUser(event) {
+			event.preventDefault();
 
-            const email = this.querySelector('#email').value
+			const email = this.querySelector("#email").value;
 
-            try {
-                const data = await fetchJson("/padmission-tickets/api/otp-request", {email}, 'POST');
-                console.log('data', data)
-                this.changeView("chat-otp-verify");
-            } catch (e) {
-                const formField = this.querySelector('.form-field');
-                formField.classList.add('has-error')
-                formField.querySelector('.error').innerHTML = await e.error()
-            }
-        }
+			try {
+				const data = await fetchJson(
+					"/padmission-tickets/api/otp-request",
+					{ email },
+					"POST",
+				);
+				console.log("data", data);
+				this.changeView("chat-otp-verify");
+			} catch (e) {
+				const formField = this.querySelector(".form-field");
+				formField.classList.add("has-error");
+				formField.querySelector(".error").innerHTML = await e.error();
+			}
+		}
 		async render() {
-            // biome-ignore format: preserve template formatting
-            return render(`
+			// biome-ignore format: preserve template formatting
+			return render(`
                 <div class="chat-list-tickets">
                     <header>
                         <form data-close-dialog>
