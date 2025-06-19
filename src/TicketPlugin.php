@@ -10,9 +10,9 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
+use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\Filament\Widgets;
-use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
 {
@@ -172,7 +172,7 @@ final class TicketPlugin implements Plugin
     public function notificationConfiguration(
         NotificationConfiguration|callable|null $configuration = null
     ): self {
-        if ($configuration === null) {
+        if (!$configuration) {
             $this->notificationConfiguration = NotificationConfiguration::make();
         } elseif (is_callable($configuration)) {
             $this->notificationConfiguration = $configuration(
@@ -190,6 +190,7 @@ final class TicketPlugin implements Plugin
         if (isset($this->notificationConfiguration)) {
             return $this->notificationConfiguration;
         }
+
         $this->notificationConfiguration();
 
         return $this->notificationConfiguration;
