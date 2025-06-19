@@ -11,7 +11,8 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\Contracts\IsTicketActivity as TicketActivity;
+//use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\TicketPlugin;
 use Tiptap\Editor;
 

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Models\Contracts\IsTicketActivity;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\TicketPlugin;
 
@@ -17,18 +18,27 @@ trait HasTicketActivities
         ActivitySender $sender = ActivitySender::User,
         ?int $userId = null,
         array $data = []
-    ): TicketActivity {
+    ): IsTicketActivity {
         $userId ??= auth()->id();
 
-        return $this->ticketActivities()->create([
-            'type' => $type,
-            'content' => $content ?? '',
-            'sender' => $sender,
-            'user_id' => $userId,
-            'data' => $data,
-        ]);
+		$ticketActivity = $this->ticketActivities()->create([
+			'type' => $type,
+			'content' => $content ?? '',
+			'sender' => $sender,
+			'user_id' => $userId,
+			'data' => $data,
+		]);
+
+		if (!$ticketActivity instanceof IsTicketActivity) {
+			throw new \LogicException('Invalid return');
+		}
+
+        return $ticketActivity;
     }
 
+	/**
+	 * @return HasMany<TicketActivity, self>
+	 */
     public function ticketActivities(): HasMany
     {
         return $this->hasMany(
