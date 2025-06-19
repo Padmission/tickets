@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Padmission\Tickets\Notifications\OtpNotification;
 use Padmission\Tickets\TicketPlugin;
@@ -52,8 +51,8 @@ class RequestOtpController
         $limiter->hit($rateLimitKey, 60);
 
         Notification::send(
-            (new AnonymousNotifiable)->route('mail', $email),
-            resolve(OtpNotification::class, ['otp' => $otp])
+            $user,
+            resolve(OtpNotification::class, ['user' => $user, 'otp' => $otp])
         );
 
         return response()->json();

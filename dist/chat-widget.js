@@ -40,7 +40,7 @@
                         }
                     </style>
                 </div>
-            `)}});var w=class{constructor(t){this.response=t}async error(t){try{return(await this.response.json()).error}catch(e){return console.log("json",e),"Unknown error"}}};async function u(s,t={},e="GET"){e==="GET"&&(s+="?"+new URLSearchParams(t).toString());let i=await fetch(s,{method:e,headers:{"Content-Type":"application/json",Accept:"application/json","X-Requested-With":"XMLHttpRequest","X-CSRF-TOKEN":document.querySelector('meta[name="csrf-token"]')?.getAttribute("content")||""},credentials:"same-origin",body:e==="POST"?JSON.stringify(t):null});if(!i.ok)throw new w(i);return await i.json()}customElements.define("chat-list-tickets",class extends l{get useShadowDom(){return!1}async renderedCallback(){let s=await this.fetchTickets(),t=a(`
+            `)}});var w=class{constructor(t){this.response=t}async error(t){try{return(await this.response.json()).error||o("errors.unknown")}catch{return o("errors.unknown")}}};async function u(s,t={},e="GET"){e==="GET"&&(s+="?"+new URLSearchParams(t).toString());let i=await fetch(s,{method:e,headers:{"Content-Type":"application/json",Accept:"application/json","X-Requested-With":"XMLHttpRequest","X-CSRF-TOKEN":document.querySelector('meta[name="csrf-token"]')?.getAttribute("content")||""},credentials:"same-origin",body:e==="POST"?JSON.stringify(t):null});if(!i.ok)throw new w(i);return await i.json()}customElements.define("chat-list-tickets",class extends l{get useShadowDom(){return!1}async renderedCallback(){let s=await this.fetchTickets(),t=a(`
                 <ul class="ticket-list">
                     ${s.map(e=>`
                         <li>

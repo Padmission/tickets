@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notification;
 class OtpNotification extends Notification
 {
     public function __construct(
+        public $user,
         public string $otp,
     ) {}
 

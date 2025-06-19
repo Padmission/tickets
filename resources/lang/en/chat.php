@@ -5,6 +5,7 @@ return [
     'close_modal' => 'Close modal',
 
     'errors' => [
+        'unknown' => 'Unknown error',
         'too_many_requests' => 'Too many requests. Retry in :seconds seconds.',
     ],
 

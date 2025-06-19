@@ -1,3 +1,5 @@
+import __ from "./trans.js";
+
 class HttpError
 {
     constructor(response) {
@@ -8,10 +10,9 @@ class HttpError
         try {
             const json = await this.response.json();
 
-            return json.error;
+            return json.error || __('errors.unknown');
         } catch (e) {
-            console.log('json', e)
-            return 'Unknown error';
+            return __('errors.unknown');
         }
     }
 }
