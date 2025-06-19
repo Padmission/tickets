@@ -188,16 +188,16 @@ final class TicketPlugin implements Plugin
 
     public function getNotificationConfiguration(): NotificationConfiguration
     {
-        if (isset($this->notificationConfiguration) && !is_null($this->notificationConfiguration)) {
+        if (isset($this->notificationConfiguration) && ! is_null($this->notificationConfiguration)) {
             return $this->notificationConfiguration;
         }
 
         $this->notificationConfiguration();
 
-	    if (!isset($this->notificationConfiguration) || is_null($this->notificationConfiguration)) {
-		    throw new LogicException('Notification configuration is not set.');
-	    }
-		
+        if (! isset($this->notificationConfiguration) || is_null($this->notificationConfiguration)) {
+            throw new LogicException('Notification configuration is not set.');
+        }
+
         return $this->notificationConfiguration;
     }
 

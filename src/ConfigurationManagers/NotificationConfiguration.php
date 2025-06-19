@@ -50,10 +50,10 @@ class NotificationConfiguration
     /** @var array<string, EventNotificationSettings> */
     private array $eventSettings = [];
 
-	public static function make(): self
-	{
-		return new self();
-	}
+    public static function make(): self
+    {
+        return new self;
+    }
 
     public function __call(string $method, array $arguments): static
     {
