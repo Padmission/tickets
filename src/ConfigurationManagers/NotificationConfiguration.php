@@ -73,7 +73,8 @@ class NotificationConfiguration
 
     private function isValidEvent(string $event): bool
     {
-	    $event = Str::start($event, 'ticket_');
+        $event = Str::start($event, 'ticket_');
+
         return array_key_exists($event, $this->getDefaultSettings());
     }
 

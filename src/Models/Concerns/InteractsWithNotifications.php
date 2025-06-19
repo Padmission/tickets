@@ -14,9 +14,9 @@ trait InteractsWithNotifications
     public function getNotificationRecipients(): Collection
     {
         return collect([
-	            $this->assignee_id ? $this->assignee : null,
-	            $this->submitter_id ? $this->submitter : null
-            ])
+            $this->assignee_id ? $this->assignee : null,
+            $this->submitter_id ? $this->submitter : null,
+        ])
             ->filter()
             ->unique(function ($user) {
                 return $user->getKey();
