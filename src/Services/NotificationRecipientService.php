@@ -2,7 +2,7 @@
 
 namespace Padmission\Tickets\Services;
 
-use Illuminate\Contracts\Auth\Access\Authorizable;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\NotificationStrategy;
@@ -29,7 +29,7 @@ class NotificationRecipientService
         return $this->resolveRecipientsFromConfiguration($event, $configuration);
     }
 
-    public function getUserNotificationStrategy(Authorizable $user): NotificationStrategy
+    public function getUserNotificationStrategy(Authenticable $user): NotificationStrategy
     {
         if (method_exists($user, 'ticketNotificationStrategy')) {
             return $user->ticketNotificationStrategy();
