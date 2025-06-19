@@ -90,7 +90,7 @@ class SupportPanelProvider extends PanelProvider
                         NotificationConfiguration::make()
                             ->onTicketCreated(function ($context) {
                                 // New tickets always notify support team
-                                $context->notifySupporter();
+                                $context->onlyNotifySupporter();
                             })
                             ->onTicketActivity(function ($context) {
                                 // User messages notify support, support replies notify users
@@ -99,7 +99,7 @@ class SupportPanelProvider extends PanelProvider
                             })
                             ->onTicketClosed(function ($context) {
                                 // Always notify the user when ticket is closed
-                                $context->notifyUser();
+                                $context->onlyNotifyUser();
                             })
                     ),
             ]);
@@ -133,15 +133,11 @@ class CustomerPanelProvider extends PanelProvider
                     ->escalationLevel('customer')
                     ->notificationConfiguration(
                         NotificationConfiguration::make()
-                            ->onTicketCreated(function ($context, $ticket, $actor) {
+                            ->onTicketCreated(function ($context) {
                                 // Customers creating tickets - notify both for confirmation
-                                if ($ticket->priority?->display_name === 'Urgent') {
-                                    $context->notifyBoth(); // Urgent tickets notify everyone immediately
-                                } else {
-                                    $context->notifyUser(); // Standard tickets just confirm to user
-                                }
+                                $context->notifyBoth(); // Notify both customer and support
                             })
-                            ->onTicketActivity(function ($context, $ticket, $actor) {
+                            ->onTicketActivity(function ($context) {
                                 // Only notify customers of support team replies
                                 $context->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
                             })
@@ -153,39 +149,23 @@ class CustomerPanelProvider extends PanelProvider
 
 ## Notification Configuration
 
-### Business Hours & Priority-Based Notifications
+### Business Hours Configuration
 
 ```php
 NotificationConfiguration::make()
-    ->onTicketCreated(function ($context, $ticket, $actor) {
+    ->onTicketCreated(function ($context) {
         $isBusinessHours = now()->between('09:00', '17:00') && now()->isWeekday();
-        $isUrgent = $ticket->priority?->display_name === 'Urgent';
-        $isVip = $ticket->submitter?->hasRole('vip');
         
-        if ($isUrgent || $isVip) {
-            // Urgent/VIP tickets always notify everyone
-            $context->notifyBoth();
-        } elseif ($isBusinessHours) {
-            // Business hours - notify support team
-            $context->notifySupporter();
-        } else {
-            // After hours - just confirm receipt to user
-            $context->notifyUser();
-        }
-    })
-    ->onTicketActivity(function ($context, $ticket, $actor) {
-        // Smart activity notifications based on context
-        $context->when($actor?->hasRole('admin'), function ($ctx) {
-            // Admin replies always notify users
-            $ctx->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
-        })->when($ticket->assignee_id === $actor?->id, function ($ctx) {
-            // Assigned support agent replies notify user
-            $ctx->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
-        })->otherwise(function ($ctx) {
-            // Default behavior for other scenarios
-            $ctx->whenUserTriggered(['notify_user' => false, 'notify_supporter' => true])
-                ->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
+        $context->when($isBusinessHours, function ($ctx) {
+            $ctx->notifyBoth(); // During business hours, notify everyone
+        })->unless($isBusinessHours, function ($ctx) {
+            $ctx->onlyNotifySupporter(); // After hours, only notify support
         });
+    })
+    ->onTicketActivity(function ($context) {
+        // Standard activity notifications
+        $context->whenUserTriggered(['notify_user' => false, 'notify_supporter' => true])
+                ->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
     })
 ```
 
@@ -197,7 +177,7 @@ NotificationConfiguration::make()
         $context->inEnvironment('production', function ($ctx) {
             $ctx->notifyBoth();
         })->inEnvironment('staging', function ($ctx) {
-            $ctx->notifySupporter(); // Only notify testers in staging
+            $ctx->onlyNotifySupporter(); // Only notify testers in staging
         })->inEnvironment('local', function ($ctx) {
             $ctx->notifyNone(); // Don't spam in development
         });
@@ -349,13 +329,13 @@ return [
 
 ## Service Integration
 
-### Custom Notification Job with Slack Integration
+### Custom Notification Job with Enhanced Email Features
 
 ```php
 <?php
 // app/Jobs/CustomNotificationJob.php
 
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Padmission\Tickets\Jobs\NotificationJob;
 
 class CustomNotificationJob extends NotificationJob
@@ -365,45 +345,27 @@ class CustomNotificationJob extends NotificationJob
         // Run the parent notification logic
         parent::handle();
 
-        // Add custom Slack notification for urgent tickets
-        if ($this->shouldSendSlackNotification()) {
-            $this->sendSlackNotification();
+        // Add custom urgent ticket email notification
+        if ($this->shouldSendUrgentEmailNotification()) {
+            $this->sendUrgentEmailNotification();
         }
     }
 
-    protected function shouldSendSlackNotification(): bool
+    protected function shouldSendUrgentEmailNotification(): bool
     {
         return $this->ticket->priority?->display_name === 'Urgent'
-            && config('services.slack.webhook_url');
+            && config('tickets.urgent_email_enabled', true);
     }
 
-    protected function sendSlackNotification(): void
+    protected function sendUrgentEmailNotification(): void
     {
-        Http::post(config('services.slack.webhook_url'), [
-            'text' => "🚨 Urgent Ticket Created",
-            'blocks' => [
-                [
-                    'type' => 'section',
-                    'text' => [
-                        'type' => 'mrkdwn',
-                        'text' => "*Urgent Ticket #{$this->ticket->id}*\n" .
-                                 "Subject: {$this->ticket->subject}\n" .
-                                 "Submitter: {$this->ticket->submitter?->name}\n" .
-                                 "Priority: {$this->ticket->priority?->display_name}"
-                    ]
-                ],
-                [
-                    'type' => 'actions',
-                    'elements' => [
-                        [
-                            'type' => 'button',
-                            'text' => ['type' => 'plain_text', 'text' => 'View Ticket'],
-                            'url' => route('filament.support.resources.tickets.view', $this->ticket)
-                        ]
-                    ]
-                ]
-            ]
-        ]);
+        $urgentRecipients = config('tickets.urgent_notification_emails', []);
+        
+        if (!empty($urgentRecipients)) {
+            Mail::to($urgentRecipients)->send(
+                new \App\Mail\UrgentTicketNotification($this->ticket)
+            );
+        }
     }
 }
 ```
@@ -543,131 +505,57 @@ class TicketEscalationTest extends TestCase
 }
 ```
 
-### Unit Test for Custom Notification Logic
+### Unit Test for Notification Configuration
 
 ```php
 <?php
-// tests/Unit/CustomNotificationJobTest.php
+// tests/Unit/NotificationConfigurationTest.php
 
-use App\Jobs\CustomNotificationJob;
-use App\Models\Ticket;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Queue;
-use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
-
-class CustomNotificationJobTest extends TestCase
-{
-    use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        (new TicketPrioritySeeder)->run();
-        
-        config(['services.slack.webhook_url' => 'https://hooks.slack.com/test']);
-    }
-
-    test('urgent tickets send slack notifications', function () {
-        Http::fake();
-        
-        $urgentPriority = \Padmission\Tickets\Models\TicketPriority::where('display_name', 'Urgent')->first();
-        $user = User::factory()->create();
-        $ticket = Ticket::factory()->create([
-            'priority_id' => $urgentPriority->id,
-            'subject' => 'Critical system failure',
-        ]);
-
-        $job = new CustomNotificationJob($ticket, $user, 'created');
-        $job->handle();
-
-        Http::assertSent(function ($request) use ($ticket) {
-            return $request->url() === config('services.slack.webhook_url')
-                && str_contains($request->body(), "Urgent Ticket #{$ticket->id}")
-                && str_contains($request->body(), 'Critical system failure');
-        });
-    });
-
-    test('normal priority tickets do not send slack notifications', function () {
-        Http::fake();
-        
-        $normalPriority = \Padmission\Tickets\Models\TicketPriority::where('display_name', 'Normal')->first();
-        $user = User::factory()->create();
-        $ticket = Ticket::factory()->create([
-            'priority_id' => $normalPriority->id,
-        ]);
-
-        $job = new CustomNotificationJob($ticket, $user, 'created');
-        $job->handle();
-
-        Http::assertNothingSent();
-    });
-}
-```
-
-### Integration Test for Panel-Specific Configuration
-
-```php
-<?php
-// tests/Feature/PanelSpecificNotificationTest.php
-
-use App\Models\User;
-use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
-use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;
 
-class PanelSpecificNotificationTest extends TestCase
+class NotificationConfigurationTest extends TestCase
 {
     use RefreshDatabase;
 
-    test('support panel has different notification rules than customer panel', function () {
-        Notification::fake();
+    test('business hours configuration works', function () {
+        $config = NotificationConfiguration::make()
+            ->onTicketCreated(function ($context) {
+                $isBusinessHours = now()->between('09:00', '17:00') && now()->isWeekday();
+                
+                $context->when($isBusinessHours, function ($ctx) {
+                    $ctx->notifyBoth();
+                })->unless($isBusinessHours, function ($ctx) {
+                    $ctx->onlyNotifySupporter();
+                });
+            });
 
-        // Configure support panel
-        $supportPanel = Filament::getPanel('support');
-        $supportPanel->plugin(
-            TicketPlugin::make()->notificationConfiguration(
-                NotificationConfiguration::make()
-                    ->onTicketCreated(function ($context) {
-                        $context->notifyBoth(); // Support panel notifies everyone
-                    })
-            )
-        );
+        $settings = $config->getSettingsFor('ticket_created');
+        $userTriggered = $settings->getSettingsFor('user_triggered');
 
-        // Configure customer panel  
-        $customerPanel = Filament::getPanel('customer');
-        $customerPanel->plugin(
-            TicketPlugin::make()->notificationConfiguration(
-                NotificationConfiguration::make()
-                    ->onTicketCreated(function ($context) {
-                        $context->notifyUser(); // Customer panel only confirms to user
-                    })
-            )
-        );
+        // This will depend on when the test runs, but structure should be valid
+        expect($userTriggered)
+            ->toHaveKey('notify_user')
+            ->toHaveKey('notify_supporter');
+    });
 
-        $user = User::factory()->create();
-        $supporter = User::factory()->create();
+    test('environment specific configuration works', function () {
+        $config = NotificationConfiguration::make()
+            ->onTicketCreated(function ($context) {
+                $context->inEnvironment('testing', function ($ctx) {
+                    $ctx->notifyNone();
+                })->inEnvironment('production', function ($ctx) {
+                    $ctx->notifyBoth();
+                });
+            });
 
-        // Test support panel behavior
-        Filament::setCurrentPanel($supportPanel);
-        $supportTicket = Ticket::factory()->create([
-            'submitter_id' => $user->id,
-            'assignee_id' => $supporter->id,
-        ]);
+        $settings = $config->getSettingsFor('ticket_created');
+        $userTriggered = $settings->getSettingsFor('user_triggered');
 
-        // Test customer panel behavior
-        Filament::setCurrentPanel($customerPanel);
-        $customerTicket = Ticket::factory()->create([
-            'submitter_id' => $user->id,
-            'assignee_id' => $supporter->id,
-        ]);
-
-        // Verify different notification behaviors
-        // (Add specific notification assertions based on your implementation)
+        // Should match testing environment
+        expect($userTriggered)
+            ->toHaveKey('notify_user', false)
+            ->toHaveKey('notify_supporter', false);
     });
 }
 ```

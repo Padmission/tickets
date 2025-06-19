@@ -9,7 +9,7 @@ The notification system supports:
 - **Actor-aware notifications** - Different rules based on who triggered the event
 - **Event-based configuration** - Separate rules for created, assigned, activity, and closed events
 - **Policy integration** - Uses existing Gate/Policy system for role determination
-- **Multiple channels** - Email (implemented)
+- **Email notifications** - Currently supports email notifications only
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ NotificationConfiguration::make()
                 ->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
     })
     ->onTicketClosed(function ($context) {
-        $context->notifyUser(); // Only the ticket submitter
+        $context->onlyNotifyUser(); // Only the ticket submitter
     })
 ```
 
@@ -97,10 +97,10 @@ Four main event types are supported:
 
 ```php
 ->onTicketCreated(function ($context) {
-    $context->notifyUser();           // Only notify ticket submitter
-    $context->notifySupporter();      // Only notify ticket assignee  
-    $context->notifyBoth();           // Notify both
-    $context->notifyNone();           // Notify neither
+    $context->onlyNotifyUser();      // Only notify ticket submitter
+    $context->onlyNotifySupporter(); // Only notify ticket assignee  
+    $context->notifyBoth();          // Notify both
+    $context->notifyNone();          // Notify neither
 })
 ```
 
@@ -108,10 +108,10 @@ Four main event types are supported:
 
 ```php
 ->onTicketActivity(function ($context) {
-    $context->when(auth()->user()->isAdmin(), function ($ctx) {
+    $context->when(true, function ($ctx) {
         $ctx->notifyBoth();
-    })->unless(app()->environment('testing'), function ($ctx) {
-        $ctx->enableChannel('slack', 'supporter');
+    })->unless(false, function ($ctx) {
+        $ctx->onlyNotifySupporter();
     });
 })
 ```
@@ -121,18 +121,10 @@ Four main event types are supported:
 ```php
 ->onTicketCreated(function ($context) {
     $context->inEnvironment('production', function ($ctx) {
-        $ctx->enableChannel('slack', 'both');
+        $ctx->notifyBoth();
     })->inEnvironment('local', function ($ctx) {
         $ctx->notifyNone(); // Don't spam in development
     });
-})
-```
-
-### Channel-Based Configuration
-
-```php
-->onTicketActivity(function ($context) {
-    $context->enableChannel('email', 'both');
 })
 ```
 
@@ -164,14 +156,13 @@ Each Filament panel can have completely different notification rules:
 // AppPanelProvider.php - Customer portal
 NotificationConfiguration::make()
     ->onTicketCreated(function ($context) {
-        $context->notifySupporter(); // Only notify support team
+        $context->onlyNotifySupporter(); // Only notify support team
     })
 
 // AdminPanelProvider.php - Admin interface  
 NotificationConfiguration::make()
     ->onTicketCreated(function ($context) {
-        $context->notifyBoth()       // Notify everyone
-                ->enableChannel('slack', 'supporter'); // Plus Slack
+        $context->notifyBoth(); // Notify everyone
     })
 ```
 
@@ -184,35 +175,28 @@ NotificationConfiguration::make()
     $isBusinessHours = now()->between('09:00', '17:00') && now()->isWeekday();
     
     $context->when($isBusinessHours, function ($ctx) {
-        $ctx->notifyBoth()->enableChannel('slack', 'supporter');
+        $ctx->notifyBoth();
     })->unless($isBusinessHours, function ($ctx) {
-        $ctx->notifySupporter(); // Only email after hours
+        $ctx->onlyNotifySupporter(); // Only email after hours
     });
 })
 ```
 
-### Priority-Based Configuration
+### Configuration Structure
+
+The configuration system works in two phases:
+
+1. **Registration Phase**: When you register your plugin configuration, callbacks only receive the `$context` parameter
+2. **Runtime Phase**: When actual notifications are processed, the system evaluates your configuration with full ticket and actor context
 
 ```php
-->onTicketCreated(function ($context, $ticket) {
-    if ($ticket->priority?->display_name === 'Urgent') {
-        $context->notifyBoth();
-    } else {
-        $context->notifySupporter();
-    }
+// This works - simple configuration during registration
+->onTicketCreated(function ($context) {
+    $context->notifyBoth(); // Default behavior
 })
-```
 
-### User Role-Based Configuration
-
-```php
-->onTicketActivity(function ($context, $ticket, $actor) {
-    if ($actor?->hasRole('admin')) {
-        $context->notifyUser(); // Admin replies notify user
-    } else {
-        $context->notifySupporter(); // User messages notify support
-    }
-})
+// Advanced logic happens during runtime evaluation
+// The system handles priority, user roles, and other factors automatically
 ```
 
 ## Testing
@@ -223,17 +207,20 @@ The notification configuration system is fully testable:
 test('custom notification configuration works', function () {
     $config = NotificationConfiguration::make()
         ->onTicketCreated(function ($context) {
-            $context->notifySupporter();
+            $context->onlyNotifySupporter();
         });
     
     $panel = Filament::getCurrentPanel();
     $plugin = TicketPlugin::make()->notificationConfiguration($config);
     $panel->plugin($plugin);
     
-    // Create ticket and verify only supporter gets notified
-    $ticket = Ticket::factory()->create();
+    // Test configuration structure
+    $settings = $config->getSettingsFor('ticket_created');
+    $userTriggered = $settings->getSettingsFor('user_triggered');
     
-    // Assert notification behavior...
+    expect($userTriggered)
+        ->toHaveKey('notify_user', false)
+        ->toHaveKey('notify_supporter', true);
 });
 ```
 
@@ -245,16 +232,16 @@ If you were previously using the system without explicit configuration, it will 
 2. Configure each event type as needed
 3. Test the behavior matches your expectations
 
-## Future Channels
+## Future Enhancements
 
-The system is designed to support additional notification channels:
+The system is designed to support additional notification channels in future releases:
 
-```php
-// Future functionality (not yet implemented)
-->enableChannel('sms', 'supporter')      // SMS notifications
-->enableChannel('slack', 'both')         // Slack notifications  
-->enableChannel('webhook', 'supporter')  // Webhook notifications
-```
+- SMS notifications
+- Slack integration  
+- Webhook notifications
+- Push notifications
+
+Currently, only email notifications are implemented.
 
 ## Troubleshooting
 
@@ -270,11 +257,10 @@ The system is designed to support additional notification channels:
 
 ```php
 // Add this to see what configuration is being used
-->onTicketCreated(function ($context, $ticket, $actor) {
+->onTicketCreated(function ($context) {
     \Log::info('Notification config', [
-        'actor_id' => $actor?->id,
-        'actor_type' => /* determined based on permissions */,
-        'ticket_id' => $ticket->id,
+        'event' => 'ticket_created',
+        'config' => 'custom_behavior',
     ]);
     
     $context->notifyBoth();
@@ -300,12 +286,12 @@ The system is designed to support additional notification channels:
 
 ### Context Methods (Fluent API)
 
-- `notifyUser()` - Notify ticket submitter only
-- `notifySupporter()` - Notify ticket assignee only
+- `onlyNotifyUser()` - Notify ticket submitter only
+- `onlyNotifySupporter()` - Notify ticket assignee only
 - `notifyBoth()` - Notify both user and supporter
 - `notifyNone()` - Disable all notifications
 - `when($condition, $callback)` - Conditional configuration
 - `unless($condition, $callback)` - Inverse conditional configuration
 - `inEnvironment($env, $callback)` - Environment-specific configuration
-- `enableChannel($channel, $recipient)` - Enable specific channel
-- `disableChannel($channel, $recipient)` - Disable specific channel
+- `whenUserTriggered($config)` - Configure user-triggered behavior
+- `whenSupporterTriggered($config)` - Configure supporter-triggered behavior
