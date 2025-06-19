@@ -9,9 +9,9 @@ class HttpError {
 		try {
 			const json = await this.response.json();
 
-            return json.error || __('errors.unknown');
+			return json.error || __("errors.unknown");
 		} catch (e) {
-            return __('errors.unknown');
+			return __("errors.unknown");
 		}
 	}
 }
