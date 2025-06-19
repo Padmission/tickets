@@ -81,6 +81,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
     {
         $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
         $user = $userModel::find($this->userId);
+
         return $user instanceof Authenticatable ? $user : null;
     }
 

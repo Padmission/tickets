@@ -120,7 +120,7 @@ class NotificationConfiguration
 
         return $this;
     }
-	
+
     public function getSettingsForWithContext(string $event, $ticketContext = null, $userContext = null): EventNotificationSettings
     {
         if (isset($this->eventCallbacks[$event])) {

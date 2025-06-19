@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Services;
 
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\NotificationStrategy;
