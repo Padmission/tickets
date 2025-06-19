@@ -1,11 +1,11 @@
 <?php
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Tests\User;
-use Carbon\Carbon;
 
 beforeEach(function () {
     Queue::fake();
@@ -16,10 +16,10 @@ beforeEach(function () {
     $this->supporter = User::factory()->create(['name' => 'Support Agent']);
 
     // Seed priorities if they don't exist
-    if (!TicketPriority::where('display_name', 'Urgent')->exists()) {
+    if (! TicketPriority::where('display_name', 'Urgent')->exists()) {
         TicketPriority::factory()->create(['display_name' => 'Urgent', 'order' => 1]);
     }
-    if (!TicketPriority::where('display_name', 'Normal')->exists()) {
+    if (! TicketPriority::where('display_name', 'Normal')->exists()) {
         TicketPriority::factory()->create(['display_name' => 'Normal', 'order' => 2]);
     }
 });
@@ -39,7 +39,7 @@ describe('Documentation Examples - Basic Configuration', function () {
 
         // Test ticket created configuration
         $createdSettings = $config->getSettingsFor('ticket_created');
-        
+
         $userTriggered = $createdSettings->getSettingsFor('user_triggered');
         expect($userTriggered)
             ->toHaveKey('notify_user', true)
@@ -52,7 +52,7 @@ describe('Documentation Examples - Basic Configuration', function () {
 
         // Test ticket activity configuration
         $activitySettings = $config->getSettingsFor('ticket_activity');
-        
+
         $activityUserTriggered = $activitySettings->getSettingsFor('user_triggered');
         expect($activityUserTriggered)
             ->toHaveKey('notify_user', false)
@@ -71,7 +71,7 @@ describe('Documentation Examples - Basic Configuration', function () {
             })
             ->onTicketActivity(function ($context) {
                 $context->whenUserTriggered(['notify_user' => false, 'notify_supporter' => true])
-                        ->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
+                    ->whenSupporterTriggered(['notify_user' => true, 'notify_supporter' => false]);
             })
             ->onTicketClosed(function ($context) {
                 $context->onlyNotifyUser(); // Only the ticket submitter
@@ -112,7 +112,7 @@ describe('Documentation Examples - Boolean Helper Methods', function () {
                 $context->onlyNotifyUser();           // Only notify ticket submitter
             })
             ->onTicketActivity(function ($context) {
-                $context->onlyNotifySupporter();      // Only notify ticket assignee  
+                $context->onlyNotifySupporter();      // Only notify ticket assignee
             })
             ->onTicketClosed(function ($context) {
                 $context->notifyBoth();           // Notify both
@@ -128,7 +128,7 @@ describe('Documentation Examples - Boolean Helper Methods', function () {
             ->toHaveKey('notify_user', true)
             ->toHaveKey('notify_supporter', false);
 
-        // Test onlyNotifySupporter  
+        // Test onlyNotifySupporter
         $activitySettings = $config->getSettingsFor('ticket_activity');
         $activityConfig = $activitySettings->getSettingsFor('user_triggered');
         expect($activityConfig)
@@ -219,7 +219,7 @@ describe('Documentation Examples - Business Hours Configuration', function () {
         $config = NotificationConfiguration::make()
             ->onTicketCreated(function ($context) {
                 $isBusinessHours = now()->between('09:00', '17:00') && now()->isWeekday();
-                
+
                 $context->when($isBusinessHours, function ($ctx) {
                     $ctx->notifyBoth();
                 })->unless($isBusinessHours, function ($ctx) {
@@ -244,7 +244,7 @@ describe('Documentation Examples - Business Hours Configuration', function () {
         $config = NotificationConfiguration::make()
             ->onTicketCreated(function ($context) {
                 $isBusinessHours = now()->between('09:00', '17:00') && now()->isWeekday();
-                
+
                 $context->when($isBusinessHours, function ($ctx) {
                     $ctx->notifyBoth();
                 })->unless($isBusinessHours, function ($ctx) {
