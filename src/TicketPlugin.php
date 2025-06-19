@@ -172,7 +172,7 @@ final class TicketPlugin implements Plugin
     public function notificationConfiguration(
         NotificationConfiguration|callable|null $configuration = null
     ): self {
-        if (!$configuration) {
+        if (! $configuration) {
             $this->notificationConfiguration = NotificationConfiguration::make();
         } elseif (is_callable($configuration)) {
             $this->notificationConfiguration = $configuration(
