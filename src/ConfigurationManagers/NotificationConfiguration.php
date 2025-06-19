@@ -8,8 +8,8 @@ use Illuminate\Support\Str;
 use Padmission\Tickets\Configuration\Context\EventConfigurationContext;
 use Padmission\Tickets\Configuration\Data\EventNotificationSettings;
 use Padmission\Tickets\ConfigurationManagers\Concerns\HasDefaultNotificationSettings;
+use Padmission\Tickets\Exceptions\InvalidEventException;
 use Padmission\Tickets\Models\Ticket;
-use PHPUnit\Event\InvalidEventException;
 
 /**
  * $config = NotificationConfiguration::make()
@@ -73,6 +73,7 @@ class NotificationConfiguration
 
     private function isValidEvent(string $event): bool
     {
+	    $event = Str::start($event, 'ticket_');
         return array_key_exists($event, $this->getDefaultSettings());
     }
 
@@ -256,6 +257,7 @@ class NotificationConfiguration
     public function getSettingsFor(string $event): EventNotificationSettings
     {
         if (! $this->isValidEvent($event)) {
+	        dd($event);
             throw new InvalidEventException($event);
         }
 

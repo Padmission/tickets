@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Jobs;
 
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -11,7 +12,6 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -69,7 +69,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
                 return;
             }
             $this->sendNotification($user, $record, $notificationClass);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->handleException($e);
         }
     }
@@ -164,7 +164,6 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     protected function handleException(\Exception $e): void
     {
-        Log::error($e->getMessage());
         // Override in child classes for custom error handling
         // Default behavior is to silently continue
     }
