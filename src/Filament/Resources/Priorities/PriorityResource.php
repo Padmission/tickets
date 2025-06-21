@@ -33,7 +33,7 @@ class PriorityResource extends Resource
 
     public static function canAccess(): bool
     {
-        if (! Gate::getPolicyFor(TicketPriority::class)) {
+        if (! Gate::getPolicyFor(static::getModel())) {
             return Filament::auth()->user()->can('viewAny', TicketPlugin::resolveModelClass(Ticket::class));
         }
 
