@@ -3,7 +3,7 @@
 return [
     'ticket-history' => [
         'subject' => 'Your ticket has been updated',
-        'message' => 'A new ticket has been created with the subject: :subject',
+        'message' => 'Your ticket ":subject" has been updated with new activity.',
         'more-activities' => 'There are more activities on this ticket that are not shown in this email. View the ticket to see all activities.',
         'action' => 'View Ticket',
         'activities-header' => 'Recent Ticket Activity',

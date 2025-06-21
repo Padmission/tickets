@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Services;
 
+use Illuminate\Contracts\Support\Htmlable;
 use Padmission\Tickets\Models\Ticket;
 
 class EmailLogoService
@@ -9,7 +10,7 @@ class EmailLogoService
     /**
      * Get the email logo for a ticket
      */
-    public function getEmailLogo(Ticket $ticket): ?string
+    public function getEmailLogo(Ticket $ticket): string | Htmlable | null
     {
         $panelId = $ticket->panel;
         if (! $panelId) {

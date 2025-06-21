@@ -9,17 +9,13 @@ use Illuminate\Database\Eloquent\Scope;
 
 class CurrentPanelScope implements Scope
 {
-    public function apply(Builder $builder, Model $model): void
-    {
-        $panel = Filament::getCurrentPanel();
-        $panel = $panel ? $panel->getId() : $model->panel;
-        if ($panel) {
-            $builder->where('panel', $panel);
-        }
-    }
-
     public function __invoke($query): Builder
     {
         return $query->where('panel', Filament::getCurrentPanel()->getId());
+    }
+
+    public function apply(Builder $builder, Model $model)
+    {
+        $this($builder);
     }
 }

@@ -84,16 +84,11 @@ describe('Debouncing Core Functionality', function () {
         $createdJob = new NotificationJob($user, $ticket, 'created');
         $invalidJob = new NotificationJob($user, $ticket, 'invalid-type');
 
-        // Use reflection to test the protected method
-        $reflection = new ReflectionClass($activityJob);
-        $method = $reflection->getMethod('getNotificationClass');
-        $method->setAccessible(true);
-
-        expect($method->invoke($activityJob))
+        expect(invade($activityJob)->getNotificationClass())
             ->toBe(\Padmission\Tickets\Notifications\TicketNotification::class);
-        expect($method->invoke($createdJob))
+        expect(invade($createdJob)->getNotificationClass())
             ->toBe(\Padmission\Tickets\Notifications\TicketNotification::class);
-        expect($method->invoke($invalidJob))
+        expect(invade($invalidJob)->getNotificationClass())
             ->toBeNull();
     });
 
