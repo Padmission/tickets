@@ -16,14 +16,14 @@ trait CanBeAssigned
     protected function getUserDisplayName(?int $userId): string
     {
         if (! $userId) {
-            return 'unassigned';
+            return __('padmission-tickets::activities.user_display.unassigned');
         }
 
         $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
         $user = $userModel::find($userId);
 
         if (! $user) {
-            return "user {$userId}";
+            return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);
         }
 
         if ($user instanceof HasTicketDisplayName) {
@@ -44,7 +44,7 @@ trait CanBeAssigned
         }
 
         // Last resort fallback
-        return "user {$userId}";
+        return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);
     }
 
     /**
@@ -54,8 +54,8 @@ trait CanBeAssigned
     {
         if ($oldAssigneeId !== $newAssigneeId) {
             $assignmentMessage = $newAssigneeId
-                ? "Assigned to {$this->getUserDisplayName($newAssigneeId)}"
-                : 'Unassigned';
+                ? __('padmission-tickets::activities.assigned_to', ['name' => $this->getUserDisplayName($newAssigneeId)])
+                : __('padmission-tickets::activities.unassigned');
 
             $this->addTicketActivity(
                 ActivityType::AssigneeChanged,
