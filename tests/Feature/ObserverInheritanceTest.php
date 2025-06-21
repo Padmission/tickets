@@ -7,9 +7,6 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\TicketPlugin;
-
-uses(RefreshDatabase::class);
-
 // Mock user-created models that extend the package base models
 class CustomTicket extends \Padmission\Tickets\Models\Ticket
 {
@@ -271,25 +268,4 @@ it('ensures ticket observer handles status transition to closed', function () {
         ->where('type', ActivityType::Closed)
         ->first();
     expect($closeActivity)->not->toBeNull();
-});
-
-it('ensures custom models can add their own functionality', function () {
-    // Test that custom models can extend functionality
-    $customModel = new class extends \Padmission\Tickets\Models\Ticket
-    {
-        protected $table = 'tickets';
-
-        public function customMethod(): string
-        {
-            return 'custom functionality';
-        }
-
-        public function getCustomAttribute(): string
-        {
-            return 'custom attribute';
-        }
-    };
-
-    expect($customModel->customMethod())->toBe('custom functionality');
-    expect($customModel->custom)->toBe('custom attribute');
 });

@@ -40,22 +40,17 @@ describe('TicketNotificationListener Unit Tests', function () {
         $ticket = Ticket::factory()->open()->create();
         $listener = new TicketNotificationListener(app(NotificationRecipientService::class));
 
-        // Use reflection to test the protected method
-        $reflection = new ReflectionClass($listener);
-        $method = $reflection->getMethod('getNotificationType');
-        $method->setAccessible(true);
-
         // Test different event types
-        expect($method->invoke($listener, new TicketActivityEvent($ticket, ActivityType::Message)))
+        expect(invade($listener)->getNotificationType(new TicketActivityEvent($ticket, ActivityType::Message)))
             ->toBe('activity');
 
-        expect($method->invoke($listener, new TicketCreatedEvent($ticket)))
+        expect(invade($listener)->getNotificationType(new TicketCreatedEvent($ticket)))
             ->toBe('created');
 
-        expect($method->invoke($listener, new TicketAssignedEvent($ticket)))
+        expect(invade($listener)->getNotificationType(new TicketAssignedEvent($ticket)))
             ->toBe('assigned');
 
-        expect($method->invoke($listener, new TicketClosedEvent($ticket)))
+        expect(invade($listener)->getNotificationType(new TicketClosedEvent($ticket)))
             ->toBe('closed');
     });
 
@@ -128,12 +123,7 @@ describe('NotificationJob Unit Tests', function () {
 
         $job = new NotificationJob($user, $ticket, 'activity');
 
-        // Use reflection to test protected method
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('resolveUser');
-        $method->setAccessible(true);
-
-        $resolvedUser = $method->invoke($job);
+        $resolvedUser = invade($job)->resolveUser();
 
         expect($resolvedUser)->not->toBeNull()
             ->and($resolvedUser->id)->toBe($user->id);
@@ -145,12 +135,7 @@ describe('NotificationJob Unit Tests', function () {
 
         $job = new NotificationJob($user, $ticket, 'activity');
 
-        // Use reflection to test protected method
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('resolveModel');
-        $method->setAccessible(true);
-
-        $resolvedTicket = $method->invoke($job);
+        $resolvedTicket = invade($job)->resolveModel();
 
         expect($resolvedTicket)->not->toBeNull()
             ->and($resolvedTicket->id)->toBe($ticket->id);
@@ -165,12 +150,7 @@ describe('NotificationJob Unit Tests', function () {
         // Delete the user after job creation
         $user->delete();
 
-        // Use reflection to test protected method
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('resolveUser');
-        $method->setAccessible(true);
-
-        $resolvedUser = $method->invoke($job);
+        $resolvedUser = invade($job)->resolveUser();
 
         expect($resolvedUser)->toBeNull();
     });
@@ -184,12 +164,7 @@ describe('NotificationJob Unit Tests', function () {
         // Delete the ticket after job creation
         $ticket->delete();
 
-        // Use reflection to test protected method
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('resolveModel');
-        $method->setAccessible(true);
-
-        $resolvedTicket = $method->invoke($job);
+        $resolvedTicket = invade($job)->resolveModel();
 
         expect($resolvedTicket)->toBeNull();
     });
@@ -200,12 +175,7 @@ describe('NotificationJob Unit Tests', function () {
 
         $job = new NotificationJob($user, $ticket, 'activity');
 
-        // Use reflection to test protected method
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('getNotificationClass');
-        $method->setAccessible(true);
-
-        $notificationClass = $method->invoke($job);
+        $notificationClass = invade($job)->getNotificationClass();
 
         expect($notificationClass)->toBe(\Padmission\Tickets\Notifications\TicketNotification::class);
     });
@@ -216,12 +186,7 @@ describe('NotificationJob Unit Tests', function () {
 
         $job = new NotificationJob($user, $ticket, 'invalid-type');
 
-        // Use reflection to test protected method
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('getNotificationClass');
-        $method->setAccessible(true);
-
-        $notificationClass = $method->invoke($job);
+        $notificationClass = invade($job)->getNotificationClass();
 
         expect($notificationClass)->toBeNull();
     });
