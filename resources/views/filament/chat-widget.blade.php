@@ -2,7 +2,8 @@
     use Filament\Facades\Filament;
     use Filament\Support\Facades\FilamentAsset;
     use Padmission\Tickets\Models\Ticket;
-    use Padmission\Tickets\Services\TicketAuth;use Padmission\Tickets\TicketPlugin;
+    use Padmission\Tickets\Services\TicketAuth;
+    use Padmission\Tickets\TicketPlugin;
 
     $config = TicketPlugin::get()->getChatWidgetConfig();
 
