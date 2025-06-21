@@ -88,8 +88,7 @@ test('returns null when user has no previous notifications for ticket', function
 test('gets last notification for specific user and ticket', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new TicketNotification($ticket, 'history');
-
+	
     // Create a notification record
     $notificationRecord = $ticket->ticketNotifications()->create([
         'user_id' => $user->getKey(),
