@@ -1,8 +1,12 @@
-import BaseElement from "./helpers/base-element";
-import render from "./helpers/render";
+import BaseElement from "./helpers/base-element.js";
+import render from "./helpers/render.js";
+import config from "./helpers/config.js";
+import __ from "./helpers/trans.js";
 
-import "./chat-widget/view";
-import "./chat-widget/list";
+import "./chat-widget/view.js";
+import "./chat-widget/list.js";
+import "./chat-widget/otp-request.js";
+import "./chat-widget/otp-verify.js";
 
 customElements.define(
 	"chat-widget",
@@ -10,12 +14,20 @@ customElements.define(
 		get stylesheet() {
 			return "/css/padmission-tickets/chat-widget.css";
 		}
+		beforeRender() {
+			config.setConfig(JSON.parse(this.config));
+		}
 
 		renderedCallback() {
 			this.shadowRoot
 				.querySelector("button")
 				.addEventListener("click", (event) => {
-					this.changeView("chat-list-tickets");
+					if (!config.userId) {
+						this.changeView("chat-otp-request");
+					} else {
+						this.changeView("chat-list-tickets");
+					}
+
 					this.shadowRoot.querySelector("dialog").show();
 				});
 
@@ -34,7 +46,9 @@ customElements.define(
 				this.changeView(viewName, attributes);
 			});
 
-			this.openTicketByHash();
+			if (config.userId) {
+				this.openTicketByHash();
+			}
 		}
 
 		openTicketByHash() {
@@ -86,7 +100,7 @@ customElements.define(
                     class="button-icon"
                     data-open-dialog
                 >
-                    <span class="sr-only">Open support chat</span>
+                    <span class="sr-only">${__('open_modal')}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-question-icon lucide-message-circle-question"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                 </button>
 

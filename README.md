@@ -1,4 +1,4 @@
-# Padmission Tickets
+# Tickets
 
 [![Premium Package](https://img.shields.io/badge/package-premium-gold?style=flat-square)](https://tickets.padmission.com)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue?style=flat-square)](composer.json)
@@ -7,6 +7,19 @@
 
 ## Introduction
 
+Tickets is a comprehensive support ticket management system for Filament applications. It provides a full-featured ticketing system with chat widget, email authentication, activity tracking, and extensive customization options.
+
+## Key Features
+
+- 🎫 **Full Ticket Management** - Create, view, assign, and close tickets
+- 💬 **Embedded Chat Widget** - Real-time support chat for your users
+- 📧 **Email Authentication** - Allow non-authenticated users to submit tickets via email verification
+- 👥 **Multi-Tenancy Support** - Built-in support for multi-tenant applications
+- 📊 **Analytics Widgets** - Track open tickets, response times, and burndown charts
+- 🔄 **Turn Management** - Track whose turn it is to respond (User or Supporter)
+- 📝 **Activity Tracking** - Comprehensive logging of all ticket changes
+- 🔔 **Flexible Notifications** - Multiple notification strategies
+- 📎 **File Attachments** - Support for file uploads via Spatie Media Library
 
 ## Prerequisites
 
@@ -97,6 +110,20 @@ class User extends Authenticatable implements HasTicketDisplayName
 
 ## Configuration
 
+### Publishing Configuration
+
+To customize the package settings, publish the configuration file:
+
+```bash
+php artisan vendor:publish --tag="padmission-tickets-config"
+```
+
+This will create a `config/padmission-tickets.php` file where you can configure:
+- Model bindings
+- Multi-tenancy settings
+- Escalation levels
+- Attachment storage settings
+
 ### Resources
 
 The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use the `->registerResources()` method:
@@ -108,23 +135,40 @@ TicketPlugin::make()
     ->registerResources();
 ```
 
-For each resource you can easily overwrite it's label, navigation group, and navigation icon:
+This registers the following resources:
+- **TicketResource** - Main ticket management
+- **StatusResource** - Manage ticket statuses
+- **DispositionResource** - Manage ticket dispositions
+- **PriorityResource** - Manage ticket priorities
+
+For each resource you can easily overwrite its label, navigation group, sort, and navigation icon:
 
 ```php
-use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;class YourServiceProvider {
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+
+class YourServiceProvider {
     public function boot() {
         TicketResource::configure(
             modelLabel: 'Your Label',
             pluralModelLabel: fn () => __('your.model'),
             navigationGroup: 'New Group',
-            navigationIcon: 'heroicon-o-tag' 
+            navigationIcon: 'heroicon-o-tag',
+            navigationSort: 10, 
         );
     }
 }
 ```
 
 ## Widgets
-This package comes with multiple Filamnet widgets that can be added to your dashboard. You can find the widgets in the `Padmission\Tickets\Filament\Widgets` namespace. They are registered automatically when using `->registerResources()`. You can disable this by using `->registerResources(shouldRegisterWidgets: false)`.
+
+This package comes with multiple Filament widgets that can be added to your dashboard:
+
+- **OpenTicketsWidget** - Shows count of open tickets
+- **OpenSupporterTickets** - Shows tickets assigned to supporters
+- **TicketCloseTimeWidget** - Displays average ticket close times
+- **TicketBurndownChartWidget** - Visualizes ticket closure trends
+
+Widgets are registered automatically when using `->registerResources()`. You can disable this by using `->registerResources(shouldRegisterWidgets: false)`.
 
 By default, it will show the `TicketStatsWidget` on the `ListTickets` page.
 
@@ -147,21 +191,64 @@ Gate::policy(
 
 The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
 
-### Dispositions
+### Email Authentication for Non-Authenticated Users
 
-The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed.
-You can configure dispositions within each panel using the DispositionResource.
+The package supports email-based authentication for non-authenticated users, allowing them to submit and track tickets without creating an account. This is particularly useful for password reset requests or public support systems.
 
-### Chat Widget
-
-Users can create tickets via a chat widget. To enable the widget in a panel, use the `->showChatWidget()` method. You can configure the chat widget via `ChatWidgetConfig`
+To enable email authentication:
 
 ```php
-use Filament\Support\Colors\Color;use Padmission\Tickets\ChatWidgetConfig;use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\ChatWidgetConfig;
+use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
     ->showChatWidget(config: ChatWidgetConfig::make()
-        ->introMessage('Welcome to the support chat.')
+        ->allowEmailAuthentication(
+            allow: true,
+            allowGuests: true,
+            otpExpiresAfterMinutes: 10
+        )
+    );
+```
+
+How it works:
+1. User enters their email address
+2. System sends a 6-digit OTP (One-Time Password) to their email
+3. User enters the OTP to verify their identity
+4. User can then submit tickets and view their ticket history
+
+Features:
+- Rate limiting on OTP requests (1 per minute)
+- Rate limiting on OTP verification attempts (5 per minute)
+- Configurable OTP expiration time
+- Session-based authentication for verified users
+
+### Dispositions
+
+The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed. You can configure dispositions within each panel using the DispositionResource.
+
+### Chat Widget
+
+Users can create tickets via a chat widget. The widget provides a modern, real-time chat interface with:
+
+- **Rich text editor** with formatting options (bold, links, lists)
+- **Auto-response messages** after first user message
+- **Turn management** - Shows whose turn it is to respond
+- **File attachments** (when configured)
+- **Keyboard shortcuts** for power users
+
+To enable the widget in a panel, use the `->showChatWidget()` method:
+
+```php
+use Filament\Support\Colors\Color;
+use Padmission\Tickets\ChatWidgetConfig;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->showChatWidget(config: ChatWidgetConfig::make()
+        ->introMessage('Welcome to our support system! How can we help you today?')
+        ->autoResponse('Thanks for your message! A support agent will be with you shortly.')
+        ->placeholder('Type your message here...')
         ->primaryColor(Color::Cyan)
     );
 ```
@@ -178,18 +265,36 @@ Make sure the CSRF token is included in your HTML head section:
 <meta name="csrf-token" content="{{ csrf_token() }}">
 ```
 
-### Escalation levels
+### Multi-Tenancy Support
 
-You can have multiple panels with different "escalation levels". For example basic support and tech support. The standard level is `default`. You can configure your levels via `config/tickets.php`.
-
-To set the level for a panel use the `->escalationLevel()` method:
+The package includes built-in support for multi-tenant applications. Enable it in your configuration:
 
 ```php
-use Padmission\Tickets\TicketPlugin;
-
-TicketPlugin::make()
-    ->escalationLevel('tech');
+// config/padmission-tickets.php
+return [
+    'tenancy' => [
+        'enabled' => true,
+        'tenancy_model' => App\Models\Tenant::class,
+    ],
+];
 ```
+
+The package automatically handles:
+- Foreign key constraints based on your tenant model
+- UUID/ULID support for tenant IDs
+- Tenant isolation for all ticket operations
+
+### Escalation Levels
+
+COMING SOON
+
+### Turn Management
+
+The package automatically tracks whose "turn" it is to respond to a ticket:
+- **User Turn** - Waiting for user response
+- **Supporter Turn** - Waiting for support agent response
+
+This helps support teams prioritize tickets that need attention. Turn changes are automatically logged in the activity history.
 
 ### Ticket Assignment
 
@@ -200,15 +305,23 @@ The package comes with two default ticket assignment strategies. You can customi
 
 ```php
 use Padmission\Tickets\AssignmentStrategies\AssignDefaultUser;
+use Padmission\Tickets\AssignmentStrategies\AssignUserWithLeastTickets;
 use Padmission\Tickets\TicketPlugin;
 
+// Assign to specific user
 TicketPlugin::make()
     ->assignmentStrategy(
-        new AssignDefaultUser(1)
+        new AssignDefaultUser(userId: 1)
+    );
+
+// Or assign to user with least tickets
+TicketPlugin::make()
+    ->assignmentStrategy(
+        new AssignUserWithLeastTickets()
     );
 ```
 
-### Notification about new tickets
+### Notification Strategies
 
 The package comes with three default notification strategies. You can customize this by implementing your own `NotificationStrategy` class. The default strategies are:
 
@@ -217,14 +330,110 @@ The package comes with three default notification strategies. You can customize 
 - `NotifyAssignedUser`: Notifies the user assigned to the ticket
 
 ```php
-
 use Padmission\Tickets\NotificationStrategies\NotifyEmail;
+use Padmission\Tickets\NotificationStrategies\NotifyAllUsers;
+use Padmission\Tickets\NotificationStrategies\NotifyAssignedUser;
 use Padmission\Tickets\TicketPlugin;
 
+// Notify specific emails
 TicketPlugin::make()
     ->notificationStrategy(
-        new NotifyEmail(['info@example.com'])
+        new NotifyEmail(['support@example.com', 'admin@example.com'])
     );
+
+// Or notify all users who can view tickets
+TicketPlugin::make()
+    ->notificationStrategy(
+        new NotifyAllUsers()
+    );
+
+// Or notify only the assigned user
+TicketPlugin::make()
+    ->notificationStrategy(
+        new NotifyAssignedUser()
+    );
+```
+
+### Activity Tracking
+
+All ticket changes are automatically tracked in the activity log:
+
+- **Message** - Regular ticket messages
+- **Internal Message** - Internal notes not visible to end users
+- **Opened** - Ticket creation
+- **Priority Changed** - Priority modifications
+- **Status Changed** - Status updates
+- **Turn Changed** - Turn ownership changes
+- **Closed** - Ticket closure with disposition
+
+Activities include:
+- User who made the change
+- Timestamp
+- Previous and new values (where applicable)
+- Soft delete support for audit trails
+
+### File Attachments
+
+The package supports file attachments via Spatie Media Library. Configure the storage disk in your configuration:
+
+```php
+// config/padmission-tickets.php
+'attachments' => [
+    'storage' => env('MEDIA_DISK', 's3'),
+],
+```
+
+Files can be attached to ticket messages through the chat widget or API.
+
+## Customization
+
+### Custom Models
+
+You can extend the package models with your own:
+
+```php
+// config/padmission-tickets.php
+'models' => [
+    Padmission\Tickets\Models\Ticket::class => App\Models\Ticket::class,
+    Padmission\Tickets\Models\TicketActivity::class => App\Models\TicketActivity::class,
+    // ... other models
+],
+```
+
+Your custom models should extend the package models to ensure compatibility.
+
+### Custom Assignment Strategy
+
+Create your own assignment strategy:
+
+```php
+use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
+use Padmission\Tickets\Models\Ticket;
+
+class RoundRobinAssignment implements AssignmentStrategy
+{
+    public function assign(Ticket $ticket): void
+    {
+        // Your custom logic here
+    }
+}
+```
+
+### Custom Notification Strategy
+
+Create your own notification strategy:
+
+```php
+use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
+use Padmission\Tickets\Models\Ticket;
+
+class SlackNotification implements NotificationStrategy
+{
+    public function notify(Ticket $ticket): void
+    {
+        // Send to Slack
+    }
+}
 ```
 
 

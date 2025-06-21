@@ -39,4 +39,9 @@ return [
         'title' => 'Too Many Notifications',
         'message' => 'You have reached the maximum number of notifications per hour. Please try again later.',
     ],
+
+    'otp-verification' => [
+        'subject' => 'Verify Your Email Address',
+        'message' => 'Please verify your email address by entering the following verification code. This code will expire in 10 minutes.',
+    ],
 ];

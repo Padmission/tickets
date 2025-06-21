@@ -83,7 +83,9 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         );
 
         if ($policy === null) {
-            throw new Exception('Register a TicketPolicy via Gate::policy() facade in a ServiceProvider::register() method.');
+            throw new Exception(
+                'Register a TicketPolicy via Gate::policy() facade in a ServiceProvider::register() method.'
+            );
         }
 
         /*
