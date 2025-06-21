@@ -13,7 +13,7 @@ return [
 
     'ticket-created' => [
         'subject' => 'New ticket created: :subject (#:ticket_id)',
-        'intro' => 'A new ticket has been created and assigned to you.',
+        'intro' => 'A new ticket has been created.',
         'outro' => 'Please review the ticket details and respond as needed.',
     ],
 

@@ -48,9 +48,10 @@ class TicketNotification extends Notification
 
         $hasMoreActivities = $activities->count() >= $maxEvents;
 
+        $key = "padmission-tickets::notifications.ticket-{$this->notificationType}.intro";
         $message = (new MailMessage)
             ->subject($this->getEmailSubject())
-            ->line(__('padmission-tickets::notifications.ticket-history.intro'))
+            ->line(__($key))
             ->action(
                 __('padmission-tickets::notifications.ticket-history.action'),
                 $this->urlService->getActionUrl($this->ticket)
@@ -62,7 +63,7 @@ class TicketNotification extends Notification
 
         $message->line(__('padmission-tickets::notifications.ticket-history.outro'));
 
-        return $message->view('padmission-tickets::emails.ticket-history', [
+        return $message->view($this->getView(), [
             'ticket' => $this->ticket,
             'activitiesHeader' => __('padmission-tickets::notifications.ticket-history.activities-header'),
             'activities' => $activities,
@@ -74,6 +75,11 @@ class TicketNotification extends Notification
             'maxEvents' => $maxEvents,
             'styles' => $this->styleService->getStyles(),
         ]);
+    }
+
+    public function getView(): string
+    {
+        return 'padmission-tickets::emails.ticket-history';
     }
 
     /**
