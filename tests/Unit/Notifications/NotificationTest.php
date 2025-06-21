@@ -1,8 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Config;
-use Padmission\Tickets\Enums\ActivitySender;
-use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Notifications\TicketNotification;

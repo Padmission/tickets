@@ -10,7 +10,7 @@ class EmailLogoService
     /**
      * Get the email logo for a ticket
      */
-    public function getEmailLogo(Ticket $ticket): string | Htmlable | null
+    public function getEmailLogo(Ticket $ticket): string|Htmlable|null
     {
         $panelId = $ticket->panel;
         if (! $panelId) {

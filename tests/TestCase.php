@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Tests;
 
 use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
 use BladeUI\Icons\BladeIconsServiceProvider;
-use Carbon\Carbon;
 use Filament\Actions\ActionsServiceProvider;
 use Filament\Facades\Filament;
 use Filament\FilamentServiceProvider;
@@ -22,10 +21,7 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
-use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketActivity;
-use Padmission\Tickets\Models\TicketNotification;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\TicketPluginServiceProvider;
