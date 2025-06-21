@@ -1,6 +1,8 @@
 import BaseElement from "../helpers/base-element";
 import render from "../helpers/render";
 import fetchJson from "../helpers/fetch-json.js";
+import config from "../helpers/config.js";
+import __ from "../helpers/trans.js";
 
 customElements.define(
 	"chat-list-tickets",
@@ -83,33 +85,31 @@ customElements.define(
 			return render(`
                 <div class="chat-list-tickets">
                     <header>
-                        <h2>
-                            How can we help you?
-                        </h2>
-
                         <form data-close-dialog>
                             <button
                                 class="button-icon"
-                                data-close-dialog
                                 formmethod="dialog"
                             >
-                                <span class="sr-only">Close modal</span>
+                                <span class="sr-only">${__('close_modal')}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                              </button>
                         </form>
-
                     </header>
+
+                    <h2>
+                        ${__('list.heading')}
+                    </h2>
 
                     <button
                         class="button"
                         @click="createTicket"
                     >
-                        <span>Open New Ticket</span>
+                        <span>${__('list.create_ticket')}</span>
 
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
                     </button>
 
-                    <h3>Your tickets</h3>
+                    <h3>${__('list.tickets_heading')}</h3>
 
                     <div data-ticket-list>
                     </div>
