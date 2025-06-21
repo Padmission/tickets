@@ -17,16 +17,20 @@ trait HasResourceConfiguration
 
     public static Closure|string|Htmlable|null $getNavigationIconUsing = null;
 
+    public static Closure|int|null $getNavigationSortUsing = null;
+
     public static function configure(
         Closure|string|null $modelLabel = null,
         Closure|string|null $pluralModelLabel = null,
         Closure|string|null $navigationGroup = null,
         Closure|string|Htmlable|null $navigationIcon = null,
+        Closure|int|null $navigationSort = null,
     ): void {
         static::$getModelLabelUsing = $modelLabel;
         static::$getPluralModelLabelUsing = $pluralModelLabel;
         static::$getNavigationGroupUsing = $navigationGroup;
         static::$getNavigationIconUsing = $navigationIcon;
+        static::$getNavigationSortUsing = $navigationSort;
     }
 
     public static function getModel(): string
@@ -68,5 +72,14 @@ trait HasResourceConfiguration
         }
 
         return new HtmlString(file_get_contents(TICKET_PLUGIN_DIR.'/resources/icons/'.static::$slug.'.svg'));
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        if (static::$getNavigationSortUsing) {
+            return value(static::$getNavigationSortUsing);
+        }
+
+        return null;
     }
 }

@@ -8,6 +8,6 @@ class TicketAuth
 {
     public function getUserId(): int|string|null
     {
-        return Filament::auth()->id ?? session()->get('padmission-tickets::user_key');
+        return Filament::auth()->id() ?? session()->get('padmission-tickets::user_key');
     }
 }
