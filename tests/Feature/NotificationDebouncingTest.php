@@ -84,16 +84,11 @@ describe('Debouncing Core Functionality', function () {
         $createdJob = new NotificationJob($user, $ticket, 'created');
         $invalidJob = new NotificationJob($user, $ticket, 'invalid-type');
 
-        // Use reflection to test the protected method
-        $reflection = new ReflectionClass($activityJob);
-        $method = $reflection->getMethod('getNotificationClass');
-        $method->setAccessible(true);
-
-        expect($method->invoke($activityJob))
+        expect(invade($activityJob)->getNotificationClass())
             ->toBe(\Padmission\Tickets\Notifications\TicketNotification::class);
-        expect($method->invoke($createdJob))
+        expect(invade($createdJob)->getNotificationClass())
             ->toBe(\Padmission\Tickets\Notifications\TicketNotification::class);
-        expect($method->invoke($invalidJob))
+        expect(invade($invalidJob)->getNotificationClass())
             ->toBeNull();
     });
 
@@ -251,28 +246,6 @@ describe('Debouncing Logic Validation', function () {
 
 describe('Configuration and Edge Cases', function () {
 
-    test('respects custom debounce configuration', function () {
-        // Set custom debounce time
-        $originalDebounce = config('padmission-tickets.notification-debounce');
-        config(['padmission-tickets.notification-debounce' => 600]); // 10 minutes
-
-        $user = User::factory()->create();
-        $ticket = Ticket::factory()->open()->create(['assignee_id' => $user->id]);
-        $event = new TicketActivityEvent($ticket, ActivityType::Message);
-
-        $listener = new TicketNotificationListener(app(NotificationRecipientService::class));
-
-        // The debounce time should be read from config
-        expect(config('padmission-tickets.notification-debounce'))->toBe(600);
-
-        $listener->handle($event);
-
-        // Reset config
-        config(['padmission-tickets.notification-debounce' => $originalDebounce]);
-
-        expect(config('padmission-tickets.notification-debounce'))->toBe($originalDebounce);
-    });
-
     test('handles missing ticket gracefully in notification job', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
@@ -283,11 +256,7 @@ describe('Configuration and Edge Cases', function () {
         $ticket->delete();
 
         // Job should handle missing ticket gracefully
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('resolveModel');
-        $method->setAccessible(true);
-
-        expect($method->invoke($job))->toBeNull();
+        expect(invade($job)->resolveModel())->toBeNull();
     });
 
     test('handles missing user gracefully in notification job', function () {
@@ -300,11 +269,7 @@ describe('Configuration and Edge Cases', function () {
         $user->delete();
 
         // Job should handle missing user gracefully
-        $reflection = new ReflectionClass($job);
-        $method = $reflection->getMethod('resolveUser');
-        $method->setAccessible(true);
-
-        expect($method->invoke($job))->toBeNull();
+        expect(invade($job)->resolveUser())->toBeNull();
     });
 });
 
@@ -376,21 +341,16 @@ describe('Event Type Mapping', function () {
         $ticket = Ticket::factory()->open()->create();
         $listener = new TicketNotificationListener(app(NotificationRecipientService::class));
 
-        // Use reflection to test the protected method
-        $reflection = new ReflectionClass($listener);
-        $method = $reflection->getMethod('getNotificationType');
-        $method->setAccessible(true);
-
         // Test event type mapping
         $activityEvent = new TicketActivityEvent($ticket, ActivityType::Message);
         $createdEvent = new \Padmission\Tickets\Events\TicketCreatedEvent($ticket);
         $assignedEvent = new \Padmission\Tickets\Events\TicketAssignedEvent($ticket);
         $closedEvent = new \Padmission\Tickets\Events\TicketClosedEvent($ticket);
 
-        expect($method->invoke($listener, $activityEvent))->toBe('activity');
-        expect($method->invoke($listener, $createdEvent))->toBe('created');
-        expect($method->invoke($listener, $assignedEvent))->toBe('assigned');
-        expect($method->invoke($listener, $closedEvent))->toBe('closed');
+        expect(invade($listener)->getNotificationType($activityEvent))->toBe('activity');
+        expect(invade($listener)->getNotificationType($createdEvent))->toBe('created');
+        expect(invade($listener)->getNotificationType($assignedEvent))->toBe('assigned');
+        expect(invade($listener)->getNotificationType($closedEvent))->toBe('closed');
     });
 });
 

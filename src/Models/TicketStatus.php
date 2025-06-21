@@ -15,9 +15,6 @@ use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
-/**
- * @mixin \Illuminate\Database\Eloquent\Model
- */
 #[ObservedBy([TicketStatusObserver::class])]
 #[ScopedBy([CurrentPanelScope::class])]
 #[UseFactory(TicketStatusFactory::class)]

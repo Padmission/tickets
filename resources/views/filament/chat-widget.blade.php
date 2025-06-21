@@ -2,20 +2,23 @@
     use Filament\Facades\Filament;
     use Filament\Support\Facades\FilamentAsset;
     use Padmission\Tickets\Models\Ticket;
+    use Padmission\Tickets\Services\TicketAuth;
     use Padmission\Tickets\TicketPlugin;
 
-    if (Filament::auth()->user()?->cannot('create', TicketPlugin::resolveModelClass(Ticket::class))) {
+    $config = TicketPlugin::get()->getChatWidgetConfig();
+
+    if (! $config->getAllowEmailAuthentication() && ! Filament::auth()->user()?->can('create', TicketPlugin::resolveModelClass(Ticket::class))) {
         return;
     }
 
-    $config = TicketPlugin::get()->getChatWidgetConfig();
+    $auth = resolve(TicketAuth::class);
+
 @endphp
 
 <div wire:ignore>
     <chat-widget
         id="chat-widget"
-        widget-id="panel-{{ Filament::getId() }}"
-        default-message="{!! $config->getIntroMessage() !!}"
+        config="{{ $config->toJs() }}"
     />
 
     <script

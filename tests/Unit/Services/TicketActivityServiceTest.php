@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Config;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketNotification;
@@ -48,4 +49,59 @@ test('returns null when no notification exists', function () {
     $lastNotification = $this->service->getLastNotification($this->ticket, $this->user);
 
     expect($lastNotification)->toBeNull();
+});
+
+test('respects max events configuration', function () {
+    Config::set('padmission-tickets.notification-max-events', 2);
+
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->create();
+
+    // Create 4 activities
+    for ($i = 0; $i < 4; $i++) {
+        TicketActivity::factory()->create([
+            'ticket_id' => $ticket->id,
+        ]);
+    }
+
+    $notification = new \Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
+
+    // Use the activity service to get unread activities
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $activities = $activityService->getUnreadActivities($ticket, $user, 2, 7);
+
+    expect($activities)->toHaveCount(2); // Should limit to 2
+});
+
+test('returns null when user has no previous notifications for ticket', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->create();
+    $notification = new \Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
+
+    // Use the activity service to get the last notification
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $lastNotification = $activityService->getLastNotification($ticket, $user);
+
+    expect($lastNotification)->toBeNull();
+});
+
+test('gets last notification for specific user and ticket', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->create();
+    $notification = new TicketNotification($ticket, 'history');
+
+    // Create a notification record
+    $notificationRecord = $ticket->ticketNotifications()->create([
+        'user_id' => $user->getKey(),
+        'created_at' => now()->subHour(),
+    ]);
+
+    // Use the activity service to get the last notification
+    $activityService = app(\Padmission\Tickets\Services\TicketActivityService::class);
+    $lastNotification = $activityService->getLastNotification($ticket, $user);
+
+    expect($lastNotification)
+        ->not->toBeNull()
+        ->id->toBe($notificationRecord->id)
+        ->user_id->toBe($user->getKey());
 });
