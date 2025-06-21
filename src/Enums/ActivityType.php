@@ -17,4 +17,8 @@ enum ActivityType: string
     case TurnChanged = 'turn-changed';
 
     case Closed = 'closed';
+
+    case AssigneeChanged = 'assignee-changed';
+
+    case Escalated = 'escalated';
 }

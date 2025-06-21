@@ -98,6 +98,19 @@ final class TicketPlugin implements Plugin
         return (string) ($classes[$class] ?? $class);
     }
 
+    /**
+     * Resolve a job class, allowing for custom implementations
+     *
+     * @param  class-string  $class
+     * @return class-string
+     */
+    public static function resolveJobClass(string $class): string
+    {
+        $jobs = config()->array('padmission-tickets.jobs');
+
+        return (string) ($jobs[$class] ?? $class);
+    }
+
     /* Configuration options */
     public function escalationLevel(string $level): static
     {

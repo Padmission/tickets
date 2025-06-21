@@ -4,26 +4,29 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Models\Contracts\HasName;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketActivityFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
+use Padmission\Tickets\Models\Observers\TicketActivityObserver;
 use Padmission\Tickets\TicketPlugin;
 
 /**
  * @property ActivitySide $side
  */
+#[ObservedBy(TicketActivityObserver::class)]
 #[UseFactory(TicketActivityFactory::class)]
 class TicketActivity extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'ticket_activities';
 
@@ -33,15 +36,9 @@ class TicketActivity extends Model
         'data' => 'array',
         'type' => ActivityType::class,
         'sender' => ActivitySender::class,
+        'turn' => Turn::class,
         'created_at' => 'immutable_datetime',
     ];
-
-    protected static function booted(): void
-    {
-        static::creating(function ($model) {
-            $model->user_id ??= auth()->user()?->id;
-        });
-    }
 
     public function ticket(): BelongsTo
     {
@@ -69,18 +66,26 @@ class TicketActivity extends Model
 
             $user = $this->user;
 
-            if (method_exists($user, 'getSupportName')) {
-                return $user->getSupportName();
+            if (! $user) {
+                return '';
             }
 
+            // Check if user implements the interface for custom display names
+            if ($user instanceof HasTicketDisplayName) {
+                return $user->getNameForTickets();
+            }
+
+            // Fallback to Filament's HasName interface
             if ($user instanceof HasName) {
                 return $user->getFilamentName();
             }
 
+            // Fallback to common name attributes
             if (isset($user->name)) {
                 return $user->name;
             }
 
+            // Last resort fallback
             return '';
         });
     }

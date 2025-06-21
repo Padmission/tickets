@@ -1,0 +1,44 @@
+<?php
+
+namespace Padmission\Tickets\Models\Concerns;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
+use Padmission\Tickets\Models\TicketNotification;
+use Padmission\Tickets\TicketPlugin;
+
+trait InteractsWithNotifications
+{
+    public function getNotificationRecipients(): Collection
+    {
+        return collect([$this->assignee, $this->submitter])
+            ->filter()
+            ->unique(function ($user) {
+                return $user->getKey();
+            });
+    }
+
+    // Can be overridden in specific implementations to add business rules about when to send notifications
+    public function shouldSendNotification(string $type): bool
+    {
+        return true;
+    }
+
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(
+            TicketPlugin::resolveModelClass(Authenticatable::class),
+            'submitter_id'
+        );
+    }
+
+    public function ticketNotifications(): HasMany
+    {
+        return $this->hasMany(
+            TicketPlugin::resolveModelClass(TicketNotification::class),
+            'ticket_id'
+        );
+    }
+}

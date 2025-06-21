@@ -65,4 +65,15 @@ class TicketFactory extends Factory
             'closed_by' => $this->getRandomRecycledModel($userModel) ?? $userModel::factory(),
         ]);
     }
+
+    public function open(): static
+    {
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+
+        return $this->state([
+            'status_id' => $statusModel::getOpenStatuses()->first(),
+            'closed_at' => null,
+            'closed_by' => null,
+        ]);
+    }
 }

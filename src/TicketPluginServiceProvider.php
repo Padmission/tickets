@@ -7,6 +7,8 @@ use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
@@ -46,6 +48,28 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
         $this->registerCssFiles();
         $this->registerBrowserSync();
+    }
+
+    public function packageBooted(): void
+    {
+        $this->bootEventListeners();
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->registerServices();
+    }
+
+    /**
+     * Register services with the container
+     */
+    protected function registerServices(): void
+    {
+        $this->app->singleton(\Padmission\Tickets\Services\TicketActivityService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\EmailLogoService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\EmailStyleService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\TicketUrlService::class);
+        $this->app->singleton(\Padmission\Tickets\Services\NotificationRecipientService::class);
     }
 
     private function ensurePolicyIsRegistered(): void
@@ -145,5 +169,16 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     private function isDevMode(): bool
     {
         return file_exists(__DIR__.'/../dist/.hot');
+    }
+
+    protected function bootEventListeners(): void
+    {
+        $listeners = config('padmission-tickets.event-listeners', []);
+
+        foreach ($listeners as $event => $eventListeners) {
+            foreach (Arr::wrap($eventListeners) as $listener) {
+                Event::listen($event, $listener);
+            }
+        }
     }
 }

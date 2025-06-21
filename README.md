@@ -2,7 +2,7 @@
 
 [![Premium Package](https://img.shields.io/badge/package-premium-gold?style=flat-square)](https://tickets.padmission.com)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue?style=flat-square)](composer.json)
-[![Laravel Version](https://img.shields.io/badge/laravel-%3E%3D10.0-red?style=flat-square)](composer.json)
+[![Laravel Version](https://img.shields.io/badge/laravel-%3E%3D11.0-red?style=flat-square)](composer.json)
 [![Filament Version](https://img.shields.io/badge/filament-v3.x-purple?style=flat-square)](composer.json)
 
 ## Introduction
@@ -79,6 +79,34 @@ use Padmission\Tickets\TicketPlugin;
 
 $panel->plugin(TicketPlugin::make());
 ```
+
+**Step 5:** Implement the display name interface on your User model:
+
+For better ticket activity messages, implement the `HasTicketDisplayName` interface on your User model:
+
+```php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
+
+class User extends Authenticatable implements HasTicketDisplayName
+{
+    // ... your existing code ...
+
+    /**
+     * Get the display name for ticket activities and notifications
+     */
+    public function getNameForTickets(): string
+    {
+        return $this->name ?? $this->email ?? "User {$this->id}";
+    }
+}
+```
+
+> **Note:** If you don't implement this interface, the package will automatically fall back to using the `name` attribute, then `email`, and finally "user {id}" as the display name.
 
 ## Configuration
 
@@ -406,6 +434,172 @@ class SlackNotification implements NotificationStrategy
         // Send to Slack
     }
 }
+```
+
+
+## Custom Models & Jobs
+
+### Using Custom Models
+
+To use custom models with this package, you need to:
+
+1. **Create your custom model class** by extending the base model
+2. **Update the configuration** to map the base class to your custom class
+
+### Ticket Model Example
+
+```php
+<?php
+
+namespace App\Models;
+
+use Padmission\Tickets\Models\Ticket as BaseTicket;
+
+class CustomTicket extends BaseTicket
+{
+    // Your custom functionality
+    // The observers are automatically inherited from the base class
+    
+    public function someCustomMethod()
+    {
+        // Your custom logic here
+    }
+}
+```
+
+Then update your `config/padmission-tickets.php` file:
+
+```php
+'models' => [
+    // ... other models
+    \Padmission\Tickets\Models\Ticket::class => \App\Models\CustomTicket::class,
+],
+```
+
+### Other Model Examples
+
+For other models, follow the same pattern:
+
+```php
+// Custom TicketActivity
+namespace App\Models;
+
+use Padmission\Tickets\Models\TicketActivity as BaseTicketActivity;
+
+class CustomTicketActivity extends BaseTicketActivity
+{
+    // Your custom functionality
+}
+
+// Custom TicketStatus  
+namespace App\Models;
+
+use Padmission\Tickets\Models\TicketStatus as BaseTicketStatus;
+
+class CustomTicketStatus extends BaseTicketStatus
+{
+    // Your custom functionality
+}
+```
+
+Then update the config:
+
+```php
+'models' => [
+    // ... other models
+    \Padmission\Tickets\Models\TicketActivity::class => \App\Models\CustomTicketActivity::class,
+    \Padmission\Tickets\Models\TicketStatus::class => \App\Models\CustomTicketStatus::class,
+],
+```
+
+### Custom Jobs
+
+To use custom job classes, you need to:
+
+1. **Create your custom job class** by extending the base job
+2. **Update the configuration** to map the base class to your custom class
+
+#### Extending NotificationJob
+
+To add custom properties like `tenantId` to the notification job:
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models\Ticket;
+
+class CustomNotificationJob extends NotificationJob
+{
+    public ?int $tenantId = null;
+
+    /**
+     * Override to add custom initialization
+     */
+    protected function initializeJob(Authenticatable $user, Ticket $model): void
+    {
+        // Add your custom logic here
+        $this->tenantId = $user->tenant_id ?? null;
+        
+        // Set custom queue, delay, etc.
+        $this->onQueue('tenant-' . $this->tenantId);
+    }
+
+    /**
+     * Override unique ID generation to include tenant
+     */
+    protected function buildUniqueId(): string
+    {
+        return parent::buildUniqueId() . '-tenant-' . $this->tenantId;
+    }
+
+    /**
+     * Override notification sending for tenant-specific logic
+     */
+    protected function sendNotification(Authenticatable $user, Ticket $record, string $notificationClass): void
+    {
+        // Add tenant-specific notification logic
+        if ($this->shouldSendNotification($user, $record)) {
+            parent::sendNotification($user, $record, $notificationClass);
+        }
+    }
+
+    /**
+     * Custom logic to determine if notification should be sent
+     */
+    protected function shouldSendNotification(Authenticatable $user, Ticket $record): bool
+    {
+        // Add your business logic here
+        return $user->tenant_id === $record->tenant_id;
+    }
+
+    /**
+     * Override error handling
+     */
+    protected function handleException(\Exception $e): void
+    {
+        // Log errors with tenant context
+        \Log::error('Notification job failed', [
+            'tenant_id' => $this->tenantId,
+            'ticket_id' => $this->getTicketKey(),
+            'user_id' => $this->getUserId(),
+            'error' => $e->getMessage(),
+        ]);
+    }
+}
+```
+
+#### Register Custom Job
+
+Configure the package to use your custom job in your `config/padmission-tickets.php`:
+
+```php
+'jobs' => [
+    \Padmission\Tickets\Jobs\NotificationJob::class => \App\Jobs\CustomNotificationJob::class,
+],
 ```
 
 ## Support

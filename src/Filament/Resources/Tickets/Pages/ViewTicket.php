@@ -37,7 +37,6 @@ class ViewTicket extends ViewRecord
     {
         return [
             CloseTicketAction::make(),
-
             EditTicketAction::make(),
         ];
     }

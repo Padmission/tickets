@@ -14,7 +14,7 @@ it('closes ticket', function () {
     (new TicketStatusSeeder)->run();
 
     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-    $ticket = $ticketModel::factory()->create();
+    $ticket = $ticketModel::factory()->create(['status_id' => TicketStatus::getOpenStatuses()->first()->id]);
 
     $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
     $disposition = $dispositionModel::factory()->create();

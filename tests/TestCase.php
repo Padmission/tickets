@@ -44,6 +44,9 @@ class TestCase extends \Orchestra\Testbench\TestCase
         return [
             LivewireServiceProvider::class,
 
+            // Add the Queue Debouncer Service Provider
+            \Mpbarlow\LaravelQueueDebouncer\ServiceProvider::class,
+
             FilamentServiceProvider::class,
             FormsServiceProvider::class,
             InfolistsServiceProvider::class,
@@ -67,14 +70,37 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         Gate::policy(Ticket::class, TestTicketPolicy::class);
 
-        Filament::registerPanel(fn () => Panel::make()
+        $panel = Panel::make()
             ->default()
             ->id('test')
             ->path('test')
             ->plugin(
                 TicketPlugin::make()->registerResources()
-            ),
-        );
+            );
+
+        Filament::registerPanel(fn () => $panel);
+
+        Filament::setCurrentPanel($panel);
+
+        $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider::class, function () {
+            return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider
+            {
+                public function getKey($job): string
+                {
+                    return 'test_key_'.md5(serialize($job));
+                }
+            };
+        });
+
+        $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider::class, function () {
+            return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider
+            {
+                public function getIdentifier(): string
+                {
+                    return 'test_identifier_'.uniqid();
+                }
+            };
+        });
     }
 
     // Helper methods
