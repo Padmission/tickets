@@ -1,12 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\TicketPlugin;
+
 // Mock user-created models that extend the package base models
 class CustomTicket extends \Padmission\Tickets\Models\Ticket
 {
