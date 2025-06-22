@@ -6,14 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Carbon;
 
 /**
  * @template TModel of Model
@@ -59,11 +51,13 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Contracts\Pagination\Paginator simplePaginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', int|null $page = null)
  *
  * PHPStan magic property support for unknown attributes
+ *
  * @property-read mixed $__get
  * @property mixed $__set
  */
 interface IsTicketActivity
 {
-	public function ticket(): BelongsTo;
-	public function user(): BelongsTo;
+    public function ticket(): BelongsTo;
+
+    public function user(): BelongsTo;
 }

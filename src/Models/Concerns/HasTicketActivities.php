@@ -21,24 +21,24 @@ trait HasTicketActivities
     ): IsTicketActivity {
         $userId ??= auth()->id();
 
-		$ticketActivity = $this->ticketActivities()->create([
-			'type' => $type,
-			'content' => $content ?? '',
-			'sender' => $sender,
-			'user_id' => $userId,
-			'data' => $data,
-		]);
+        $ticketActivity = $this->ticketActivities()->create([
+            'type' => $type,
+            'content' => $content ?? '',
+            'sender' => $sender,
+            'user_id' => $userId,
+            'data' => $data,
+        ]);
 
-		if (!$ticketActivity instanceof IsTicketActivity) {
-			throw new \LogicException('Invalid return');
-		}
+        if (! $ticketActivity instanceof IsTicketActivity) {
+            throw new \LogicException('Invalid return');
+        }
 
         return $ticketActivity;
     }
 
-	/**
-	 * @return HasMany<TicketActivity, self>
-	 */
+    /**
+     * @return HasMany<TicketActivity, self>
+     */
     public function ticketActivities(): HasMany
     {
         return $this->hasMany(
