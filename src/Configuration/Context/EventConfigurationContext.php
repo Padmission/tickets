@@ -140,12 +140,13 @@ class EventConfigurationContext
         return $this;
     }
 
-	public function unless(callable|bool $condition, callable $callback): static
-	{
-		$shouldApply = is_callable($condition) ? !$condition() : !$condition;
-		return $this->when($shouldApply, $callback);
-	}
-	
+    public function unless(callable|bool $condition, callable $callback): static
+    {
+        $shouldApply = is_callable($condition) ? ! $condition() : ! $condition;
+
+        return $this->when($shouldApply, $callback);
+    }
+
     public function inEnvironment(string|array $environments, callable $callback): static
     {
         $currentEnv = app()->environment();
