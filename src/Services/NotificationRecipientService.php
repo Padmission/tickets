@@ -5,7 +5,6 @@ namespace Padmission\Tickets\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
-use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
@@ -22,34 +21,34 @@ class NotificationRecipientService
     ): Collection {
         $eventName = $this->getEventName($event);
         $triggerType = $this->determineTriggerType($event);
-        
+
         $config = TicketPlugin::get()
             ->getNotificationConfiguration()
             ->getConfigurationFor($eventName, $triggerType);
-        
+
         $recipients = collect();
-        
+
         if (($config['notify_user'] ?? false) && $event->ticket->submitter) {
             $recipients->push($event->ticket->submitter);
-        }        
+        }
         if (($config['notify_supporter'] ?? false) && $event->ticket->assignee) {
             $recipients->push($event->ticket->assignee);
         }
-        
+
         return $recipients->filter()->unique('id');
     }
-    
+
     private function determineTriggerType($event): string
     {
-        if (!$event->actor || $event->actor->getKey() === $event->ticket->submitter_id) {
+        if (! $event->actor || $event->actor->getKey() === $event->ticket->submitter_id) {
             return 'user_triggered';
         }
-        
-        return Gate::forUser($event->actor)->allows('update', $event->ticket) 
-            ? 'supporter_triggered' 
+
+        return Gate::forUser($event->actor)->allows('update', $event->ticket)
+            ? 'supporter_triggered'
             : 'user_triggered';
     }
-    
+
     private function getEventName($event): string
     {
         $class = get_class($event);
@@ -61,7 +60,7 @@ class NotificationRecipientService
             TicketPriorityChangedEvent::class => 'ticket_activity',
             TicketStatusChangedEvent::class => 'ticket_activity',
         ];
-        
+
         return $map[$class] ?? 'ticket_activity';
     }
 

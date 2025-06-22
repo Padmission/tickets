@@ -3,9 +3,9 @@
 namespace Padmission\Tickets\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Padmission\Tickets\Models\Ticket;
 
 class TicketClosedEvent

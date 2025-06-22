@@ -25,10 +25,10 @@ class NotificationConfiguration
 
     public static function make(): static
     {
-        return new static();
+        return new static;
     }
 
-    public function onTicketCreated(array $userTriggered = null, array $supporterTriggered = null): static
+    public function onTicketCreated(?array $userTriggered = null, ?array $supporterTriggered = null): static
     {
         if ($userTriggered !== null) {
             $this->rules['ticket_created']['user_triggered'] = $userTriggered;
@@ -36,10 +36,11 @@ class NotificationConfiguration
         if ($supporterTriggered !== null) {
             $this->rules['ticket_created']['supporter_triggered'] = $supporterTriggered;
         }
+
         return $this;
     }
 
-    public function onTicketAssigned(array $userTriggered = null, array $supporterTriggered = null): static
+    public function onTicketAssigned(?array $userTriggered = null, ?array $supporterTriggered = null): static
     {
         if ($userTriggered !== null) {
             $this->rules['ticket_assigned']['user_triggered'] = $userTriggered;
@@ -47,20 +48,22 @@ class NotificationConfiguration
         if ($supporterTriggered !== null) {
             $this->rules['ticket_assigned']['supporter_triggered'] = $supporterTriggered;
         }
+
         return $this;
     }
 
-    public function onTicketActivity(array $userTriggered = null, array $supporterTriggered = null): static
+    public function onTicketActivity(?array $userTriggered = null, ?array $supporterTriggered = null): static
     {
         if ($userTriggered !== null) {
             $this->rules['ticket_activity']['user_triggered'] = $userTriggered;
         }        if ($supporterTriggered !== null) {
             $this->rules['ticket_activity']['supporter_triggered'] = $supporterTriggered;
         }
+
         return $this;
     }
 
-    public function onTicketClosed(array $userTriggered = null, array $supporterTriggered = null): static
+    public function onTicketClosed(?array $userTriggered = null, ?array $supporterTriggered = null): static
     {
         if ($userTriggered !== null) {
             $this->rules['ticket_closed']['user_triggered'] = $userTriggered;
@@ -68,6 +71,7 @@ class NotificationConfiguration
         if ($supporterTriggered !== null) {
             $this->rules['ticket_closed']['supporter_triggered'] = $supporterTriggered;
         }
+
         return $this;
     }
 
