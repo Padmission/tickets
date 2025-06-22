@@ -11,7 +11,7 @@ class TicketConfigurationInvalidSetting extends Exception
     public function __construct(string $event)
     {
         $this->context = "Unknown event '{$event}'";
-        parent::__construct('Ticket Disposition not found.');
+        parent::__construct("Invalid or unknown event: '{$event}'.");
     }
 
     public function getContext(): mixed
