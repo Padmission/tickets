@@ -3,6 +3,7 @@
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
@@ -22,7 +23,9 @@ test('notification recipients are correctly identified', function () {
         'submitter_id' => $submitter->id,
     ]);
 
-    $event = new TicketActivityEvent($ticket, ActivityType::Message);
+    Gate::define('update', fn () => true);
+
+    $event = new TicketCreatedEvent($ticket, $assignee);
     $recipientService = app(NotificationRecipientService::class);
 
     $recipients = $recipientService->getNotificationRecipients($event);

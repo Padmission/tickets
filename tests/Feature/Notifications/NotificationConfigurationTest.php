@@ -11,6 +11,8 @@ use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
@@ -23,13 +25,13 @@ beforeEach(function () {
     $this->supporter = User::factory()->create(['name' => 'Supporter']);
 
     // Create ticket statuses and priorities
-    \Padmission\Tickets\Models\TicketStatus::factory()->create([
+    TicketStatus::factory()->create([
         'display_name' => 'Open',
         'order' => 1,
         'panel' => 'test',
     ]);
 
-    \Padmission\Tickets\Models\TicketPriority::factory()->create([
+    TicketPriority::factory()->create([
         'display_name' => 'Normal',
         'order' => 1,
         'panel' => 'test',

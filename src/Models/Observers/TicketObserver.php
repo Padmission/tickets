@@ -69,7 +69,7 @@ class TicketObserver
                 $ticket->close(closedById: auth()->id());
             }
 
-            event(new TicketStatusChangedEvent($ticket, $oldStatusId, $newStatusId));
+            event(new TicketStatusChangedEvent($ticket, $oldStatusId, $newStatusId, auth()->user()));
         }
     }
 
@@ -148,7 +148,7 @@ class TicketObserver
                     auth()->id()
                 );
 
-                event(new TicketAssignedEvent($ticket));
+                event(new TicketAssignedEvent($ticket, auth()->user()));
             }
         }
     }
