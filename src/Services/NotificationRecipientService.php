@@ -5,7 +5,9 @@ namespace Padmission\Tickets\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Enums\NotificationTrigger;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
@@ -19,7 +21,7 @@ class NotificationRecipientService
     public function getNotificationRecipients(
         TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
     ): Collection {
-        $eventName = $this->getEventName($event);
+        $eventName = $event::class;
         $triggerType = $this->determineTriggerType($event);
 
         $config = TicketPlugin::get()
@@ -28,40 +30,25 @@ class NotificationRecipientService
 
         $recipients = collect();
 
-        if (($config['notify_user'] ?? false) && $event->ticket->submitter) {
+        if (($config->value & NotificationRecipient::User->value) && $event->ticket->submitter) {
             $recipients->push($event->ticket->submitter);
         }
-        if (($config['notify_supporter'] ?? false) && $event->ticket->assignee) {
+        if (($config->value & NotificationRecipient::Supporter->value) && $event->ticket->assignee) {
             $recipients->push($event->ticket->assignee);
         }
 
         return $recipients->filter()->unique('id');
     }
 
-    private function determineTriggerType($event): string
+    private function determineTriggerType($event): NotificationTrigger
     {
         if (! $event->actor || $event->actor->getKey() === $event->ticket->submitter_id) {
-            return 'user_triggered';
+            return NotificationTrigger::User;
         }
 
         return Gate::forUser($event->actor)->allows('update', $event->ticket)
-            ? 'supporter_triggered'
-            : 'user_triggered';
-    }
-
-    private function getEventName($event): string
-    {
-        $class = get_class($event);
-        $map = [
-            TicketCreatedEvent::class => 'ticket_created',
-            TicketAssignedEvent::class => 'ticket_assigned',
-            TicketActivityEvent::class => 'ticket_activity',
-            TicketClosedEvent::class => 'ticket_closed',
-            TicketPriorityChangedEvent::class => 'ticket_activity',
-            TicketStatusChangedEvent::class => 'ticket_activity',
-        ];
-
-        return $map[$class] ?? 'ticket_activity';
+            ? NotificationTrigger::Supporter
+            : NotificationTrigger::User;
     }
 
     public function getUserNotificationStrategy(Authenticatable $user): NotificationStrategy

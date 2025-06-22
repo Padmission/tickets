@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Enums\NotificationTrigger;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
@@ -171,17 +173,23 @@ test('ticket assignment with default configuration sends notifications correctly
 
 test('custom notification configuration overrides defaults correctly', function () {
     $customConfig = NotificationConfiguration::make()
-        ->onTicketCreated(
-            userTriggered: ['notify_user' => false, 'notify_supporter' => true],
-            supporterTriggered: ['notify_user' => false, 'notify_supporter' => false]
-        );
+        ->on(
+            TicketCreatedEvent::class,
+            fn (NotificationTrigger $trigger) => match ($trigger) {
+                NotificationTrigger::User => NotificationRecipient::Supporter,
+                default => false
+            });
 
     $plugin = TicketPlugin::get();
     $plugin->notificationConfiguration($customConfig);
 
     // Verify the configuration was set
-    expect($plugin->getNotificationConfiguration()->getConfigurationFor('ticket_created', 'user_triggered'))
-        ->toBe(['notify_user' => false, 'notify_supporter' => true]);
+    expect($plugin->getNotificationConfiguration())
+        ->getConfigurationFor(
+            TicketCreatedEvent::class,
+            NotificationTrigger::User
+        )
+        ->toBe(NotificationRecipient::Supporter);
 
     $listener = createListener();
 
@@ -214,9 +222,9 @@ test('no notifications are sent when configuration disables them', function () {
     $plugin = TicketPlugin::get();
 
     $customConfig = NotificationConfiguration::make()
-        ->onTicketCreated(
-            userTriggered: ['notify_user' => false, 'notify_supporter' => false],
-            supporterTriggered: ['notify_user' => false, 'notify_supporter' => false]
+        ->on(
+            TicketCreatedEvent::class,
+            fn (NotificationTrigger $trigger) => NotificationRecipient::None
         );
 
     $plugin->notificationConfiguration($customConfig);
@@ -288,9 +296,9 @@ test('custom notification configuration for activities works correctly', functio
     $plugin = TicketPlugin::get();
 
     $customConfig = NotificationConfiguration::make()
-        ->onTicketActivity(
-            userTriggered: ['notify_user' => true, 'notify_supporter' => true],
-            supporterTriggered: ['notify_user' => true, 'notify_supporter' => true]
+        ->on(
+            TicketActivityEvent::class,
+            fn (NotificationTrigger $trigger) => NotificationRecipient::Both,
         );
 
     $plugin->notificationConfiguration($customConfig);

@@ -2,86 +2,66 @@
 
 namespace Padmission\Tickets\ConfigurationManagers;
 
+use Closure;
+use Padmission\Tickets\Enums\NotificationRecipient;
+use Padmission\Tickets\Enums\NotificationTrigger;
+use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Events\TicketClosedEvent;
+use Padmission\Tickets\Events\TicketCreatedEvent;
+
 final class NotificationConfiguration
 {
-    private array $rules = [
-        'ticket_created' => [
-            'user_triggered' => ['notify_user' => true, 'notify_supporter' => false],
-            'supporter_triggered' => ['notify_user' => true, 'notify_supporter' => true],
-        ],
-        'ticket_assigned' => [
-            'user_triggered' => ['notify_user' => false, 'notify_supporter' => false],
-            'supporter_triggered' => ['notify_user' => false, 'notify_supporter' => true],
-        ],
-        'ticket_activity' => [
-            'user_triggered' => ['notify_user' => false, 'notify_supporter' => true],
-            'supporter_triggered' => ['notify_user' => true, 'notify_supporter' => false],
-        ],
-        'ticket_closed' => [
-            'user_triggered' => ['notify_user' => true, 'notify_supporter' => false],
-            'supporter_triggered' => ['notify_user' => true, 'notify_supporter' => false],
-        ],
-    ];
+    protected array $config = [];
 
     public static function make(): static
     {
-        return new self;
+        return (new self)
+            ->on(
+                TicketCreatedEvent::class,
+                fn (NotificationTrigger $trigger) => match ($trigger) {
+                    NotificationTrigger::User => NotificationRecipient::User,
+                    default => NotificationRecipient::Both,
+                }
+            )
+            ->on(
+                TicketAssignedEvent::class,
+                fn (NotificationTrigger $trigger) => match ($trigger) {
+                    NotificationTrigger::Supporter => NotificationRecipient::Supporter,
+                    default => false,
+                }
+            )
+            ->on(
+                TicketActivityEvent::class,
+                fn (NotificationTrigger $trigger) => match ($trigger) {
+                    NotificationTrigger::User => NotificationRecipient::Supporter,
+                    NotificationTrigger::Supporter => NotificationRecipient::User,
+                }
+            )
+            ->on(
+                TicketClosedEvent::class,
+                fn (NotificationTrigger $trigger) => match ($trigger) {
+                    NotificationTrigger::User => NotificationRecipient::Supporter,
+                    NotificationTrigger::Supporter => NotificationRecipient::User,
+                }
+            );
     }
 
-    public function onTicketCreated(?array $userTriggered = null, ?array $supporterTriggered = null): static
+    /**
+     * @param  class-string  $event
+     */
+    public function on(string $event, Closure $callback): static
     {
-        if ($userTriggered !== null) {
-            $this->rules['ticket_created']['user_triggered'] = $userTriggered;
-        }
-        if ($supporterTriggered !== null) {
-            $this->rules['ticket_created']['supporter_triggered'] = $supporterTriggered;
-        }
+        $this->config[$event] = $callback;
 
         return $this;
     }
 
-    public function onTicketAssigned(?array $userTriggered = null, ?array $supporterTriggered = null): static
+    public function getConfigurationFor(string $event, NotificationTrigger $triggerType): NotificationRecipient
     {
-        if ($userTriggered !== null) {
-            $this->rules['ticket_assigned']['user_triggered'] = $userTriggered;
-        }
-        if ($supporterTriggered !== null) {
-            $this->rules['ticket_assigned']['supporter_triggered'] = $supporterTriggered;
-        }
-
-        return $this;
-    }
-
-    public function onTicketActivity(?array $userTriggered = null, ?array $supporterTriggered = null): static
-    {
-        if ($userTriggered !== null) {
-            $this->rules['ticket_activity']['user_triggered'] = $userTriggered;
-        }        if ($supporterTriggered !== null) {
-            $this->rules['ticket_activity']['supporter_triggered'] = $supporterTriggered;
-        }
-
-        return $this;
-    }
-
-    public function onTicketClosed(?array $userTriggered = null, ?array $supporterTriggered = null): static
-    {
-        if ($userTriggered !== null) {
-            $this->rules['ticket_closed']['user_triggered'] = $userTriggered;
-        }
-        if ($supporterTriggered !== null) {
-            $this->rules['ticket_closed']['supporter_triggered'] = $supporterTriggered;
-        }
-
-        return $this;
-    }
-
-    public function getRules(): array
-    {
-        return $this->rules;
-    }
-
-    public function getConfigurationFor(string $event, string $triggerType): array
-    {
-        return $this->rules[$event][$triggerType] ?? [];
+        return app()->call($this->config[$event], [
+            'trigger' => $triggerType,
+            'event' => $event,
+        ]);
     }
 }
