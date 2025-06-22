@@ -19,6 +19,9 @@ use Illuminate\Foundation\Testing\Concerns\InteractsWithViews;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Livewire\LivewireServiceProvider;
+use Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider;
+use Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider;
+use Mpbarlow\LaravelQueueDebouncer\ServiceProvider as LaravelQueueDebounceServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
 use Padmission\Tickets\Models\Ticket;
@@ -44,8 +47,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
         return [
             LivewireServiceProvider::class,
 
-            // Add the Queue Debouncer Service Provider
-            \Mpbarlow\LaravelQueueDebouncer\ServiceProvider::class,
+            LaravelQueueDebounceServiceProvider::class,
 
             FilamentServiceProvider::class,
             FormsServiceProvider::class,
@@ -66,7 +68,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function defineEnvironment($app): void
     {
-        config()->set('padmission-tickets.models.'.Authenticatable::class, \Padmission\Tickets\Tests\User::class);
+        config()->set('padmission-tickets.models.'.Authenticatable::class, User::class);
 
         Gate::policy(Ticket::class, TestTicketPolicy::class);
 
@@ -82,24 +84,20 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         Filament::setCurrentPanel($panel);
 
-        $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider::class, function () {
-            return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider
+        $app->bind(CacheKeyProvider::class, fn () => new class implements CacheKeyProvider
+        {
+            public function getKey($job): string
             {
-                public function getKey($job): string
-                {
-                    return 'test_key_'.md5(serialize($job));
-                }
-            };
+                return 'test_key_'.md5(serialize($job));
+            }
         });
 
-        $app->bind(\Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider::class, function () {
-            return new class implements \Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider
+        $app->bind(UniqueIdentifierProvider::class, fn () => new class implements UniqueIdentifierProvider
+        {
+            public function getIdentifier(): string
             {
-                public function getIdentifier(): string
-                {
-                    return 'test_identifier_'.uniqid();
-                }
-            };
+                return 'test_identifier_'.uniqid();
+            }
         });
     }
 

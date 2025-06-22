@@ -106,8 +106,6 @@ final class TicketPlugin implements Plugin
     }
 
     /**
-     * Resolve a job class, allowing for custom implementations
-     *
      * @param  class-string  $class
      * @return class-string
      */

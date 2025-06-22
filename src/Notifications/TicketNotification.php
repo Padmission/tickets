@@ -82,9 +82,6 @@ class TicketNotification extends Notification
         return 'padmission-tickets::emails.ticket-history';
     }
 
-    /**
-     * Get the email subject based on notification type
-     */
     protected function getEmailSubject(): string
     {
         $key = "padmission-tickets::notifications.ticket-{$this->notificationType}.subject";

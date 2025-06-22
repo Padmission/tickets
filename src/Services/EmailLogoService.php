@@ -2,17 +2,17 @@
 
 namespace Padmission\Tickets\Services;
 
+use Filament\Facades\Filament;
 use Illuminate\Contracts\Support\Htmlable;
 use Padmission\Tickets\Models\Ticket;
+use Throwable;
 
 class EmailLogoService
 {
-    /**
-     * Get the email logo for a ticket
-     */
     public function getEmailLogo(Ticket $ticket): string|Htmlable|null
     {
         $panelId = $ticket->panel;
+
         if (! $panelId) {
             return null;
         }
@@ -22,16 +22,13 @@ class EmailLogoService
             return $logo;
         }
 
-        // Fallback to panel brand logo
         return $this->getPanelLogo($panelId);
     }
 
-    /**
-     * Get tenant logo if available
-     */
     protected function getTenantLogo(): ?string
     {
-        $tenant = \Filament\Facades\Filament::getTenant();
+        $tenant = Filament::getTenant();
+
         if (! $tenant || ! method_exists($tenant, 'getLogo')) {
             return null;
         }
@@ -40,17 +37,15 @@ class EmailLogoService
             $logo = $tenant->getLogo();
 
             return $this->formatLogo($logo);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }
 
-    /**
-     * Get panel brand logo
-     */
     protected function getPanelLogo(string $panelId): ?string
     {
-        $panel = \Filament\Facades\Filament::getPanel($panelId);
+        $panel = Filament::getPanel($panelId);
+
         if (! $panel || ! ($logo = $panel->getBrandLogo())) {
             return null;
         }

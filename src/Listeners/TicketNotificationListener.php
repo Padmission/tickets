@@ -30,9 +30,9 @@ class TicketNotificationListener
             return;
         }
 
-        $recipients->each(function (Authenticatable $user) use ($event, $notificationType) {
-            $this->sendNotificationToUser($user, $event, $notificationType);
-        });
+        $recipients->each(
+            fn (Authenticatable $user) => $this->sendNotificationToUser($user, $event, $notificationType)
+        );
     }
 
     protected function getNotificationType($event): ?string

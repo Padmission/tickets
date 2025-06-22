@@ -13,16 +13,16 @@ trait HasTicketActivities
 {
     public function addTicketActivity(
         ActivityType $type,
-        ?string $content,
         ActivitySender $sender = ActivitySender::User,
         ?int $userId = null,
-        array $data = []
+        array $data = [],
+        ?string $content = null,
     ): TicketActivity {
         $userId ??= auth()->id();
 
         return $this->ticketActivities()->create([
             'type' => $type,
-            'content' => $content ?? '',
+            'content' => $content,
             'sender' => $sender,
             'user_id' => $userId,
             'data' => $data,
