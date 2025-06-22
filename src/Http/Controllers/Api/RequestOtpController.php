@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Http\Controllers\Api;
 
 use Illuminate\Cache\RateLimiter;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -60,7 +59,7 @@ class RequestOtpController
 
     protected function findUser(string $email): ?Model
     {
-        $userClass = TicketPlugin::resolveModelClass(Authenticatable::class);
+        $userClass = TicketPlugin::resolveUserModelClass();
 
         return $userClass::query()
             ->where('email', $email)

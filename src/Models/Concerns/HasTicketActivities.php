@@ -29,6 +29,9 @@ trait HasTicketActivities
         ]);
     }
 
+    /**
+     * @return HasMany<TicketActivity,$this>
+     */
     public function ticketActivities(): HasMany
     {
         return $this->hasMany(

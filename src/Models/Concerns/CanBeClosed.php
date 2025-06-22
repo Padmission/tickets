@@ -27,7 +27,7 @@ trait CanBeClosed
             return;
         }
 
-        $closedBy ??= auth()->id();
+        $closedById ??= auth()->id();
 
         // Get the closed status
         $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
@@ -41,7 +41,7 @@ trait CanBeClosed
 
         // Use direct attribute assignment to avoid observer conflicts
         $this->disposition_id = $dispositionId;
-        $this->closed_by = $closedBy;
+        $this->closed_by = $closedById;
         $this->closed_at = now();
         $this->status_id = $newStatusId;
 
@@ -57,7 +57,7 @@ trait CanBeClosed
                 ActivityType::StatusChanged,
                 'Status changed',
                 ActivitySender::System,
-                $closedBy,
+                $closedById,
                 [
                     'from' => $originalStatusId,
                     'to' => $newStatusId,
@@ -70,8 +70,8 @@ trait CanBeClosed
             ActivityType::Closed,
             'Ticket closed',
             ActivitySender::System,
-            $closedBy,
-            ['closed_by' => $closedBy, 'disposition_id' => $dispositionId]
+            $closedById,
+            ['closed_by' => $closedById, 'disposition_id' => $dispositionId]
         );
 
         event(new TicketClosedEvent($this));

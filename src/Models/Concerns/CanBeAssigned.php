@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Models\Concerns;
 
 use Filament\Models\Contracts\HasName;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
@@ -19,7 +18,7 @@ trait CanBeAssigned
             return __('padmission-tickets::activities.user_display.unassigned');
         }
 
-        $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
+        $userModel = TicketPlugin::resolveUserModelClass();
         $user = $userModel::find($userId);
 
         if (! $user) {
@@ -81,7 +80,7 @@ trait CanBeAssigned
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Authenticatable::class),
+            TicketPlugin::resolveUserModelClass(),
             'assignee_id'
         );
     }

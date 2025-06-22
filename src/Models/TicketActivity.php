@@ -40,6 +40,9 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
+    /**
+     * @return BelongsTo<Ticket,$this>
+     */
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(
@@ -47,10 +50,13 @@ class TicketActivity extends Model
         );
     }
 
+    /**
+     * @return BelongsTo<Model&Authenticatable, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Authenticatable::class)
+            TicketPlugin::resolveUserModelClass()
         );
     }
 

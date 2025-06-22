@@ -39,9 +39,9 @@ class TicketNotificationListener
     {
         $type = str($event::class)
             ->classBasename()
-            ->lower()
             ->after('Ticket')
             ->beforeLast('Event')
+            ->lower()
             ->toString();
 
         return $type ?: null;
