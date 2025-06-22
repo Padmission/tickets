@@ -59,6 +59,10 @@ final class NotificationConfiguration
 
     public function getConfigurationFor(string $event, NotificationTrigger $triggerType): NotificationRecipient
     {
+        if (! isset($this->config[$event])) {
+            return NotificationRecipient::None;
+        }
+
         return app()->call($this->config[$event], [
             'trigger' => $triggerType,
             'event' => $event,
