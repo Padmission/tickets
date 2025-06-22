@@ -36,7 +36,6 @@ afterEach(function () {
 });
 
 describe('Debouncing Core Functionality', function () {
-
     test('debouncer creates unique cache key for each user-ticket combination', function () {
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
@@ -88,27 +87,6 @@ describe('Debouncing Core Functionality', function () {
         expect(invade($createdJob)->getNotificationClass())->toBe(TicketNotification::class);
         expect(invade($invalidJob)->getNotificationClass())->toBeNull();
     });
-
-    test('multiple recipients each get their own debounced notification', function () {
-        $assignee = User::factory()->create();
-        $submitter = User::factory()->create();
-        $ticket = Ticket::factory()->open()->create([
-            'assignee_id' => $assignee->id,
-            'submitter_id' => $submitter->id,
-        ]);
-
-        $event = new TicketActivityEvent($ticket, ActivityType::Message);
-        $listener = new TicketNotificationListener(app(NotificationRecipientService::class));
-
-        $listener->handle($event);
-
-        // Should create separate jobs for each recipient
-        // We can verify this by checking that jobs with different user IDs would be created
-        $assigneeJob = new NotificationJob($assignee, $ticket, 'activity');
-        $submitterJob = new NotificationJob($submitter, $ticket, 'activity');
-
-        expect($assigneeJob->uniqueId())->not->toBe($submitterJob->uniqueId());
-    });
 });
 
 describe('Time-Based Debouncing Tests', function () {
@@ -150,40 +128,6 @@ describe('Time-Based Debouncing Tests', function () {
         expect($activityContents)->toContain('Recent message 1')
             ->and($activityContents)->toContain('Recent message 2')
             ->and($activityContents)->not->toContain('Old message');
-    });
-
-});
-
-describe('Debouncing Logic Validation', function () {
-    test('listener dispatches separate jobs for each recipient enabling per-user debouncing', function () {
-        $assignee = User::factory()->create();
-        $submitter = User::factory()->create();
-        $ticket = Ticket::factory()->open()->create([
-            'assignee_id' => $assignee->id,
-            'submitter_id' => $submitter->id,
-        ]);
-
-        // Mock the recipient service to control the flow
-        $recipientService = \Mockery::mock(NotificationRecipientService::class);
-        $recipientService->shouldReceive('getNotificationRecipients')
-            ->andReturn(collect([$assignee, $submitter]));
-        $recipientService->shouldReceive('getUserNotificationStrategy')
-            ->with($assignee)
-            ->andReturn(NotificationStrategy::Debounced);
-        $recipientService->shouldReceive('getUserNotificationStrategy')
-            ->with($submitter)
-            ->andReturn(NotificationStrategy::Debounced);
-
-        $event = new TicketActivityEvent($ticket, ActivityType::Message);
-        $listener = new TicketNotificationListener($recipientService);
-
-        $listener->handle($event);
-
-        // Should create jobs with different unique IDs for debouncing
-        $assigneeJob = new NotificationJob($assignee, $ticket, 'activity');
-        $submitterJob = new NotificationJob($submitter, $ticket, 'activity');
-
-        expect($assigneeJob->uniqueId())->not->toBe($submitterJob->uniqueId());
     });
 });
 

@@ -64,16 +64,11 @@ class EmailLogoService
      */
     protected function formatLogo(mixed $logo): ?string
     {
-        if (is_object($logo)) {
-            if (method_exists($logo, 'getLogo')) {
-                return $logo->getLogo();
-            }
-            if (method_exists($logo, 'getUrl')) {
-                return $logo->getUrl();
-            }
+        if (is_object($logo) && method_exists($logo, 'getUrl')) {
+            return $logo->getUrl();
         }
 
-        if (is_string($logo)) {
+        if (is_string($logo) || $logo instanceof Htmlable) {
             // Simple SVG check (starts with <svg)
             if (stripos($logo, '<svg') === 0) {
                 return $logo; // Raw SVG
