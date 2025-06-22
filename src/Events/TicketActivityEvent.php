@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Padmission\Tickets\Enums\ActivityType;
@@ -16,7 +17,7 @@ class TicketActivityEvent
 
     public $metadata;
 
-    public function __construct(public Ticket $ticket, ActivityType|string $activityType, $metadata = null)
+    public function __construct(public Ticket $ticket, ActivityType|string $activityType, $metadata = null, public ?Authenticatable $actor = null)
     {
         $this->activityType = $activityType instanceof ActivityType ? $activityType->value : $activityType;
         $this->metadata = $metadata;

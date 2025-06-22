@@ -28,7 +28,7 @@ trait ManagesPriority
             ]
         );
 
-        event(new TicketPriorityChangedEvent($this, $oldPriorityId, $newPriorityId));
+        event(new TicketPriorityChangedEvent($this, $oldPriorityId, $newPriorityId, auth()->user()));
     }
 
     public function priority(): BelongsTo

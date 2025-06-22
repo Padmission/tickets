@@ -64,7 +64,7 @@ trait CanBeAssigned
                 $userId
             );
 
-            event(new TicketAssignedEvent($this));
+            event(new TicketAssignedEvent($this, auth()->user()));
         }
     }
 

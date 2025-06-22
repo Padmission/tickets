@@ -354,6 +354,97 @@ TicketPlugin::make()
     );
 ```
 
+### Notification Configuration Per Panel
+
+The package supports granular control over who receives notifications based on event type and actor role. You can configure different notification rules for each Filament panel.
+
+```php
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
+use Padmission\Tickets\TicketPlugin;
+
+$panel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->onTicketCreated(
+                    userTriggered: ['notify_user' => true, 'notify_supporter' => false],
+                    supporterTriggered: ['notify_user' => true, 'notify_supporter' => true]
+                )
+                ->onTicketActivity(
+                    userTriggered: ['notify_user' => false, 'notify_supporter' => true],
+                    supporterTriggered: ['notify_user' => true, 'notify_supporter' => false]
+                )
+                ->onTicketAssigned(
+                    supporterTriggered: ['notify_user' => false, 'notify_supporter' => true]
+                )
+                ->onTicketClosed(
+                    userTriggered: ['notify_user' => true, 'notify_supporter' => false],
+                    supporterTriggered: ['notify_user' => true, 'notify_supporter' => false]
+                )
+        )
+);
+```
+
+#### How It Works
+
+The notification system distinguishes between two types of actors:
+- **User-triggered**: When the ticket submitter performs an action
+- **Supporter-triggered**: When someone with ticket management permissions performs an action
+
+For each event type, you can configure:
+- `notify_user`: Whether to notify the ticket submitter
+- `notify_supporter`: Whether to notify the assigned supporter
+
+#### Default Behavior
+
+If no configuration is provided, the package uses sensible defaults:
+
+**Ticket Created**
+- User-triggered: Notifies user only
+- Supporter-triggered: Notifies both user and supporter
+
+**Ticket Assigned**
+- User-triggered: No notifications (a ticket can never be assigned by a user)
+- Supporter-triggered: Notifies supporter only
+
+**Ticket Activity** (messages, comments)
+- User-triggered: Notifies supporter only
+- Supporter-triggered: Notifies user only
+
+**Ticket Closed**
+- User-triggered: Notifies user only
+- Supporter-triggered: Notifies user only
+
+#### Per-Panel Configuration
+
+Since configuration is set at the panel level, you can have different rules for different panels:
+
+```php
+// Admin Panel - Notify all parties
+$adminPanel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->onTicketCreated(
+                    userTriggered: ['notify_user' => true, 'notify_supporter' => true],
+                    supporterTriggered: ['notify_user' => true, 'notify_supporter' => true]
+                )
+        )
+);
+
+// Customer Panel - More restrictive notifications
+$customerPanel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->onTicketCreated(
+                    userTriggered: ['notify_user' => true, 'notify_supporter' => false],
+                    supporterTriggered: ['notify_user' => true, 'notify_supporter' => false]
+                )
+        )
+);
+```
+
 ### Activity Tracking
 
 All ticket changes are automatically tracked in the activity log:

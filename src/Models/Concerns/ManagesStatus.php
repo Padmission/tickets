@@ -27,7 +27,7 @@ trait ManagesStatus
         // Check if this transition closes the ticket
         $this->handleStatusTransition($newStatusId, $userId);
 
-        event(new TicketStatusChangedEvent($this, $oldStatusId, $newStatusId));
+        event(new TicketStatusChangedEvent($this, $oldStatusId, $newStatusId, auth()->user()));
     }
 
     protected function handleStatusTransition(int $newStatusId, ?int $userId = null): void

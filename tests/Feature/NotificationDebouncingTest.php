@@ -288,12 +288,12 @@ describe('Recipient and Strategy Logic', function () {
 
         $recipients = $recipientService->getNotificationRecipients($event);
 
-        expect($recipients)->toHaveCount(2);
+        // For user-triggered activity (no actor), default is notify_supporter only
+        expect($recipients)->toHaveCount(1);
 
-        // Check that both users are in the recipients by ID
+        // Check that only the assignee (supporter) is in the recipients
         $recipientIds = $recipients->pluck('id')->toArray();
-        expect($recipientIds)->toContain($assignee->id)
-            ->and($recipientIds)->toContain($submitter->id);
+        expect($recipientIds)->toContain($assignee->id);
     });
 
     test('duplicate recipients are filtered out', function () {
