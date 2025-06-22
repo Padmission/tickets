@@ -55,9 +55,9 @@ function createListener()
 }
 
 test('ticket creation with default configuration sends notifications correctly', function () {    // Setup plugin with default configuration
-    $plugin = TicketPlugin::make()
-        ->notificationConfiguration(NotificationConfiguration::make());
-    app()->instance('filament.plugins.padmission-tickets', $plugin);
+    $this->modifyPlugin(
+        fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
+    );
 
     $listener = createListener();
 
@@ -104,10 +104,9 @@ test('ticket creation with default configuration sends notifications correctly',
 });
 
 test('ticket activity with default configuration sends notifications correctly', function () {
-    // Setup plugin with default configuration
-    $plugin = TicketPlugin::make()
-        ->notificationConfiguration(NotificationConfiguration::make());
-    app()->instance('filament.plugins.padmission-tickets', $plugin);
+    $this->modifyPlugin(
+        fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
+    );
 
     $listener = createListener();
 
@@ -145,10 +144,9 @@ test('ticket activity with default configuration sends notifications correctly',
 });
 
 test('ticket assignment with default configuration sends notifications correctly', function () {
-    // Setup plugin with default configuration
-    $plugin = TicketPlugin::make()
-        ->notificationConfiguration(NotificationConfiguration::make());
-    app()->instance('filament.plugins.padmission-tickets', $plugin);
+    $this->modifyPlugin(
+        fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
+    );
 
     $listener = createListener();
 
@@ -172,20 +170,14 @@ test('ticket assignment with default configuration sends notifications correctly
 });
 
 test('custom notification configuration overrides defaults correctly', function () {
-    // Get the existing plugin from the panel and update its configuration
-    $plugin = TicketPlugin::get();
-
     $customConfig = NotificationConfiguration::make()
         ->onTicketCreated(
             userTriggered: ['notify_user' => false, 'notify_supporter' => true],
             supporterTriggered: ['notify_user' => false, 'notify_supporter' => false]
         );
 
-    // Use reflection to update the plugin's configuration
-    $reflection = new \ReflectionClass($plugin);
-    $property = $reflection->getProperty('notificationConfiguration');
-    $property->setAccessible(true);
-    $property->setValue($plugin, $customConfig);
+    $plugin = TicketPlugin::get();
+    $plugin->notificationConfiguration($customConfig);
 
     // Verify the configuration was set
     expect($plugin->getNotificationConfiguration()->getConfigurationFor('ticket_created', 'user_triggered'))
@@ -227,11 +219,7 @@ test('no notifications are sent when configuration disables them', function () {
             supporterTriggered: ['notify_user' => false, 'notify_supporter' => false]
         );
 
-    // Use reflection to update the plugin's configuration
-    $reflection = new \ReflectionClass($plugin);
-    $property = $reflection->getProperty('notificationConfiguration');
-    $property->setAccessible(true);
-    $property->setValue($plugin, $customConfig);
+    $plugin->notificationConfiguration($customConfig);
 
     $listener = createListener();
 
@@ -248,10 +236,9 @@ test('no notifications are sent when configuration disables them', function () {
 });
 
 test('notifications handle missing assignee gracefully', function () {
-    // Setup plugin with default configuration
-    $plugin = TicketPlugin::make()
-        ->notificationConfiguration(NotificationConfiguration::make());
-    app()->instance('filament.plugins.padmission-tickets', $plugin);
+    $this->modifyPlugin(
+        fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
+    );
 
     $listener = createListener();
 
@@ -273,10 +260,9 @@ test('notifications handle missing assignee gracefully', function () {
 });
 
 test('actor determination works correctly without explicit actor', function () {
-    // Setup plugin with default configuration
-    $plugin = TicketPlugin::make()
-        ->notificationConfiguration(NotificationConfiguration::make());
-    app()->instance('filament.plugins.padmission-tickets', $plugin);
+    $this->modifyPlugin(
+        fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
+    );
 
     $listener = createListener();
 
@@ -307,11 +293,7 @@ test('custom notification configuration for activities works correctly', functio
             supporterTriggered: ['notify_user' => true, 'notify_supporter' => true]
         );
 
-    // Use reflection to update the plugin's configuration
-    $reflection = new \ReflectionClass($plugin);
-    $property = $reflection->getProperty('notificationConfiguration');
-    $property->setAccessible(true);
-    $property->setValue($plugin, $customConfig);
+    $plugin->notificationConfiguration($customConfig);
 
     $listener = createListener();
 

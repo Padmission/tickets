@@ -2,7 +2,7 @@
 
 namespace Padmission\Tickets\ConfigurationManagers;
 
-class NotificationConfiguration
+final class NotificationConfiguration
 {
     private array $rules = [
         'ticket_created' => [
@@ -25,7 +25,7 @@ class NotificationConfiguration
 
     public static function make(): static
     {
-        return new static;
+        return new self;
     }
 
     public function onTicketCreated(?array $userTriggered = null, ?array $supporterTriggered = null): static

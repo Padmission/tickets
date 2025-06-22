@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Tests;
 
 use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
 use BladeUI\Icons\BladeIconsServiceProvider;
+use Closure;
 use Filament\Actions\ActionsServiceProvider;
 use Filament\Facades\Filament;
 use Filament\FilamentServiceProvider;
@@ -109,5 +110,14 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->actingAs($user);
 
         return $user;
+    }
+
+    public function modifyPlugin(Closure $callback): void
+    {
+        $plugin = TicketPlugin::get();
+
+        $callback($plugin);
+
+        app()->instance('filament.plugins.padmission-tickets', $plugin);
     }
 }
