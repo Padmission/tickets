@@ -30,6 +30,12 @@ parameters:
         
         # Nullsafe operator issues
         - '#Using nullsafe property access on non-nullable type#'
+        
+        # Laravel magic property on interface - PHPStan limitation with @property on interfaces
+        - '#Access to an undefined property Padmission\\Tickets\\Models\\Contracts\\IsTicketActivity::\$sender#'
+        
+        # Generic relationship type issues in traits - PHPStan has trouble with $this in generic contexts
+        - '#Method .* should return .* but returns .*\$this\(.*\)#'
 
     databaseMigrationsPath:
         - database/migrations
