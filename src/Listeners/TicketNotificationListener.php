@@ -3,7 +3,7 @@
 namespace Padmission\Tickets\Listeners;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\Str;
+use Mpbarlow\LaravelQueueDebouncer\Debouncer;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
@@ -30,22 +30,19 @@ class TicketNotificationListener
             return;
         }
 
-        $recipients->each(function (Authenticatable $user) use ($event, $notificationType) {
-            $this->sendNotificationToUser($user, $event, $notificationType);
-        });
+        $recipients->each(
+            fn (Authenticatable $user) => $this->sendNotificationToUser($user, $event, $notificationType)
+        );
     }
 
     protected function getNotificationType($event): ?string
     {
-        $type = strtolower(
-            Str::chopEnd(               // remove trailing 'Event'
-                Str::chopStart(          // remove leading 'Ticket'
-                    class_basename($event::class),
-                    'Ticket'
-                ),
-                'Event'
-            )
-        );
+        $type = str($event::class)
+            ->classBasename()
+            ->after('Ticket')
+            ->beforeLast('Event')
+            ->lower()
+            ->toString();
 
         return $type ?: null;
     }
@@ -81,8 +78,7 @@ class TicketNotificationListener
         $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
         $job = new $jobClass($user, $ticket, $type);
 
-        // Use dependency injection to get the debouncer and customize the cache key provider
-        $debouncer = app(\Mpbarlow\LaravelQueueDebouncer\Debouncer::class);
+        $debouncer = resolve(Debouncer::class);
 
         $debouncer
             ->usingCacheKeyProvider(fn () => $job->uniqueId())

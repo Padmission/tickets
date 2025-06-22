@@ -4,21 +4,16 @@ namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketStatusChangedEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketObserver
 {
-    public function creating(Ticket $ticket): void
-    {
-        // Only infrastructure concerns
-        // Panel context would need panel column in database migration
-        // For now, we focus on the core functionality
-    }
-
     public function created(Ticket $ticket): void
     {
         event(new TicketCreatedEvent($ticket, auth()->user()));
@@ -57,8 +52,24 @@ class TicketObserver
             $oldStatusId = $ticket->getOriginal('status_id');
             $newStatusId = $ticket->status_id;
 
-            // Only handle activities and events - closure logic is in saving event
-            $ticket->handleStatusTransitionLogic($oldStatusId, $newStatusId, auth()->id());
+            $ticket->addTicketActivity(
+                ActivityType::StatusChanged,
+                ActivitySender::System,
+                auth()->id(),
+                [
+                    'from' => $oldStatusId,
+                    'to' => $newStatusId,
+                ]
+            );
+
+            $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+            $isClosedStatus = $newStatusId === $closedStatus->getKey();
+
+            if ($isClosedStatus && $ticket->isOpen) {
+                $ticket->close(closedById: auth()->id());
+            }
+
+            event(new TicketStatusChangedEvent($ticket, $oldStatusId, $newStatusId));
         }
     }
 
@@ -83,9 +94,6 @@ class TicketObserver
         }
     }
 
-    /**
-     * Handle status-based closure activities and events after save
-     */
     protected function handleStatusClosureActivitiesAndEvents(Ticket $ticket): void
     {
         $oldStatusId = $ticket->getOriginal('status_id');
@@ -100,7 +108,6 @@ class TicketObserver
 
             $ticket->addTicketActivity(
                 ActivityType::Closed,
-                'Ticket closed',
                 ActivitySender::System,
                 $userId,
                 ['closed_by' => $userId]
@@ -110,19 +117,21 @@ class TicketObserver
         }
     }
 
-    /**
-     * Handle priority transitions by calling the ManagesPriority concern
-     */
     protected function handlePriorityTransition(Ticket $ticket): void
     {
         if ($ticket->isDirty('priority_id')) {
             $oldPriorityId = $ticket->getOriginal('priority_id');
             $newPriorityId = $ticket->priority_id;
 
-            // Use the concern's change method - but avoid double update
-            // Since we're in updating, the priority_id is already changed
-            // We just need to handle the business logic
-            $ticket->handlePriorityTransitionLogic($oldPriorityId, $newPriorityId, auth()->id());
+            $ticket->addTicketActivity(
+                ActivityType::PriorityChanged,
+                ActivitySender::System,
+                auth()->id(),
+                [
+                    'from' => $oldPriorityId,
+                    'to' => $newPriorityId,
+                ]
+            );
         }
     }
 
@@ -132,7 +141,15 @@ class TicketObserver
             $oldAssigneeId = $ticket->getOriginal('assignee_id');
             $newAssigneeId = $ticket->assignee_id;
 
-            $ticket->handleAssignmentTransitionLogic($oldAssigneeId, $newAssigneeId, auth()->id());
+            if ($oldAssigneeId !== $newAssigneeId) {
+                $ticket->addTicketActivity(
+                    ActivityType::AssigneeChanged,
+                    ActivitySender::System,
+                    auth()->id()
+                );
+
+                event(new TicketAssignedEvent($ticket));
+            }
         }
     }
 }

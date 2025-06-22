@@ -30,10 +30,12 @@ class TicketNotification extends Model
     }
 
     /**
-     * @return BelongsTo<Model, $this>
+     * @return BelongsTo<Model&Authenticatable, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(TicketPlugin::resolveModelClass(Authenticatable::class));
+        return $this->belongsTo(
+            TicketPlugin::resolveUserModelClass()
+        );
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-use Filament\Models\Contracts\HasName;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -10,12 +9,12 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Database\Factories\TicketActivityFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
 use Padmission\Tickets\TicketPlugin;
 
@@ -40,6 +39,9 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
+    /**
+     * @return BelongsTo<Ticket,$this>
+     */
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(
@@ -47,10 +49,13 @@ class TicketActivity extends Model
         );
     }
 
+    /**
+     * @return BelongsTo<Model&Authenticatable, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Authenticatable::class)
+            TicketPlugin::resolveUserModelClass()
         );
     }
 
@@ -64,29 +69,7 @@ class TicketActivity extends Model
                 return __('padmission-tickets::tickets.side_you');
             }
 
-            $user = $this->user;
-
-            if (! $user) {
-                return '';
-            }
-
-            // Check if user implements the interface for custom display names
-            if ($user instanceof HasTicketDisplayName) {
-                return $user->getNameForTickets();
-            }
-
-            // Fallback to Filament's HasName interface
-            if ($user instanceof HasName) {
-                return $user->getFilamentName();
-            }
-
-            // Fallback to common name attributes
-            if (isset($user->name)) {
-                return $user->name;
-            }
-
-            // Last resort fallback
-            return '';
+            return resolve(GetUserDisplayName::class)($this->user_id);
         });
     }
 
@@ -100,6 +83,9 @@ class TicketActivity extends Model
         return Attribute::get(fn ($value) => match ($this->type) {
             ActivityType::Opened => __('padmission-tickets::activities.opened'),
             ActivityType::Closed => __('padmission-tickets::activities.closed'),
+            ActivityType::AssigneeChanged => filled($this->data['to'])
+                ? __('padmission-tickets::activities.assigned_to', ['name' => resolve(GetUserDisplayName::class)($this->data['to'])])
+                : __('padmission-tickets::activities.unassigned'),
             ActivityType::TurnChanged => __('padmission-tickets::activities.turn_changed', [
                 'from' => Turn::tryFrom($this->data['from'])->getLabel(),
                 'to' => Turn::tryFrom($this->data['to'])->getLabel(),

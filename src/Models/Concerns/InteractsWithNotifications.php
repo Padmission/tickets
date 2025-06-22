@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models\Concerns;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
@@ -26,10 +27,13 @@ trait InteractsWithNotifications
         return true;
     }
 
+    /**
+     * @return BelongsTo<Model&Authenticatable, $this>
+     */
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Authenticatable::class),
+            TicketPlugin::resolveUserModelClass(),
             'submitter_id'
         );
     }

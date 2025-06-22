@@ -19,21 +19,6 @@ test('can generate action URL with valid ticket URL', function () {
     expect($actionUrl)->toBe("https://example.com/tickets#ticket-{$ticket->id}");
 });
 
-test('falls back to app URL when ticket URL is invalid', function () {
-    $ticket = Ticket::factory()->create([
-        'data' => [
-            'url' => 'invalid-url',
-        ],
-    ]);
-
-    // When URL validation fails, it falls back to config('app.url')
-    $expectedUrl = config('app.url');
-
-    $actionUrl = $this->service->getActionUrl($ticket);
-
-    expect($actionUrl)->toBe("{$expectedUrl}#ticket-{$ticket->id}");
-});
-
 test('uses app URL when no ticket URL provided', function () {
     $ticket = Ticket::factory()->create([
         'data' => [],

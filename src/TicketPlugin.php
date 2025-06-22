@@ -12,7 +12,6 @@ use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\Filament\Widgets;
-use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
 
 final class TicketPlugin implements Plugin
 {
@@ -25,8 +24,6 @@ final class TicketPlugin implements Plugin
     protected string $escalationLevel = 'default';
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
-
-    protected ?NotificationStrategy $notificationStrategy = null;
 
     protected bool $shouldShowChatWidget = false;
 
@@ -91,7 +88,7 @@ final class TicketPlugin implements Plugin
     /**
      * @template T of Model
      *
-     * @param  class-string<T|Authenticatable>  $class
+     * @param  class-string<T>  $class
      * @return class-string<T>
      */
     public static function resolveModelClass(string $class): string
@@ -102,8 +99,16 @@ final class TicketPlugin implements Plugin
     }
 
     /**
-     * Resolve a job class, allowing for custom implementations
-     *
+     * @return class-string<Authenticatable&Model>
+     */
+    public static function resolveUserModelClass(): string
+    {
+        $classes = config()->array('padmission-tickets.models');
+
+        return (string) ($classes[Authenticatable::class]);
+    }
+
+    /**
      * @param  class-string  $class
      * @return class-string
      */
@@ -137,18 +142,6 @@ final class TicketPlugin implements Plugin
     public function getAssignmentStrategy(): ?AssignmentStrategy
     {
         return $this->assignmentStrategy;
-    }
-
-    public function notificationStrategy(NotificationStrategy $strategy): static
-    {
-        $this->notificationStrategy = $strategy;
-
-        return $this;
-    }
-
-    public function getNotificationStrategy(): ?NotificationStrategy
-    {
-        return $this->notificationStrategy;
     }
 
     public function registerResources(bool $shouldRegister = true, bool $shouldRegisterWidgets = true): static

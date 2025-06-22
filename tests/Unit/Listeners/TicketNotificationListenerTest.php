@@ -10,6 +10,7 @@ use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Tests\User;
 
@@ -32,6 +33,25 @@ beforeEach(function () {
 
 afterEach(function () {
     \Mockery::close();
+});
+
+test('notification listener correctly maps event types to notification types', function () {
+    $ticket = Ticket::factory()->open()->create();
+    $listener = new TicketNotificationListener(app(NotificationRecipientService::class));
+
+    // Test event type mapping
+    $activityEvent = new TicketActivityEvent($ticket, ActivityType::Message);
+    $createdEvent = new TicketCreatedEvent($ticket);
+    $assignedEvent = new TicketAssignedEvent($ticket);
+    $closedEvent = new TicketClosedEvent($ticket);
+
+    $listener = invade($listener);
+
+    expect($listener)
+        ->getNotificationType($activityEvent)->toBe('activity')
+        ->getNotificationType($createdEvent)->toBe('created')
+        ->getNotificationType($assignedEvent)->toBe('assigned')
+        ->getNotificationType($closedEvent)->toBe('closed');
 });
 
 describe('TicketNotificationListener Unit Tests', function () {
@@ -177,7 +197,7 @@ describe('NotificationJob Unit Tests', function () {
 
         $notificationClass = invade($job)->getNotificationClass();
 
-        expect($notificationClass)->toBe(\Padmission\Tickets\Notifications\TicketNotification::class);
+        expect($notificationClass)->toBe(TicketNotification::class);
     });
 
     test('returns null for invalid notification type', function () {

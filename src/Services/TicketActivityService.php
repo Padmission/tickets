@@ -39,7 +39,7 @@ class TicketActivityService
      */
     public function getLastNotification(Ticket $ticket, $notifiable): ?TicketNotification
     {
-        /** @var \Padmission\Tickets\Models\TicketNotification|null $notification */
+        /** @var TicketNotification|null $notification */
         $notification = $ticket
             ->ticketNotifications()
             ->where('user_id', $notifiable->getKey())

@@ -22,42 +22,34 @@ trait CanBeClosed
 
     public function close(?int $dispositionId = null, ?int $closedById = null): void
     {
-        // Use direct attribute check instead of method to avoid conflicts
         if ($this->closed_at !== null) {
             return;
         }
 
-        $closedBy ??= auth()->id();
+        $closedById ??= auth()->id();
 
-        // Get the closed status
         $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
 
-        // Store the original status before changing it
         $originalStatusId = $this->status_id;
         $newStatusId = $closedStatus->getKey();
 
-        // Set flag to indicate this is an explicit close() call
         $this->isExplicitCloseCall = true;
 
-        // Use direct attribute assignment to avoid observer conflicts
         $this->disposition_id = $dispositionId;
-        $this->closed_by = $closedBy;
+        $this->closed_by = $closedById;
         $this->closed_at = now();
         $this->status_id = $newStatusId;
 
-        // Save the model
         $this->save();
 
         // Clear the flag
         $this->isExplicitCloseCall = false;
 
-        // Create status change activity if status actually changed
         if ($originalStatusId !== $newStatusId) {
             $this->addTicketActivity(
                 ActivityType::StatusChanged,
-                'Status changed',
                 ActivitySender::System,
-                $closedBy,
+                $closedById,
                 [
                     'from' => $originalStatusId,
                     'to' => $newStatusId,
@@ -65,13 +57,11 @@ trait CanBeClosed
             );
         }
 
-        // Create closed activity
         $this->addTicketActivity(
             ActivityType::Closed,
-            'Ticket closed',
             ActivitySender::System,
-            $closedBy,
-            ['closed_by' => $closedBy, 'disposition_id' => $dispositionId]
+            $closedById,
+            ['closed_by' => $closedById, 'disposition_id' => $dispositionId]
         );
 
         event(new TicketClosedEvent($this));
