@@ -354,6 +354,164 @@ TicketPlugin::make()
     );
 ```
 
+### Notification Configuration Per Panel
+
+The package supports granular control over who receives notifications based on event type and actor role. You can configure different notification rules for each Filament panel using a fluent API.
+
+```php
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
+use Padmission\Tickets\Enums\NotificationRecipient;
+use Padmission\Tickets\Enums\NotificationTrigger;
+use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Events\TicketClosedEvent;
+use Padmission\Tickets\TicketPlugin;
+
+$panel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->on(
+                    TicketCreatedEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::User,
+                        NotificationTrigger::Supporter => NotificationRecipient::Both,
+                    }
+                )
+                ->on(
+                    TicketActivityEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::Supporter,
+                        NotificationTrigger::Supporter => NotificationRecipient::User,
+                    }
+                )
+                ->on(
+                    TicketAssignedEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::Supporter => NotificationRecipient::Supporter,
+                        default => NotificationRecipient::None,
+                    }
+                )
+                ->on(
+                    TicketClosedEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::Supporter,
+                        NotificationTrigger::Supporter => NotificationRecipient::User,
+                    }
+                )
+        )
+);
+```
+
+#### How It Works
+
+The notification system uses two key enums:
+
+**NotificationTrigger** - Who triggered the event:
+- `NotificationTrigger::User` - The ticket submitter performed the action
+- `NotificationTrigger::Supporter` - Someone with ticket management permissions performed the action
+
+**NotificationRecipient** - Who should be notified:
+- `NotificationRecipient::User` - Notify the ticket submitter only
+- `NotificationRecipient::Supporter` - Notify the assigned supporter only
+- `NotificationRecipient::Both` - Notify both user and supporter
+- `NotificationRecipient::None` - Don't send any notifications
+
+For each event type, you define a closure that receives the trigger type and returns who should be notified. This allows for flexible notification rules based on who initiated the action.
+
+#### Default Behavior
+
+The package provides sensible defaults if no configuration is provided:
+
+**Ticket Created**
+- User-triggered: Notifies user only
+- Supporter-triggered: Notifies both user and supporter
+
+**Ticket Assigned**
+- Supporter-triggered: Notifies supporter only
+- User-triggered: No notifications (users cannot assign tickets)
+
+**Ticket Activity** (messages, comments)
+- User-triggered: Notifies supporter only
+- Supporter-triggered: Notifies user only
+
+**Ticket Closed**
+- User-triggered: Notifies supporter only
+- Supporter-triggered: Notifies user only
+
+#### Per-Panel Configuration
+
+Since configuration is set at the panel level, you can have different rules for different panels:
+
+```php
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
+use Padmission\Tickets\Enums\NotificationRecipient;
+use Padmission\Tickets\Enums\NotificationTrigger;
+use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketActivityEvent;
+
+// Admin Panel - Notify all parties for everything
+$adminPanel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->on(
+                    TicketCreatedEvent::class,
+                    fn (NotificationTrigger $trigger) => NotificationRecipient::Both
+                )
+                ->on(
+                    TicketActivityEvent::class,
+                    fn (NotificationTrigger $trigger) => NotificationRecipient::Both
+                )
+        )
+);
+
+// Customer Panel - More restrictive notifications
+$customerPanel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->on(
+                    TicketCreatedEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::User,
+                        NotificationTrigger::Supporter => NotificationRecipient::None,
+                    }
+                )
+                ->on(
+                    TicketActivityEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::None,
+                        NotificationTrigger::Supporter => NotificationRecipient::User,
+                    }
+                )
+        )
+);
+```
+
+#### Custom Notification Logic
+
+You can also implement complex notification logic based on your business requirements:
+
+```php
+->on(
+    TicketCreatedEvent::class,
+    function (NotificationTrigger $trigger) {
+        // Custom logic based on time of day, user type, etc.
+        if ($trigger === NotificationTrigger::User) {
+            // During business hours, notify both
+            if (now()->hour >= 9 && now()->hour < 17) {
+                return NotificationRecipient::Both;
+            }
+            // Outside business hours, just notify user
+            return NotificationRecipient::User;
+        }
+        
+        return NotificationRecipient::Both;
+    }
+)
+
 ### Activity Tracking
 
 All ticket changes are automatically tracked in the activity log:

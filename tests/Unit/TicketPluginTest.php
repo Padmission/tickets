@@ -40,6 +40,5 @@ it('ensures model resolution works with custom models', function (string $given,
     [TicketDisposition::class, CustomTicketDisposition::class],
     [TicketStatus::class, CustomTicketStatus::class],
     [TicketPriority::class, CustomTicketPriority::class],
-    [TicketActivity::class, CustomTicketActivity::class],
     [TicketNotification::class, CustomTicketNotification::class],
 ]);

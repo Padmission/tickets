@@ -9,6 +9,7 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\Filament\Widgets;
 
@@ -27,6 +28,8 @@ final class TicketPlugin implements Plugin
     protected bool $shouldShowChatWidget = false;
 
     protected ?ChatWidgetConfig $chatWidgetConfig = null;
+
+    protected ?NotificationConfiguration $notificationConfiguration = null;
 
     public static function make(): static
     {
@@ -170,6 +173,18 @@ final class TicketPlugin implements Plugin
     public function getChatWidgetConfig(): ChatWidgetConfig
     {
         return $this->chatWidgetConfig ?? new ChatWidgetConfig;
+    }
+
+    public function notificationConfiguration(NotificationConfiguration $configuration): static
+    {
+        $this->notificationConfiguration = $configuration;
+
+        return $this;
+    }
+
+    public function getNotificationConfiguration(): NotificationConfiguration
+    {
+        return $this->notificationConfiguration ?? NotificationConfiguration::make();
     }
 
     public function shouldShowChatWidget(): bool
