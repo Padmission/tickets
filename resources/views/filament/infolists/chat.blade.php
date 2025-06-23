@@ -1,8 +1,9 @@
 @php
     use Filament\Facades\Filament;
-    use Filament\Support\Facades\FilamentAsset;
+    use Filament\Support\Facades\FilamentAsset;use Padmission\Tickets\TicketPlugin;
 
-    $primaryColor = data_get(Filament::getCurrentPanel()->getColors(), 'primary.600');
+    $config = TicketPlugin::get()->getChatWidgetConfig();
+    $primaryColor = $config->getPrimaryColor();
 @endphp
 <div
     class="pad-ti-chat-wrapper"
@@ -21,6 +22,11 @@
             }
         }
 
+        chat-component {
+            --color-surface: transparent;
+            --composer-bg: transparent;
+        }
+
         @if ($primaryColor)
             chat-component {
                 --color-primary: rgb({{ $primaryColor }});
@@ -30,6 +36,7 @@
 
     <chat-component
         ticket-id="{{ $this->record->id }}"
+        config="{{ $config->toJs() }}"
         scroll-threshold="100"
         polling-interval="10000"
         has-elevated-rights="true"

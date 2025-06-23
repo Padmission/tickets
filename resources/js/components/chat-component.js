@@ -19,8 +19,6 @@ customElements.define(
 		constructor() {
 			super();
 
-			console.log("config", config);
-
 			this.scrollThreshold = 100;
 			this.pollingIntervalMs = 5000;
 
@@ -40,6 +38,12 @@ customElements.define(
 
 			this.isNearBottom = true;
 		}
+
+        beforeRender() {
+            if (this.config) {
+                config.setConfig(JSON.parse(this.config))
+            }
+        }
 
 		disconnectedCallback() {
 			this.stopPolling();
