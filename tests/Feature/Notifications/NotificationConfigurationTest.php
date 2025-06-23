@@ -22,11 +22,9 @@ use Padmission\Tickets\TicketPlugin;
 beforeEach(function () {
     Queue::fake();
 
-    // Create test users
     $this->submitter = User::factory()->create(['name' => 'Submitter']);
     $this->supporter = User::factory()->create(['name' => 'Supporter']);
 
-    // Create ticket statuses and priorities
     TicketStatus::factory()->create([
         'display_name' => 'Open',
         'order' => 1,
@@ -39,14 +37,11 @@ beforeEach(function () {
         'panel' => 'test',
     ]);
 
-    // Setup Gate to identify supporters
     Gate::define('update', function ($user, $ticket) {
-        // In our test, the supporter can update any ticket
         return $user->id === $this->supporter->id;
     });
 });
 
-// Helper function to create a listener with immediate notifications
 function createListener()
 {
     $recipientService = \Mockery::mock(NotificationRecipientService::class)->makePartial();
@@ -56,14 +51,13 @@ function createListener()
     return new TicketNotificationListener($recipientService);
 }
 
-test('ticket creation with default configuration sends notifications correctly', function () {    // Setup plugin with default configuration
+test('ticket creation with default configuration sends notifications correctly', function () {
     $this->modifyPlugin(
         fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
     );
 
     $listener = createListener();
 
-    // Test 1: User creates ticket - should notify user only
     $this->actingAs($this->submitter);
     $ticket = Ticket::factory()->create([
         'submitter_id' => $this->submitter->id,
@@ -73,18 +67,16 @@ test('ticket creation with default configuration sends notifications correctly',
     $event = new TicketCreatedEvent($ticket, $this->submitter);
     $listener->handle($event);
 
-    // Should dispatch notification to submitter only (user-triggered: notify_user: true, notify_supporter: false)
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->submitter->id &&
                $job->notificationType === 'created';
     });
 
-    Queue::assertPushed(NotificationJob::class, 1); // Only one notification
+    Queue::assertPushed(NotificationJob::class, 1);
 
-    // Clear queue for next test
     Queue::fake();
 
-    // Test 2: Supporter creates ticket - should notify both    $this->actingAs($this->supporter);
+    $this->actingAs($this->supporter);
     $ticket2 = Ticket::factory()->create([
         'submitter_id' => $this->submitter->id,
         'assignee_id' => $this->supporter->id,
@@ -93,7 +85,6 @@ test('ticket creation with default configuration sends notifications correctly',
     $event2 = new TicketCreatedEvent($ticket2, $this->supporter);
     $listener->handle($event2);
 
-    // Should dispatch notifications to both (supporter-triggered: notify_user: true, notify_supporter: true)
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->submitter->id;
     });
@@ -102,7 +93,7 @@ test('ticket creation with default configuration sends notifications correctly',
         return $job->getUserId() === $this->supporter->id;
     });
 
-    Queue::assertPushed(NotificationJob::class, 2); // Two notifications
+    Queue::assertPushed(NotificationJob::class, 2);
 });
 
 test('ticket activity with default configuration sends notifications correctly', function () {
@@ -112,16 +103,15 @@ test('ticket activity with default configuration sends notifications correctly',
 
     $listener = createListener();
 
-    $ticket = Ticket::factory()->create(['submitter_id' => $this->submitter->id,
+    $ticket = Ticket::factory()->create([
+        'submitter_id' => $this->submitter->id,
         'assignee_id' => $this->supporter->id,
     ]);
 
-    // Test 1: User adds activity - should notify supporter only
     $this->actingAs($this->submitter);
     $event = new TicketActivityEvent($ticket, ActivityType::Message, null, $this->submitter);
     $listener->handle($event);
 
-    // Should dispatch notification to supporter only (user-triggered: notify_user: false, notify_supporter: true)
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->supporter->id &&
                $job->notificationType === 'activity';
@@ -129,15 +119,12 @@ test('ticket activity with default configuration sends notifications correctly',
 
     Queue::assertPushed(NotificationJob::class, 1);
 
-    // Clear queue
     Queue::fake();
 
-    // Test 2: Supporter adds activity - should notify user only
     $this->actingAs($this->supporter);
     $event2 = new TicketActivityEvent($ticket, ActivityType::Message, null, $this->supporter);
     $listener->handle($event2);
 
-    // Should dispatch notification to user only (supporter-triggered: notify_user: true, notify_supporter: false)
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->submitter->id;
     });
@@ -157,12 +144,10 @@ test('ticket assignment with default configuration sends notifications correctly
         'assignee_id' => $this->supporter->id,
     ]);
 
-    // Test: Supporter assigns ticket - should notify supporter only
     $this->actingAs($this->supporter);
     $event = new TicketAssignedEvent($ticket, $this->supporter);
     $listener->handle($event);
 
-    // Should dispatch notification to supporter only (supporter-triggered: notify_user: false, notify_supporter: true)
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->supporter->id &&
                $job->notificationType === 'assigned';
@@ -177,13 +162,12 @@ test('custom notification configuration overrides defaults correctly', function 
             TicketCreatedEvent::class,
             fn (NotificationTrigger $trigger) => match ($trigger) {
                 NotificationTrigger::User => NotificationRecipient::Supporter,
-                default => false
+                default => NotificationRecipient::None
             });
 
     $plugin = TicketPlugin::get();
     $plugin->notificationConfiguration($customConfig);
 
-    // Verify the configuration was set
     expect($plugin->getNotificationConfiguration())
         ->getConfigurationFor(
             TicketCreatedEvent::class,
@@ -198,11 +182,9 @@ test('custom notification configuration overrides defaults correctly', function 
         'assignee_id' => $this->supporter->id,
     ]);
 
-    // Test: User creates ticket with custom config
     $this->actingAs($this->submitter);
     $event = new TicketCreatedEvent($ticket, $this->submitter);
 
-    // Directly test the recipient service to debug
     $recipientService = new NotificationRecipientService;
     $recipients = $recipientService->getNotificationRecipients($event);
     expect($recipients)->toHaveCount(1);
@@ -210,7 +192,6 @@ test('custom notification configuration overrides defaults correctly', function 
 
     $listener->handle($event);
 
-    // Custom config: user-triggered should notify supporter only
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->supporter->id &&
                $job->notificationType === 'created';
@@ -218,7 +199,6 @@ test('custom notification configuration overrides defaults correctly', function 
 });
 
 test('no notifications are sent when configuration disables them', function () {
-    // Get the existing plugin from the panel and update its configuration
     $plugin = TicketPlugin::get();
 
     $customConfig = NotificationConfiguration::make()
@@ -236,7 +216,6 @@ test('no notifications are sent when configuration disables them', function () {
         'assignee_id' => $this->supporter->id,
     ]);
 
-    // Create ticket - should send no notifications
     $event = new TicketCreatedEvent($ticket, $this->submitter);
     $listener->handle($event);
 
@@ -250,13 +229,11 @@ test('notifications handle missing assignee gracefully', function () {
 
     $listener = createListener();
 
-    // Create ticket without assignee
     $ticket = Ticket::factory()->create([
         'submitter_id' => $this->submitter->id,
         'assignee_id' => null,
     ]);
 
-    // User creates ticket - should only notify user (assignee doesn't exist)
     $event = new TicketCreatedEvent($ticket, $this->submitter);
     $listener->handle($event);
 
@@ -279,11 +256,9 @@ test('actor determination works correctly without explicit actor', function () {
         'assignee_id' => $this->supporter->id,
     ]);
 
-    // Activity event without actor - should be treated as user-triggered
     $event = new TicketActivityEvent($ticket, ActivityType::Message, null, null);
     $listener->handle($event);
 
-    // Default for user-triggered activity: notify supporter only
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->supporter->id;
     });
@@ -292,7 +267,6 @@ test('actor determination works correctly without explicit actor', function () {
 });
 
 test('custom notification configuration for activities works correctly', function () {
-    // Get the existing plugin from the panel and update its configuration
     $plugin = TicketPlugin::get();
 
     $customConfig = NotificationConfiguration::make()
@@ -310,12 +284,10 @@ test('custom notification configuration for activities works correctly', functio
         'assignee_id' => $this->supporter->id,
     ]);
 
-    // Test: User adds activity with custom config - should notify both
     $this->actingAs($this->submitter);
     $event = new TicketActivityEvent($ticket, ActivityType::Message, null, $this->submitter);
     $listener->handle($event);
 
-    // Custom config: user-triggered activity should notify both
     Queue::assertPushed(NotificationJob::class, function ($job) {
         return $job->getUserId() === $this->submitter->id &&
                $job->notificationType === 'activity';
