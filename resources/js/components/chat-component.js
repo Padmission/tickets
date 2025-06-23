@@ -39,11 +39,11 @@ customElements.define(
 			this.isNearBottom = true;
 		}
 
-        beforeRender() {
-            if (this.config) {
-                config.setConfig(JSON.parse(this.config))
-            }
-        }
+		beforeRender() {
+			if (this.config) {
+				config.setConfig(JSON.parse(this.config));
+			}
+		}
 
 		disconnectedCallback() {
 			this.stopPolling();
