@@ -9,12 +9,20 @@ class ChatWidgetConfig {
 	lang = {};
 
 	constructor() {
-		if (window.ChatWidgetConfig) {
-			return window.ChatWidgetConfig;
+		if (ChatWidgetConfig.instance) {
+			throw new Error('Use ChatWidgetConfig.getInstance()')
 		}
 
-		window.ChatWidgetConfig = this;
+		ChatWidgetConfig.instance = this;
 	}
+
+    static getInstance() {
+        if (! ChatWidgetConfig.instance) {
+            ChatWidgetConfig.instance = new ChatWidgetConfig()
+        }
+
+        return ChatWidgetConfig.instance
+    }
 
 	/**
 	 * @param {Partial<ChatWidgetConfig>} config
@@ -24,5 +32,5 @@ class ChatWidgetConfig {
 	}
 }
 
-const config = new ChatWidgetConfig();
+const config = ChatWidgetConfig.getInstance();
 export default config;
