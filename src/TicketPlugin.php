@@ -25,9 +25,9 @@ final class TicketPlugin implements Plugin
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
 
-    protected bool $shouldShowChatWidget = false;
+    protected mixed $shouldShowChatWidget = false;
 
-    protected ?ChatWidgetConfig $chatWidgetConfig = null;
+    protected mixed $chatWidgetConfig = null;
 
     protected ?NotificationConfiguration $notificationConfiguration = null;
 
@@ -61,14 +61,20 @@ final class TicketPlugin implements Plugin
             ]);
         }
 
-        if ($this->shouldShowChatWidget()) {
-            $panel->renderHook(
-                PanelsRenderHook::BODY_END,
-                fn () => view('padmission-tickets::filament.chat-widget', [
+        // Always register the render hook, but check the condition inside the closure
+        $panel->renderHook(
+            PanelsRenderHook::BODY_END,
+            function () use ($panel) {
+                // Check the condition when the hook is actually rendered (after auth)
+                if (! $this->shouldShowChatWidget()) {
+                    return '';
+                }
+
+                return view('padmission-tickets::filament.chat-widget', [
                     'primaryColor' => data_get($panel->getColors(), 'primary', null),
-                ])
-            );
-        }
+                ]);
+            }
+        );
     }
 
     public function boot(Panel $panel): void {}
@@ -162,7 +168,7 @@ final class TicketPlugin implements Plugin
         return $this->shouldRegisterWidgets;
     }
 
-    public function showChatWidget(bool $shouldShow = true, ?ChatWidgetConfig $config = null): static
+    public function showChatWidget(bool | \Closure $shouldShow = true, ChatWidgetConfig | \Closure | null $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;
         $this->chatWidgetConfig = $config;
@@ -172,6 +178,10 @@ final class TicketPlugin implements Plugin
 
     public function getChatWidgetConfig(): ChatWidgetConfig
     {
+        if ($this->chatWidgetConfig instanceof \Closure) {
+            return app()->call($this->chatWidgetConfig);
+        }
+
         return $this->chatWidgetConfig ?? new ChatWidgetConfig;
     }
 
@@ -189,6 +199,10 @@ final class TicketPlugin implements Plugin
 
     public function shouldShowChatWidget(): bool
     {
+        if ($this->shouldShowChatWidget instanceof \Closure) {
+            return (bool) app()->call($this->shouldShowChatWidget);
+        }
+
         return $this->shouldShowChatWidget;
     }
 }
