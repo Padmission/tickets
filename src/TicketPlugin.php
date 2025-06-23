@@ -168,7 +168,7 @@ final class TicketPlugin implements Plugin
         return $this->shouldRegisterWidgets;
     }
 
-    public function showChatWidget(bool | \Closure $shouldShow = true, ChatWidgetConfig | \Closure | null $config = null): static
+    public function showChatWidget(bool|\Closure $shouldShow = true, ChatWidgetConfig|\Closure|null $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;
         $this->chatWidgetConfig = $config;

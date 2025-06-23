@@ -10,19 +10,19 @@ class ChatWidgetConfig {
 
 	constructor() {
 		if (ChatWidgetConfig.instance) {
-			throw new Error('Use ChatWidgetConfig.getInstance()')
+			throw new Error("Use ChatWidgetConfig.getInstance()");
 		}
 
 		ChatWidgetConfig.instance = this;
 	}
 
-    static getInstance() {
-        if (! ChatWidgetConfig.instance) {
-            ChatWidgetConfig.instance = new ChatWidgetConfig()
-        }
+	static getInstance() {
+		if (!ChatWidgetConfig.instance) {
+			ChatWidgetConfig.instance = new ChatWidgetConfig();
+		}
 
-        return ChatWidgetConfig.instance
-    }
+		return ChatWidgetConfig.instance;
+	}
 
 	/**
 	 * @param {Partial<ChatWidgetConfig>} config
