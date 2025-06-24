@@ -27,8 +27,7 @@ final class NotificationConfiguration
             ->on(
                 TicketAssignedEvent::class,
                 fn (NotificationTrigger $trigger) => match ($trigger) {
-                    NotificationTrigger::Supporter => NotificationRecipient::Supporter,
-                    default => false,
+                    default => NotificationRecipient::Supporter,
                 }
             )
             ->on(
