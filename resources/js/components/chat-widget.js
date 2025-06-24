@@ -3,6 +3,8 @@ import render from "./helpers/render.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
+import "./chat-component.js";
+
 import "./chat-widget/view.js";
 import "./chat-widget/list.js";
 import "./chat-widget/otp-request.js";

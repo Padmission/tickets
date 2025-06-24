@@ -114,8 +114,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     {
         $files = [
             __DIR__.'/../resources/css/chat-component.css',
-            __DIR__.'/../dist/chat-component.js',
-
             __DIR__.'/../resources/css/chat-widget.css',
             __DIR__.'/../dist/chat-widget.js',
         ];

@@ -23,7 +23,6 @@ const context = await esbuild.context({
     target: ['es2020'],
     entryPoints: [
         './resources/js/components/chat-widget.js',
-        './resources/js/components/chat-component.js'
     ],
     outdir: './dist',
 })

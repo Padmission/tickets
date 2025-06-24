@@ -25,10 +25,7 @@
         src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission-tickets') }}"
         type="module"
     ></script>
-    <script
-        src="{{ FilamentAsset::getScriptSrc('chat-component', package: 'padmission-tickets') }}"
-        type="module"
-    ></script>
+
 
     <style>
         chat-widget {
