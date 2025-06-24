@@ -77,6 +77,9 @@ class TestCase extends \Orchestra\Testbench\TestCase
             ->default()
             ->id('test')
             ->path('test')
+            ->colors([ // set default primary color for the panel, needed in CloseTicketActionTest.php
+                'primary' => '#4F46E5',
+            ])
             ->plugin(
                 TicketPlugin::make()->registerResources()
             );

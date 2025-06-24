@@ -4,19 +4,19 @@ use Padmission\Tickets\Http\Controllers\Api;
 use Padmission\Tickets\Http\Middleware\AuthenticateGuests;
 
 Route::middleware(['web'])
-    ->name('padmission-ticket::otp')
     ->prefix('padmission-tickets/api')
+    ->as('padmission-tickets::.')
     ->group(function () {
-        Route::post('/otp-request', Api\RequestOtpController::class);
-        Route::post('/otp-verify', Api\VerifyOtpController::class);
+        Route::post('/otp-request', Api\RequestOtpController::class)->name('otp.request');
+        Route::post('/otp-verify', Api\VerifyOtpController::class)->name('otp.verify');
     });
 
 Route::middleware(['web', AuthenticateGuests::class])
-    ->name('padmission-ticket::api')
     ->prefix('padmission-tickets/api/tickets')
+    ->as('padmission-tickets::api.')
     ->group(function () {
-        Route::get('/', Api\ListTicketsController::class);
-        Route::post('/', Api\CreateTicketController::class);
-        Route::get('/{ticket}/messages', Api\ListMessagesController::class);
-        Route::post('/{ticket}/messages', Api\CreateMessageController::class);
+        Route::get('/', Api\ListTicketsController::class)->name('index');
+        Route::post('/', Api\CreateTicketController::class)->name('store');
+        Route::get('/{ticket}/messages', Api\ListMessagesController::class)->name('messages.index');
+        Route::post('/{ticket}/messages', Api\CreateMessageController::class)->name('messages.store');
     });
