@@ -43,7 +43,7 @@
     ></chat-component>
 
     <script
-        src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission-tickets') }}"
+        src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission/tickets') }}"
         type="module"
     >
     </script>

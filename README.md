@@ -191,38 +191,6 @@ Gate::policy(
 
 The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
 
-### Email Authentication for Non-Authenticated Users
-
-The package supports email-based authentication for non-authenticated users, allowing them to submit and track tickets without creating an account. This is particularly useful for password reset requests or public support systems.
-
-To enable email authentication:
-
-```php
-use Padmission\Tickets\ChatWidgetConfig;
-use Padmission\Tickets\TicketPlugin;
-
-TicketPlugin::make()
-    ->showChatWidget(config: ChatWidgetConfig::make()
-        ->allowEmailAuthentication(
-            allow: true,
-            allowGuests: true,
-            otpExpiresAfterMinutes: 10
-        )
-    );
-```
-
-How it works:
-1. User enters their email address
-2. System sends a 6-digit OTP (One-Time Password) to their email
-3. User enters the OTP to verify their identity
-4. User can then submit tickets and view their ticket history
-
-Features:
-- Rate limiting on OTP requests (1 per minute)
-- Rate limiting on OTP verification attempts (5 per minute)
-- Configurable OTP expiration time
-- Session-based authentication for verified users
-
 ### Dispositions
 
 The package allows you to define custom dispositions for tickets. Dispositions are used to categorize tickets when they are closed. You can configure dispositions within each panel using the DispositionResource.
@@ -263,6 +231,54 @@ Make sure the CSRF token is included in your HTML head section:
 
 ```blade
 <meta name="csrf-token" content="{{ csrf_token() }}">
+```
+
+#### Email Authentication for Non-Authenticated Users
+
+The package supports email-based authentication for non-authenticated users, allowing them to submit and track tickets without creating an account. This is particularly useful for password reset requests or public support systems.
+
+To enable email authentication:
+
+```php
+use Padmission\Tickets\ChatWidgetConfig;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->showChatWidget(config: ChatWidgetConfig::make()
+        ->allowEmailAuthentication(
+            allow: true,
+            allowGuests: true,
+            otpExpiresAfterMinutes: 10
+        )
+    );
+```
+
+**How it works:**
+1. User enters their email address
+2. System sends a 6-digit OTP (One-Time Password) to their email
+3. User enters the OTP to verify their identity
+4. User can then submit tickets and view their ticket history
+
+**Features:**
+- Rate limiting on OTP requests (1 per minute)
+- Rate limiting on OTP verification attempts (5 per minute)
+- Configurable OTP expiration time
+- Session-based authentication for verified users
+
+#### File Uploads
+
+If you want to allow users to upload files you can use the `->allowFileUploads()` method on the `ChatWidgetConfig`:
+
+
+```php
+use Filament\Support\Colors\Color;
+use Padmission\Tickets\ChatWidgetConfig;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->showChatWidget(config: ChatWidgetConfig::make()
+        ->allowFileUploads()
+    );
 ```
 
 ### Multi-Tenancy Support

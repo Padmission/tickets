@@ -14,7 +14,7 @@ customElements.define(
 	"chat-widget",
 	class extends BaseElement {
 		get stylesheet() {
-			return "/css/padmission-tickets/chat-widget.css";
+			return "/css/padmission/tickets/chat-widget.css";
 		}
 		beforeRender() {
 			config.setConfig(JSON.parse(this.config));

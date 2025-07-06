@@ -127,12 +127,12 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             if (! $this->isDevMode()) {
                 FilamentAsset::register([
                     $assetClass::make($name, $filepath)->loadedOnRequest(),
-                ], package: 'padmission-tickets');
+                ], package: 'padmission/tickets');
 
                 continue;
             }
 
-            Route::get("{$extension}/padmission-tickets/{$name}.{$extension}", function () use ($filepath, $type) {
+            Route::get("{$extension}/padmission/tickets/{$name}.{$extension}", function () use ($filepath, $type) {
                 if (file_exists($filepath)) {
                     return response()->file($filepath, ['Content-Type' => 'text/'.$type]);
                 }
@@ -145,9 +145,9 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             FilamentAsset::register([
                 $assetClass::make(
                     $name,
-                    url("{$extension}/padmission-tickets/$name.$extension?t={$timestamp}")
+                    url("{$extension}/padmission/tickets/$name.$extension?t={$timestamp}")
                 )->loadedOnRequest(),
-            ], package: 'padmission-tickets');
+            ], package: 'padmission/tickets');
         }
     }
 

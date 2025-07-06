@@ -26,6 +26,8 @@ final class ChatWidgetConfig
 
     public string|array|Closure|null $primaryColor = null;
 
+    public bool|Closure $allowFileUploads = false;
+
     public static function make(): self
     {
         return new self;
@@ -51,6 +53,18 @@ final class ChatWidgetConfig
     public function getOtpExpiresAfterMinutes(): int
     {
         return value($this->otpExpiresAfterMinutes);
+    }
+
+    public function allowFileUploads(bool|Closure $enable = true): self
+    {
+        $this->allowFileUploads = $enable;
+
+        return $this;
+    }
+
+    public function getAllowFileUploads(): bool
+    {
+        return value($this->allowFileUploads);
     }
 
     /**
@@ -143,6 +157,7 @@ final class ChatWidgetConfig
             'userId' => $auth->getUserId(),
             'placeholder' => $this->getPlaceholder(),
             'introMessage' => $this->getIntroMessage(),
+            'allowFileUploads' => $this->getAllowFileUploads(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),
         ]);
     }

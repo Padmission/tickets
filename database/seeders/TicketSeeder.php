@@ -36,7 +36,10 @@ class TicketSeeder extends Seeder
                 Filament::setCurrentPanel($panel);
 
                 $tenantKey = $this->getTenantKey();
-                $scopeToTenant = fn ($query) => $query->where($tenantKey, $tenantId);
+                $scopeToTenant = fn ($query) => $query->when(
+                    $tenantId !== null,
+                    fn ($query) => $query->where($tenantKey, $tenantId)
+                );
 
                 $statuses = TicketPlugin::resolveModelClass(TicketStatus::class)::query()
                     ->tap(new CurrentPanelScope)

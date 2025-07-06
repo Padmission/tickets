@@ -19,4 +19,5 @@ Route::middleware(['web', AuthenticateGuests::class])
         Route::post('/', Api\CreateTicketController::class)->name('store');
         Route::get('/{ticket}/messages', Api\ListMessagesController::class)->name('messages.index');
         Route::post('/{ticket}/messages', Api\CreateMessageController::class)->name('messages.store');
+        Route::post('/{ticket}/upload-url', Api\AttachmentUrlController::class)->name('attachment-url');
     });

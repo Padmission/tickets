@@ -10,9 +10,11 @@ return [
     ],
 
     'chat' => [
+        'error' => 'Sorry, something went wrong. Please try again.',
+        'droparea' => 'Drop to add files',
         'send' => 'Send',
         'new_messages' => 'New messages',
-        'add_files' => 'Add files',
+        'add_attachments' => 'Add attachments',
         'bold' => 'Bold',
         'link' => 'Link',
         'unordered_list' => 'Unordered List',
