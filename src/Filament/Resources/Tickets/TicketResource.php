@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets;
 
 use Carbon\CarbonImmutable;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -80,6 +81,12 @@ class TicketResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('source_panel')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
+                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                    ->sortable()
+                    ->visible(fn () => static::shouldShowSourcePanel()),
+
                 TextColumn::make('latestMessage.created_at')
                     ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                     ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
@@ -122,6 +129,30 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery();
+        return parent::getEloquentQuery()
+            ->where('panel', Filament::getCurrentPanel()->getId());
+    }
+
+    public static function shouldShowSourcePanel(): bool
+    {
+        // Count panels that have the chat widget enabled
+        $panelsWithChatWidget = 0;
+
+        foreach (Filament::getPanels() as $panel) {
+            try {
+                $plugin = TicketPlugin::get($panel->getId());
+                if ($plugin->shouldShowChatWidget()) {
+                    $panelsWithChatWidget++;
+                    if ($panelsWithChatWidget > 1) {
+                        return true;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Panel might not have the plugin registered
+                continue;
+            }
+        }
+
+        return false;
     }
 }

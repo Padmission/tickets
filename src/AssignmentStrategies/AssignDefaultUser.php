@@ -3,7 +3,9 @@
 namespace Padmission\Tickets\AssignmentStrategies;
 
 use Closure;
+use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 final class AssignDefaultUser implements AssignmentStrategy
 {
@@ -13,6 +15,28 @@ final class AssignDefaultUser implements AssignmentStrategy
 
     public function assign(Ticket $ticket): void
     {
-        $ticket->assignee_id = value($this->userId);
+        $userId = value($this->userId);
+
+        $this->ensureUserIsEligibleSupporter($userId, $ticket);
+
+        $ticket->assignee_id = $userId;
+    }
+
+    private function ensureUserIsEligibleSupporter(int $userId, Ticket $ticket): void
+    {
+        $targetPanelId = $ticket->panel ?? Filament::getCurrentPanel()->getId();
+        $targetPlugin = TicketPlugin::get($targetPanelId);
+        $allSupportersQuery = $targetPlugin->getAllSupportersQuery();
+
+        if ($allSupportersQuery) {
+            $eligibleUserIds = app()->call($allSupportersQuery)->pluck('id')->toArray();
+
+            if (! in_array($userId, $eligibleUserIds)) {
+                throw new \RuntimeException(
+                    "User ID {$userId} is not in the allSupportersQuery for panel '{$targetPanelId}'. ".
+                    'Only users defined in allSupportersQuery can be assigned tickets.'
+                );
+            }
+        }
     }
 }

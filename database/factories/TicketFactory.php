@@ -29,6 +29,8 @@ class TicketFactory extends Factory
         $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
 
         return [
+            'panel' => 'test', // Default to test panel for tests
+            'source_panel' => null,
             'subject' => $this->faker->word(),
             'escalation_level' => 'default',
             'submitter_id' => TicketPlugin::resolveModelClass(Authenticatable::class)::factory(),
