@@ -19,6 +19,7 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
+
 use function app;
 
 class TicketResource extends Resource
