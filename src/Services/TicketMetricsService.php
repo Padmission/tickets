@@ -7,6 +7,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterval;
 use Carbon\CarbonPeriod;
 use Exception;
+use Filament\Facades\Filament;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,11 @@ use Padmission\Tickets\TicketPlugin;
 class TicketMetricsService
 {
     protected int $cacheTimeInSeconds = 10;
+
+    protected function getCurrentPanelId(): ?string
+    {
+        return Filament::getCurrentPanel()?->getId();
+    }
 
     public function setCacheTime(int|string $duration): self
     {
@@ -31,24 +37,36 @@ class TicketMetricsService
 
     public function getOpenTicketsCount(): int
     {
-        $cacheKey = __METHOD__;
+        $panelId = $this->getCurrentPanelId();
+        $cacheKey = __METHOD__.'-panel:'.$panelId;
 
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
-            return TicketPlugin::resolveModelClass(Ticket::class)::query()
-                ->whereNull('closed_at')
-                ->count();
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($panelId) {
+            $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
+                ->whereNull('closed_at');
+
+            if ($panelId) {
+                $query->where('panel', $panelId);
+            }
+
+            return $query->count();
         });
     }
 
     public function getOpenTicketsWaitingOnSupportCount(): int
     {
-        $cacheKey = __METHOD__;
+        $panelId = $this->getCurrentPanelId();
+        $cacheKey = __METHOD__.'-panel:'.$panelId;
 
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () {
-            return TicketPlugin::resolveModelClass(Ticket::class)::query()
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($panelId) {
+            $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->where('turn', Turn::Supporter)
-                ->whereNull('closed_at')
-                ->count();
+                ->whereNull('closed_at');
+
+            if ($panelId) {
+                $query->where('panel', $panelId);
+            }
+
+            return $query->count();
         });
     }
 
@@ -61,11 +79,16 @@ class TicketMetricsService
      */
     public function getAverageCloseTime(?int $days = 30): array
     {
-        $cacheKey = __METHOD__.'-'.$days;
+        $panelId = $this->getCurrentPanelId();
+        $cacheKey = __METHOD__.'-'.$days.'-panel:'.$panelId;
 
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days, $panelId) {
             $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
                 ->whereNotNull('closed_at');
+
+            if ($panelId) {
+                $query->where('panel', $panelId);
+            }
 
             if ($days !== null && $days > 0) {
                 $query->where('created_at', '>=', Carbon::now()->subDays($days));
@@ -144,36 +167,54 @@ class TicketMetricsService
      */
     public function getBurndownData(int $days): array
     {
-        $cacheKey = __METHOD__.'-'.$days;
+        $panelId = $this->getCurrentPanelId();
+        $cacheKey = __METHOD__.'-'.$days.'-panel:'.$panelId;
 
-        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days) {
+        return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days, $panelId) {
             $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = CarbonImmutable::today()->subDays($days - 1);
             $endDate = CarbonImmutable::today()->endOfDay();
 
-            $opened = $ticketModel::query()
-                ->whereBetween('created_at', [$startDate, $endDate])
+            $openedQuery = $ticketModel::query()
+                ->whereBetween('created_at', [$startDate, $endDate]);
+
+            if ($panelId) {
+                $openedQuery->where('panel', $panelId);
+            }
+
+            $opened = $openedQuery
                 ->selectRaw('DATE(created_at) as day, COUNT(*) as count')
                 ->groupBy('day')
                 ->pluck('count', 'day')
                 ->all();
 
-            $closed = $ticketModel::query()
+            $closedQuery = $ticketModel::query()
                 ->whereNotNull('closed_at')
-                ->whereBetween('closed_at', [$startDate, $endDate])
+                ->whereBetween('closed_at', [$startDate, $endDate]);
+
+            if ($panelId) {
+                $closedQuery->where('panel', $panelId);
+            }
+
+            $closed = $closedQuery
                 ->selectRaw('DATE(closed_at) as day, COUNT(*) as count')
                 ->groupBy('day')
                 ->pluck('count', 'day')
                 ->all();
 
-            $openAtStart = $ticketModel::query()
+            $openAtStartQuery = $ticketModel::query()
                 ->where('created_at', '<', $startDate)
                 ->where(function ($query) use ($startDate) {
                     $query
                         ->whereNull('closed_at')
                         ->orWhere('closed_at', '>=', $startDate);
-                })
-                ->count();
+                });
+
+            if ($panelId) {
+                $openAtStartQuery->where('panel', $panelId);
+            }
+
+            $openAtStart = $openAtStartQuery->count();
 
             return [
                 'opened' => $opened,
