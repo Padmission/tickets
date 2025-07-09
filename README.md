@@ -9,6 +9,60 @@
 
 Tickets is a comprehensive support ticket management system for Filament applications. It provides a full-featured ticketing system with chat widget, email authentication, activity tracking, and extensive customization options.
 
+## Quick Start Examples
+
+### Basic Support System
+
+```php
+// In your Panel Service Provider
+use App\Models\User;
+use Padmission\Tickets\AssignmentStrategies\AssignRandomUser;
+use Padmission\Tickets\TicketPlugin;
+
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->id('admin')
+        ->plugin(
+            TicketPlugin::make()
+                ->allSupportersQuery(fn () => User::role('support'))
+                ->assignmentStrategy(new AssignRandomUser())
+                ->registerResources()
+                ->showChatWidget()
+        );
+}
+```
+
+### Multi-Panel Support System
+
+```php
+// Support Panel - Where tickets are managed
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->id('support')
+        ->plugin(
+            TicketPlugin::make()
+                ->allSupportersQuery(fn () => User::role(['support', 'admin']))
+                ->initialAssignmentSupportersQuery(fn () => User::role('tier-1'))
+                ->assignmentStrategy(new AssignUserWithLeastTickets())
+                ->registerResources()
+        );
+}
+
+// Customer Panel - Where tickets are created
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->id('customer')
+        ->plugin(
+            TicketPlugin::make()
+                ->targetPanel('support')
+                ->showChatWidget()
+        );
+}
+```
+
 ## Key Features
 
 - 🎫 **Full Ticket Management** - Create, view, assign, and close tickets
@@ -20,6 +74,8 @@ Tickets is a comprehensive support ticket management system for Filament applica
 - 📝 **Activity Tracking** - Comprehensive logging of all ticket changes
 - 🔔 **Flexible Notifications** - Multiple notification strategies
 - 📎 **File Attachments** - Support for file uploads via Spatie Media Library
+- 🎯 **Smart Assignment** - Automatic ticket assignment with flexible strategies
+- 🏢 **Multi-Panel Support** - Route tickets from multiple panels to a central location
 
 ## Prerequisites
 
@@ -72,17 +128,29 @@ php artisan migrate
 php artisan filament:assets
 ```
 
-**Step 4:** Add the plugin to your Filament panel:
+**Step 4:** Configure the plugin in your Filament panel:
 
 ```php
+use App\Models\User;
 use Padmission\Tickets\TicketPlugin;
 
-$panel->plugin(TicketPlugin::make());
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        // ... other panel configuration
+        ->plugin(
+            TicketPlugin::make()
+                ->allSupportersQuery(fn () => User::role(['support', 'admin']))
+                ->registerResources()
+        );
+}
 ```
 
-**Step 5:** Implement the display name interface on your User model:
+> **Important:** The `allSupportersQuery()` is required when registering resources. It defines all users who can support tickets in this panel.
 
-For better ticket activity messages, implement the `HasTicketDisplayName` interface on your User model:
+**Step 5:** Set up your User model:
+
+Add the `HasTickets` trait to your User model.
 
 ```php
 <?php
@@ -90,10 +158,13 @@ For better ticket activity messages, implement the `HasTicketDisplayName` interf
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Padmission\Tickets\Models\Concerns\User\HasTickets;
 use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 
 class User extends Authenticatable implements HasTicketDisplayName
 {
+    use HasTickets;
+    
     // ... your existing code ...
 
     /**
@@ -106,7 +177,9 @@ class User extends Authenticatable implements HasTicketDisplayName
 }
 ```
 
-> **Note:** If you don't implement this interface, the package will automatically fall back to using the `name` attribute, then `email`, and finally "user {id}" as the display name.
+The `HasTickets` trait provides:
+- `assignedTickets()` - Relationship to tickets assigned to this user
+- `submittedTickets()` - Relationship to tickets submitted by this user
 
 ## Configuration
 
@@ -126,17 +199,21 @@ This will create a `config/padmission-tickets.php` file where you can configure:
 
 ### Resources
 
-The package comes with a set of Filament resources to manage tickets. If you want to manage tickets via this Filament panel, you can use the `->registerResources()` method:
+The package comes with a set of Filament resources to manage tickets. To enable ticket management in a panel:
 
 ```php
+use App\Models\User;
 use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
-    ->registerResources();
+    ->allSupportersQuery(fn () => User::role(['support', 'admin']))
+    ->registerResources()
 ```
 
+> **Important:** When registering resources, you must define `allSupportersQuery()`. This query determines which users can be assigned tickets through the UI.
+
 This registers the following resources:
-- **TicketResource** - Main ticket management
+- **TicketResource** - Main ticket management with assignment controls
 - **StatusResource** - Manage ticket statuses
 - **DispositionResource** - Manage ticket dispositions
 - **PriorityResource** - Manage ticket priorities
@@ -298,60 +375,207 @@ This helps support teams prioritize tickets that need attention. Turn changes ar
 
 ### Ticket Assignment
 
-The package comes with two default ticket assignment strategies. You can customize the assignment logic by implementing your own `AssignmentStrategy` class. The default strategies are:
+The package provides automatic ticket assignment with flexible configuration options.
 
-- `AssignDefaultUser`: Assigns tickets to a fixed user
-- `AssignUserWithLeastTickets`: Assigns tickets to the user with the least number of open tickets
+#### Configuration
+
+**All Supporters Query (Required for Resources)**
+
+Define all users who can support tickets in a panel:
+
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role(['support', 'senior-support', 'admin']))
+    ->registerResources()
+```
+
+**Initial Assignment Query (Optional)**
+
+Define a subset of users for automatic assignment. If not specified, falls back to `allSupportersQuery()`:
+
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role(['support', 'senior-support', 'admin']))
+    ->initialAssignmentSupportersQuery(fn () => User::role('support'))
+    ->assignmentStrategy(new AssignUserWithLeastTickets())
+```
+
+#### Assignment Strategies
+
+**DoNotAssign (Default)**
+
+Leaves tickets unassigned:
+
+```php
+TicketPlugin::make()
+    ->assignmentStrategy(new DoNotAssign())
+```
+
+**AssignUserWithLeastTickets**
+
+Assigns to the user with fewest open tickets:
+
+```php
+use Padmission\Tickets\AssignmentStrategies\AssignUserWithLeastTickets;
+
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->assignmentStrategy(new AssignUserWithLeastTickets())
+```
+
+**AssignRandomUser**
+
+Randomly assigns to an eligible user:
+
+```php
+use Padmission\Tickets\AssignmentStrategies\AssignRandomUser;
+
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->assignmentStrategy(new AssignRandomUser())
+```
+
+**AssignDefaultUser**
+
+Assigns to a specific user:
 
 ```php
 use Padmission\Tickets\AssignmentStrategies\AssignDefaultUser;
-use Padmission\Tickets\AssignmentStrategies\AssignUserWithLeastTickets;
-use Padmission\Tickets\TicketPlugin;
 
-// Assign to specific user
+// Using user ID
 TicketPlugin::make()
-    ->assignmentStrategy(
-        new AssignDefaultUser(userId: 1)
-    );
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->assignmentStrategy(new AssignDefaultUser(userId: 1))
 
-// Or assign to user with least tickets
+// Using callback
 TicketPlugin::make()
-    ->assignmentStrategy(
-        new AssignUserWithLeastTickets()
-    );
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->assignmentStrategy(new AssignDefaultUser(
+        fn() => User::role('lead-support')->first()->id
+    ))
 ```
 
-### Notification Strategies
+#### Multi-Panel Configuration
 
-The package comes with three default notification strategies. You can customize this by implementing your own `NotificationStrategy` class. The default strategies are:
-
-- `NotifyEmail`: Notifies one or multiple emails
-- `NotifyAllUsers`: Notifies all users that can access the ticket
-- `NotifyAssignedUser`: Notifies the user assigned to the ticket
+Route tickets from multiple panels to a central support panel:
 
 ```php
-use Padmission\Tickets\NotificationStrategies\NotifyEmail;
-use Padmission\Tickets\NotificationStrategies\NotifyAllUsers;
-use Padmission\Tickets\NotificationStrategies\NotifyAssignedUser;
-use Padmission\Tickets\TicketPlugin;
+// Main support panel - manages all tickets
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->id('support')
+        ->plugin(
+            TicketPlugin::make()
+                ->allSupportersQuery(fn () => User::role(['support', 'admin']))
+                ->initialAssignmentSupportersQuery(fn () => User::role('tier-1-support'))
+                ->assignmentStrategy(new AssignUserWithLeastTickets())
+                ->registerResources()
+        );
+}
 
-// Notify specific emails
-TicketPlugin::make()
-    ->notificationStrategy(
-        new NotifyEmail(['support@example.com', 'admin@example.com'])
-    );
+// Customer panel - creates tickets but routes to support
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->id('customer')
+        ->plugin(
+            TicketPlugin::make()
+                ->targetPanel('support') // Route tickets to support panel
+                ->initialAssignmentSupportersQuery(fn () => User::role('customer-support'))
+                ->showChatWidget()
+                ->registerResources(false) // Don't show management UI here
+        );
+}
 
-// Or notify all users who can view tickets
-TicketPlugin::make()
-    ->notificationStrategy(
-        new NotifyAllUsers()
-    );
+// Enterprise panel - creates tickets with different assignment
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->id('enterprise')
+        ->plugin(
+            TicketPlugin::make()
+                ->targetPanel('support')
+                ->initialAssignmentSupportersQuery(fn () => User::role('enterprise-support'))
+                ->showChatWidget()
+                ->registerResources(false)
+        );
+}
+```
 
-// Or notify only the assigned user
+#### Source Panel Tracking
+
+When tickets are created from different panels, the system tracks the source:
+- The `panel` column stores where the ticket is managed
+- The `source_panel` column stores where the ticket was created
+- Source panel is automatically shown in the UI when multiple panels have the chat widget
+
+#### Creating Custom Assignment Strategies
+
+Extend `PanelAwareAssignmentStrategy` for automatic query handling:
+
+```php
+namespace App\AssignmentStrategies;
+
+use Padmission\Tickets\AssignmentStrategies\PanelAwareAssignmentStrategy;
+use Padmission\Tickets\Models\Ticket;
+
+class AssignByWorkload extends PanelAwareAssignmentStrategy
+{
+    public function assign(Ticket $ticket): void
+    {
+        // Automatically uses initialAssignmentSupportersQuery or allSupportersQuery
+        $user = $this->getEligibleUsersQuery($ticket)
+            ->withCount([
+                'assignedTickets as today_count' => fn ($q) => 
+                    $q->whereDate('created_at', today())
+            ])
+            ->orderBy('today_count')
+            ->first();
+        
+        if ($user) {
+            $ticket->assignee_id = $user->id;
+            // Do NOT call save() - handled automatically
+        }
+    }
+}
+```
+
+#### Common Patterns
+
+**Department-Based Assignment**
+
+```php
 TicketPlugin::make()
-    ->notificationStrategy(
-        new NotifyAssignedUser()
-    );
+    ->allSupportersQuery(fn () => User::whereHas('department'))
+    ->initialAssignmentSupportersQuery(fn () => User::query()
+        ->whereHas('department', fn ($q) => $q->where('name', 'Support'))
+    )
+    ->assignmentStrategy(new AssignUserWithLeastTickets())
+```
+
+**Time-Based Assignment**
+
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->initialAssignmentSupportersQuery(fn () => User::role('support')
+        ->whereHas('workSchedule', fn ($q) => 
+            $q->where('day', now()->dayOfWeek)
+              ->whereTime('start_time', '<=', now())
+              ->whereTime('end_time', '>=', now())
+        )
+    )
+    ->assignmentStrategy(new AssignRandomUser())
+```
+
+**Role-Based with Spatie Permissions**
+
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::permission('manage tickets'))
+    ->initialAssignmentSupportersQuery(fn () => User::role('support'))
+    ->assignmentStrategy(new AssignUserWithLeastTickets())
 ```
 
 ### Notification Configuration Per Panel
@@ -560,41 +784,6 @@ You can extend the package models with your own:
 
 Your custom models should extend the package models to ensure compatibility.
 
-### Custom Assignment Strategy
-
-Create your own assignment strategy:
-
-```php
-use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
-use Padmission\Tickets\Models\Ticket;
-
-class RoundRobinAssignment implements AssignmentStrategy
-{
-    public function assign(Ticket $ticket): void
-    {
-        // Your custom logic here
-    }
-}
-```
-
-### Custom Notification Strategy
-
-Create your own notification strategy:
-
-```php
-use Padmission\Tickets\NotificationStrategies\NotificationStrategy;
-use Padmission\Tickets\Models\Ticket;
-
-class SlackNotification implements NotificationStrategy
-{
-    public function notify(Ticket $ticket): void
-    {
-        // Send to Slack
-    }
-}
-```
-
-
 ## Custom Models & Jobs
 
 ### Using Custom Models
@@ -759,6 +948,48 @@ Configure the package to use your custom job in your `config/padmission-tickets.
     \Padmission\Tickets\Jobs\NotificationJob::class => \App\Jobs\CustomNotificationJob::class,
 ],
 ```
+
+## Troubleshooting
+
+### Exception: "requires an allSupportersQuery()"
+
+This happens when registering resources without defining who can support tickets:
+
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->registerResources()
+```
+
+### No Users Being Assigned
+
+Debug your queries to see what users are being returned:
+
+```php
+// Test all supporters query
+$query = app()->call(TicketPlugin::get()->getAllSupportersQuery());
+dd($query->count(), $query->pluck('name', 'id'));
+
+// Test initial assignment query
+$query = app()->call(TicketPlugin::get()->getInitialAssignmentSupportersQuery());
+dd($query->count(), $query->pluck('name', 'id'));
+```
+
+### Tickets Going to Wrong Panel
+
+Ensure your target panel ID matches exactly:
+
+```php
+// Panel ID must match exactly (case-sensitive)
+->targetPanel('support') // Not 'Support' or 'SUPPORT'
+```
+
+### Assignment Strategy Not Working
+
+1. Ensure the User model has the `HasTickets` trait
+2. Check that your queries return users
+3. Verify the assignment strategy is configured
+4. Check Laravel logs for exceptions
 
 ## Support
 

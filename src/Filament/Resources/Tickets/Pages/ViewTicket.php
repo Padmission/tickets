@@ -83,6 +83,12 @@ class ViewTicket extends ViewRecord
                             ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
                             ->columnSpanFull(),
 
+                        TextEntry::make('source_panel')
+                            ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
+                            ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                            ->visible(fn () => TicketResource::shouldShowSourcePanel())
+                            ->columnSpanFull(),
+
                         TextEntry::make('latestMessage.created_at')
                             ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                             ->hidden(fn (Ticket $record) => $record->isClosed)

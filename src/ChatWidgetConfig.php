@@ -137,9 +137,12 @@ final class ChatWidgetConfig
     public function toJs(): string
     {
         $auth = resolve(TicketAuth::class);
+        $targetPanelId = TicketPlugin::get()->getTargetPanelId()
+            ?? Filament::getId();
 
         return json_encode([
             'panelId' => 'panel-'.Filament::getId(),
+            'targetPanelId' => 'panel-'.$targetPanelId,
             'userId' => $auth->getUserId(),
             'placeholder' => $this->getPlaceholder(),
             'introMessage' => $this->getIntroMessage(),

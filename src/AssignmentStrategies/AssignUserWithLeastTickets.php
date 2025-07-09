@@ -3,23 +3,34 @@
 namespace Padmission\Tickets\AssignmentStrategies;
 
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;
 
-final class AssignUserWithLeastTickets implements AssignmentStrategy
+final class AssignUserWithLeastTickets extends PanelAwareAssignmentStrategy
 {
     public function assign(Ticket $ticket): void
     {
-        $userModel = TicketPlugin::resolveUserModelClass();
-
-        // TODO: Check if user can access the ticket/panel
-
-        $user = $userModel::query()
+        $users = $this->getEligibleUsersQuery($ticket)
             ->withCount([
                 'assignedTickets' => fn ($query) => $query->open(),
             ])
             ->orderBy('assigned_tickets_count', 'ASC')
-            ->first();
+            ->get();
 
+        if ($users->isEmpty()) {
+            return;
+        }
+
+        $user = $this->getUserWithLowestCount($users);
         $ticket->assignee_id = $user->getKey();
+    }
+
+    private function getUserWithLowestCount($users)
+    {
+        $lowestCount = $users->first()->assigned_tickets_count;
+
+        $usersWithLowestCount = $users->filter(
+            fn ($user) => $user->assigned_tickets_count === $lowestCount
+        );
+
+        return $usersWithLowestCount->random();
     }
 }

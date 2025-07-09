@@ -7,6 +7,7 @@ use Filament\Facades\Filament;
 use Filament\Panel;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
@@ -30,6 +31,12 @@ final class TicketPlugin implements Plugin
     protected mixed $chatWidgetConfig = null;
 
     protected ?NotificationConfiguration $notificationConfiguration = null;
+
+    protected ?string $targetPanelId = null;
+
+    protected mixed $allSupportersQuery = null;
+
+    protected mixed $initialAssignmentSupportersQuery = null;
 
     public static function make(): static
     {
@@ -77,7 +84,15 @@ final class TicketPlugin implements Plugin
         );
     }
 
-    public function boot(Panel $panel): void {}
+    public function boot(Panel $panel): void
+    {
+        if ($this->shouldRegisterResources && ! $this->allSupportersQuery) {
+            throw new \RuntimeException(
+                "The TicketPlugin on panel '{$panel->getId()}' requires an allSupportersQuery() ".
+                'to be configured when registering resources. This defines all users who can support tickets in this panel.'
+            );
+        }
+    }
 
     public static function get(?string $panelId = null): static
     {
@@ -197,6 +212,18 @@ final class TicketPlugin implements Plugin
         return $this->notificationConfiguration ?? NotificationConfiguration::make();
     }
 
+    public function targetPanel(string $panelId): static
+    {
+        $this->targetPanelId = $panelId;
+
+        return $this;
+    }
+
+    public function getTargetPanelId(): ?string
+    {
+        return $this->targetPanelId;
+    }
+
     public function shouldShowChatWidget(): bool
     {
         if ($this->shouldShowChatWidget instanceof \Closure) {
@@ -204,5 +231,37 @@ final class TicketPlugin implements Plugin
         }
 
         return $this->shouldShowChatWidget;
+    }
+
+    public function allSupportersQuery(\Closure|Builder $query): static
+    {
+        $this->allSupportersQuery = $query;
+
+        return $this;
+    }
+
+    public function getAllSupportersQuery(): ?\Closure
+    {
+        if ($this->allSupportersQuery instanceof Builder) {
+            return fn () => clone $this->allSupportersQuery;
+        }
+
+        return $this->allSupportersQuery;
+    }
+
+    public function initialAssignmentSupportersQuery(\Closure|Builder $query): static
+    {
+        $this->initialAssignmentSupportersQuery = $query;
+
+        return $this;
+    }
+
+    public function getInitialAssignmentSupportersQuery(): ?\Closure
+    {
+        if ($this->initialAssignmentSupportersQuery instanceof Builder) {
+            return fn () => clone $this->initialAssignmentSupportersQuery;
+        }
+
+        return $this->initialAssignmentSupportersQuery;
     }
 }

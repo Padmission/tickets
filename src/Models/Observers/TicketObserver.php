@@ -14,6 +14,15 @@ use Padmission\Tickets\TicketPlugin;
 
 class TicketObserver
 {
+    public function creating(Ticket $ticket): void
+    {
+        $assignmentStrategy = TicketPlugin::get()->getAssignmentStrategy();
+
+        if ($assignmentStrategy && ! $ticket->assignee_id) {
+            $assignmentStrategy->assign($ticket);
+        }
+    }
+
     public function created(Ticket $ticket): void
     {
         event(new TicketCreatedEvent($ticket, auth()->user()));

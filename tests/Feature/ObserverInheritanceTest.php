@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Event;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -20,6 +21,7 @@ use Padmission\Tickets\Tests\Fixtures\Models\CustomTicketNotification;
 use Padmission\Tickets\Tests\Fixtures\Models\CustomTicketPriority;
 use Padmission\Tickets\Tests\Fixtures\Models\CustomTicketStatus;
 use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
     // Set up the package to use custom models
@@ -61,6 +63,7 @@ it('ensures CustomTicket inherits TicketObserver and fires events', function () 
     // Create a ticket using the custom model
     $ticket = CustomTicket::create([
         'subject' => 'Test Ticket',
+        'panel' => TicketPlugin::get()->getTargetPanelId() ?? Filament::getId(),
         'escalation_level' => 'default',
         'turn' => Turn::User,
         'submitter_id' => $this->user->id,
@@ -88,6 +91,7 @@ it('ensures CustomTicket priority change triggers observer', function () {
     // Create a ticket
     $ticket = CustomTicket::create([
         'subject' => 'Test Ticket',
+        'panel' => TicketPlugin::get()->getTargetPanelId() ?? Filament::getId(),
         'escalation_level' => 'default',
         'turn' => Turn::User,
         'submitter_id' => $this->user->id,
@@ -114,6 +118,7 @@ it('ensures CustomTicketActivity inherits TicketActivityObserver', function () {
     // Create a ticket first
     $ticket = CustomTicket::create([
         'subject' => 'Test Ticket',
+        'panel' => TicketPlugin::get()->getTargetPanelId() ?? Filament::getId(),
         'escalation_level' => 'default',
         'turn' => Turn::User,
         'submitter_id' => $this->user->id,
@@ -187,6 +192,7 @@ it('ensures ticket observer handles status transition to closed', function () {
     // Create a ticket
     $ticket = CustomTicket::create([
         'subject' => 'Test Ticket',
+        'panel' => TicketPlugin::get()->getTargetPanelId() ?? Filament::getId(),
         'escalation_level' => 'default',
         'turn' => Turn::User,
         'submitter_id' => $this->user->id,

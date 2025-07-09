@@ -81,7 +81,9 @@ class TestCase extends \Orchestra\Testbench\TestCase
                 'primary' => '#4F46E5',
             ])
             ->plugin(
-                TicketPlugin::make()->registerResources()
+                TicketPlugin::make()
+                    ->allSupportersQuery(fn () => User::query())
+                    ->registerResources()
             );
 
         Filament::registerPanel(fn () => $panel);
