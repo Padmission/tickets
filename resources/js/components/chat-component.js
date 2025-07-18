@@ -425,26 +425,28 @@ customElements.define(
 			}
 		}
 
-        addAttachments(attachments) {
-            this.clearError()
+		addAttachments(attachments) {
+			this.clearError();
 
-            for (let i in attachments) {
-                if (attachments[i].size > config.maxUploadFileSize) {
-                    this.setError(__('chat.max_file_size', {
-                        size: humanFileSize(config?.maxUploadFileSize)
-                    }));
+			for (let i in attachments) {
+				if (attachments[i].size > config.maxUploadFileSize) {
+					this.setError(
+						__("chat.max_file_size", {
+							size: humanFileSize(config?.maxUploadFileSize),
+						}),
+					);
 
-                    return;
-                }
-            }
+					return;
+				}
+			}
 
 			this.attachments = this.attachments.concat(attachments);
 
-            this.renderAttachments();
-        }
+			this.renderAttachments();
+		}
 
-        handleFileSelect(event) {
-            this.addAttachments(Array.from(event.target.files));
+		handleFileSelect(event) {
+			this.addAttachments(Array.from(event.target.files));
 		}
 
 		removeAttachment(event) {
@@ -572,7 +574,7 @@ customElements.define(
 			const payload = {
 				filename: file.name,
 				content_type: file.type,
-                content_length: file.size,
+				content_length: file.size,
 			};
 
 			if (thumbnailData) {
@@ -712,19 +714,19 @@ customElements.define(
 			event.preventDefault();
 		}
 
-        handleDroppedFiles(event) {
+		handleDroppedFiles(event) {
 			if (!config.allowFileUploads) {
 				return;
 			}
 
-            event.preventDefault();
+			event.preventDefault();
 
 			const files = Array.from(event.dataTransfer.items)
 				.filter((item) => item.kind === "file")
 				.map((item) => item.getAsFile());
 
-            this.addAttachments(files);
-            this.disableDroparea();
+			this.addAttachments(files);
+			this.disableDroparea();
 		}
 
 		render() {
