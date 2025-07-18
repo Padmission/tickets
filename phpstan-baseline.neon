@@ -27,3 +27,9 @@ parameters:
             identifier: method.notFound
             count: 2
             path: src/Models/Ticket.php
+
+        -
+            message: '#^Trait Padmission\\Tickets\\Models\\Concerns\\User\\HasTickets is used zero times and is not analysed.#'
+            identifier: trait.unused
+            count: 1
+            path: src/Models/Concerns/User/HasTickets.php
