@@ -122,7 +122,7 @@ class BaseElement extends HTMLElement {
 		while ((node = iterator.nextNode())) {
 			if (!node) return;
 
-            let attributes = Array.from(node.attributes)
+			let attributes = Array.from(node.attributes);
 
 			for (const attr of attributes) {
 				if (attr.name.startsWith("@")) {
@@ -148,7 +148,7 @@ class BaseElement extends HTMLElement {
 			callback: (e) => this[method](e),
 		});
 
-        elem.removeAttributeNode(attr);
+		elem.removeAttributeNode(attr);
 	}
 
 	async _render() {

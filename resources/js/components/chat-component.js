@@ -26,7 +26,7 @@ customElements.define(
 			this.ticket = null;
 
 			this.messages = [];
-            this.attachments = [];
+			this.attachments = [];
 			this.lastMessageId = 0;
 			this.lastTimestamp = null;
 			this.lastSeenMessageId = 0;
@@ -38,7 +38,7 @@ customElements.define(
 			this.messageListObserver = null;
 
 			this.isNearBottom = true;
-            this.dropIndex = 0
+			this.dropIndex = 0;
 		}
 
 		beforeRender() {
@@ -173,7 +173,7 @@ customElements.define(
 
 				const lastMessage = messages[messages.length - 1];
 
-                this.lastTimestamp = lastMessage.created_at;
+				this.lastTimestamp = lastMessage.created_at;
 				this.lastMessageId = lastMessage.id;
 
 				if (this.lastSeenMessageId === 0) {
@@ -281,27 +281,34 @@ customElements.define(
                     </div>
                 `);
 
-                renderedHtml.querySelectorAll('[data-preview]').forEach(el => el.addEventListener('click', (event) => {
-                    const el = event.currentTarget;
-                    const type = el.dataset.preview
+				renderedHtml.querySelectorAll("[data-preview]").forEach((el) =>
+					el.addEventListener("click", (event) => {
+						const el = event.currentTarget;
+						const type = el.dataset.preview;
 
-                    if (! ['image', 'video'].includes(type)) {
-                        return;
-                    }
+						if (!["image", "video"].includes(type)) {
+							return;
+						}
 
-                    event.preventDefault()
+						event.preventDefault();
 
-                    const previewSource = event.currentTarget.getAttribute('href');
-                    const dialog = this.rootNode().querySelector('[data-preview-popup]')
-                    const dialogContent = dialog.querySelector('[data-preview-popup-content]')
+						const previewSource = event.currentTarget.getAttribute("href");
+						const dialog = this.rootNode().querySelector(
+							"[data-preview-popup]",
+						);
+						const dialogContent = dialog.querySelector(
+							"[data-preview-popup-content]",
+						);
 
-                    const previewEl = type === 'image'
-                        ? render(`<img src="${previewSource}" alt="">`)
-                        : render(`<video src="${previewSource}" controls>`)
+						const previewEl =
+							type === "image"
+								? render(`<img src="${previewSource}" alt="">`)
+								: render(`<video src="${previewSource}" controls>`);
 
-                    dialogContent.replaceChildren(previewEl)
-                    dialog.showModal()
-                }))
+						dialogContent.replaceChildren(previewEl);
+						dialog.showModal();
+					}),
+				);
 
 				this.messagesElement.append(renderedHtml);
 				this.messages.push(message);
@@ -366,8 +373,6 @@ customElements.define(
 				});
 		}
 
-
-
 		toggleBold(event) {
 			this.editor.chain().focus().toggleBold().run();
 		}
@@ -407,18 +412,18 @@ customElements.define(
 				.run();
 		}
 
-        setIsSending(isSending) {
-            this.isSending = isSending
-            const button = this.shadowRoot.querySelector("[data-chat-submit]")
+		setIsSending(isSending) {
+			this.isSending = isSending;
+			const button = this.shadowRoot.querySelector("[data-chat-submit]");
 
-            if (isSending) {
-                button.classList.add('is-sending');
-                button.toggleAttribute('disabled');
-            } else {
-               button.classList.remove('is-sending');
-                button.removeAttribute('disabled');
-            }
-        }
+			if (isSending) {
+				button.classList.add("is-sending");
+				button.toggleAttribute("disabled");
+			} else {
+				button.classList.remove("is-sending");
+				button.removeAttribute("disabled");
+			}
+		}
 
         addAttachments(attachments) {
             this.clearError()
@@ -442,61 +447,64 @@ customElements.define(
             this.addAttachments(Array.from(event.target.files));
 		}
 
-        removeAttachment(event) {
-            let index = event.currentTarget.dataset.index
+		removeAttachment(event) {
+			let index = event.currentTarget.dataset.index;
 
-            this.attachments.splice(index, 1)
-            this.renderAttachments()
-        }
+			this.attachments.splice(index, 1);
+			this.renderAttachments();
+		}
 
-        async generateThumbnail(file) {
-            console.log({file, indexOf: file.type.indexOf('image/')})
-            if (file.type.indexOf('image/') < 0) {
-                return null;
-            }
+		async generateThumbnail(file) {
+			console.log({ file, indexOf: file.type.indexOf("image/") });
+			if (file.type.indexOf("image/") < 0) {
+				return null;
+			}
 
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+			return new Promise((resolve, reject) => {
+				const img = new Image();
+				const canvas = document.createElement("canvas");
+				const ctx = canvas.getContext("2d");
 
-                canvas.width = 100;
-                canvas.height = 100;
+				canvas.width = 100;
+				canvas.height = 100;
 
-                img.onload = () => {
-                    const {width, height} = img;
-                    const canvasAspect = 1;
-                    const imageAspect = width / height;
+				img.onload = () => {
+					const { width, height } = img;
+					const canvasAspect = 1;
+					const imageAspect = width / height;
 
-                    let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+					let drawWidth,
+						drawHeight,
+						offsetX = 0,
+						offsetY = 0;
 
-                    if (imageAspect > canvasAspect) {
-                        drawHeight = 100;
-                        drawWidth = (width / height) * 100;
-                        offsetX = (100 - drawWidth) / 2;
-                    } else {
-                        drawWidth = 100;
-                        drawHeight = (height / width) * 100;
-                        offsetY = (100 - drawHeight) / 2;
-                    }
+					if (imageAspect > canvasAspect) {
+						drawHeight = 100;
+						drawWidth = (width / height) * 100;
+						offsetX = (100 - drawWidth) / 2;
+					} else {
+						drawWidth = 100;
+						drawHeight = (height / width) * 100;
+						offsetY = (100 - drawHeight) / 2;
+					}
 
-                    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+					ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
-                    const thumbnailDataUrl = canvas.toDataURL('image/png', 0.8);
-                    resolve(thumbnailDataUrl);
-                };
+					const thumbnailDataUrl = canvas.toDataURL("image/png", 0.8);
+					resolve(thumbnailDataUrl);
+				};
 
-                img.onerror = () => {
-                    reject(new Error('Failed to load image for thumbnail generation'));
-                };
+				img.onerror = () => {
+					reject(new Error("Failed to load image for thumbnail generation"));
+				};
 
-                img.src = URL.createObjectURL(file);
-            });
-        }
+				img.src = URL.createObjectURL(file);
+			});
+		}
 
-        renderAttachments() {
-            // biome-ignore format: preserve template formatting
-            const node = render(`
+		renderAttachments() {
+			// biome-ignore format: preserve template formatting
+			const node = render(`
                 <div class="attachments">
                     ${this.attachments.map((attachment, index) => `
                         <div class="attachment">
@@ -519,79 +527,78 @@ customElements.define(
                 </div>
             `);
 
-            this._configureEventListeners(node);
+			this._configureEventListeners(node);
 
-            this.shadowRoot.querySelector('[data-attachments]').replaceChildren(node);
-        }
+			this.shadowRoot.querySelector("[data-attachments]").replaceChildren(node);
+		}
 
-        clearAttachments() {
-            this.attachments = []
-            this.renderAttachments()
-        }
+		clearAttachments() {
+			this.attachments = [];
+			this.renderAttachments();
+		}
 
-        async uploadAttachments() {
-            if (! this.attachments) {
-                return [];
-            }
+		async uploadAttachments() {
+			if (!this.attachments) {
+				return [];
+			}
 
-            let uploadedAttachments = [];
-            let pendingUploads = []
+			let uploadedAttachments = [];
+			let pendingUploads = [];
 
-            for (let attachment of this.attachments) {
-                pendingUploads.push(new Promise(async (resolve, reject) => {
-                    try {
-                        const thumbnailData = await this.generateThumbnail(attachment)
-                        const {
-                            attachment_id,
-                            upload_url
-                        } = await this.getSignedUploadUrl(attachment, thumbnailData);
+			for (let attachment of this.attachments) {
+				pendingUploads.push(
+					new Promise(async (resolve, reject) => {
+						try {
+							const thumbnailData = await this.generateThumbnail(attachment);
+							const { attachment_id, upload_url } =
+								await this.getSignedUploadUrl(attachment, thumbnailData);
 
-                        await this.uploadAttachment(attachment, upload_url);
-                        uploadedAttachments.push(attachment_id)
-                        resolve();
-                    } catch (error) {
-                        reject(error)
-                    }
-                }))
-            }
+							await this.uploadAttachment(attachment, upload_url);
+							uploadedAttachments.push(attachment_id);
+							resolve();
+						} catch (error) {
+							reject(error);
+						}
+					}),
+				);
+			}
 
-            await Promise.all(pendingUploads);
+			await Promise.all(pendingUploads);
 
-            return uploadedAttachments;
-        }
+			return uploadedAttachments;
+		}
 
-
-        async getSignedUploadUrl(file, thumbnailData = null) {
-            const payload = {
-                filename: file.name,
-                content_type: file.type,
+		async getSignedUploadUrl(file, thumbnailData = null) {
+			const payload = {
+				filename: file.name,
+				content_type: file.type,
                 content_length: file.size,
-            };
+			};
 
-            if (thumbnailData) {
-                payload.thumbnail = thumbnailData;
-            }
+			if (thumbnailData) {
+				payload.thumbnail = thumbnailData;
+			}
 
-            return fetchJson(
-                `/padmission-tickets/api/tickets/${this.ticketId}/upload-url`,
-                payload,
-                'POST',
-            );
-        }
+			return fetchJson(
+				`/padmission-tickets/api/tickets/${this.ticketId}/upload-url`,
+				payload,
+				"POST",
+			);
+		}
 
-        async uploadAttachment(file, uploadUrl) {
-            const response = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': file.type,
-                },
-                body: file,
-            });
+		async uploadAttachment(file, uploadUrl) {
+			const response = await fetch(uploadUrl, {
+				method: "PUT",
+				headers: {
+					"Content-Type": file.type,
+				},
+				body: file,
+			});
 
-            if (!response.ok) {
-                throw new Error(`File upload failed: ${response.statusText}`);
-            }
-        }
+			if (!response.ok) {
+				throw new Error(`File upload failed: ${response.statusText}`);
+			}
+		}
 
 		async createTicket() {
 			const subject = this.messageContent
@@ -623,26 +630,26 @@ customElements.define(
 				return;
 			}
 
-            if (this.isSending) {
-                return;
-            }
+			if (this.isSending) {
+				return;
+			}
 
-            this.clearError()
-            this.setIsSending(true)
+			this.clearError();
+			this.setIsSending(true);
 
 			try {
-                if (!this.ticketId) {
-                    this.ticketId = await this.createTicket();
-                }
+				if (!this.ticketId) {
+					this.ticketId = await this.createTicket();
+				}
 
-                const attachment_ids = await this.uploadAttachments();
+				const attachment_ids = await this.uploadAttachments();
 
 				const data = await fetchJson(
 					`/padmission-tickets/api/tickets/${this.ticketId}/messages`,
 					{
-						content: this.messageContent || '',
+						content: this.messageContent || "",
 						lock_turn: lockTurn,
-                        attachment_ids: attachment_ids
+						attachment_ids: attachment_ids,
 					},
 					"POST",
 				);
@@ -657,62 +664,68 @@ customElements.define(
 				this.lastMessageId = lastMessage.id;
 				this.lastTimestamp = lastMessage.created_at;
 
-                this.clearAttachments()
+				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
 			} catch (error) {
-                console.log('Sending failed', error)
-                this.setError(__('chat.error'))
+				console.log("Sending failed", error);
+				this.setError(__("chat.error"));
 			}
 
-            this.setIsSending(false)
+			this.setIsSending(false);
 		}
 
-        setError(message) {
-            const el = this.rootNode().querySelector('[data-chat-error]');
+		setError(message) {
+			const el = this.rootNode().querySelector("[data-chat-error]");
 
-            el.innerHTML = message
-            el.removeAttribute('hidden')
-        }
+			el.innerHTML = message;
+			el.removeAttribute("hidden");
+		}
 
-        clearError() {
-            this.rootNode().querySelector('[data-chat-error]').setAttribute('hidden', '');
-        }
+		clearError() {
+			this.rootNode()
+				.querySelector("[data-chat-error]")
+				.setAttribute("hidden", "");
+		}
 
-        enableDroparea(event) {
-            if (! config.allowFileUploads) {
-                return;
-            }
+		enableDroparea(event) {
+			if (!config.allowFileUploads) {
+				return;
+			}
 
-            if (this.dropIndex++ === 0) {
-                this.rootNode().querySelector('[data-droparea]').removeAttribute('hidden')
-            }
-        }
+			if (this.dropIndex++ === 0) {
+				this.rootNode()
+					.querySelector("[data-droparea]")
+					.removeAttribute("hidden");
+			}
+		}
 
-        disableDroparea() {
-            if (--this.dropIndex === 0) {
-                this.rootNode().querySelector('[data-droparea]').setAttribute('hidden', true)
-            }
-        }
+		disableDroparea() {
+			if (--this.dropIndex === 0) {
+				this.rootNode()
+					.querySelector("[data-droparea]")
+					.setAttribute("hidden", true);
+			}
+		}
 
-        dragover(event) {
-            event.preventDefault();
-        }
+		dragover(event) {
+			event.preventDefault();
+		}
 
         handleDroppedFiles(event) {
-            if (! config.allowFileUploads) {
-                return;
-            }
+			if (!config.allowFileUploads) {
+				return;
+			}
 
-            event.preventDefault()
+            event.preventDefault();
 
-            const files = Array.from(event.dataTransfer.items)
-                .filter(item => item.kind === "file")
-                .map(item => item.getAsFile())
+			const files = Array.from(event.dataTransfer.items)
+				.filter((item) => item.kind === "file")
+				.map((item) => item.getAsFile());
 
-            this.addAttachments(files)
-            this.disableDroparea()
-        }
+            this.addAttachments(files);
+            this.disableDroparea();
+		}
 
 		render() {
 			// biome-ignore format: preserve template formatting
