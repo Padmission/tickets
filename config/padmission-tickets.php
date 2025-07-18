@@ -63,6 +63,7 @@ return [
          * @var string|null
          */
         'preview_disk' => env('MEDIA_DISK', 's3'),
+        'disk' => env('MEDIA_DISK', 's3'),
     ],
 
     'event-listeners' => [

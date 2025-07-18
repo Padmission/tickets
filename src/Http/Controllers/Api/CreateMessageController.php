@@ -6,7 +6,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
@@ -34,6 +36,8 @@ class CreateMessageController
             'attachment_ids' => ['array', Rule::requiredIf(fn () => blank($request->get('content')))],
             'lock_turn' => ['boolean'],
         ]);
+
+        $this->validateAttachments($validated['attachment_ids']);
 
         $ticket = $ticketModel::findOrFail($ticket);
 
@@ -76,6 +80,29 @@ class CreateMessageController
         return [
             'messages' => $messages->map(fn ($message) => TicketActivityMapper::map($message)),
         ];
+    }
+
+    protected function validateAttachments(array $attachmentIds): void
+    {
+        $attachmentClass = TicketPlugin::resolveModelClass(TicketAttachment::class);
+
+        $attachments = $attachmentClass::query()
+            ->whereIn('id', $attachmentIds)
+            ->get();
+
+        foreach ($attachments as $attachment) {
+            $actualSize = Storage::disk(config('padmission-tickets.attachments.disk'))->size($attachment->filepath);
+
+            if ($attachment->file_size === $actualSize - 1) {
+                continue;
+            }
+
+            $attachments->each->delete();
+
+            throw ValidationException::withMessages([
+                'attachment_id' => $attachment->id,
+            ]);
+        }
     }
 
     protected function attachAttachments(TicketActivity $activity, array $attachmentIds): void

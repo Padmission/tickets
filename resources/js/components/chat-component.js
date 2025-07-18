@@ -3,9 +3,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import fetchJson from "./helpers/fetch-json";
-
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
+import humanFileSize from "./helpers/human-file-size.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -420,10 +420,26 @@ customElements.define(
             }
         }
 
-        addAttachments(event) {
-			this.attachments = this.attachments.concat(Array.from(event.target.files));
+        addAttachments(attachments) {
+            this.clearError()
+
+            for (let i in attachments) {
+                if (attachments[i].size > config.maxUploadFileSize) {
+                    this.setError(__('chat.max_file_size', {
+                        size: humanFileSize(config?.maxUploadFileSize)
+                    }));
+
+                    return;
+                }
+            }
+
+			this.attachments = this.attachments.concat(attachments);
 
             this.renderAttachments();
+        }
+
+        handleFileSelect(event) {
+            this.addAttachments(Array.from(event.target.files));
 		}
 
         removeAttachment(event) {
@@ -549,6 +565,7 @@ customElements.define(
             const payload = {
                 filename: file.name,
                 content_type: file.type,
+                content_length: file.size,
             };
 
             if (thumbnailData) {
@@ -682,22 +699,19 @@ customElements.define(
             event.preventDefault();
         }
 
-        addDroppedFiles(event) {
+        handleDroppedFiles(event) {
             if (! config.allowFileUploads) {
                 return;
             }
 
             event.preventDefault()
 
-
             const files = Array.from(event.dataTransfer.items)
                 .filter(item => item.kind === "file")
                 .map(item => item.getAsFile())
 
-            this.attachments = this.attachments.concat(files);
-
+            this.addAttachments(files)
             this.disableDroparea()
-            this.renderAttachments();
         }
 
 		render() {
@@ -720,7 +734,7 @@ customElements.define(
                         hidden
                         class="droparea"
                         data-droparea
-                        @drop="addDroppedFiles"
+                        @drop="handleDroppedFiles"
                     >
                         <span>${__('chat.droparea')}</span>
                     </div>
@@ -762,7 +776,7 @@ customElements.define(
                                             id="attachments"
                                             multiple
                                             accept="video/*,image/*,.pdf"
-                                            @change="addAttachments"
+                                            @change="handleFileSelect"
                                             style="display: none;"
                                         >
 

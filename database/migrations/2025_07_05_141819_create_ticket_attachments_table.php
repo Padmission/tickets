@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('filename');
             $table->string('filepath');
             $table->string('preview_filepath')->nullable();
+            $table->integer('file_size')->unsigned();
             $table->string('mime_type');
             $table->timestamps();
 

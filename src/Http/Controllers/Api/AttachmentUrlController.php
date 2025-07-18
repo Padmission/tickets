@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
@@ -17,10 +18,13 @@ class AttachmentUrlController
 
     public function __invoke(Request $request, int $ticket): array
     {
+        $this->authorize('create', TicketPlugin::resolveModelClass(Ticket::class));
+
         $request->validate([
-            'filename' => 'required|string|max:255',
-            'content_type' => 'required|string|max:100',
-            'thumbnail' => 'nullable|string',
+            'filename' => ['required', 'string', 'max:255'],
+            'content_type' => ['required', 'string', 'max:100'],
+            'content_length' => ['required', 'int'],
+            'thumbnail' => ['nullable', 'string'],
         ]);
 
         $id = Uuid::uuid4()->toString();
@@ -35,7 +39,7 @@ class AttachmentUrlController
             $previewFilePath = $this->storeThumbnail($thumbnailData, $ticket, $id);
         }
 
-        ['url' => $url, 'headers' => $headers] = Storage::temporaryUploadUrl($filepath, now()->addMinutes(5), [
+        ['url' => $url, 'headers' => $headers] = Storage::disk(config('padmission-tickets.attachments.disk'))->temporaryUploadUrl($filepath, now()->addMinutes(5), [
             'ContentType' => $contentType,
         ]);
 
@@ -45,6 +49,7 @@ class AttachmentUrlController
             'filepath' => $filepath,
             'preview_filepath' => $previewFilePath,
             'mime_type' => $contentType,
+            'file_size' => $request->integer('content_length'),
         ]);
 
         dispatch($this->pruneAttachments(...))->afterResponse();
@@ -74,9 +79,11 @@ class AttachmentUrlController
 
     public function pruneAttachments(): void
     {
-        TicketPlugin::resolveModelClass(TicketAttachment::class)::query()
+        $attachments = TicketPlugin::resolveModelClass(TicketAttachment::class)::query()
             ->whereNull('activity_id')
             ->where('created_at', '<', now()->subHour())
-            ->delete();
+            ->get();
+
+        $attachments->each->delete();
     }
 }
