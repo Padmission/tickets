@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Filament\Resources\Concerns;
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\TicketPlugin;
 
 trait HasResourceConfiguration
@@ -19,18 +20,22 @@ trait HasResourceConfiguration
 
     public static Closure|int|null $getNavigationSortUsing = null;
 
+    public static Closure|string|null $getNavigationParentItemUsing = null;
+
     public static function configure(
         Closure|string|null $modelLabel = null,
         Closure|string|null $pluralModelLabel = null,
         Closure|string|null $navigationGroup = null,
         Closure|string|Htmlable|null $navigationIcon = null,
         Closure|int|null $navigationSort = null,
+        Closure|string|null $navigationParentItem = null,
     ): void {
         static::$getModelLabelUsing = $modelLabel;
         static::$getPluralModelLabelUsing = $pluralModelLabel;
         static::$getNavigationGroupUsing = $navigationGroup;
         static::$getNavigationIconUsing = $navigationIcon;
         static::$getNavigationSortUsing = $navigationSort;
+        static::$getNavigationParentItemUsing = $navigationParentItem;
     }
 
     public static function getModel(): string
@@ -81,5 +86,14 @@ trait HasResourceConfiguration
         }
 
         return null;
+    }
+
+    public static function getNavigationParentItem(): ?string
+    {
+        if (isset(static::$getNavigationParentItemUsing)) {
+            return value(static::$getNavigationParentItemUsing);
+        }
+
+        return TicketResource::getNavigationLabel();
     }
 }
