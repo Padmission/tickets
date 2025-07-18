@@ -19,6 +19,7 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\Filament\Widgets;
 
 use function app;
 
@@ -31,6 +32,15 @@ class TicketResource extends Resource
     public static function getModel(): string
     {
         return TicketPlugin::resolveModelClass(Ticket::class);
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            Widgets\OpenTicketsWidget::class,
+            Widgets\OpenSupporterTickets::class,
+            Widgets\TicketCloseTimeWidget::class,
+        ];
     }
 
     public static function table(Table $table): Table
