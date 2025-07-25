@@ -1,6 +1,7 @@
 <?php
 
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
 use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
 use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -8,6 +9,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 dataset('resources', $resources = [
     TicketResource::class,
     StatusResource::class,
+    DispositionResource::class,
     PriorityResource::class,
 ]);
 
@@ -18,6 +20,7 @@ afterEach(function () use ($resources) {
             pluralModelLabel: null,
             navigationGroup: null,
             navigationIcon: null,
+            navigationParentItem: null,
         );
     }
 });
@@ -29,19 +32,25 @@ test('resources can be configured', function (string $resourceClass) {
     expect($resourceClass::getModelLabel())->not->toBe('label')
         ->and($resourceClass::getPluralModelLabel())->not->toBe('plural label')
         ->and($resourceClass::getNavigationGroup())->not->toBe('group')
-        ->and($resourceClass::getNavigationIcon())->not->toBe('icon');
+        ->and($resourceClass::getNavigationIcon())->not->toBe('icon')
+        ->and($resourceClass::getNavigationParentItem())->not->toBe('parent');
 
     $resourceClass::configure(
         modelLabel: 'label',
         pluralModelLabel: 'plural label',
         navigationGroup: 'group',
-        navigationIcon: 'icon'
+        navigationIcon: 'icon',
+        navigationParentItem: 'parent',
     );
 
     expect($resourceClass::getModelLabel())->toBe('label')
         ->and($resourceClass::getPluralModelLabel())->toBe('plural label')
         ->and($resourceClass::getNavigationGroup())->toBe('group')
         ->and($resourceClass::getNavigationIcon())->toBe('icon');
+
+    if ($resourceClass !== TicketResource::class) {
+        expect($resourceClass::getNavigationParentItem())->toBe('parent');
+    }
 })
     ->with('resources');
 
@@ -53,12 +62,17 @@ test('resources can be configured via closure', function (string $resourceClass)
         modelLabel: fn () => 'label',
         pluralModelLabel: fn () => 'plural label',
         navigationGroup: fn () => 'group',
-        navigationIcon: fn () => 'icon'
+        navigationIcon: fn () => 'icon',
+        navigationParentItem: fn () => 'parent',
     );
 
     expect($resourceClass::getModelLabel())->toBe('label')
         ->and($resourceClass::getPluralModelLabel())->toBe('plural label')
         ->and($resourceClass::getNavigationGroup())->toBe('group')
         ->and($resourceClass::getNavigationIcon())->toBe('icon');
+
+    if ($resourceClass !== TicketResource::class) {
+        expect($resourceClass::getNavigationParentItem())->toBe('parent');
+    }
 })
     ->with('resources');
