@@ -165,7 +165,7 @@ final class TicketPlugin implements Plugin
         return $this->assignmentStrategy;
     }
 
-    public function registerResources(bool $shouldRegister = true, bool $shouldRegisterWidgets = true): static
+    public function registerResources(bool $shouldRegister = true, bool $shouldRegisterWidgets = false): static
     {
         $this->shouldRegisterResources = $shouldRegister;
         $this->shouldRegisterWidgets = $shouldRegisterWidgets;
