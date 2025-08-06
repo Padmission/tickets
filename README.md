@@ -13,11 +13,7 @@ Tickets is a comprehensive support ticket management system for Filament applica
 
 The package is using `orchestral/testbench` for testing against a Laravel app.
 
-If you want to manually test in the browser, run:
-
-```bash
-composer serve
-```
+`composer serve` will start the application as `http://tickets.test`. Make sure that test domain is available on your machine or change it to `http://localhost` in the `testbench.yaml` and `composer.json`. 
 
 ### Assets
 
