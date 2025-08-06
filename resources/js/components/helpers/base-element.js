@@ -69,34 +69,37 @@ class BaseElement extends HTMLElement {
 		link.rel = "stylesheet";
 		link.href = this.stylesheet;
 
-        this.cssLink = link;
+		this.cssLink = link;
 		this.rootNode().appendChild(link);
 
-        this.setupBrowsersyncListener()
+		this.setupBrowsersyncListener();
 	}
 
-        setupBrowsersyncListener() {
-            if (typeof window.___browserSync___ !== 'undefined') {
-                window.___browserSync___.socket.on('file:reload', (data) => {
-                    if (data.path.includes('.css') && data.path.includes(this.stylesheet.split('/').pop())) {
-                        this.reloadCSS();
-                    }
-                });
-            }
-        }
+	setupBrowsersyncListener() {
+		if (typeof window.___browserSync___ !== "undefined") {
+			window.___browserSync___.socket.on("file:reload", (data) => {
+				if (
+					data.path.includes(".css") &&
+					data.path.includes(this.stylesheet.split("/").pop())
+				) {
+					this.reloadCSS();
+				}
+			});
+		}
+	}
 
-    reloadCSS() {
-        if (! this.cssLink) {
-            return;
-        }
+	reloadCSS() {
+		if (!this.cssLink) {
+			return;
+		}
 
-        const timestamp = Date.now();
-        const newHref = this.stylesheet.includes('?')
-            ? `${this.stylesheet}&t=${timestamp}`
-            : `${this.stylesheet}?t=${timestamp}`;
+		const timestamp = Date.now();
+		const newHref = this.stylesheet.includes("?")
+			? `${this.stylesheet}&t=${timestamp}`
+			: `${this.stylesheet}?t=${timestamp}`;
 
-        this.cssLink.href = newHref;
-    }
+		this.cssLink.href = newHref;
+	}
 
 	_initializeAttributes() {
 		const attributes = this.getAttributeNames();
