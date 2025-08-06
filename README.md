@@ -9,6 +9,31 @@
 
 Tickets is a comprehensive support ticket management system for Filament applications. It provides a full-featured ticketing system with chat widget, email authentication, activity tracking, and extensive customization options.
 
+## Development
+
+The package is using `orchestral/testbench` for testing against a Laravel app.
+
+If you want to manually test in the browser, run:
+
+```bash
+composer serve
+```
+
+### Assets
+
+When running `composer serve` Filament the latest assets are automatically published.
+
+If you want to work on JS or CSS files, you can run:
+
+```bash
+npm install
+npm run dev
+```
+
+This will start Vite, put the application in Dev Mode, remove existing Filament assets and serve the assets directly from the dist folder. It will also enable BrowserSync to reload the browser on changed.
+
+Make sure you restart `npm run dev` if you restart `composer serve` or after you published the assets.
+
 ## Quick Start Examples
 
 ### Basic Support System
@@ -1004,20 +1029,3 @@ For additional support:
 ## License
 
 The Tickets package is a private, paid package. All rights reserved. Unauthorized distribution, modification, or use is strictly prohibited.
-
-## Development
-
-```bash
-npm install
-npm run dev
-```
-
-### Watch Mode
-
-When running `npm run dev`, the package will be in debug mode and automatically load compiled assets directly from the dist file. No need for `php artisan filament:assets`.
-
-Make sure you didn't publish the assets before running `npm run dev`, as this will cause the package to load the published assets instead of the compiled ones.
-
-### BrowserSync
-
-BrowserSync will reload the page when you make changes to the resources. You can configure the project url you are using for development and the BrowserSync port via the .env file
