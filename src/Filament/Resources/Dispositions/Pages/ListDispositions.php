@@ -2,9 +2,9 @@
 
 namespace Padmission\Tickets\Filament\Resources\Dispositions\Pages;
 
+use Filament\Support\Enums\Width;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Support\Enums\MaxWidth;
 use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
 
 class ListDispositions extends ListRecords
@@ -14,7 +14,7 @@ class ListDispositions extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->slideOver()->modalWidth(MaxWidth::Medium),
+            CreateAction::make()->slideOver()->modalWidth(Width::Medium),
         ];
     }
 }

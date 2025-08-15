@@ -2,6 +2,8 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
+use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\Models\TicketDisposition;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
@@ -30,7 +32,7 @@ class CloseTicketAction extends Action
         $hasDispositions = $this->dispositionsExist();
 
         if ($hasDispositions) {
-            $this->form([
+            $this->schema([
                 Select::make('disposition')
                     ->label(__('padmission-tickets::tickets.actions.close.disposition.label'))
                     ->relationship('disposition', 'display_name')
@@ -49,7 +51,7 @@ class CloseTicketAction extends Action
 
     protected function dispositionsExist(): bool
     {
-        $dispositionModel = \Padmission\Tickets\TicketPlugin::resolveModelClass(\Padmission\Tickets\Models\TicketDisposition::class);
+        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
 
         return $dispositionModel::query()->exists();
     }

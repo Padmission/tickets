@@ -9,6 +9,6 @@ class TicketDispositionObserver
 {
     public function creating(TicketDisposition $disposition): void
     {
-        $disposition->panel ??= Filament::getCurrentPanel()?->getId();
+        $disposition->panel ??= Filament::getCurrentOrDefaultPanel()?->getId();
     }
 }

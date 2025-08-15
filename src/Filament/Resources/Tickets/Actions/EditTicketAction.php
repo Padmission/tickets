@@ -2,10 +2,11 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
+use Filament\Support\Enums\Width;
+use Padmission\Tickets\TicketPlugin;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\Facades\Blade;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
@@ -22,10 +23,10 @@ class EditTicketAction extends EditAction
 
         $this
             ->slideOver()
-            ->modalWidth(MaxWidth::Medium)
+            ->modalWidth(Width::Medium)
             ->closeModalByClickingAway(false)
             ->hidden(fn ($record): bool => $record->isClosed)
-            ->form([
+            ->schema([
                 TextInput::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->disabled()
@@ -73,7 +74,7 @@ class EditTicketAction extends EditAction
                 Select::make('assignee_id')
                     ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
                     ->relationship('assignee', 'name', function ($query) {
-                        $allSupportersQuery = \Padmission\Tickets\TicketPlugin::get()->getAllSupportersQuery();
+                        $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
 
                         if ($allSupportersQuery) {
                             $supporterIds = app()->call($allSupportersQuery)->pluck('id');

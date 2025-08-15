@@ -2,6 +2,9 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Filament\Resources\Pages\ListRecords;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets;
@@ -10,7 +13,7 @@ class ListTickets extends ListRecords
 {
     protected static string $resource = TicketResource::class;
 
-    public function getHeaderWidgetsColumns(): int|string|array
+    public function getHeaderWidgetsColumns(): int|array
     {
         return 12;
     }
@@ -18,9 +21,9 @@ class ListTickets extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
-            Widgets\OpenTicketsWidget::class,
-            Widgets\OpenSupporterTickets::class,
-            Widgets\TicketCloseTimeWidget::class,
+            OpenTicketsWidget::class,
+            OpenSupporterTickets::class,
+            TicketCloseTimeWidget::class,
         ];
     }
 

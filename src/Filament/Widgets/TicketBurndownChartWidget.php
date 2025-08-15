@@ -10,9 +10,9 @@ use Padmission\Tickets\Services\TicketMetricsService;
 
 class TicketBurndownChartWidget extends ChartWidget
 {
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
-    protected static ?string $maxHeight = '12.5rem';
+    protected ?string $maxHeight = '12.5rem';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -25,7 +25,7 @@ class TicketBurndownChartWidget extends ChartWidget
 
     public static function getColors(): array
     {
-        $colors = Filament::getCurrentPanel()->getColors();
+        $colors = Filament::getCurrentOrDefaultPanel()->getColors();
 
         return [
             'rgb('.FilamentColor::processColor($colors['primary'] ?? Color::Blue)[600].')',

@@ -11,7 +11,7 @@ class CurrentPanelScope implements Scope
 {
     public function __invoke($query): Builder
     {
-        return $query->where('panel', Filament::getCurrentPanel()->getId());
+        return $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
     }
 
     public function apply(Builder $builder, Model $model)

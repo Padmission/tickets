@@ -2,12 +2,13 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets;
 
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Exception;
 use Carbon\CarbonImmutable;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -124,7 +125,7 @@ class TicketResource extends Resource
 
                 SelectFilter::make('assignee')
                     ->relationship('assignee', 'name', function ($query) {
-                        $allSupportersQuery = \Padmission\Tickets\TicketPlugin::get()->getAllSupportersQuery();
+                        $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
 
                         if ($allSupportersQuery) {
                             $supporterIds = app()->call($allSupportersQuery)->pluck('id');
@@ -136,10 +137,10 @@ class TicketResource extends Resource
                     })
                     ->preload(),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
@@ -157,7 +158,7 @@ class TicketResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('panel', Filament::getCurrentPanel()->getId());
+            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
     }
 
     public static function shouldShowSourcePanel(): bool
@@ -174,7 +175,7 @@ class TicketResource extends Resource
                         return true;
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Panel might not have the plugin registered
                 continue;
             }

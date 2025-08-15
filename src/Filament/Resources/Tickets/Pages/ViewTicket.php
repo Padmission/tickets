@@ -2,12 +2,12 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
 use Carbon\CarbonImmutable;
-use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
-use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
@@ -41,7 +41,7 @@ class ViewTicket extends ViewRecord
         ];
     }
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
         return $infolist
             ->columns(3)

@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Http\Controllers\Api;
 
+use RuntimeException;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -63,12 +64,12 @@ class CreateTicketController
 
     private function resolveTargetPanelId(): string
     {
-        $currentPanel = Filament::getCurrentPanel();
+        $currentPanel = Filament::getCurrentOrDefaultPanel();
         $targetPanelId = TicketPlugin::get()->getTargetPanelId()
             ?? $currentPanel?->getId();
 
         if (! $targetPanelId) {
-            throw new \RuntimeException('No target panel configured for ticket creation.');
+            throw new RuntimeException('No target panel configured for ticket creation.');
         }
 
         return $targetPanelId;
@@ -78,7 +79,7 @@ class CreateTicketController
     {
         $panel = Filament::getPanel($panelId);
         if ($panel->getId() !== $panelId) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'Panel "%s" is not registered in Filament.',
                 $panelId
             ));
@@ -93,7 +94,7 @@ class CreateTicketController
             ->first();
 
         if (! $defaultStatus) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'No ticket status found for panel "%s". Please configure ticket statuses for this panel.',
                 $panelId
             ));
@@ -110,7 +111,7 @@ class CreateTicketController
             ->first();
 
         if (! $defaultPriority) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'No ticket priority found for panel "%s". Please configure ticket priorities for this panel.',
                 $panelId
             ));
@@ -127,7 +128,7 @@ class CreateTicketController
         TicketPriority $priority
     ): Ticket {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-        $currentPanel = Filament::getCurrentPanel();
+        $currentPanel = Filament::getCurrentOrDefaultPanel();
 
         return $ticketModel::create([
             'panel' => $targetPanelId,

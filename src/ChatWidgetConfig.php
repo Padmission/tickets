@@ -144,7 +144,7 @@ final class ChatWidgetConfig
     public function getPrimaryColor(): string
     {
         $color = $this->primaryColor
-            ?? Filament::getCurrentPanel()->getColors()['primary']
+            ?? Filament::getCurrentOrDefaultPanel()->getColors()['primary']
             ?? null;
 
         if ($color === null) {

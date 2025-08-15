@@ -8,7 +8,7 @@ use Padmission\Tickets\Services\TicketMetricsService;
 
 class OpenTicketsWidget extends BaseWidget
 {
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
     protected int|string|array $columnSpan = 4;
 

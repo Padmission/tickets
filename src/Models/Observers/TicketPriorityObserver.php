@@ -9,6 +9,6 @@ class TicketPriorityObserver
 {
     public function creating(TicketPriority $priority): void
     {
-        $priority->panel ??= Filament::getCurrentPanel()?->getId();
+        $priority->panel ??= Filament::getCurrentOrDefaultPanel()?->getId();
     }
 }

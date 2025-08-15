@@ -2,15 +2,16 @@
 
 namespace Padmission\Tickets\Filament\Resources\Statuses;
 
+use Filament\Schemas\Schema;
+use Filament\Actions\EditAction;
+use Filament\Support\Enums\Width;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Padmission\Tickets\Filament\Resources\Statuses\Pages\ListStatuses;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Support\Enums\MaxWidth;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -39,11 +40,11 @@ class StatusResource extends Resource
         return parent::canAccess();
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->columns(1)
-            ->schema([
+            ->components([
                 TextInput::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.display_name'))
                     ->required(),
@@ -68,11 +69,11 @@ class StatusResource extends Resource
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.display_name')),
             ])
-            ->actions([
-                EditAction::make()->slideOver()->modalWidth(MaxWidth::Medium),
+            ->recordActions([
+                EditAction::make()->slideOver()->modalWidth(Width::Medium),
                 DeleteAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
@@ -82,7 +83,7 @@ class StatusResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListStatuses::route('/'),
+            'index' => ListStatuses::route('/'),
         ];
     }
 
