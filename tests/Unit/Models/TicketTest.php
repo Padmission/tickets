@@ -13,25 +13,26 @@ use Padmission\Tickets\TicketPlugin;
 
 it('executes assignment strategy while creating', function () {
     Filament::getPanel('test')->plugin(
-        TicketPlugin::make()->assignmentStrategy(
-            new class implements AssignmentStrategy
-            {
-                public function assign($ticket): void
+        TicketPlugin::make()
+            ->allSupportersQuery(fn () => User::query())
+            ->assignmentStrategy(
+                new class implements AssignmentStrategy
                 {
-                    $ticket->assignee_id = 2;
+                    public function assign(Ticket $ticket): void
+                    {
+                        $ticket->assignee_id = 2;
+                    }
                 }
-            }
-        )
+            )
+            ->registerResources()
     );
 
-    $ticket = Ticket::factory()->make([
+    $ticket = Ticket::factory()->create([
         'assignee_id' => null,
     ]);
 
-    $ticket->save();
-
     expect($ticket->assignee_id)->toEqual(2);
-})->skip('feature needs refactoring');
+});
 
 test('open/close scopes', function () {
     (new TicketStatusSeeder)->run();

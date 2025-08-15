@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets;
 
-use Dotenv\Dotenv;
 use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
@@ -20,8 +19,6 @@ define('TICKET_PLUGIN_DIR', __DIR__.'/..');
 
 class TicketPluginServiceProvider extends PackageServiceProvider
 {
-    private array $devConfig;
-
     public function configurePackage(Package $package): void
     {
         $package
@@ -41,10 +38,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         }
 
         $this->ensurePolicyIsRegistered();
-
-        if ($this->isDevMode()) {
-            $this->devConfig = Dotenv::parse(file_get_contents(__DIR__.'/../.env'));
-        }
 
         $this->registerCssFiles();
         $this->registerBrowserSync();
@@ -157,7 +150,8 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             return;
         }
 
-        $port = $this->devConfig['BROWSERSYNC_PORT'] ?? 3000;
+        /* @phpstan-ignore-next-line */
+        $port = env('BROWSERSYNC_PORT') ?? 3000;
 
         FilamentAsset::register([
             Js::make('browser-sync', "http://localhost:$port/browser-sync/browser-sync-client.js"),

@@ -1,0 +1,39 @@
+laravel: '@testbench'
+
+providers:
+   - App\Providers\WorkbenchServiceProvider
+   - App\Providers\Filament\DefaultPanelProvider
+
+migrations:
+  - workbench/database/migrations
+
+seeders:
+  - Database\Seeders\DatabaseSeeder
+
+env:
+  - APP_NAME="Tickets Package"
+  - APP_URL=http://tickets.test:8000
+
+workbench:
+  start: '/'
+  install: true
+  health: false
+  discovers:
+    web: true
+    api: false
+    commands: true
+    components: false
+    factories: true
+    views: false
+  build:
+    - asset-publish
+    - create-sqlite-db
+    - filament:assets
+    - db-wipe
+    - migrate-fresh
+  assets:
+    - laravel-assets
+  sync:
+    - from: storage
+      to: workbench/storage
+      reverse: true

@@ -26,6 +26,8 @@ return new class extends Migration
                 };
             }
 
+            $table->string('panel')->index();
+            $table->string('source_panel')->nullable()->index();
             $table->string('escalation_level')->default('default');
             $table->string('subject');
             $table->foreignId('status_id')->constrained('ticket_statuses');

@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets;
 
 use Carbon\CarbonImmutable;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -14,10 +15,13 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Filament\Widgets;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
+
+use function app;
 
 class TicketResource extends Resource
 {
@@ -25,9 +29,23 @@ class TicketResource extends Resource
 
     protected static ?string $slug = 'tickets';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return null;
+    }
+
     public static function getModel(): string
     {
         return TicketPlugin::resolveModelClass(Ticket::class);
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            Widgets\OpenTicketsWidget::class,
+            Widgets\OpenSupporterTickets::class,
+            Widgets\TicketCloseTimeWidget::class,
+        ];
     }
 
     public static function table(Table $table): Table
@@ -80,6 +98,12 @@ class TicketResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('source_panel')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
+                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                    ->sortable()
+                    ->visible(fn () => static::shouldShowSourcePanel()),
+
                 TextColumn::make('latestMessage.created_at')
                     ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                     ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
@@ -99,7 +123,17 @@ class TicketResource extends Resource
                     ->preload(),
 
                 SelectFilter::make('assignee')
-                    ->relationship('assignee', 'name')
+                    ->relationship('assignee', 'name', function ($query) {
+                        $allSupportersQuery = \Padmission\Tickets\TicketPlugin::get()->getAllSupportersQuery();
+
+                        if ($allSupportersQuery) {
+                            $supporterIds = app()->call($allSupportersQuery)->pluck('id');
+
+                            return $query->whereIn('id', $supporterIds);
+                        }
+
+                        return $query;
+                    })
                     ->preload(),
             ])
             ->actions([
@@ -122,6 +156,30 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery();
+        return parent::getEloquentQuery()
+            ->where('panel', Filament::getCurrentPanel()->getId());
+    }
+
+    public static function shouldShowSourcePanel(): bool
+    {
+        // Count panels that have the chat widget enabled
+        $panelsWithChatWidget = 0;
+
+        foreach (Filament::getPanels() as $panel) {
+            try {
+                $plugin = TicketPlugin::get($panel->getId());
+                if ($plugin->shouldShowChatWidget()) {
+                    $panelsWithChatWidget++;
+                    if ($panelsWithChatWidget > 1) {
+                        return true;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Panel might not have the plugin registered
+                continue;
+            }
+        }
+
+        return false;
     }
 }

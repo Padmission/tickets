@@ -71,7 +71,18 @@ class EditTicketAction extends EditAction
                     ->required(),
 
                 Select::make('assignee_id')
-                    ->relationship('assignee', 'name')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                    ->relationship('assignee', 'name', function ($query) {
+                        $allSupportersQuery = \Padmission\Tickets\TicketPlugin::get()->getAllSupportersQuery();
+
+                        if ($allSupportersQuery) {
+                            $supporterIds = app()->call($allSupportersQuery)->pluck('id');
+
+                            return $query->whereIn('id', $supporterIds);
+                        }
+
+                        return $query;
+                    })
                     ->searchable()
                     ->required(),
             ]);
