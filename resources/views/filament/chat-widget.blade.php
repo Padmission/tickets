@@ -12,7 +12,6 @@
     }
 
     $auth = resolve(TicketAuth::class);
-
 @endphp
 
 <div wire:ignore>
@@ -22,7 +21,7 @@
     />
 
     <script
-        src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission-tickets') }}"
+        src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission/tickets') }}"
         type="module"
     ></script>
 

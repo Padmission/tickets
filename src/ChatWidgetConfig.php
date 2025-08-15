@@ -26,6 +26,10 @@ final class ChatWidgetConfig
 
     public string|array|Closure|null $primaryColor = null;
 
+    public bool|Closure $allowFileUploads = false;
+
+    public int|Closure $maxUploadFileSize = 10 * 1024 * 1024;
+
     public static function make(): self
     {
         return new self;
@@ -51,6 +55,26 @@ final class ChatWidgetConfig
     public function getOtpExpiresAfterMinutes(): int
     {
         return value($this->otpExpiresAfterMinutes);
+    }
+
+    public function allowFileUploads(
+        bool|Closure $enable = true,
+        int|Closure $maxFileSize = 10 * 1024 * 1024,
+    ): self {
+        $this->allowFileUploads = $enable;
+        $this->maxUploadFileSize = $maxFileSize;
+
+        return $this;
+    }
+
+    public function getAllowFileUploads(): bool
+    {
+        return value($this->allowFileUploads);
+    }
+
+    public function getMaxUploadFileSize(): int
+    {
+        return value($this->maxUploadFileSize);
     }
 
     /**
@@ -146,6 +170,8 @@ final class ChatWidgetConfig
             'userId' => $auth->getUserId(),
             'placeholder' => $this->getPlaceholder(),
             'introMessage' => $this->getIntroMessage(),
+            'allowFileUploads' => $this->getAllowFileUploads(),
+            'maxUploadFileSize' => $this->getMaxUploadFileSize(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),
         ]);
     }

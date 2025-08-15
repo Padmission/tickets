@@ -3,9 +3,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import fetchJson from "./helpers/fetch-json";
-
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
+import humanFileSize from "./helpers/human-file-size.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -13,7 +13,7 @@ customElements.define(
 	"chat-component",
 	class extends BaseElement {
 		get stylesheet() {
-			return "/css/padmission-tickets/chat-component.css";
+			return "/css/padmission/tickets/chat-component.css";
 		}
 
 		constructor() {
@@ -26,9 +26,10 @@ customElements.define(
 			this.ticket = null;
 
 			this.messages = [];
+			this.attachments = [];
 			this.lastMessageId = 0;
-			this.lastSeenMessageId = 0;
 			this.lastTimestamp = null;
+			this.lastSeenMessageId = 0;
 
 			this.editor = null;
 			this.pollingInterval = null;
@@ -37,6 +38,7 @@ customElements.define(
 			this.messageListObserver = null;
 
 			this.isNearBottom = true;
+			this.dropIndex = 0;
 		}
 
 		beforeRender() {
@@ -170,6 +172,7 @@ customElements.define(
 				}
 
 				const lastMessage = messages[messages.length - 1];
+
 				this.lastTimestamp = lastMessage.created_at;
 				this.lastMessageId = lastMessage.id;
 
@@ -213,7 +216,7 @@ customElements.define(
 			messages = messages || [];
 
 			messages.forEach((message) => {
-				if (message.content === null) {
+				if (message.content === null && message.attachments.length === 0) {
 					return;
 				}
 
@@ -246,14 +249,66 @@ customElements.define(
                         data-side="${message.side}"
                         data-message-id="${message.id}"
                     >
-                        <div class="message__content markdown">
-                            ${message.content}
+                        <div class="message__content">
+                            <div class="markdown">
+                                ${message.content || ''}
+                            </div>
+
+                            ${message.attachments ? `
+                                <div class="message__attachments">
+                                    ${message.attachments?.map((attachment) =>
+                                        `
+                                            <a
+                                                href="${attachment.url}"
+                                                class="attachment"
+                                                data-preview="${attachment.type}"
+                                                target="_blank"
+                                            >
+                                                ${
+                                                    attachment.type === 'image'
+                                                        ? `<img src="${attachment.preview_url}">`
+                                                        : `<span>${attachment.filename}</span>`
+                                                }
+                                            </a>
+                                        `
+                                        ).join('') ?? ''}
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="message__sender">
                             ${message.user_name}
                         </div>
                     </div>
                 `);
+
+				renderedHtml.querySelectorAll("[data-preview]").forEach((el) =>
+					el.addEventListener("click", (event) => {
+						const el = event.currentTarget;
+						const type = el.dataset.preview;
+
+						if (!["image", "video"].includes(type)) {
+							return;
+						}
+
+						event.preventDefault();
+
+						const previewSource = event.currentTarget.getAttribute("href");
+						const dialog = this.rootNode().querySelector(
+							"[data-preview-popup]",
+						);
+						const dialogContent = dialog.querySelector(
+							"[data-preview-popup-content]",
+						);
+
+						const previewEl =
+							type === "image"
+								? render(`<img src="${previewSource}" alt="">`)
+								: render(`<video src="${previewSource}" controls>`);
+
+						dialogContent.replaceChildren(previewEl);
+						dialog.showModal();
+					}),
+				);
 
 				this.messagesElement.append(renderedHtml);
 				this.messages.push(message);
@@ -318,10 +373,6 @@ customElements.define(
 				});
 		}
 
-		addFiles(event) {
-			// TODO: Implement file upload functionality
-		}
-
 		toggleBold(event) {
 			this.editor.chain().focus().toggleBold().run();
 		}
@@ -361,6 +412,196 @@ customElements.define(
 				.run();
 		}
 
+		setIsSending(isSending) {
+			this.isSending = isSending;
+			const button = this.shadowRoot.querySelector("[data-chat-submit]");
+
+			if (isSending) {
+				button.classList.add("is-sending");
+				button.toggleAttribute("disabled");
+			} else {
+				button.classList.remove("is-sending");
+				button.removeAttribute("disabled");
+			}
+		}
+
+		addAttachments(attachments) {
+			this.clearError();
+
+			for (let i in attachments) {
+				if (attachments[i].size > config.maxUploadFileSize) {
+					this.setError(
+						__("chat.max_file_size", {
+							size: humanFileSize(config?.maxUploadFileSize),
+						}),
+					);
+
+					return;
+				}
+			}
+
+			this.attachments = this.attachments.concat(attachments);
+
+			this.renderAttachments();
+		}
+
+		handleFileSelect(event) {
+			this.addAttachments(Array.from(event.target.files));
+		}
+
+		removeAttachment(event) {
+			let index = event.currentTarget.dataset.index;
+
+			this.attachments.splice(index, 1);
+			this.renderAttachments();
+		}
+
+		async generateThumbnail(file) {
+			console.log({ file, indexOf: file.type.indexOf("image/") });
+			if (file.type.indexOf("image/") < 0) {
+				return null;
+			}
+
+			return new Promise((resolve, reject) => {
+				const img = new Image();
+				const canvas = document.createElement("canvas");
+				const ctx = canvas.getContext("2d");
+
+				canvas.width = 100;
+				canvas.height = 100;
+
+				img.onload = () => {
+					const { width, height } = img;
+					const canvasAspect = 1;
+					const imageAspect = width / height;
+
+					let drawWidth,
+						drawHeight,
+						offsetX = 0,
+						offsetY = 0;
+
+					if (imageAspect > canvasAspect) {
+						drawHeight = 100;
+						drawWidth = (width / height) * 100;
+						offsetX = (100 - drawWidth) / 2;
+					} else {
+						drawWidth = 100;
+						drawHeight = (height / width) * 100;
+						offsetY = (100 - drawHeight) / 2;
+					}
+
+					ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+					const thumbnailDataUrl = canvas.toDataURL("image/png", 0.8);
+					resolve(thumbnailDataUrl);
+				};
+
+				img.onerror = () => {
+					reject(new Error("Failed to load image for thumbnail generation"));
+				};
+
+				img.src = URL.createObjectURL(file);
+			});
+		}
+
+		renderAttachments() {
+			// biome-ignore format: preserve template formatting
+			const node = render(`
+                <div class="attachments">
+                    ${this.attachments.map((attachment, index) => `
+                        <div class="attachment">
+                            <button
+                                class="button-icon"
+                                @click="removeAttachment"
+                                data-index="${index}"
+                            >
+                                <span class="sr-only">Remove</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                            </button>
+
+                            ${
+                                attachment.type.startsWith('image/')
+                                    ? `<img src="${URL.createObjectURL(attachment)}">`
+                                    : `<span>${attachment.name}</span>`
+                            }
+                        </div>
+                    `,).join("")}
+                </div>
+            `);
+
+			this._configureEventListeners(node);
+
+			this.shadowRoot.querySelector("[data-attachments]").replaceChildren(node);
+		}
+
+		clearAttachments() {
+			this.attachments = [];
+			this.renderAttachments();
+		}
+
+		async uploadAttachments() {
+			if (!this.attachments) {
+				return [];
+			}
+
+			let uploadedAttachments = [];
+			let pendingUploads = [];
+
+			for (let attachment of this.attachments) {
+				pendingUploads.push(
+					new Promise(async (resolve, reject) => {
+						try {
+							const thumbnailData = await this.generateThumbnail(attachment);
+							const { attachment_id, upload_url } =
+								await this.getSignedUploadUrl(attachment, thumbnailData);
+
+							await this.uploadAttachment(attachment, upload_url);
+							uploadedAttachments.push(attachment_id);
+							resolve();
+						} catch (error) {
+							reject(error);
+						}
+					}),
+				);
+			}
+
+			await Promise.all(pendingUploads);
+
+			return uploadedAttachments;
+		}
+
+		async getSignedUploadUrl(file, thumbnailData = null) {
+			const payload = {
+				filename: file.name,
+				content_type: file.type,
+				content_length: file.size,
+			};
+
+			if (thumbnailData) {
+				payload.thumbnail = thumbnailData;
+			}
+
+			return fetchJson(
+				`/padmission-tickets/api/tickets/${this.ticketId}/upload-url`,
+				payload,
+				"POST",
+			);
+		}
+
+		async uploadAttachment(file, uploadUrl) {
+			const response = await fetch(uploadUrl, {
+				method: "PUT",
+				headers: {
+					"Content-Type": file.type,
+				},
+				body: file,
+			});
+
+			if (!response.ok) {
+				throw new Error(`File upload failed: ${response.statusText}`);
+			}
+		}
+
 		async createTicket() {
 			const subject = this.messageContent
 				.trim()
@@ -387,21 +628,30 @@ customElements.define(
 		async sendMessage() {
 			const lockTurn = this.lockTurnCheckbox?.checked || false;
 
-			if (!this.messageContent.trim()) {
+			if (!this.messageContent.trim() && this.attachments.length === 0) {
 				return;
 			}
 
-			if (!this.ticketId) {
-				this.ticketId = await this.createTicket();
-				console.log("Created new ticket with ID:", this.ticketId);
+			if (this.isSending) {
+				return;
 			}
 
+			this.clearError();
+			this.setIsSending(true);
+
 			try {
+				if (!this.ticketId) {
+					this.ticketId = await this.createTicket();
+				}
+
+				const attachment_ids = await this.uploadAttachments();
+
 				const data = await fetchJson(
 					`/padmission-tickets/api/tickets/${this.ticketId}/messages`,
 					{
-						content: this.messageContent,
+						content: this.messageContent || "",
 						lock_turn: lockTurn,
+						attachment_ids: attachment_ids,
 					},
 					"POST",
 				);
@@ -416,11 +666,67 @@ customElements.define(
 				this.lastMessageId = lastMessage.id;
 				this.lastTimestamp = lastMessage.created_at;
 
+				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
 			} catch (error) {
-				console.error("Error sending message:", error);
+				console.log("Sending failed", error);
+				this.setError(__("chat.error"));
 			}
+
+			this.setIsSending(false);
+		}
+
+		setError(message) {
+			const el = this.rootNode().querySelector("[data-chat-error]");
+
+			el.innerHTML = message;
+			el.removeAttribute("hidden");
+		}
+
+		clearError() {
+			this.rootNode()
+				.querySelector("[data-chat-error]")
+				.setAttribute("hidden", "");
+		}
+
+		enableDroparea(event) {
+			if (!config.allowFileUploads) {
+				return;
+			}
+
+			if (this.dropIndex++ === 0) {
+				this.rootNode()
+					.querySelector("[data-droparea]")
+					.removeAttribute("hidden");
+			}
+		}
+
+		disableDroparea() {
+			if (--this.dropIndex === 0) {
+				this.rootNode()
+					.querySelector("[data-droparea]")
+					.setAttribute("hidden", true);
+			}
+		}
+
+		dragover(event) {
+			event.preventDefault();
+		}
+
+		handleDroppedFiles(event) {
+			if (!config.allowFileUploads) {
+				return;
+			}
+
+			event.preventDefault();
+
+			const files = Array.from(event.dataTransfer.items)
+				.filter((item) => item.kind === "file")
+				.map((item) => item.getAsFile());
+
+			this.addAttachments(files);
+			this.disableDroparea();
 		}
 
 		render() {
@@ -432,7 +738,22 @@ customElements.define(
                     }
                 </style>
 
-                <div class="chat">
+                <div
+                    class="chat"
+                    data-chat
+                    @dragenter="enableDroparea"
+                    @dragleave="disableDroparea"
+                    @dragover="dragover"
+                >
+                    <div
+                        hidden
+                        class="droparea"
+                        data-droparea
+                        @drop="handleDroppedFiles"
+                    >
+                        <span>${__('chat.droparea')}</span>
+                    </div>
+
                     <div class="message-list" data-chat-messages>
 
                     </div>
@@ -450,21 +771,34 @@ customElements.define(
                         </button>
                     </div>
 
-                    <form class="composer" data-composer>
+                    <form class="composer" data-composer style="position: relative;">
+                       <div hidden class="composer__error" data-chat-error>Something went wrong</div>
                         <div class="composer__message">
                             <div data-chat-input></div>
 
-                            <div class="composer__toolbar">
-                                <button
-                                    class="button-icon"
-                                    type="button"
-                                    @click="addFiles"
-                                    style="display: none;"
-                                >
-                                    <span class="sr-only">${__('chat.add_files')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
-                                </button>
+                            <div data-attachments></div>
 
+
+                            <div class="composer__toolbar">
+                                ${config.allowFileUploads ? `
+                                    <label
+                                        role="button"
+                                        class="button button-icon"
+
+                                    >
+                                        <input
+                                            type="file"
+                                            id="attachments"
+                                            multiple
+                                            accept="video/*,image/*,.pdf"
+                                            @change="handleFileSelect"
+                                            style="display: none;"
+                                        >
+
+                                        <span class="sr-only">${__('chat.add_files')}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
+                                    </label>
+                                `: ''}
                                 <button
                                     class="button-icon"
                                     type="button"
@@ -502,6 +836,11 @@ customElements.define(
                                 </button>
 
                                 <button type="submit" data-chat-submit>
+                                    <svg class="loading-indicator" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path clip-rule="evenodd" d="M12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19ZM12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill-rule="evenodd" fill="currentColor" opacity="0.2"></path>
+                                        <path d="M2 12C2 6.47715 6.47715 2 12 2V5C8.13401 5 5 8.13401 5 12H2Z" fill="currentColor"></path>
+                                    </svg>
+
                                     <span>${__('chat.send')}</span>
 
                                     <kbd>
@@ -530,6 +869,26 @@ customElements.define(
                         }
                     </form>
                 </div>
+
+                <dialog
+                    class="preview"
+                    closedby="any"
+                    data-preview-popup
+                >
+                    <form>
+                        <button
+                            class="button-icon"
+                            formmethod="dialog"
+                        >
+                            <span class="sr-only">${__('close_modal')}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                         </button>
+                    </form>
+
+                    <div class="preview__inner" data-preview-popup-content>
+
+                    </div>
+                </dialog>
             `);
 		}
 	},

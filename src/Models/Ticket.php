@@ -13,6 +13,7 @@ use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\CanBeAssigned;
 use Padmission\Tickets\Models\Concerns\CanBeClosed;
 use Padmission\Tickets\Models\Concerns\HasTicketActivities;
+use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
@@ -30,6 +31,7 @@ class Ticket extends Model
     use CanBeClosed;
     use HasFactory;
     use HasTicketActivities;
+    use HasTicketAttachments;
     use InteractsWithNotifications;
     use ManagesPriority;
     use ManagesStatus;

@@ -6,10 +6,7 @@ use Padmission\Tickets\Models\Ticket;
 
 class TicketMapper
 {
-    /**
-     * @param  Ticket  $ticket
-     */
-    public static function map($ticket): array
+    public static function map(Ticket $ticket): array
     {
         return [
             'id' => $ticket->id,

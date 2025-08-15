@@ -151,7 +151,9 @@ class BaseElement extends HTMLElement {
 		while ((node = iterator.nextNode())) {
 			if (!node) return;
 
-			for (const attr of node.attributes) {
+			let attributes = Array.from(node.attributes);
+
+			for (const attr of attributes) {
 				if (attr.name.startsWith("@")) {
 					this._processEventHandler(attr);
 				}
@@ -175,7 +177,6 @@ class BaseElement extends HTMLElement {
 			callback: (e) => this[method](e),
 		});
 
-		// Remove (non-standard) attribute from element
 		elem.removeAttributeNode(attr);
 	}
 

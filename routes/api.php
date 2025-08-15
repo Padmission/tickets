@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Auth\Middleware\Authenticate;
 use Padmission\Tickets\Http\Controllers\Api;
 use Padmission\Tickets\Http\Middleware\AuthenticateGuests;
 
@@ -11,7 +12,7 @@ Route::middleware(['web'])
         Route::post('/otp-verify', Api\VerifyOtpController::class)->name('otp.verify');
     });
 
-Route::middleware(['web', AuthenticateGuests::class])
+Route::middleware(['web', AuthenticateGuests::class, Authenticate::class])
     ->prefix('padmission-tickets/api/tickets')
     ->as('padmission-tickets::api.')
     ->group(function () {
@@ -19,4 +20,5 @@ Route::middleware(['web', AuthenticateGuests::class])
         Route::post('/', Api\CreateTicketController::class)->name('store');
         Route::get('/{ticket}/messages', Api\ListMessagesController::class)->name('messages.index');
         Route::post('/{ticket}/messages', Api\CreateMessageController::class)->name('messages.store');
+        Route::post('/{ticket}/upload-url', Api\AttachmentUrlController::class)->name('attachment-url');
     });
