@@ -12,6 +12,7 @@ use Filament\Forms\FormsServiceProvider;
 use Filament\Infolists\InfolistsServiceProvider;
 use Filament\Notifications\NotificationsServiceProvider;
 use Filament\Panel;
+use Filament\Schemas\SchemasServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
@@ -19,6 +20,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\Concerns\InteractsWithViews;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Kirschbaum\PowerJoins\PowerJoinsServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider;
 use Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider;
@@ -45,26 +47,33 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function getPackageProviders($app): array
     {
-        return [
-            LivewireServiceProvider::class,
 
+        $providers = [
             LaravelQueueDebounceServiceProvider::class,
+
+            ActionsServiceProvider::class,
+            BladeCaptureDirectiveServiceProvider::class,
+            BladeHeroiconsServiceProvider::class,
+            BladeIconsServiceProvider::class,
 
             FilamentServiceProvider::class,
             FormsServiceProvider::class,
             InfolistsServiceProvider::class,
-            TablesServiceProvider::class,
-            SupportServiceProvider::class,
-            ActionsServiceProvider::class,
-            WidgetsServiceProvider::class,
             NotificationsServiceProvider::class,
-
-            BladeIconsServiceProvider::class,
-            BladeHeroiconsServiceProvider::class,
-            BladeCaptureDirectiveServiceProvider::class,
+            SchemasServiceProvider::class,
+            SupportServiceProvider::class,
+            TablesServiceProvider::class,
+            WidgetsServiceProvider::class,
 
             TicketPluginServiceProvider::class,
+            PowerJoinsServiceProvider::class,
+
+            LivewireServiceProvider::class,
         ];
+
+        sort($providers);
+
+        return $providers;
     }
 
     protected function defineEnvironment($app): void
