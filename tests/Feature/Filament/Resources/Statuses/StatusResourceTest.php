@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Actions\Testing\TestAction;
 use Filament\Support\Colors\Color;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Statuses\Pages\ListStatuses;
@@ -18,9 +19,9 @@ it('lists statuses', function () {
         ->assertSee(__('padmission-tickets::tickets.resources.statuses.plural_model_label'))
         ->assertCountTableRecords(3)
         ->assertSeeInOrder([
-            'rgb('.Color::Green['600'].')', 'Low',
-            'rgb('.Color::Blue['600'].')', 'Medium',
-            'rgb('.Color::Red['600'].')', 'High',
+            Color::Green['600'], 'Low',
+            Color::Blue['600'], 'Medium',
+            Color::Red['600'], 'High',
         ]);
 });
 
@@ -54,20 +55,28 @@ it('can create status', function () {
     $this->login();
 
     Livewire::test(ListStatuses::class)
-        ->callAction('create', [
-            'display_name' => '',
-            'color' => '',
-        ])
-        ->assertHasActionErrors(['display_name', 'color'])
-        ->callAction('create', [
-            'display_name' => 'New Status',
-            'color' => 'Zinc',
-        ])
-        ->assertHasNoActionErrors();
+        ->callAction(
+            'create',
+            [
+                'display_name' => '',
+                'color' => '',
+            ]
+        )
+        ->assertHasFormErrors(['display_name', 'color']);
+
+    Livewire::test(ListStatuses::class)
+        ->callAction(
+            'create',
+            [
+                'display_name' => 'New Status',
+                'color' => 'Red',
+            ]
+        )
+        ->assertHasNoFormErrors();
 
     $this->assertDatabaseHas(TicketStatus::class, [
         'display_name' => 'New Status',
-        'color' => 'Zinc',
+        'color' => 'Red',
         'order' => 99,
     ]);
 });
@@ -78,11 +87,14 @@ it('can edit status', function () {
     $status = TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListStatuses::class)
-        ->callTableAction('edit', $status, [
-            'display_name' => 'New Name',
-            'color' => 'Red',
-        ])
-        ->assertHasNoActionErrors();
+        ->callAction(
+            TestAction::make('edit')->table($status),
+            [
+                'display_name' => 'New Name',
+                'color' => 'Red',
+            ]
+        )
+        ->assertHasNoFormErrors();
 
     $this->assertDatabaseHas(TicketStatus::class, [
         'id' => $status->id,
@@ -98,7 +110,7 @@ it('can delete status', function () {
     $status = TicketStatus::factory()->create(['display_name' => 'Low', 'color' => 'Green', 'order' => 1]);
 
     Livewire::test(ListStatuses::class)
-        ->callTableAction('delete', $status->id)
+        ->callAction(TestAction::make('delete')->table($status))
         ->assertHasNoErrors();
 
     $this->assertSoftDeleted(TicketStatus::class, [
