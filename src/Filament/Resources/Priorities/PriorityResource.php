@@ -66,7 +66,7 @@ class PriorityResource extends Resource
             ->columns([
                 ColorColumn::make('color')
                     ->label(__('padmission-tickets::tickets.resources.priorities.color'))
-                    ->getStateUsing(fn (TicketPriority $record) => 'rgb('.Color::{$record->color}[600].')'),
+                    ->getStateUsing(fn (TicketPriority $record) => $record->colorPalette[600]),
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.priorities.display_name')),

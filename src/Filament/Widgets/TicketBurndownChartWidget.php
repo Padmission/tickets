@@ -27,9 +27,12 @@ class TicketBurndownChartWidget extends ChartWidget
     {
         $colors = Filament::getCurrentOrDefaultPanel()->getColors();
 
+        $primary = is_array($primary = $colors['primary']) ? $primary : Color::generatePalette($primary);
+        $secondary = is_array($secondary = $colors['secondary']) ? $secondary : Color::generatePalette($secondary);
+
         return [
-            'rgb('.FilamentColor::processColor($colors['primary'] ?? Color::Blue)[600].')',
-            'rgb('.FilamentColor::processColor($colors['secondary'] ?? Color::Gray)[600].')',
+            'rgb('.$primary[600].');',
+            'rgb('.$secondary[600].');',
         ];
     }
 

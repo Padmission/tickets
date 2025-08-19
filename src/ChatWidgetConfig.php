@@ -5,6 +5,7 @@ namespace Padmission\Tickets;
 use Closure;
 use Exception;
 use Filament\Facades\Filament;
+use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentColor;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Arr;
@@ -155,7 +156,9 @@ final class ChatWidgetConfig
             $color = $color();
         }
 
-        return 'rgb('.FilamentColor::processColor($color)[600].')';
+        $color = is_array($color) ? $color : Color::generatePalette($color);
+
+        return 'rgb('.$color[600].');';
     }
 
     public function toJs(): string

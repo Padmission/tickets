@@ -65,7 +65,7 @@ class DispositionResource extends Resource
             ->columns([
                 ColorColumn::make('color')
                     ->label(__('padmission-tickets::tickets.resources.dispositions.color'))
-                    ->getStateUsing(fn (TicketDisposition $record) => 'rgb('.$record->colorPalette[600].')'),
+                    ->getStateUsing(fn (TicketDisposition $record) => $record->colorPalette[600]),
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.dispositions.display_name')),

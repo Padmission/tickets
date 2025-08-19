@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
+use Padmission\Tickets\Models\Concerns\HasColor;
 use Padmission\Tickets\Models\Observers\TicketPriorityObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
@@ -19,20 +20,11 @@ use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 #[UseFactory(TicketPriorityFactory::class)]
 class TicketPriority extends Model
 {
+    use HasColor;
     use HasFactory;
     use SoftDeletes;
 
     protected $table = 'ticket_priorities';
 
     protected $guarded = ['id'];
-
-    /**
-     * @return Attribute<array,never>
-     */
-    protected function colorPalette(): Attribute
-    {
-        return Attribute::make(
-            get: fn ($value) => Color::{$this->color},
-        );
-    }
 }

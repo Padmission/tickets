@@ -64,7 +64,7 @@ class StatusResource extends Resource
             ->columns([
                 ColorColumn::make('color')
                     ->label(__('padmission-tickets::tickets.resources.statuses.color'))
-                    ->getStateUsing(fn (TicketStatus $record) => 'rgb('.$record->colorPalette[600].')'),
+                    ->getStateUsing(fn (TicketStatus $record) => $record->colorPalette[600]),
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.display_name')),
