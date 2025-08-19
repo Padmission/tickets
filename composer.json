@@ -51,7 +51,7 @@
         "serve": [
             "Composer\\Config::disableProcessTimeout",
             "@build",
-            "@php vendor/bin/testbench serve --host=tickets.test --ansi"
+            "XDEBUG_SESSION=1 php vendor/bin/testbench serve --host=tickets.test --ansi"
         ]
     },
     "prefer-stable": true,
