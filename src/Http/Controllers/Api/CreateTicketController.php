@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Http\Controllers\Api;
 
-use RuntimeException;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -13,6 +12,7 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
+use RuntimeException;
 use Tiptap\Editor;
 
 use function sprintf;

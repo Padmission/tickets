@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
-use Filament\Support\Facades\FilamentColor;
 use Filament\Widgets\ChartWidget;
 use Padmission\Tickets\Services\TicketMetricsService;
 

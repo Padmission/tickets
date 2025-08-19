@@ -2,9 +2,9 @@
 
 namespace Padmission\Tickets\Filament\Resources\Statuses\Pages;
 
-use Filament\Support\Enums\Width;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Enums\Width;
 use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
 
 class ListStatuses extends ListRecords
