@@ -3,6 +3,7 @@ laravel: '@testbench'
 providers:
    - App\Providers\WorkbenchServiceProvider
    - App\Providers\Filament\DefaultPanelProvider
+   - Padmission\Tickets\TicketPluginServiceProvider
 
 migrations:
   - workbench/database/migrations
