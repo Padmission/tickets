@@ -18,6 +18,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 class ViewTicket extends ViewRecord
 {
@@ -43,7 +44,7 @@ class ViewTicket extends ViewRecord
 
     public function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->columns(3)
             ->schema([
                 Section::make()
@@ -94,7 +95,7 @@ class ViewTicket extends ViewRecord
                             ->hidden(fn (Ticket $record) => $record->isClosed)
                             ->dateTime()
                             ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
-                            ->tooltip(fn (?CarbonImmutable $state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
+                            ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
                             ->columnSpanFull(),
 
                         TextEntry::make('closed_at')
@@ -102,7 +103,7 @@ class ViewTicket extends ViewRecord
                             ->visible(fn (Ticket $record) => $record->isClosed)
                             ->dateTime()
                             ->formatStateUsing(fn ($state) => $state?->diffForHumans())
-                            ->tooltip(fn ($state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
+                            ->tooltip(fn ($state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
                             ->columnSpanFull(),
                     ]),
                 ]),

@@ -108,7 +108,7 @@ class TicketResource extends Resource
                 TextColumn::make('latestMessage.created_at')
                     ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                     ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
-                    ->tooltip(fn (?CarbonImmutable $state) => $state?->format(Table::$defaultDateTimeDisplayFormat))
+                    ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::getDateTimeDisplayFormat()))
                     ->sortable(),
             ])
             ->filters([

@@ -40,6 +40,8 @@ final class TicketPlugin implements Plugin
 
     protected mixed $initialAssignmentSupportersQuery = null;
 
+    protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
+
     public static function make(): static
     {
         return new self;
@@ -143,6 +145,17 @@ final class TicketPlugin implements Plugin
     }
 
     /* Configuration options */
+    public function dateTimeDisplayFormat(string $format): self
+    {
+        $this->dateTimeDisplayFormat = $format;
+
+        return $this;
+    }
+    public function getDateTimeDisplayFormat(): string
+    {
+        return $this->dateTimeDisplayFormat;
+    }
+
     public function escalationLevel(string $level): static
     {
         $this->escalationLevel = $level;
