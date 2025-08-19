@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets;
 
-use RuntimeException;
 use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
@@ -15,6 +14,7 @@ use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\Filament\Widgets;
+use RuntimeException;
 
 final class TicketPlugin implements Plugin
 {
@@ -151,6 +151,7 @@ final class TicketPlugin implements Plugin
 
         return $this;
     }
+
     public function getDateTimeDisplayFormat(): string
     {
         return $this->dateTimeDisplayFormat;

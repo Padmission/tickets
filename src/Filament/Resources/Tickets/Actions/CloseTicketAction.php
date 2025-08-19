@@ -2,12 +2,12 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
-use Padmission\Tickets\TicketPlugin;
-use Padmission\Tickets\Models\TicketDisposition;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\TicketPlugin;
 
 class CloseTicketAction extends Action
 {

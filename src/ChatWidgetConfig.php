@@ -6,7 +6,6 @@ use Closure;
 use Exception;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
-use Filament\Support\Facades\FilamentColor;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Arr;
 use Padmission\Tickets\Services\TicketAuth;

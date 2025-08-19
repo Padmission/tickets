@@ -2,11 +2,11 @@
 
 namespace Padmission\Tickets\AssignmentStrategies;
 
-use RuntimeException;
 use Closure;
 use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
+use RuntimeException;
 
 final class AssignDefaultUser implements AssignmentStrategy
 {

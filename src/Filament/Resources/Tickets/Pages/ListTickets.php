@@ -2,12 +2,11 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
-use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
-use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
-use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Filament\Resources\Pages\ListRecords;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
-use Padmission\Tickets\Filament\Widgets;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 
 class ListTickets extends ListRecords
 {

@@ -2,11 +2,11 @@
 
 namespace Padmission\Tickets\AssignmentStrategies;
 
-use RuntimeException;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
+use RuntimeException;
 
 abstract class PanelAwareAssignmentStrategy implements AssignmentStrategy
 {
