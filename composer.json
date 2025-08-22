@@ -48,9 +48,11 @@
         "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
         "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "theme": " npx @tailwindcss/cli --input ./workbench/resources/css/filament/default/theme.css --output ./workbench/public/css/filament/default/theme.css --minify",
         "serve": [
             "Composer\\Config::disableProcessTimeout",
             "@build",
+            "@theme",
             "XDEBUG_SESSION=1 php vendor/bin/testbench serve --host=tickets.test --ansi"
         ]
     },
