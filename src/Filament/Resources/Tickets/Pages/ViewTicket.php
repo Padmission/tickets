@@ -53,59 +53,57 @@ class ViewTicket extends ViewRecord
                         ViewEntry::make('chat')->view('padmission-tickets::filament.infolists.chat'),
                     ]),
 
-                Grid::make()->columnSpan(1)->columns(2)->schema([
-                    Section::make()->schema([
-                        TextEntry::make('status.display_name')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.status'))
-                            ->badge()
-                            ->color(fn (Ticket $record) => $record->status->colorPalette),
+                Section::make()->columns(2)->schema([
+                    TextEntry::make('status.display_name')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.status'))
+                        ->badge()
+                        ->color(fn (Ticket $record) => $record->status->colorPalette),
 
-                        TextEntry::make('priority.display_name')
-                            ->badge()
-                            ->color(fn (Ticket $record) => $record->priority->colorPalette)
-                            ->label(__('padmission-tickets::tickets.resources.tickets.priority')),
+                    TextEntry::make('priority.display_name')
+                        ->badge()
+                        ->color(fn (Ticket $record) => $record->priority->colorPalette)
+                        ->label(__('padmission-tickets::tickets.resources.tickets.priority')),
 
-                        TextEntry::make('disposition.display_name')
-                            ->badge()
-                            ->color(fn (Ticket $record) => $record->disposition?->colorPalette)
-                            ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
-                            ->hidden(fn (Ticket $record) => ! $record->disposition_id),
+                    TextEntry::make('disposition.display_name')
+                        ->badge()
+                        ->color(fn (Ticket $record) => $record->disposition?->colorPalette)
+                        ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
+                        ->hidden(fn (Ticket $record) => ! $record->disposition_id),
 
-                        SubmitterEntry::make('submitter')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
-                            ->columnSpanFull(),
+                    SubmitterEntry::make('submitter')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
+                        ->columnSpanFull(),
 
-                        AvatarEntry::make('assignee')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
-                            ->columnSpanFull(),
+                    AvatarEntry::make('assignee')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                        ->columnSpanFull(),
 
-                        TextEntry::make('turn')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
-                            ->columnSpanFull(),
+                    TextEntry::make('turn')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
+                        ->columnSpanFull(),
 
-                        TextEntry::make('source_panel')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
-                            ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
-                            ->visible(fn () => TicketResource::shouldShowSourcePanel())
-                            ->columnSpanFull(),
+                    TextEntry::make('source_panel')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
+                        ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                        ->visible(fn () => TicketResource::shouldShowSourcePanel())
+                        ->columnSpanFull(),
 
-                        TextEntry::make('latestMessage.created_at')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
-                            ->hidden(fn (Ticket $record) => $record->isClosed)
-                            ->dateTime()
-                            ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
-                            ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
-                            ->columnSpanFull(),
+                    TextEntry::make('latestMessage.created_at')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
+                        ->hidden(fn (Ticket $record) => $record->isClosed)
+                        ->dateTime()
+                        ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
+                        ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
+                        ->columnSpanFull(),
 
-                        TextEntry::make('closed_at')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.closed_at'))
-                            ->visible(fn (Ticket $record) => $record->isClosed)
-                            ->dateTime()
-                            ->formatStateUsing(fn ($state) => $state?->diffForHumans())
-                            ->tooltip(fn ($state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
-                            ->columnSpanFull(),
-                    ]),
+                    TextEntry::make('closed_at')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.closed_at'))
+                        ->visible(fn (Ticket $record) => $record->isClosed)
+                        ->dateTime()
+                        ->formatStateUsing(fn ($state) => $state?->diffForHumans())
+                        ->tooltip(fn ($state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
+                        ->columnSpanFull(),
                 ]),
-            ]);
+        ]);
     }
 }
