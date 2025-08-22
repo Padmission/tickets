@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
 
         (new TicketStatusSeeder)->run();
         (new TicketPrioritySeeder)->run();
-        (new TicketDispositionSeeder())->run();
+        (new TicketDispositionSeeder)->run();
         (new TicketSeeder)->run();
     }
 }

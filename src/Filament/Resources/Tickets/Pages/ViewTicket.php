@@ -6,7 +6,6 @@ use Carbon\CarbonImmutable;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\ViewRecord;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
@@ -104,6 +103,6 @@ class ViewTicket extends ViewRecord
                         ->tooltip(fn ($state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
                         ->columnSpanFull(),
                 ]),
-        ]);
+            ]);
     }
 }
