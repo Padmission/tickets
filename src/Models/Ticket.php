@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\Turn;
@@ -45,6 +47,16 @@ class Ticket extends Model
         'submitter_data' => SubmitterData::class,
         'closed_at' => 'datetime',
     ];
+
+    public function linkedToTicket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'linked_ticket_id', 'id');
+    }
+
+    public function linkedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'linked_ticket_id', 'id');
+    }
 
     /* Scopes */
 

@@ -6,6 +6,8 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
+use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Http\DataMappers\TicketMapper;
 use Padmission\Tickets\Models\Ticket;
@@ -31,8 +33,8 @@ class CreateTicketController
         $targetPanelId = $this->resolveTargetPanelId();
         $this->verifyPanelExists($targetPanelId);
 
-        $defaultStatus = $this->getDefaultStatusForPanel($targetPanelId);
-        $defaultPriority = $this->getDefaultPriorityForPanel($targetPanelId);
+        $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
+        $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
 
         $ticket = $this->createTicket(
             $request,
@@ -84,40 +86,6 @@ class CreateTicketController
                 $panelId
             ));
         }
-    }
-
-    private function getDefaultStatusForPanel(string $panelId): TicketStatus
-    {
-        $defaultStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::query()
-            ->where('panel', $panelId)
-            ->orderBy('order', 'asc')
-            ->first();
-
-        if (! $defaultStatus) {
-            throw new RuntimeException(sprintf(
-                'No ticket status found for panel "%s". Please configure ticket statuses for this panel.',
-                $panelId
-            ));
-        }
-
-        return $defaultStatus;
-    }
-
-    private function getDefaultPriorityForPanel(string $panelId): TicketPriority
-    {
-        $defaultPriority = TicketPlugin::resolveModelClass(TicketPriority::class)::query()
-            ->where('panel', $panelId)
-            ->orderBy('order', 'asc')
-            ->first();
-
-        if (! $defaultPriority) {
-            throw new RuntimeException(sprintf(
-                'No ticket priority found for panel "%s". Please configure ticket priorities for this panel.',
-                $panelId
-            ));
-        }
-
-        return $defaultPriority;
     }
 
     private function createTicket(

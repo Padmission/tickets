@@ -1,1 +1,76 @@
-@source '../views/**';
+.avatar-entry {
+    font-size: var(--text-sm);
+    color: var(--color-gray-950);
+
+    .dark & {
+        color: var(--color-white);
+    }
+
+    &:has(.fi-avatar) {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 2);
+    }
+
+    .avatar-entry__email {
+        word-wrap: break-word;
+    }
+}
+
+.fi-resource-edit-record-page:where(.fi-resource-tickets) {
+    .fi-fo-modal-table-select-badges-ctn {
+        flex-direction: column;
+        justify-content: start;
+        gap: .25rem;
+
+        & > .fi-badge {
+            all: revert;
+        }
+    }
+
+    .fi-fo-modal-table-select {
+        flex-direction: column;
+
+        button {
+            display: flex;
+            margin-top: calc(var(--spacing) * 2);
+            margin-left: auto;
+        }
+    }
+}
+
+.ticket-card {
+    --border-color: var(--color-black);
+
+    width: 100%;
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-normal);
+
+    padding-block: var(--spacing);
+    padding-inline: calc(var(--spacing) * 2);
+    border: 1px solid rgba(from var(--border-color) r g b / 0.2);
+    border-radius: var(--radius-md);
+
+    .dark & {
+        --border-color: var(--color-white);
+    }
+
+    .ticket-card__subject {
+        margin-top: var(--spacing);
+
+        a {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing);
+
+            &:hover,
+            &:focus-visible {
+                text-decoration: underline;
+            }
+        }
+
+        svg {
+            margin-left: auto;
+        }
+    }
+}
