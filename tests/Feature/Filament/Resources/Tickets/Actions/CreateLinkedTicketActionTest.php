@@ -42,7 +42,6 @@ it('is hidden when ticket already has parent', function () {
         ->assertActionHidden(CreateLinkedTicketAction::class);
 });
 
-
 it('sets default subject', function () {
     TicketPlugin::get()->allowLinkedTickets();
 
@@ -52,7 +51,6 @@ it('sets default subject', function () {
         ->mountAction(CreateLinkedTicketAction::class)
         ->assertSchemaComponentStateSet('subject', $originalTicket->subject);
 });
-
 
 it('creates linked ticket successfully', function () {
     (new TicketStatusSeeder)->run();
