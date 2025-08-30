@@ -66,7 +66,9 @@ class TicketSeeder extends Seeder
                     $userFactory = $userFactory->state([$this->getTenantKey() => $tenantId]);
                 }
 
-                $users = $userFactory->create();
+                $users = $userModel::all()->merge($userFactory->create());
+
+                $firstUser = $users->first();
 
                 $baseTicketFactory = $ticketModel::factory()
                     ->recycle($statuses)
@@ -79,11 +81,13 @@ class TicketSeeder extends Seeder
                     $baseTicketFactory = $baseTicketFactory->state([$this->getTenantKey() => $tenantId]);
                 }
 
-                $tickets = collect([
-                    ['subject' => 'Users Turn', 'turn' => Turn::User],
-                    ['subject' => 'Supporters Turn', 'turn' => Turn::Supporter],
+                $mainTickets = collect([
+                    ['subject' => 'Users Turn', 'turn' => Turn::User, 'assignee_id' => $firstUser->id],
+                    ['subject' => 'Supporters Turn', 'turn' => Turn::Supporter, 'assignee_id' => $firstUser->id],
                     ['subject' => 'Closed Ticket', 'turn' => Turn::Supporter, 'closed' => true],
                     ['subject' => 'Non-user submitter', 'turn' => Turn::Supporter, 'withSubmitterData' => true],
+                    ['subject' => 'Parent Ticket - Login Issues', 'turn' => Turn::Supporter],
+                    ['subject' => 'Parent Ticket - Payment Problems', 'turn' => Turn::User],
                 ])->map(function ($ticketData) use ($baseTicketFactory) {
                     $factory = clone $baseTicketFactory;
 
@@ -99,6 +103,19 @@ class TicketSeeder extends Seeder
 
                     return $factory->create($ticketData);
                 });
+
+                $linkedTickets = collect([
+                    ['subject' => 'Related: Password Reset Not Working', 'turn' => Turn::User, 'linked_ticket_id' => $mainTickets[4]->id, 'submitter_id' => $firstUser->id, 'source_panel' => $panel->getId()],
+                    ['subject' => 'Related: 2FA Authentication Issue', 'turn' => Turn::Supporter, 'linked_ticket_id' => $mainTickets[4]->id, 'submitter_id' => $firstUser->id, 'source_panel' => $panel->getId()],
+                    ['subject' => 'Related: Credit Card Declined', 'turn' => Turn::User, 'linked_ticket_id' => $mainTickets[5]->id, 'source_panel' => $panel->getId()],
+                    ['subject' => 'Related: PayPal Integration Error', 'turn' => Turn::Supporter, 'linked_ticket_id' => $mainTickets[5]->id, 'source_panel' => $panel->getId()],
+                ])->map(function ($ticketData) use ($baseTicketFactory) {
+                    $factory = clone $baseTicketFactory;
+
+                    return $factory->create($ticketData);
+                });
+
+                $tickets = $mainTickets->concat($linkedTickets);
 
                 foreach ($tickets as $ticket) {
                     $this->addActivities($ticket, $users);

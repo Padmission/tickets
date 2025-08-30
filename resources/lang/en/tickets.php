@@ -63,6 +63,13 @@ return [
             'disposition' => 'Disposition',
             'linked_to_ticket' => 'Linked Ticket',
             'linked_tickets' => 'Linked Tickets',
+
+            'tabs' => [
+                'all' => 'All Tickets',
+                'my' => 'My Tickets',
+                'linked' => 'All Linked Tickets',
+                'my_linked' => 'My Linked Tickets',
+            ],
         ],
 
         'statuses' => [
