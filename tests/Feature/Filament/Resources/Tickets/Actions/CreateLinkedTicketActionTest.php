@@ -42,6 +42,18 @@ it('is hidden when ticket already has parent', function () {
         ->assertActionHidden(CreateLinkedTicketAction::class);
 });
 
+
+it('sets default subject', function () {
+    TicketPlugin::get()->allowLinkedTickets();
+
+    $originalTicket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
+        ->mountAction(CreateLinkedTicketAction::class)
+        ->assertSchemaComponentStateSet('subject', $originalTicket->subject);
+});
+
+
 it('creates linked ticket successfully', function () {
     (new TicketStatusSeeder)->run();
     (new TicketPrioritySeeder)->run();

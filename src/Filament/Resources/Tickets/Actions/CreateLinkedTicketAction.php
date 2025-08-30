@@ -38,6 +38,7 @@ class CreateLinkedTicketAction extends Action
             ->slideOver()
             ->modalWidth(Width::Medium)
             ->closeModalByClickingAway(false)
+            ->fillForm(fn (Ticket $record) => ['subject' => $record->subject])
             ->schema([
                 Select::make('panel')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
