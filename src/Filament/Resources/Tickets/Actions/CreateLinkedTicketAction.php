@@ -34,7 +34,7 @@ class CreateLinkedTicketAction extends Action
             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
             ->icon(Heroicon::Link)
             ->color('gray')
-            ->hidden(fn (Ticket $record) => $record->linkedToTicket !== null)
+            ->visible(fn (Ticket $record) => TicketPlugin::get()->hasLinkedTickets() && $record->linkedToTicket === null)
             ->slideOver()
             ->modalWidth(Width::Medium)
             ->closeModalByClickingAway(false)
@@ -43,9 +43,9 @@ class CreateLinkedTicketAction extends Action
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
                     ->required()
                     ->selectablePlaceholder(false)
-                    ->visible(fn () => count(Filament::getPanels()) > 1)
+                    ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 1)
                     ->options(
-                        collect(Filament::getPanels())
+                        collect(TicketPlugin::get()->getPanelsForLinkedTicketCreation())
                             ->mapWithKeys(fn (Panel $panel) => [$panel->getId() => ucfirst($panel->getId())])
                     ),
 

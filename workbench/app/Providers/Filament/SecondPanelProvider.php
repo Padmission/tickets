@@ -24,7 +24,7 @@ use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
-class DefaultPanelProvider extends PanelProvider
+class SecondPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
@@ -32,8 +32,8 @@ class DefaultPanelProvider extends PanelProvider
 
         return $panel
             ->default()
-            ->id('default')
-            ->path('/')
+            ->id('second')
+            ->path('/second')
             ->login(Login::class)
             ->colors([
                 'primary' => [

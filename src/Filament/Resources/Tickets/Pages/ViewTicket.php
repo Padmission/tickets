@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Carbon\CarbonImmutable;
+use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\EditRecord;
@@ -114,6 +115,7 @@ class ViewTicket extends EditRecord
                     Section::make()
                         ->columns(2)
                         ->heading(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+                        ->visible(fn () => TicketPlugin::get()->hasLinkedTickets())
                         ->compact()
                         ->schema([
                             LinkedTicketModalSelect::make('linkedTicket')

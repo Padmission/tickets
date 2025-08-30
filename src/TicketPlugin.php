@@ -24,6 +24,10 @@ final class TicketPlugin implements Plugin
 
     protected bool $shouldRegisterWidgets = false;
 
+    protected bool $shouldEnableLinkedTickets = false;
+
+    protected ?array $allowLinkedTicketsCreationForPanels = null;
+
     protected string $escalationLevel = 'default';
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
@@ -197,6 +201,37 @@ final class TicketPlugin implements Plugin
     public function shouldRegisterWidgets(): bool
     {
         return $this->shouldRegisterWidgets;
+    }
+
+    public function allowLinkedTickets(bool $shouldEnable = true,  array|null $only = null): static
+    {
+        $this->shouldEnableLinkedTickets = $shouldEnable;
+        $this->allowLinkedTicketsCreationForPanels = $only;
+
+        return $this;
+    }
+
+    public function hasLinkedTickets(): bool
+    {
+        return $this->shouldEnableLinkedTickets;
+    }
+
+    public function getPanelsForLinkedTicketCreation(): array
+    {
+        if (! $this->hasLinkedTickets()) {
+            return [];
+        }
+
+        $panels =  Filament::getPanels();
+
+        if ($this->allowLinkedTicketsCreationForPanels === null) {
+            return $panels;
+        }
+
+        return array_filter(
+            $panels,
+            fn (Panel $panel) => in_array($panel->getId(), $this->allowLinkedTicketsCreationForPanels),
+        );
     }
 
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static
