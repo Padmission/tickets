@@ -203,7 +203,7 @@ final class TicketPlugin implements Plugin
         return $this->shouldRegisterWidgets;
     }
 
-    public function allowLinkedTickets(bool $shouldEnable = true,  array|null $only = null): static
+    public function allowLinkedTickets(bool $shouldEnable = true, ?array $only = null): static
     {
         $this->shouldEnableLinkedTickets = $shouldEnable;
         $this->allowLinkedTicketsCreationForPanels = $only;
@@ -222,7 +222,7 @@ final class TicketPlugin implements Plugin
             return [];
         }
 
-        $panels =  Filament::getPanels();
+        $panels = Filament::getPanels();
 
         if ($this->allowLinkedTicketsCreationForPanels === null) {
             return $panels;

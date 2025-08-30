@@ -110,7 +110,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             Css::make('chat-widget', __DIR__.'/../resources/css/chat-widget.css')->loadedOnRequest(),
             Css::make('tickets', __DIR__.'/../resources/css/tickets.css'),
 
-            Js::make('chat-widget', __DIR__.'/../dist/chat-widget.js')->loadedOnRequest()
+            Js::make('chat-widget', __DIR__.'/../dist/chat-widget.js')->loadedOnRequest(),
         ];
 
         if (! $this->isDevMode()) {
