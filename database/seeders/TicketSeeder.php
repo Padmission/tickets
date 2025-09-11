@@ -92,12 +92,12 @@ class TicketSeeder extends Seeder
                     $factory = clone $baseTicketFactory;
 
                     if (isset($ticketData['closed'])) {
-                        // $factory = $factory->closed();
+                        $factory = $factory->closed();
                         unset($ticketData['closed']);
                     }
 
                     if (isset($ticketData['withSubmitterData'])) {
-                        // $factory = $factory->withSubmitterData();
+                        $factory = $factory->withSubmitterData();
                         unset($ticketData['withSubmitterData']);
                     }
 
