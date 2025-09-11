@@ -14,8 +14,7 @@
         "orchestra/testbench": "^10.0",
         "pestphp/pest": "^3.8",
         "pestphp/pest-plugin-laravel": "^3.2",
-        "larastan/larastan": "^3.4",
-        "filament/upgrade": "^4.0"
+        "larastan/larastan": "^3.4"
     },
     "autoload": {
         "psr-4": {
