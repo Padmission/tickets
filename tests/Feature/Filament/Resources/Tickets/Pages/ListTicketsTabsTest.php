@@ -35,6 +35,7 @@ it('shows my tickets tab filtered by assignee', function () {
             ['assignee_id' => null],
         )
         ->count(3)
+        ->open()
         ->create([
             'status_id' => TicketStatus::getOpenStatuses()->first()->id,
         ]);
@@ -68,10 +69,9 @@ it('shows linked tickets tabs when feature enabled', function () {
     expect($tabs['my_linked']->getLabel())->toBe(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'));
 });
 
-// @TODO
-
 it('filters linked tickets tab by linked ticket id', function () {
     TicketPlugin::get()->allowLinkedTickets();
+    (new TicketStatusSeeder)->run();
 
     $this->login();
 
@@ -86,6 +86,7 @@ it('filters linked tickets tab by linked ticket id', function () {
             ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => null],
             ['source_panel' => 'other-panel', 'linked_ticket_id' => $parentTicket->id],
         )
+        ->open()
         ->count(3)
         ->create();
 
@@ -96,6 +97,7 @@ it('filters linked tickets tab by linked ticket id', function () {
 
 it('filters my linked tickets tab by linked ticket id and submitter', function () {
     TicketPlugin::get()->allowLinkedTickets();
+    (new TicketStatusSeeder)->run();
 
     $user = $this->login();
     $otherUser = User::factory()->create();
@@ -110,6 +112,7 @@ it('filters my linked tickets tab by linked ticket id and submitter', function (
             ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => $parentTicket->id, 'submitter_id' => $user->id],
             ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => $parentTicket->id, 'submitter_id' => $otherUser->id],
         )
+        ->open()
         ->count(2)
         ->create();
 

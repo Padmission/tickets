@@ -9,6 +9,7 @@ use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
@@ -67,14 +68,7 @@ it('creates linked ticket successfully', function () {
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Linked Test Ticket',
-            'message' => [
-                'type' => 'doc',
-                'content' => [
-                    ['type' => 'paragraph', 'content' => [
-                        ['type' => 'text', 'text' => $messageContent],
-                    ]],
-                ],
-            ],
+            'message' => tiptapDocument($messageContent),
         ])
         ->assertHasNoFormErrors();
 
@@ -88,7 +82,7 @@ it('creates linked ticket successfully', function () {
         ->subject->toBe('Linked Test Ticket')
         ->submitter_id->toBe(auth()->id())
         ->turn->toBe(Turn::Supporter)
-        ->status_id->toBe(1)
+        ->status_id->toBe(TicketStatus::getOpenStatuses()->first()->id)
         ->priority_id->toBe(1);
 
     expect($originalTicket->refresh())
@@ -115,14 +109,7 @@ it('creates linked ticket for different panel', function () {
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Cross-Panel Ticket',
-            'message' => [
-                'type' => 'doc',
-                'content' => [
-                    ['type' => 'paragraph', 'content' => [
-                        ['type' => 'text', 'text' => $messageContent],
-                    ]],
-                ],
-            ],
+            'message' => tiptapDocument($messageContent),
         ])
         ->assertHasNoFormErrors();
 
@@ -146,14 +133,7 @@ it('updates livewire data after creation', function () {
     $component = Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Data Update Test',
-            'message' => [
-                'type' => 'doc',
-                'content' => [
-                    ['type' => 'paragraph', 'content' => [
-                        ['type' => 'text', 'text' => 'Test message for data update'],
-                    ]],
-                ],
-            ],
+            'message' => tiptapDocument('Test message for data update'),
         ])
         ->assertHasNoFormErrors();
 
@@ -169,14 +149,7 @@ it('sends success notification with action link', function () {
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Notification Test',
-            'message' => [
-                'type' => 'doc',
-                'content' => [
-                    ['type' => 'paragraph', 'content' => [
-                        ['type' => 'text', 'text' => 'Notification test message'],
-                    ]],
-                ],
-            ],
+            'message' => tiptapDocument('Notification test message'),
         ])
         ->assertHasNoFormErrors()
         ->assertNotified();
@@ -190,7 +163,7 @@ it('requires subject field', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => '',
-            'message' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Message without subject']]]]],
+            'message' => tiptapDocument('Message without subject'),
         ])
         ->assertHasFormErrors(['subject']);
 });
@@ -203,7 +176,7 @@ it('requires message field', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Subject without message',
-            'message' => null,
+            'message' => tiptapDocument('<p></p>'),
         ])
         ->assertHasFormErrors(['message']);
 });
