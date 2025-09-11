@@ -11,9 +11,9 @@ class TicketAttachmentMapper
     {
         return [
             'filename' => $attachment->filename,
-            'url' => Storage::temporaryUrl($attachment->filepath, now()->addMinutes(5)),
+            'url' => Storage::disk(config('padmission-tickets.attachments.disk'))->temporaryUrl($attachment->filepath, now()->addMinutes(5)),
             'preview_url' => $attachment->preview_filepath
-                ? Storage::temporaryUrl($attachment->preview_filepath, now()->addMinutes(5))
+                ? Storage::disk(config('padmission-tickets.attachments.preview_disk'))->temporaryUrl($attachment->preview_filepath, now()->addMinutes(5))
                 : null,
             'type' => match (true) {
                 str_starts_with($attachment->mime_type, 'image/') => 'image',
