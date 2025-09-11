@@ -2,6 +2,7 @@ import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+
 import fetchJson from "./helpers/fetch-json";
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
@@ -456,6 +457,67 @@ customElements.define(
 			this.renderAttachments();
 		}
 
+        async takeScreenshot(event) {
+            event.preventDefault();
+            document.querySelector('chat-widget').hidden = true;
+
+            try {
+                // Use Screen Capture API to get display media stream
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        mediaSource: 'screen'
+                    },
+                    audio: false,
+                    preferCurrentTab: true,
+                    surfaceSwitching: "exclude",
+                    monitorTypeSurfaces: "exclude",
+                });
+
+                // Create a video element to capture the frame
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.muted = true;
+
+                // Wait for video to load metadata
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
+
+                // Create canvas and capture the current frame
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+
+                // Stop the media stream
+                stream.getTracks().forEach(track => track.stop());
+
+                // Convert canvas to blob and create file
+                canvas.toBlob((blob) => {
+                    const file = new File([blob], `screenshot-${Date.now()}.webp`, {
+                        type: 'image/webp',
+                        lastModified: Date.now()
+                    });
+
+                    this.addAttachments([file]);
+                }, 'image/webp');
+
+            } catch (error) {
+                if (error.name === 'NotAllowedError') {
+                    this.setError(__('chat.screenshot.permission_denied'));
+                } else {
+                    this.setError(__('chat.screenshot.failed'));
+                }
+            }
+
+            document.querySelector('chat-widget').hidden = false;
+        }
+
 		async generateThumbnail(file) {
 			console.log({ file, indexOf: file.type.indexOf("image/") });
 			if (file.type.indexOf("image/") < 0) {
@@ -795,10 +857,22 @@ customElements.define(
                                             style="display: none;"
                                         >
 
-                                        <span class="sr-only">${__('chat.add_files')}</span>
+                                        <span class="sr-only">${__('chat.add_attachments')}</span>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
                                     </label>
                                 `: ''}
+
+                                ${config.allowFileUploads && config.allowScreenshots && Boolean(navigator.mediaDevices?.getDisplayMedia) ? `
+                                    <button
+                                        role="button"
+                                        class="button button-icon"
+                                        @click="takeScreenshot"
+                                    >
+                                        <span class="sr-only">${__('chat.screenshot.capture')}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
+                                    </button>
+                                `: ''}
+
                                 <button
                                     class="button-icon"
                                     type="button"

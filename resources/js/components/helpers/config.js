@@ -6,6 +6,7 @@ class ChatWidgetConfig {
 	userId = null;
 	placeholder = null;
 	introMessage = "";
+	allowScreenshots = false;
 	allowFileUploads = false;
 	maxUploadFileSize = 10 * 1024 * 1024;
 	lang = {};

@@ -80,6 +80,10 @@
 	--shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
+:host([hidden]) {
+    opacity: 0;
+}
+
 .sr-only {
 	position: absolute;
 	width: 1px;

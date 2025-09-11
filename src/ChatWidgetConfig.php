@@ -30,6 +30,8 @@ final class ChatWidgetConfig
 
     public int|Closure $maxUploadFileSize = 10 * 1024 * 1024;
 
+    public bool|Closure $allowScreenshots = false;
+
     public static function make(): self
     {
         return new self;
@@ -75,6 +77,18 @@ final class ChatWidgetConfig
     public function getMaxUploadFileSize(): int
     {
         return value($this->maxUploadFileSize);
+    }
+
+    public function allowScreenshots(bool|Closure $enable = true): self
+    {
+        $this->allowScreenshots = $enable;
+
+        return $this;
+    }
+
+    public function getAllowScreenshots(): bool
+    {
+        return value($this->allowScreenshots);
     }
 
     /**
@@ -172,6 +186,7 @@ final class ChatWidgetConfig
             'userId' => $auth->getUserId(),
             'placeholder' => $this->getPlaceholder(),
             'introMessage' => $this->getIntroMessage(),
+            'allowScreenshots' => $this->getAllowScreenshots(),
             'allowFileUploads' => $this->getAllowFileUploads(),
             'maxUploadFileSize' => $this->getMaxUploadFileSize(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),
