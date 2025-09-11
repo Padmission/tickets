@@ -32,7 +32,7 @@ class LinkedTicketModalSelect extends ModalTableSelect
                         </x-filament::badge>
 
                         <div class="ticket-card__subject">
-                            <a href="{{ TicketResource::getUrl('view', ['record' => $record->id] }}">
+                            <a href="{{ \Padmission\Tickets\Filament\Resources\Tickets\TicketResource::getUrl('view', ['record' => $record->id]) }}">
                                 {{ $record->subject }}
 
                                 <x-heroicon-o-arrow-top-right-on-square class="fi-icon fi-size-sm" />
