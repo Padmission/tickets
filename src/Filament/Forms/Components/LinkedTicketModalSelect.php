@@ -6,7 +6,6 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\ModalTableSelect;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
-use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\TicketsTable;
 
 class LinkedTicketModalSelect extends ModalTableSelect
