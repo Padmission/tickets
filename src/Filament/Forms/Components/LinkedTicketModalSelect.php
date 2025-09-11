@@ -6,6 +6,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\ModalTableSelect;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\TicketsTable;
 
 class LinkedTicketModalSelect extends ModalTableSelect
@@ -31,7 +32,7 @@ class LinkedTicketModalSelect extends ModalTableSelect
                         </x-filament::badge>
 
                         <div class="ticket-card__subject">
-                            <a href="/tickets/{{ $record->id }}/view">
+                            <a href="{{ TicketResource::getUrl('view', ['record' => $record->id] }}">
                                 {{ $record->subject }}
 
                                 <x-heroicon-o-arrow-top-right-on-square class="fi-icon fi-size-sm" />
