@@ -75,6 +75,7 @@ class DefaultPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->theme(asset('css/filament/default/theme.css'))
             ->plugin(
                 TicketPlugin::make()
                     ->registerResources()

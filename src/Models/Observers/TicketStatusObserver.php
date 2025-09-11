@@ -9,6 +9,6 @@ class TicketStatusObserver
 {
     public function creating(TicketStatus $status): void
     {
-        $status->panel ??= Filament::getCurrentPanel()?->getId();
+        $status->panel ??= Filament::getCurrentOrDefaultPanel()?->getId();
     }
 }

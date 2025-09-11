@@ -1,8 +1,9 @@
 laravel: '@testbench'
 
 providers:
-   - App\Providers\WorkbenchServiceProvider
-   - App\Providers\Filament\DefaultPanelProvider
+  - App\Providers\WorkbenchServiceProvider
+  - App\Providers\Filament\DefaultPanelProvider
+  - Padmission\Tickets\TicketPluginServiceProvider
 
 migrations:
   - workbench/database/migrations
@@ -30,10 +31,13 @@ workbench:
     - create-sqlite-db
     - filament:assets
     - db-wipe
-    - migrate-fresh
+    - migrate:fresh
   assets:
     - laravel-assets
   sync:
+    - from: public/css
+      to: workbench/public/css
+      reverse: true
     - from: storage
       to: workbench/storage
       reverse: true

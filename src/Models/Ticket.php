@@ -21,7 +21,7 @@ use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
 /**
- * @mixin \Illuminate\Database\Eloquent\Model
+ * @mixin Model
  */
 #[UseFactory(TicketFactory::class)]
 #[ObservedBy(TicketObserver::class)]

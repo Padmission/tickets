@@ -149,7 +149,15 @@ php artisan migrate
 php artisan filament:assets
 ```
 
-**Step 4:** Configure the plugin in your Filament panel:
+**Step 4**: Publish the assets
+
+Add the following import to your custom theme:
+
+```css
+@import '../../../../vendor/padmission/tickets/resources/css/tickets.css';
+```
+
+**Step 5:** Configure the plugin in your Filament panel:
 
 ```php
 use App\Models\User;
@@ -169,7 +177,7 @@ public function panel(Panel $panel): Panel
 
 > **Important:** The `allSupportersQuery()` is required when registering resources. It defines all users who can support tickets in this panel.
 
-**Step 5:** Set up your User model:
+**Step 6:** Set up your User model:
 
 Add the `HasTickets` trait to your User model.
 

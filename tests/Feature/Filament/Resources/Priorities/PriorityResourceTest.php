@@ -17,9 +17,9 @@ it('lists priorities', function () {
     Livewire::test(ListPriorities::class)
         ->assertSee(__('padmission-tickets::tickets.resources.priorities.plural_model_label'))
         ->assertSeeInOrder([
-            'rgb('.Color::Green['600'].')', 'Low',
-            'rgb('.Color::Blue['600'].')', 'Medium',
-            'rgb('.Color::Red['600'].')', 'High',
+            Color::Green['600'], 'Low',
+            Color::Blue['600'], 'Medium',
+            Color::Red['600'], 'High',
         ]);
 });
 
@@ -57,16 +57,18 @@ it('can create priority', function () {
             'display_name' => '',
             'color' => '',
         ])
-        ->assertHasActionErrors(['display_name', 'color'])
+        ->assertHasActionErrors(['display_name', 'color']);
+
+    Livewire::test(ListPriorities::class)
         ->callAction('create', [
             'display_name' => 'New Priority',
-            'color' => 'Zinc',
+            'color' => 'Red',
         ])
         ->assertHasNoActionErrors();
 
     $this->assertDatabaseHas(TicketPriority::class, [
         'display_name' => 'New Priority',
-        'color' => 'Zinc',
+        'color' => 'Red',
         'order' => 99,
     ]);
 });

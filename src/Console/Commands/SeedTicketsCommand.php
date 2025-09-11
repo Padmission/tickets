@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Console\Commands;
 
+use Exception;
 use Filament\Facades\Filament;
 use Illuminate\Console\Command;
 use Padmission\Tickets\Database\Seeders\TicketDispositionSeeder;
@@ -76,7 +77,7 @@ class SeedTicketsCommand extends Command
 
                 $this->line("✅ {$seederName} completed successfully");
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->error("❌ {$seederName} failed: ".$e->getMessage());
 
                 if ($this->option('verbose')) {

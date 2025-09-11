@@ -4,7 +4,7 @@ namespace Padmission\Tickets\Filament\Resources\Statuses\Pages;
 
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
 
 class ListStatuses extends ListRecords
@@ -14,7 +14,7 @@ class ListStatuses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->slideOver()->modalWidth(MaxWidth::Medium),
+            CreateAction::make()->slideOver()->modalWidth(Width::Medium),
         ];
     }
 }

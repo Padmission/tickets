@@ -50,7 +50,9 @@ it('can create disposition', function () {
             'display_name' => '',
             'color' => '',
         ])
-        ->assertHasActionErrors(['display_name', 'color'])
+        ->assertHasActionErrors(['display_name', 'color']);
+
+    Livewire::test(ListDispositions::class)
         ->callAction('create', [
             'display_name' => 'New Disposition',
             'color' => 'Purple',

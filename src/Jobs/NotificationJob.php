@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Jobs;
 
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -69,7 +70,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
             }
 
             $this->sendNotification($user, $record, $notificationClass);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->handleException($e);
         }
     }
@@ -105,7 +106,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
     /**
      * Handle exceptions that occur during job execution
      */
-    protected function handleException(\Exception $e): void
+    protected function handleException(Exception $e): void
     {
         // Override in child classes for custom error handling
         // Default behavior is to silently continue

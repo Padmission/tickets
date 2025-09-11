@@ -4,15 +4,14 @@ namespace Padmission\Tickets\Filament\Widgets;
 
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
-use Filament\Support\Facades\FilamentColor;
 use Filament\Widgets\ChartWidget;
 use Padmission\Tickets\Services\TicketMetricsService;
 
 class TicketBurndownChartWidget extends ChartWidget
 {
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
-    protected static ?string $maxHeight = '12.5rem';
+    protected ?string $maxHeight = '12.5rem';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -25,11 +24,14 @@ class TicketBurndownChartWidget extends ChartWidget
 
     public static function getColors(): array
     {
-        $colors = Filament::getCurrentPanel()->getColors();
+        $colors = Filament::getCurrentOrDefaultPanel()->getColors();
+
+        $primary = is_array($primary = $colors['primary']) ? $primary : Color::generatePalette($primary);
+        $secondary = is_array($secondary = $colors['secondary']) ? $secondary : Color::generatePalette($secondary);
 
         return [
-            'rgb('.FilamentColor::processColor($colors['primary'] ?? Color::Blue)[600].')',
-            'rgb('.FilamentColor::processColor($colors['secondary'] ?? Color::Gray)[600].')',
+            'rgb('.$primary[600].');',
+            'rgb('.$secondary[600].');',
         ];
     }
 

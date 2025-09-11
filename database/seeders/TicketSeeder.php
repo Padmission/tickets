@@ -72,7 +72,8 @@ class TicketSeeder extends Seeder
                     ->recycle($statuses)
                     ->recycle($priorities)
                     ->recycle($dispositions)
-                    ->recycle($users);
+                    ->recycle($users)
+                    ->state(['panel' => $panel->getId()]);
 
                 if ($tenantId) {
                     $baseTicketFactory = $baseTicketFactory->state([$this->getTenantKey() => $tenantId]);

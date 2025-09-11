@@ -21,7 +21,7 @@ class TicketMetricsService
 
     protected function getCurrentPanelId(): ?string
     {
-        return Filament::getCurrentPanel()?->getId();
+        return Filament::getCurrentOrDefaultPanel()?->getId();
     }
 
     public function setCacheTime(int|string $duration): self

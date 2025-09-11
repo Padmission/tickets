@@ -6,12 +6,13 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
+use RuntimeException;
 
 abstract class PanelAwareAssignmentStrategy implements AssignmentStrategy
 {
     protected function getEligibleUsersQuery(Ticket $ticket): Builder
     {
-        $targetPanelId = $ticket->panel ?? Filament::getCurrentPanel()->getId();
+        $targetPanelId = $ticket->panel ?? Filament::getCurrentOrDefaultPanel()->getId();
         $targetPlugin = TicketPlugin::get($targetPanelId);
 
         $query = $this->tryGetInitialAssignmentQuery()
@@ -41,6 +42,6 @@ abstract class PanelAwareAssignmentStrategy implements AssignmentStrategy
 
     private function throwMissingSupportersQueryException(string $targetPanelId): never
     {
-        throw new \RuntimeException("No supporters query configured for panel '{$targetPanelId}'");
+        throw new RuntimeException("No supporters query configured for panel '{$targetPanelId}'");
     }
 }

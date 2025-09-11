@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets;
 
+use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
@@ -13,6 +14,7 @@ use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\Filament\Widgets;
+use RuntimeException;
 
 final class TicketPlugin implements Plugin
 {
@@ -37,6 +39,8 @@ final class TicketPlugin implements Plugin
     protected mixed $allSupportersQuery = null;
 
     protected mixed $initialAssignmentSupportersQuery = null;
+
+    protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
     public static function make(): static
     {
@@ -87,7 +91,7 @@ final class TicketPlugin implements Plugin
     public function boot(Panel $panel): void
     {
         if ($this->shouldRegisterResources && ! $this->allSupportersQuery) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 "The TicketPlugin on panel '{$panel->getId()}' requires an allSupportersQuery() ".
                 'to be configured when registering resources. This defines all users who can support tickets in this panel.'
             );
@@ -96,7 +100,7 @@ final class TicketPlugin implements Plugin
 
     public static function get(?string $panelId = null): static
     {
-        $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentPanel();
+        $panel = $panelId ? Filament::getPanel($panelId) : Filament::getCurrentOrDefaultPanel();
 
         /**
          * @var static $plugin
@@ -141,6 +145,18 @@ final class TicketPlugin implements Plugin
     }
 
     /* Configuration options */
+    public function dateTimeDisplayFormat(string $format): self
+    {
+        $this->dateTimeDisplayFormat = $format;
+
+        return $this;
+    }
+
+    public function getDateTimeDisplayFormat(): string
+    {
+        return $this->dateTimeDisplayFormat;
+    }
+
     public function escalationLevel(string $level): static
     {
         $this->escalationLevel = $level;
@@ -183,7 +199,7 @@ final class TicketPlugin implements Plugin
         return $this->shouldRegisterWidgets;
     }
 
-    public function showChatWidget(bool|\Closure $shouldShow = true, ChatWidgetConfig|\Closure|null $config = null): static
+    public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;
         $this->chatWidgetConfig = $config;
@@ -193,7 +209,7 @@ final class TicketPlugin implements Plugin
 
     public function getChatWidgetConfig(): ChatWidgetConfig
     {
-        if ($this->chatWidgetConfig instanceof \Closure) {
+        if ($this->chatWidgetConfig instanceof Closure) {
             return app()->call($this->chatWidgetConfig);
         }
 
@@ -226,21 +242,21 @@ final class TicketPlugin implements Plugin
 
     public function shouldShowChatWidget(): bool
     {
-        if ($this->shouldShowChatWidget instanceof \Closure) {
+        if ($this->shouldShowChatWidget instanceof Closure) {
             return (bool) app()->call($this->shouldShowChatWidget);
         }
 
         return $this->shouldShowChatWidget;
     }
 
-    public function allSupportersQuery(\Closure|Builder $query): static
+    public function allSupportersQuery(Closure|Builder $query): static
     {
         $this->allSupportersQuery = $query;
 
         return $this;
     }
 
-    public function getAllSupportersQuery(): ?\Closure
+    public function getAllSupportersQuery(): ?Closure
     {
         if ($this->allSupportersQuery instanceof Builder) {
             return fn () => clone $this->allSupportersQuery;
@@ -249,14 +265,14 @@ final class TicketPlugin implements Plugin
         return $this->allSupportersQuery;
     }
 
-    public function initialAssignmentSupportersQuery(\Closure|Builder $query): static
+    public function initialAssignmentSupportersQuery(Closure|Builder $query): static
     {
         $this->initialAssignmentSupportersQuery = $query;
 
         return $this;
     }
 
-    public function getInitialAssignmentSupportersQuery(): ?\Closure
+    public function getInitialAssignmentSupportersQuery(): ?Closure
     {
         if ($this->initialAssignmentSupportersQuery instanceof Builder) {
             return fn () => clone $this->initialAssignmentSupportersQuery;
