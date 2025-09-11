@@ -31,7 +31,6 @@ class SecondPanelProvider extends PanelProvider
         Gate::policy(Ticket::class, TicketPolicy::class);
 
         return $panel
-            ->default()
             ->id('second')
             ->path('/second')
             ->login(Login::class)
