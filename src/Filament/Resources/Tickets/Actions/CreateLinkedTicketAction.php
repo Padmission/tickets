@@ -46,7 +46,6 @@ class CreateLinkedTicketAction extends Action
                 Select::make('panel')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
                     ->required()
-                    ->selectablePlaceholder(false)
                     ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 1)
                     ->options(
                         collect(TicketPlugin::get()->getPanelsForLinkedTicketCreation())
