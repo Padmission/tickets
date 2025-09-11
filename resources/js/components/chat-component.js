@@ -457,66 +457,65 @@ customElements.define(
 			this.renderAttachments();
 		}
 
-        async takeScreenshot(event) {
-            event.preventDefault();
-            document.querySelector('chat-widget').hidden = true;
+		async takeScreenshot(event) {
+			event.preventDefault();
+			document.querySelector("chat-widget").hidden = true;
 
-            try {
-                // Use Screen Capture API to get display media stream
-                const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        mediaSource: 'screen'
-                    },
-                    audio: false,
-                    preferCurrentTab: true,
-                    surfaceSwitching: "exclude",
-                    monitorTypeSurfaces: "exclude",
-                });
+			try {
+				// Use Screen Capture API to get display media stream
+				const stream = await navigator.mediaDevices.getDisplayMedia({
+					video: {
+						mediaSource: "screen",
+					},
+					audio: false,
+					preferCurrentTab: true,
+					surfaceSwitching: "exclude",
+					monitorTypeSurfaces: "exclude",
+				});
 
-                // Create a video element to capture the frame
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.muted = true;
+				// Create a video element to capture the frame
+				const video = document.createElement("video");
+				video.srcObject = stream;
+				video.muted = true;
 
-                // Wait for video to load metadata
-                await new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        video.play();
-                        resolve();
-                    };
-                });
+				// Wait for video to load metadata
+				await new Promise((resolve) => {
+					video.onloadedmetadata = () => {
+						video.play();
+						resolve();
+					};
+				});
 
-                // Create canvas and capture the current frame
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+				// Create canvas and capture the current frame
+				const canvas = document.createElement("canvas");
+				canvas.width = video.videoWidth;
+				canvas.height = video.videoHeight;
 
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0);
+				const ctx = canvas.getContext("2d");
+				ctx.drawImage(video, 0, 0);
 
-                // Stop the media stream
-                stream.getTracks().forEach(track => track.stop());
+				// Stop the media stream
+				stream.getTracks().forEach((track) => track.stop());
 
-                // Convert canvas to blob and create file
-                canvas.toBlob((blob) => {
-                    const file = new File([blob], `screenshot-${Date.now()}.webp`, {
-                        type: 'image/webp',
-                        lastModified: Date.now()
-                    });
+				// Convert canvas to blob and create file
+				canvas.toBlob((blob) => {
+					const file = new File([blob], `screenshot-${Date.now()}.webp`, {
+						type: "image/webp",
+						lastModified: Date.now(),
+					});
 
-                    this.addAttachments([file]);
-                }, 'image/webp');
+					this.addAttachments([file]);
+				}, "image/webp");
+			} catch (error) {
+				if (error.name === "NotAllowedError") {
+					this.setError(__("chat.screenshot.permission_denied"));
+				} else {
+					this.setError(__("chat.screenshot.failed"));
+				}
+			}
 
-            } catch (error) {
-                if (error.name === 'NotAllowedError') {
-                    this.setError(__('chat.screenshot.permission_denied'));
-                } else {
-                    this.setError(__('chat.screenshot.failed'));
-                }
-            }
-
-            document.querySelector('chat-widget').hidden = false;
-        }
+			document.querySelector("chat-widget").hidden = false;
+		}
 
 		async generateThumbnail(file) {
 			console.log({ file, indexOf: file.type.indexOf("image/") });
