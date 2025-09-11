@@ -30,6 +30,10 @@ This will start Vite, put the application in Dev Mode, remove existing Filament 
 
 Make sure you restart `npm run dev` if you restart `composer serve` or after you published the assets.
 
+### Storage
+
+To test storage features make sure to add a S3 compatible bucket to `testbench.yaml` env config.
+
 ## Quick Start Examples
 
 ### Basic Support System
