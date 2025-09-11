@@ -36,7 +36,7 @@ return new class extends Migration
             $table->foreignId('priority_id')->constrained('ticket_priorities');
             $table->foreignId('disposition_id')->nullable()->constrained('ticket_dispositions')->nullOnDelete();
             $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->unsignedInteger('submitter_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('submitter_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->json('submitter_data')->nullable();
             $table->string('turn');
