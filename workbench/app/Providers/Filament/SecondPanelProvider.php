@@ -78,7 +78,6 @@ class SecondPanelProvider extends PanelProvider
                 TicketPlugin::make()
                     ->registerResources()
                     ->allSupportersQuery(User::query())
-                    ->allowLinkedTickets()
                     ->showChatWidget(
                         config: ChatWidgetConfig::make()
                         // ->allowFileUploads(maxFileSize: 20 * 1024)
