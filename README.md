@@ -13,9 +13,8 @@ Tickets is a comprehensive support ticket management system for Filament applica
 
 The package is using `orchestral/testbench` for testing against a Laravel app.
 
-1. `composer serve` will start the application as `http://127.0.0.1:8000`.
-2. Because we use features that require HTTPS, the easiest way is to proxy them via Herd:  
-`herd proxy --secure tickets.test http://127.0.0.1:8000`
+`composer serve` will start the application as `http://127.0.0.1:8000`.
+
 
 ### Assets
 
