@@ -267,7 +267,7 @@ customElements.define(
                                         `
                                             <button
                                                 class="attachment"
-                                                data-preview="${attachment.filename}"
+                                                data-preview="${attachment.filepath}"
                                                 data-preview-type="${attachment.type}"
                                                 target="_blank"
                                             >
@@ -673,14 +673,14 @@ customElements.define(
 			);
 		}
 
-		async getTemporarySignedUrl(filename) {
+		async getTemporarySignedUrl(filepath) {
 			const payload = {
-				filename,
+				filepath,
 			};
 
 			return fetchJson(
 				`/padmission-tickets/api/tickets/${this.ticketId}/temporary-url`,
-				{ filename },
+				{ filepath },
 				"POST",
 			);
 		}

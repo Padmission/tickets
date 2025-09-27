@@ -35,12 +35,12 @@ it('requires create permission', function () {
 it('returns a temporary url', function () {
     Storage::fake('s3');
 
-    $filename = 'test.jpg';
+    $filepath = 'test.jpg';
 
     $user = User::factory()->create();
     $ticket = Ticket::factory()
         ->has(TicketAttachment::factory([
-            'filename' => $filename,
+            'filepath' => $filepath,
         ]), 'attachments')
         ->create([
             'submitter_id' => $user->id,
@@ -52,13 +52,13 @@ it('returns a temporary url', function () {
         ->postJson(
             route('padmission-tickets::api.temporary-attachment-url', ['ticket' => $ticket]),
             [
-                'filename' => $filename,
+                'filepath' => $filepath,
             ]
         )
         ->assertOk();
 
     expect($resp->getData())
         ->toHaveKeys(['url'])
-        ->url->toContain($filename)
+        ->url->toContain($filepath)
         ->url->toContain('expiration');
 });

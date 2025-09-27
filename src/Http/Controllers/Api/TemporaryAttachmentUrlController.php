@@ -19,14 +19,14 @@ class TemporaryAttachmentUrlController
         $this->authorize('create', TicketPlugin::resolveModelClass(Ticket::class));
 
         $request->validate([
-            'filename' => ['required', 'string', 'max:255'],
+            'filepath' => ['required', 'string', 'max:255'],
         ]);
 
-        $filename = $request->input('filename');
+        $filepath = $request->input('filepath');
 
         return [
             'url' => Storage::disk(config('padmission-tickets.attachments.disk'))
-                ->temporaryUrl($filename, now()->addMinutes(5)),
+                ->temporaryUrl($filepath, now()->addMinutes(5)),
         ];
     }
 }
