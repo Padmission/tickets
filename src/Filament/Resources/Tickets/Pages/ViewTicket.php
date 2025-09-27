@@ -3,15 +3,17 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Carbon\CarbonImmutable;
+use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
-use Filament\Resources\Pages\ViewRecord;
+use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Padmission\Tickets\Actions\GetLinkedTicketSourcePanels;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
@@ -22,11 +24,16 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
-class ViewTicket extends ViewRecord
+class ViewTicket extends EditRecord
 {
     protected static string $resource = TicketResource::class;
 
     protected $listeners = ['refresh' => '$refresh'];
+
+    public function getBreadcrumb(): string
+    {
+        return 'View';
+    }
 
     public function getHeading(): string|Htmlable
     {
@@ -45,6 +52,11 @@ class ViewTicket extends ViewRecord
             CloseTicketAction::make(),
             EditTicketAction::make(),
         ];
+    }
+
+    protected function getFormActions(): array
+    {
+        return [];
     }
 
     public function form(Schema $schema): Schema
@@ -121,6 +133,7 @@ class ViewTicket extends ViewRecord
                             LinkedTicketModalSelect::make('linkedTicket')
                                 ->relationship('linkedToTicket', 'subject')
                                 ->label(__('padmission-tickets::tickets.resources.tickets.linked_to_ticket'))
+                                ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 0)
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     $record->update(['linked_ticket_id' => $state]);
                                 }),
@@ -129,6 +142,7 @@ class ViewTicket extends ViewRecord
                                 ->relationship('linkedTickets', 'subject')
                                 ->multiple()
                                 ->nullable()
+                                ->visible(fn () => count(resolve(GetLinkedTicketSourcePanels::class)(Filament::getCurrentPanel())) > 0)
                                 ->label(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     // @TODO: Should this be recorded by Activity Log?
