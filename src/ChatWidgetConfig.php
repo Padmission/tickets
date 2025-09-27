@@ -3,6 +3,7 @@
 namespace Padmission\Tickets;
 
 use Closure;
+use Composer\InstalledVersions;
 use Exception;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
@@ -63,6 +64,11 @@ final class ChatWidgetConfig
         bool|Closure $enable = true,
         int|Closure $maxFileSize = 10 * 1024 * 1024,
     ): self {
+
+        if (! InstalledVersions::isInstalled('league/flysystem-aws-s3-v3')) {
+            throw new Exception('Ticket Plugin: allowFileUploads() option requires league/flysystem-aws-s3-v3 package.');
+        }
+
         $this->allowFileUploads = $enable;
         $this->maxUploadFileSize = $maxFileSize;
 
