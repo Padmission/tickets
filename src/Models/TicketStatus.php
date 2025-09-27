@@ -38,9 +38,10 @@ class TicketStatus extends Model
 
     public static function getClosedStatus(): static
     {
+        /** @var static */
         return self::query()
             ->tap(new CurrentPanelScope)
             ->orderBy('order', 'DESC')
-            ->first();
+            ->firstOrFail();
     }
 }

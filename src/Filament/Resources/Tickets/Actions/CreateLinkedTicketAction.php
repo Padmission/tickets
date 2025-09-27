@@ -11,8 +11,11 @@ use Filament\Notifications\Notification;
 use Filament\Panel;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
 use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -36,14 +39,13 @@ class CreateLinkedTicketAction extends Action
             ->color('gray')
             ->visible(fn (Ticket $record) => TicketPlugin::get()->hasLinkedTickets() && $record->linkedToTicket === null)
             ->slideOver()
-            ->modalWidth(Width::Medium)
+            ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)
             ->fillForm(fn (Ticket $record) => ['subject' => $record->subject])
             ->schema([
                 Select::make('panel')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
                     ->required()
-                    ->selectablePlaceholder(false)
                     ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 1)
                     ->options(
                         collect(TicketPlugin::get()->getPanelsForLinkedTicketCreation())
@@ -67,6 +69,8 @@ class CreateLinkedTicketAction extends Action
                 $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
                 $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
 
+                DB::beginTransaction();
+
                 $newTicket = $ticket::create([
                     'panel' => $targetPanelId,
                     'source_panel' => $currentPanelId,
@@ -77,6 +81,12 @@ class CreateLinkedTicketAction extends Action
                     'priority_id' => $defaultPriority->id,
                 ]);
 
+                $newTicket->ticketActivities()->create([
+                    'sender' => ActivitySender::User,
+                    'type' => ActivityType::Message,
+                    'content' => $data['message'],
+                ]);
+
                 /**
                  * @var Ticket $record
                  */
@@ -84,6 +94,8 @@ class CreateLinkedTicketAction extends Action
 
                 $record->linkedToTicket()->associate($newTicket);
                 $record->save();
+
+                DB::commit();
 
                 $livewire->data['linkedTicket'] = $newTicket->id;
 

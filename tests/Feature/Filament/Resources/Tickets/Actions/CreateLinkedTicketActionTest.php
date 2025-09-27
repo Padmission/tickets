@@ -4,10 +4,12 @@ use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
@@ -61,10 +63,12 @@ it('creates linked ticket successfully', function () {
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
     $currentPanel = Filament::getCurrentOrDefaultPanel()->getId();
 
+    $messageContent = 'This is the initial message for the linked ticket';
+
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Linked Test Ticket',
-            'message' => ['Message'],
+            'message' => tiptapDocument($messageContent),
         ])
         ->assertHasNoFormErrors();
 
@@ -78,11 +82,21 @@ it('creates linked ticket successfully', function () {
         ->subject->toBe('Linked Test Ticket')
         ->submitter_id->toBe(auth()->id())
         ->turn->toBe(Turn::Supporter)
-        ->status_id->toBe(1)
+        ->status_id->toBe(TicketStatus::getOpenStatuses()->first()->id)
         ->priority_id->toBe(1);
 
     expect($originalTicket->refresh())
         ->linked_ticket_id->toBe($newTicket->id);
+
+    // Verify the message was persisted as a ticket activity
+    $messageActivity = $newTicket->ticketActivities()
+        ->where('type', ActivityType::Message)
+        ->first();
+
+    expect($messageActivity)
+        ->not->toBeNull()
+        ->content->toContain($messageContent)
+        ->user_id->toBe(auth()->id());
 });
 
 it('creates linked ticket for different panel', function () {
@@ -90,10 +104,12 @@ it('creates linked ticket for different panel', function () {
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
+    $messageContent = 'Cross-panel message content';
+
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Cross-Panel Ticket',
-            'message' => ['Message'],
+            'message' => tiptapDocument($messageContent),
         ])
         ->assertHasNoFormErrors();
 
@@ -102,6 +118,11 @@ it('creates linked ticket for different panel', function () {
     expect($newTicket)
         ->not->toBeNull()
         ->source_panel->toBe(Filament::getCurrentOrDefaultPanel()->getId());
+
+    // Verify message persistence for cross-panel ticket
+    expect($newTicket->ticketActivities()->where('type', ActivityType::Message)->first())
+        ->not->toBeNull()
+        ->content->toContain($messageContent);
 });
 
 it('updates livewire data after creation', function () {
@@ -112,7 +133,7 @@ it('updates livewire data after creation', function () {
     $component = Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Data Update Test',
-            'message' => ['Message'],
+            'message' => tiptapDocument('Test message for data update'),
         ])
         ->assertHasNoFormErrors();
 
@@ -128,7 +149,7 @@ it('sends success notification with action link', function () {
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Notification Test',
-            'message' => ['Message'],
+            'message' => tiptapDocument('Notification test message'),
         ])
         ->assertHasNoFormErrors()
         ->assertNotified();
@@ -142,7 +163,7 @@ it('requires subject field', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => '',
-            'message' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Message without subject']]]]],
+            'message' => tiptapDocument('Message without subject'),
         ])
         ->assertHasFormErrors(['subject']);
 });
@@ -155,7 +176,7 @@ it('requires message field', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Subject without message',
-            'message' => null,
+            'message' => tiptapDocument('<p></p>'),
         ])
         ->assertHasFormErrors(['message']);
 });

@@ -44,6 +44,11 @@
 	}
 }
 
+[wire\:key*="create-linked-ticket.modal"] .tiptap {
+    min-height: 6em;
+    min-height: 4lh;
+}
+
 .ticket-card {
 	--border-color: var(--color-black);
 

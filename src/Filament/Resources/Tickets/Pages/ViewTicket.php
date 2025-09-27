@@ -10,6 +10,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
@@ -133,6 +134,8 @@ class ViewTicket extends ViewRecord
                                     // @TODO: Should this be recorded by Activity Log?
                                     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
+                                    DB::beginTransaction();
+
                                     $ticketModel::query()
                                         ->where('linked_ticket_id', $record->getKey())
                                         ->whereNotIn('id', $state)
@@ -141,6 +144,8 @@ class ViewTicket extends ViewRecord
                                     $ticketModel::query()
                                         ->whereIn('id', $state)
                                         ->update(['linked_ticket_id' => $record->getKey()]);
+
+                                    DB::commit();
                                 }),
                         ]),
                 ]),

@@ -14,7 +14,7 @@ class TicketActivityMapper
             'side' => $activity->side,
             'user_name' => $activity->userName,
             'content' => $activity->content,
-            'attachments' => $activity->attachments?->map(fn (TicketAttachment $attachment) => TicketAttachmentMapper::map($attachment)),
+            'attachments' => $activity->attachments->map(fn (TicketAttachment $attachment) => TicketAttachmentMapper::map($attachment)),
             'created_at' => $activity->created_at,
         ];
     }
