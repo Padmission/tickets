@@ -33,7 +33,7 @@ Make sure you restart `npm run dev` if you restart `composer serve` or after you
 
 ### Storage
 
-To test storage features make sure to add a S3 compatible bucket to `testbench.yaml` env config.
+To test storage features make sure to add a S3 compatible bucket to `testbench.yaml` env config. It defaults to a local minio install.
 
 ## Quick Start Examples
 
