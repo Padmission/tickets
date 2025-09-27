@@ -522,17 +522,19 @@
 dialog.preview {
 	max-width: 100vw;
 	max-height: 100svh;
-	inset: 0;
-	padding: 0;
+	inset: 3em;
 	border: none;
 	border-radius: .5em;
+    background-color: transparent;
 
 	&::backdrop {
-		background-color: rgba(0 0 0 / 0.4);
+        display: block;
+		background-color: rgba(0 0 0 / 0.6);
+        backdrop-filter: blur(.5em);
 	}
 
 	button {
-		position: absolute;
+		position: fixed;
 		z-index: 1;
 		top: 1em;
 		right: 1em;
@@ -568,6 +570,7 @@ dialog.preview {
 		max-width: 100%;
 		max-height: 100%;
 		object-fit: contain;
+        border-radius: 0.5em;
 	}
 }
 

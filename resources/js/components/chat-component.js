@@ -73,6 +73,10 @@ customElements.define(
 			);
 			this.lockTurnCheckbox = node.querySelector("[data-chat-lock-turn]");
 
+            node
+                .querySelector('[formmethod="dialog"]')
+                .addEventListener('click', (event) => document.documentElement.classList.remove('has-dialog-open'))
+
 			this.initNearBottomTracking();
 
 			// Event listeners
@@ -308,6 +312,7 @@ customElements.define(
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
+                        document.documentElement.classList.add('has-open-dialog');
 					}),
 				);
 

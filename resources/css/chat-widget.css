@@ -222,7 +222,7 @@ button:has(span:not(.sr-only) + svg) {
 	}
 }
 
-dialog {
+#chat-widget-dialog {
 	pointer-events: auto;
 	position: fixed;
 	inset-inline-start: auto;
