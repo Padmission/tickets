@@ -5,7 +5,7 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 use Carbon\CarbonImmutable;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
-use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -22,7 +22,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
-class ViewTicket extends EditRecord
+class ViewTicket extends ViewRecord
 {
     protected static string $resource = TicketResource::class;
 
