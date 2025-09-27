@@ -855,98 +855,98 @@ customElements.define(
 
                     <form class="composer" data-composer style="position: relative;">
                        <div hidden class="composer__error" data-chat-error>Something went wrong</div>
+
                         <div class="composer__message">
                             <div data-chat-input></div>
 
                             <div data-attachments></div>
+                        </div>
 
+                        <div class="composer__toolbar">
+                            ${config.allowFileUploads ? `
+                                <label
+                                    role="button"
+                                    class="button button-icon"
 
-                            <div class="composer__toolbar">
-                                ${config.allowFileUploads ? `
-                                    <label
-                                        role="button"
-                                        class="button button-icon"
-
+                                >
+                                    <input
+                                        type="file"
+                                        id="attachments"
+                                        multiple
+                                        accept="video/*,image/*,.pdf"
+                                        @change="handleFileSelect"
+                                        style="display: none;"
                                     >
-                                        <input
-                                            type="file"
-                                            id="attachments"
-                                            multiple
-                                            accept="video/*,image/*,.pdf"
-                                            @change="handleFileSelect"
-                                            style="display: none;"
-                                        >
 
-                                        <span class="sr-only">${__('chat.add_attachments')}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
-                                    </label>
-                                `: ''}
+                                    <span class="sr-only">${__('chat.add_attachments')}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
+                                </label>
+                            `: ''}
 
-                                ${config.allowFileUploads && config.allowScreenshots && Boolean(navigator.mediaDevices?.getDisplayMedia) ? `
-                                    <button
-                                        role="button"
-                                        class="button button-icon"
-                                        @click="takeScreenshot"
-                                    >
-                                        <span class="sr-only">${__('chat.screenshot.capture')}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
-                                    </button>
-                                `: ''}
-
+                            ${config.allowFileUploads && config.allowScreenshots && Boolean(navigator.mediaDevices?.getDisplayMedia) ? `
                                 <button
-                                    class="button-icon"
-                                    type="button"
-                                    @click="toggleBold"
+                                    role="button"
+                                    class="button button-icon"
+                                    @click="takeScreenshot"
                                 >
-                                    <span class="sr-only">${__('chat.bold')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
+                                    <span class="sr-only">${__('chat.screenshot.capture')}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
                                 </button>
+                            `: ''}
 
-                                <button
-                                    class="button-icon"
-                                    type="button"
-                                    @click="setLink"
-                                >
-                                    <span class="sr-only">${__('chat.link')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                                </button>
+                            <button
+                                class="button-icon"
+                                type="button"
+                                @click="toggleBold"
+                            >
+                                <span class="sr-only">${__('chat.bold')}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
+                            </button>
 
-                                <button
-                                    class="button-icon"
-                                    type="button"
-                                    @click="toggleList"
-                                >
-                                    <span class="sr-only">${__('chat.unordered_list')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
-                                </button>
+                            <button
+                                class="button-icon"
+                                type="button"
+                                @click="setLink"
+                            >
+                                <span class="sr-only">${__('chat.link')}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            </button>
 
-                                <button
-                                    class="button-icon"
-                                    type="button"
-                                    @click="toggleOrderedList"
-                                >
-                                    <span class="sr-only">${__('chat.ordered_list')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
-                                </button>
+                            <button
+                                class="button-icon"
+                                type="button"
+                                @click="toggleList"
+                            >
+                                <span class="sr-only">${__('chat.unordered_list')}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
+                            </button>
 
-                                <button type="submit" data-chat-submit>
-                                    <svg class="loading-indicator" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path clip-rule="evenodd" d="M12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19ZM12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill-rule="evenodd" fill="currentColor" opacity="0.2"></path>
-                                        <path d="M2 12C2 6.47715 6.47715 2 12 2V5C8.13401 5 5 8.13401 5 12H2Z" fill="currentColor"></path>
-                                    </svg>
+                            <button
+                                class="button-icon"
+                                type="button"
+                                @click="toggleOrderedList"
+                            >
+                                <span class="sr-only">${__('chat.ordered_list')}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
+                            </button>
 
-                                    <span>${__('chat.send')}</span>
+                            <button type="submit" data-chat-submit>
+                                <svg class="loading-indicator" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path clip-rule="evenodd" d="M12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19ZM12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill-rule="evenodd" fill="currentColor" opacity="0.2"></path>
+                                    <path d="M2 12C2 6.47715 6.47715 2 12 2V5C8.13401 5 5 8.13401 5 12H2Z" fill="currentColor"></path>
+                                </svg>
 
-                                    <kbd>
-                                        <span class="sr-only">${__('chat.command_key')}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path></svg>
-                                    </kbd>
-                                    <kbd>
-                                        <span class="sr-only">${__('chat.enter_key')}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-corner-down-left-icon lucide-corner-down-left"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>
-                                    </kbd>
-                                </button>
-                            </div>
+                                <span>${__('chat.send')}</span>
+
+                                <kbd>
+                                    <span class="sr-only">${__('chat.command_key')}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path></svg>
+                                </kbd>
+                                <kbd>
+                                    <span class="sr-only">${__('chat.enter_key')}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-corner-down-left-icon lucide-corner-down-left"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>
+                                </kbd>
+                            </button>
                         </div>
 
                         ${

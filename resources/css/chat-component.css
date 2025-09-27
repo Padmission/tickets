@@ -374,6 +374,16 @@
 		border-color: var(--color-primary);
 		box-shadow: var(--focus-ring);
 	}
+
+    .attachment {
+        width: 75px;
+    }
+}
+
+.composer__message {
+    max-height: 8rem;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .composer__error {
@@ -388,7 +398,8 @@
 }
 
 .composer__toolbar {
-	display: flex;
+	container-type: inline-size;
+    display: flex;
 	justify-content: start;
 	align-items: center;
 
@@ -421,6 +432,12 @@
 			outline: none;
 			box-shadow: var(--focus-ring);
 		}
+
+        @container (max-width: 400px) {
+            &:nth-child(n + 3):not([data-chat-submit]) {
+                display: none;
+            }
+        }
 	}
 
 	.button-icon {
@@ -596,8 +613,6 @@ dialog.preview {
 	margin: -0.75rem -0.75rem 0.75rem;
 	border-radius: 0.5rem;
 	min-height: 4rem;
-	max-height: 8rem;
-	overflow-y: auto;
 	line-height: 1.5;
 	color: var(--color-text-primary);
 	background-color: transparent;

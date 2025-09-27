@@ -231,10 +231,10 @@ button:has(span:not(.sr-only) + svg) {
 	inset-block-end: 1rem;
 	margin: 0;
 	width: 30em;
-	max-width: 100%;
 	height: var(--dialog-max-height);
 	height: clamp(var(--dialog-min-height), var(--dialog-max-height), 100%);
 	max-height: calc(100% - 4rem);
+	max-width: calc(100% - 2rem);
 	overflow-y: auto;
 	z-index: 9999;
 
