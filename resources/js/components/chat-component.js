@@ -537,8 +537,8 @@ customElements.define(
 				const canvas = document.createElement("canvas");
 				const ctx = canvas.getContext("2d");
 
-				canvas.width = 100;
-				canvas.height = 100;
+				canvas.width = 300;
+				canvas.height = 300;
 
 				img.onload = () => {
 					const { width, height } = img;
@@ -551,13 +551,13 @@ customElements.define(
 						offsetY = 0;
 
 					if (imageAspect > canvasAspect) {
-						drawHeight = 100;
-						drawWidth = (width / height) * 100;
-						offsetX = (100 - drawWidth) / 2;
+						drawHeight = 300;
+						drawWidth = (width / height) * 300;
+						offsetX = (300 - drawWidth) / 2;
 					} else {
-						drawWidth = 100;
-						drawHeight = (height / width) * 100;
-						offsetY = (100 - drawHeight) / 2;
+						drawWidth = 300;
+						drawHeight = (height / width) * 300;
+						offsetY = (300 - drawHeight) / 2;
 					}
 
 					ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
