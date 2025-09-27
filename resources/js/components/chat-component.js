@@ -272,6 +272,11 @@ customElements.define(
                                                 target="_blank"
                                             >
                                                 ${
+                                                    attachment.type === 'file'
+                                                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>'
+                                                        : ''
+                                                }
+                                                ${
                                                     attachment.type === 'image'
                                                         ? `<img src="${attachment.preview_url}">`
                                                         : `<span>${attachment.filename}</span>`
@@ -592,6 +597,12 @@ customElements.define(
                                 <span class="sr-only">Remove</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
                             </button>
+
+                            ${
+                                attachment.type === 'file'
+                                    ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>'
+                                    : ''
+                            }
 
                             ${
                                 attachment.type.startsWith('image/')
