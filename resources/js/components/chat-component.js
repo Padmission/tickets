@@ -263,10 +263,10 @@ customElements.define(
                                 <div class="message__attachments">
                                     ${message.attachments?.map((attachment) =>
                                         `
-                                            <a
-                                                href="${attachment.url}"
+                                            <button
                                                 class="attachment"
-                                                data-preview="${attachment.type}"
+                                                data-preview="${attachment.filename}"
+                                                data-preview-type="${attachment.type}"
                                                 target="_blank"
                                             >
                                                 ${
@@ -274,7 +274,7 @@ customElements.define(
                                                         ? `<img src="${attachment.preview_url}">`
                                                         : `<span>${attachment.filename}</span>`
                                                 }
-                                            </a>
+                                            </button>
                                         `
                                         ).join('') ?? ''}
                                 </div>
@@ -287,17 +287,21 @@ customElements.define(
                 `);
 
 				renderedHtml.querySelectorAll("[data-preview]").forEach((el) =>
-					el.addEventListener("click", (event) => {
+					el.addEventListener("click", async (event) => {
 						const el = event.currentTarget;
-						const type = el.dataset.preview;
+						const type = el.dataset.previewType;
+
+                        const temporaryUrl = await this.getTemporarySignedUrl(el.dataset.preview);
 
 						if (!["image", "video"].includes(type)) {
+                            window.open(temporaryUrl.url)
+						    event.preventDefault();
+
 							return;
 						}
 
 						event.preventDefault();
 
-						const previewSource = event.currentTarget.getAttribute("href");
 						const dialog = this.rootNode().querySelector(
 							"[data-preview-popup]",
 						);
@@ -307,8 +311,8 @@ customElements.define(
 
 						const previewEl =
 							type === "image"
-								? render(`<img src="${previewSource}" alt="">`)
-								: render(`<video src="${previewSource}" controls>`);
+								? render(`<img src="${temporaryUrl.url}" alt="">`)
+								: render(`<video src="${temporaryUrl.url}" controls>`);
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
@@ -650,6 +654,18 @@ customElements.define(
 			return fetchJson(
 				`/padmission-tickets/api/tickets/${this.ticketId}/upload-url`,
 				payload,
+				"POST",
+			);
+		}
+
+		async getTemporarySignedUrl(filename) {
+			const payload = {
+				filename,
+			};
+
+			return fetchJson(
+				`/padmission-tickets/api/tickets/${this.ticketId}/temporary-url`,
+                {filename},
 				"POST",
 			);
 		}

@@ -10,8 +10,7 @@ class TicketAttachmentMapper
     public static function map(TicketAttachment $attachment): array
     {
         return [
-            'filename' => $attachment->filename,
-            'url' => Storage::disk(config('padmission-tickets.attachments.disk'))->temporaryUrl($attachment->filepath, now()->addMinutes(5)),
+            'filename' => $attachment->filepath,
             'preview_url' => $attachment->preview_filepath
                 ? Storage::disk(config('padmission-tickets.attachments.preview_disk'))->temporaryUrl($attachment->preview_filepath, now()->addMinutes(5))
                 : null,

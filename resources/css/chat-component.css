@@ -348,6 +348,7 @@
 	text-decoration: none;
 
 	overflow: hidden;
+    cursor: pointer;
 
 	img {
 		display: block;
