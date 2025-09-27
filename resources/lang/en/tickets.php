@@ -61,8 +61,8 @@ return [
             'last_message' => 'Last Message',
             'closed_at' => 'Closed At',
             'disposition' => 'Disposition',
-            'linked_to_ticket' => 'Linked Ticket',
-            'linked_tickets' => 'Linked Tickets',
+            'linked_to_ticket' => 'Parent Ticket',
+            'linked_tickets' => 'Child Tickets',
 
             'tabs' => [
                 'all' => 'All Tickets',
