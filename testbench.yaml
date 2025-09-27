@@ -14,7 +14,7 @@ seeders:
 
 env:
   - APP_NAME="Tickets Package"
-  - APP_URL=http://tickets.test:8000
+  - APP_URL=http://127.0.0.1:8000
   - CACHE_STORE=file
 
 workbench:
