@@ -73,9 +73,11 @@ customElements.define(
 			);
 			this.lockTurnCheckbox = node.querySelector("[data-chat-lock-turn]");
 
-            node
-                .querySelector('[formmethod="dialog"]')
-                .addEventListener('click', (event) => document.documentElement.classList.remove('has-dialog-open'))
+			node
+				.querySelector('[formmethod="dialog"]')
+				.addEventListener("click", (event) =>
+					document.documentElement.classList.remove("has-dialog-open"),
+				);
 
 			this.initNearBottomTracking();
 
@@ -291,11 +293,13 @@ customElements.define(
 						const el = event.currentTarget;
 						const type = el.dataset.previewType;
 
-                        const temporaryUrl = await this.getTemporarySignedUrl(el.dataset.preview);
+						const temporaryUrl = await this.getTemporarySignedUrl(
+							el.dataset.preview,
+						);
 
 						if (!["image", "video"].includes(type)) {
-                            window.open(temporaryUrl.url)
-						    event.preventDefault();
+							window.open(temporaryUrl.url);
+							event.preventDefault();
 
 							return;
 						}
@@ -316,7 +320,7 @@ customElements.define(
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
-                        document.documentElement.classList.add('has-open-dialog');
+						document.documentElement.classList.add("has-open-dialog");
 					}),
 				);
 
@@ -665,7 +669,7 @@ customElements.define(
 
 			return fetchJson(
 				`/padmission-tickets/api/tickets/${this.ticketId}/temporary-url`,
-                {filename},
+				{ filename },
 				"POST",
 			);
 		}

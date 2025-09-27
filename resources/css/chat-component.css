@@ -348,7 +348,7 @@
 	text-decoration: none;
 
 	overflow: hidden;
-    cursor: pointer;
+	cursor: pointer;
 
 	img {
 		display: block;
@@ -543,12 +543,12 @@ dialog.preview {
 	inset: 3em;
 	border: none;
 	border-radius: .5em;
-    background-color: transparent;
+	background-color: transparent;
 
 	&::backdrop {
-        display: block;
+		display: block;
 		background-color: rgba(0 0 0 / 0.6);
-        backdrop-filter: blur(.5em);
+		backdrop-filter: blur(.5em);
 	}
 
 	button {
@@ -588,7 +588,7 @@ dialog.preview {
 		max-width: 100%;
 		max-height: 100%;
 		object-fit: contain;
-        border-radius: 0.5em;
+		border-radius: 0.5em;
 	}
 }
 
