@@ -39,7 +39,7 @@ class CreateLinkedTicketAction extends Action
             ->color('gray')
             ->visible(fn (Ticket $record) => TicketPlugin::get()->hasLinkedTickets() && $record->linkedToTicket === null)
             ->slideOver()
-            ->modalWidth(Width::Medium)
+            ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)
             ->fillForm(fn (Ticket $record) => ['subject' => $record->subject])
             ->schema([
