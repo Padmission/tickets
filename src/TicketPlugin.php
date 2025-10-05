@@ -46,7 +46,7 @@ class TicketPlugin implements Plugin
 
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
-    public static function make(): static
+    public static function make(): self
     {
         return new self;
     }
