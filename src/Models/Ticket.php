@@ -48,12 +48,12 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
-    public function linkedToTicket(): BelongsTo
+    public function parentTicket(): BelongsTo
     {
         return $this->belongsTo(Ticket::class, 'linked_ticket_id', 'id');
     }
 
-    public function linkedTickets(): HasMany
+    public function childTickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'linked_ticket_id', 'id');
     }

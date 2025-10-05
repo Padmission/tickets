@@ -130,20 +130,20 @@ class ViewTicket extends EditRecord
                         ->visible(fn () => TicketPlugin::get()->hasLinkedTickets())
                         ->compact()
                         ->schema([
-                            LinkedTicketModalSelect::make('linkedTicket')
-                                ->relationship('linkedToTicket', 'subject')
-                                ->label(__('padmission-tickets::tickets.resources.tickets.linked_to_ticket'))
+                            LinkedTicketModalSelect::make('parentTicket')
+                                ->relationship('parentTicket', 'subject')
+                                ->label(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
                                 ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 0)
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     $record->update(['linked_ticket_id' => $state]);
                                 }),
 
-                            LinkedTicketModalSelect::make('linkedTickets')
-                                ->relationship('linkedTickets', 'subject')
+                            LinkedTicketModalSelect::make('childTickets')
+                                ->relationship('childTickets', 'subject')
                                 ->multiple()
                                 ->nullable()
                                 ->visible(fn () => count(resolve(GetLinkedTicketSourcePanels::class)(Filament::getCurrentPanel())) > 0)
-                                ->label(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+                                ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     // @TODO: Should this be recorded by Activity Log?
                                     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
