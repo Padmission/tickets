@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Carbon\CarbonImmutable;
-use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\EditRecord;
@@ -13,7 +12,6 @@ use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
-use Padmission\Tickets\Actions\GetLinkedTicketSourcePanels;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
@@ -142,7 +140,7 @@ class ViewTicket extends EditRecord
                                 ->relationship('childTickets', 'subject')
                                 ->multiple()
                                 ->nullable()
-                                ->visible(fn () => count(resolve(GetLinkedTicketSourcePanels::class)(Filament::getCurrentPanel())) > 0)
+                                ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketSourcePanels()) > 0)
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     // @TODO: Should this be recorded by Activity Log?

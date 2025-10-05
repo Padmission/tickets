@@ -16,7 +16,7 @@ use Padmission\Tickets\Filament\Resources;
 use Padmission\Tickets\Filament\Widgets;
 use RuntimeException;
 
-final class TicketPlugin implements Plugin
+class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
@@ -216,22 +216,59 @@ final class TicketPlugin implements Plugin
         return $this->shouldEnableLinkedTickets;
     }
 
+    /**
+     * Get panels the current panel can create linked tickets in.
+     */
     public function getPanelsForLinkedTicketCreation(): array
     {
-        if (! $this->hasLinkedTickets()) {
-            return [];
-        }
+        return once(function () {
+            if (! $this->hasLinkedTickets()) {
+                return [];
+            }
 
-        $panels = Filament::getPanels();
+            $panels = Filament::getPanels();
 
-        if ($this->allowLinkedTicketsCreationForPanels === null) {
+            if ($this->allowLinkedTicketsCreationForPanels === null) {
+                unset($panels[Filament::getCurrentPanel()->getId()]);
+
+                return $panels;
+            }
+
+            $filteredPanels = array_filter(
+                $panels,
+                fn (Panel $panel) => in_array($panel->getId(), $this->allowLinkedTicketsCreationForPanels),
+            );
+
+            return $filteredPanels;
+        });
+    }
+
+    /**
+     * Get panels that can link to the current panel.
+     */
+    public function getLinkedTicketSourcePanels(): array
+    {
+        return once(function () {
+            $panels = [];
+            $currentPanel = Filament::getCurrentPanel();
+
+            foreach (Filament::getPanels() as $panel) {
+                if (! $panel->hasPlugin(TicketPlugin::$id)) {
+                    continue;
+                }
+
+                /**
+                 * @var TicketPlugin $plugin
+                 */
+                $plugin = $panel->getPlugin(TicketPlugin::$id);
+
+                if (array_key_exists($currentPanel->getId(), $plugin->getPanelsForLinkedTicketCreation())) {
+                    $panels[$panel->getId()] = $panel;
+                }
+            }
+
             return $panels;
-        }
-
-        return array_filter(
-            $panels,
-            fn (Panel $panel) => in_array($panel->getId(), $this->allowLinkedTicketsCreationForPanels),
-        );
+        });
     }
 
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static

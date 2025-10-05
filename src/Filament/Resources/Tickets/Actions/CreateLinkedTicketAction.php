@@ -64,7 +64,7 @@ class CreateLinkedTicketAction extends Action
             ->action(function (array $data, ViewTicket $livewire) {
                 $ticket = TicketPlugin::resolveModelClass(Ticket::class);
                 $currentPanelId = Filament::getCurrentOrDefaultPanel()->getId();
-                $targetPanelId = $data['panel'] ?? TicketPlugin::get()->getPanelsForLinkedTicketCreation()[0];
+                $targetPanelId = $data['panel'] ?? array_keys(TicketPlugin::get()->getPanelsForLinkedTicketCreation())[0];
 
                 $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
                 $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);

@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 it('is visible when linked tickets enabled and ticket has no parent', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -35,7 +35,7 @@ it('is hidden when linked tickets disabled', function () {
 });
 
 it('is hidden when ticket already has parent', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $parentTicket = Ticket::factory()->create();
     $childTicket = Ticket::factory()->create(['linked_ticket_id' => $parentTicket->id]);
@@ -45,7 +45,7 @@ it('is hidden when ticket already has parent', function () {
 });
 
 it('sets default subject', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $originalTicket = Ticket::factory()->create();
 
@@ -58,7 +58,7 @@ it('creates linked ticket successfully', function () {
     (new TicketStatusSeeder)->run();
     (new TicketPrioritySeeder)->run();
 
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
     $currentPanel = Filament::getCurrentOrDefaultPanel()->getId();
@@ -100,7 +100,7 @@ it('creates linked ticket successfully', function () {
 });
 
 it('creates linked ticket for different panel', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -126,7 +126,7 @@ it('creates linked ticket for different panel', function () {
 });
 
 it('updates livewire data after creation', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -142,7 +142,7 @@ it('updates livewire data after creation', function () {
 });
 
 it('sends success notification with action link', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -156,7 +156,7 @@ it('sends success notification with action link', function () {
 });
 
 it('requires subject field', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -169,7 +169,7 @@ it('requires subject field', function () {
 });
 
 it('requires message field', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 

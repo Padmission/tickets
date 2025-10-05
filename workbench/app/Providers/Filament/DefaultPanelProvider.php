@@ -79,7 +79,7 @@ class DefaultPanelProvider extends PanelProvider
                 TicketPlugin::make()
                     ->registerResources()
                     ->allSupportersQuery(User::query())
-                    ->allowLinkedTickets(only: ['second'])
+                    ->allowLinkedTickets(only: ['default', 'second'])
                     ->showChatWidget(
                         config: ChatWidgetConfig::make()
                         // ->allowFileUploads(maxFileSize: 20 * 1024)
