@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Actions;
 
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
@@ -11,6 +12,7 @@ class GetDefaultStatusForPanel
     public function __invoke(string $panelId): TicketStatus
     {
         $defaultStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::query()
+            ->withoutGlobalScope(CurrentPanelScope::class)
             ->where('panel', $panelId)
             ->orderBy('order', 'asc')
             ->first();

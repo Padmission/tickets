@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models\Concerns;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
@@ -12,6 +13,8 @@ trait ManagesStatus
     {
         return $this->belongsTo(
             TicketPlugin::resolveModelClass(TicketStatus::class)
-        )->withTrashed();
+        )
+            ->withTrashed()
+            ->withoutGlobalScope(CurrentPanelScope::class);
     }
 }

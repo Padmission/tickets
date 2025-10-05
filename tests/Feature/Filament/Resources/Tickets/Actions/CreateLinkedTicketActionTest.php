@@ -10,7 +10,10 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketActi
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
+
+use function Pest\Laravel\partialMock;
 
 beforeEach(function () {
     $this->login();
@@ -153,6 +156,31 @@ it('sends success notification with action link', function () {
         ])
         ->assertHasNoFormErrors()
         ->assertNotified();
+});
+
+it('does not link ticket in notification when user has no access to target panel', function () {
+    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+
+    $mockedUser = partialMock(User::class)
+        ->shouldReceive('canAccessPanel')
+        ->andReturn(false)
+        ->getMock();
+
+    $this->actingAs($mockedUser);
+
+    $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
+        ->callAction(CreateLinkedTicketAction::class, [
+            'subject' => 'Notification Test',
+            'message' => tiptapDocument('Notification test message'),
+        ])
+        ->assertHasNoFormErrors();
+
+    $notifications = session()->get('filament.notifications');
+
+    expect($notifications)->toHaveCount(1)
+        ->and($notifications[0]['actions'])->toBeEmpty();
 });
 
 it('requires subject field', function () {
