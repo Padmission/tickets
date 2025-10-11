@@ -280,7 +280,7 @@ By default, it will show the `TicketStatsWidget` on the `ListTickets` page.
 
 ### Authentication
 
-As it's hard to predict your authentication requirements, we don't define any for you. You *must* bring your own `TicketPolicy` and define scopes for Users and Ticket.
+We define a basic policy, but you can swap it anytime with your implementation:
 
 ```php
 use Filament\Facades\Filament;
