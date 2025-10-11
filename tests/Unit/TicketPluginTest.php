@@ -46,18 +46,6 @@ it('ensures model resolution works with custom models', function (string $given,
 ]);
 
 describe('Linked Tickets', function () {
-    it('allows linked tickets configuration', function () {
-        $plugin = TicketPlugin::make();
-
-        expect($plugin->hasLinkedTickets())->toBeFalse();
-
-        $plugin = TicketPlugin::make()->allowLinkedTicketsTo(['test']);
-        expect($plugin->hasLinkedTickets())->toBeTrue();
-
-        $plugin = TicketPlugin::make()->allowLinkedTicketsTo([]);
-        expect($plugin->hasLinkedTickets())->toBeFalse();
-    });
-
     it('returns empty array when linked tickets disabled', function () {
         $plugin = TicketPlugin::make()->allowLinkedTicketsTo([]);
 

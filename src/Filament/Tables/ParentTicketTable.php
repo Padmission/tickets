@@ -5,17 +5,19 @@ namespace Padmission\Tickets\Filament\Tables;
 use Filament\Panel;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class ParentTicketTable
 {
     public static function configure(Table $table): Table
     {
-        $panels = TicketPlugin::get()->getLinkedTicketParentPanels();
-        $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
-
         return $table
-            ->modifyQueryUsing(function ($livewire, $query) use ($panelIds) {
+            ->modifyQueryUsing(function ($livewire, Builder $query) {
+                $panels = TicketPlugin::get($livewire->record->panel)->getLinkedTicketParentPanels();
+                $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
+
                 return $query
                     ->whereKeyNot($livewire->record->getKey())
                     ->whereIn('panel', $panelIds);
@@ -25,17 +27,22 @@ class ParentTicketTable
                     ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => ucfirst($state))
-                    ->visible(fn () => count($panelIds) > 1),
+                    ->visible(function ($livewire) {
+                        $panels = TicketPlugin::get($livewire->record->panel)->getLinkedTicketParentPanels();
+                        $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
+
+                        return count($panelIds) > 1;
+                    }),
 
                 TextColumn::make('status.display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.model_label'))
                     ->badge()
-                    ->color(fn ($record) => $record->status->colorPalette),
+                    ->color(fn (Ticket $record) => $record->status->colorPalette),
 
                 TextColumn::make('priority.display_name')
                     ->label(__('padmission-tickets::tickets.resources.priorities.model_label'))
                     ->badge()
-                    ->color(fn ($record) => $record->priority->colorPalette),
+                    ->color(fn (Ticket $record) => $record->priority->colorPalette),
 
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))

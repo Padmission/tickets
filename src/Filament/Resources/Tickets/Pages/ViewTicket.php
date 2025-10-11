@@ -137,7 +137,7 @@ class ViewTicket extends EditRecord
                     Section::make()
                         ->columns(2)
                         ->heading(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-                        ->visible(fn () => TicketPlugin::get()->hasLinkedTickets())
+                        ->visible(fn (Ticket $record) => TicketPlugin::get($record->panel)->hasLinkedTickets())
                         ->compact()
                         ->schema([
                             LinkedTicketModalSelect::make('parentTicket')
@@ -147,7 +147,7 @@ class ViewTicket extends EditRecord
                                 )
                                 ->tableConfiguration(ParentTicketTable::class)
                                 ->label(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
-                                ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0)
+                                ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketParentPanels()) > 0)
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     $record->update(['linked_ticket_id' => $state]);
@@ -161,7 +161,7 @@ class ViewTicket extends EditRecord
                                 ->tableConfiguration(ChildTicketsTable::class)
                                 ->multiple()
                                 ->nullable()
-                                ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0)
+                                ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0)
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state) {

@@ -20,13 +20,15 @@ class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
+    protected ?Panel $panel = null;
+
     protected bool $shouldRegisterResources = false;
 
     protected bool $shouldRegisterWidgets = false;
 
     protected bool $shouldEnableLinkedTickets = false;
 
-    protected ?array $linkTicketsToPanels = null;
+    public ?array $linkTicketsToPanels = null;
 
     protected string $escalationLevel = 'default';
 
@@ -58,6 +60,8 @@ class TicketPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
+        $this->panel = $panel;
+
         if ($this->shouldRegisterResources()) {
             $panel->resources([
                 Resources\Tickets\TicketResource::class,
@@ -224,31 +228,27 @@ class TicketPlugin implements Plugin
      */
     public function getLinkedTicketChildPanels(): array
     {
-        return once(function (): array {
-            $panels = [];
-            $currentPanel = Filament::getCurrentPanel();
+        // return once(function (): array {
+        $panels = [];
+        $currentPanel = $this->panel;
 
-            if (! $currentPanel) {
-                return [];
+        foreach (Filament::getPanels() as $panel) {
+            if (! $panel->hasPlugin(TicketPlugin::$id)) {
+                continue;
             }
 
-            foreach (Filament::getPanels() as $panel) {
-                if (! $panel->hasPlugin(TicketPlugin::$id)) {
-                    continue;
-                }
+            /**
+             * @var TicketPlugin $plugin
+             */
+            $plugin = $panel->getPlugin(TicketPlugin::$id);
 
-                /**
-                 * @var TicketPlugin $plugin
-                 */
-                $plugin = $panel->getPlugin(TicketPlugin::$id);
-
-                if (array_key_exists($currentPanel->getId(), $plugin->getLinkedTicketParentPanels())) {
-                    $panels[$panel->getId()] = $panel;
-                }
+            if (array_key_exists($currentPanel->getId(), $plugin->getLinkedTicketParentPanels())) {
+                $panels[$panel->getId()] = $panel;
             }
+        }
 
-            return $panels;
-        });
+        return $panels;
+        // });
     }
 
     /**
@@ -256,20 +256,20 @@ class TicketPlugin implements Plugin
      */
     public function getLinkedTicketParentPanels(): array
     {
-        return once(function (): array {
-            $panels = Filament::getPanels();
+        // return once(function (): array {
+        $panels = Filament::getPanels();
 
-            if ($this->linkTicketsToPanels === null) {
-                return [];
-            }
+        if ($this->linkTicketsToPanels === null) {
+            return [];
+        }
 
-            $filteredPanels = array_filter(
-                $panels,
-                fn (Panel $panel) => in_array($panel->getId(), $this->linkTicketsToPanels),
-            );
+        $filteredPanels = array_filter(
+            $panels,
+            fn (Panel $panel) => in_array($panel->getId(), $this->linkTicketsToPanels),
+        );
 
-            return $filteredPanels;
-        });
+        return $filteredPanels;
+        // });
     }
 
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static

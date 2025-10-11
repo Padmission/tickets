@@ -96,8 +96,8 @@ class TestCase extends \Orchestra\Testbench\TestCase
         Filament::registerPanel($panel);
         Filament::setCurrentPanel($panel);
 
-        Filament::registerPanel(Panel::make()->id('test2')->path('test2')->plugin($plugin));
-        Filament::registerPanel(Panel::make()->id('test3')->path('test3')->plugin($plugin));
+        Filament::registerPanel(Panel::make()->id('test2')->path('test2')->plugin(clone $plugin));
+        Filament::registerPanel(Panel::make()->id('test3')->path('test3')->plugin(clone $plugin));
     }
 
     // Helper methods

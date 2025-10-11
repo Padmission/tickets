@@ -17,6 +17,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\TicketPlugin;
 
 /**
@@ -93,12 +94,12 @@ class TicketActivity extends Model
                 'to' => Turn::tryFrom($this->data['to'])->getLabel(),
             ]),
             ActivityType::StatusChanged => __('padmission-tickets::activities.status_changed', [
-                'from' => TicketStatus::find($this->data['from'])->display_name,
-                'to' => TicketStatus::find($this->data['to'])->display_name,
+                'from' => TicketStatus::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['from'])->display_name,
+                'to' => TicketStatus::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['to'])->display_name,
             ]),
             ActivityType::PriorityChanged => __('padmission-tickets::activities.priority_changed', [
-                'from' => TicketPriority::find($this->data['from'])->display_name,
-                'to' => TicketPriority::find($this->data['to'])->display_name,
+                'from' => TicketPriority::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['from'])->display_name,
+                'to' => TicketPriority::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['to'])->display_name,
             ]),
             default => $value
         });

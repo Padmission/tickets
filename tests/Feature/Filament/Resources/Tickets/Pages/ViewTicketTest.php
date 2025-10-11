@@ -286,15 +286,15 @@ describe('Linked Tickets', function () {
 
     it('restricts child ticket options to only tickets from child panels', function () {
         $plugin = TicketPlugin::make()
-            ->allowLinkedTicketsTo(['test'])
+            ->allowLinkedTicketsTo(['test2'])
             ->registerResources();
 
-        Filament::getPanel('test2')->plugin($plugin);
+        Filament::getPanel('test')->plugin($plugin);
         Filament::getPanel('test3')->plugin($plugin);
 
         (new TicketStatusSeeder)->run();
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->create(['panel' => 'test2']);
 
         Ticket::factory()->create(['panel' => 'test1']);
         Ticket::factory()->create(['panel' => 'test2']);
@@ -309,7 +309,7 @@ describe('Linked Tickets', function () {
             ->assertActionMounted($selectAction)
             ->assertMountedActionModalSee([
                 __('padmission-tickets::tickets.resources.tickets.panel'),
-                'Test2',
+                'Test',
                 'Test3',
             ]);
         // @TODO: Rename test panel so this can be tested properly
@@ -318,14 +318,14 @@ describe('Linked Tickets', function () {
 
     it('does not show panel column in ChildTicketTable when tickets are from a single panel', function () {
         $plugin = TicketPlugin::make()
-            ->allowLinkedTicketsTo(['test'])
+            ->allowLinkedTicketsTo(['test3'])
             ->registerResources();
 
         Filament::getPanel('test2')->plugin($plugin);
 
         (new TicketStatusSeeder)->run();
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->create(['panel' => 'test3']);
         $selectAction = TestAction::make('select')->schemaComponent('childTickets');
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
