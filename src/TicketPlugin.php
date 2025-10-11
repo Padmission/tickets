@@ -26,7 +26,7 @@ class TicketPlugin implements Plugin
 
     protected bool $shouldEnableLinkedTickets = false;
 
-    protected ?array $allowLinkedTicketsCreationForPanels = null;
+    protected ?array $linkTicketsToPanels = null;
 
     protected string $escalationLevel = 'default';
 
@@ -203,54 +203,34 @@ class TicketPlugin implements Plugin
         return $this->shouldRegisterWidgets;
     }
 
-    public function allowLinkedTickets(bool $shouldEnable = true, ?array $only = null): static
+    /**
+     * @param  array<string>|null  $panelIds
+     */
+    public function allowLinkedTicketsTo(?array $panelIds = null): static
     {
-        $this->shouldEnableLinkedTickets = $shouldEnable;
-        $this->allowLinkedTicketsCreationForPanels = $only;
+        $this->linkTicketsToPanels = $panelIds;
 
         return $this;
     }
 
     public function hasLinkedTickets(): bool
     {
-        return $this->shouldEnableLinkedTickets;
-    }
-
-    /**
-     * Get panels the current panel can create linked tickets in.
-     */
-    public function getPanelsForLinkedTicketCreation(): array
-    {
-        return once(function () {
-            if (! $this->hasLinkedTickets()) {
-                return [];
-            }
-
-            $panels = Filament::getPanels();
-
-            if ($this->allowLinkedTicketsCreationForPanels === null) {
-                unset($panels[Filament::getCurrentPanel()->getId()]);
-
-                return $panels;
-            }
-
-            $filteredPanels = array_filter(
-                $panels,
-                fn (Panel $panel) => in_array($panel->getId(), $this->allowLinkedTicketsCreationForPanels),
-            );
-
-            return $filteredPanels;
-        });
+        return count($this->getLinkedTicketChildPanels()) > 0
+            || count($this->getLinkedTicketParentPanels()) > 0;
     }
 
     /**
      * Get panels that can link to the current panel.
      */
-    public function getLinkedTicketSourcePanels(): array
+    public function getLinkedTicketChildPanels(): array
     {
-        return once(function () {
+        return once(function (): array {
             $panels = [];
             $currentPanel = Filament::getCurrentPanel();
+
+            if (! $currentPanel) {
+                return [];
+            }
 
             foreach (Filament::getPanels() as $panel) {
                 if (! $panel->hasPlugin(TicketPlugin::$id)) {
@@ -262,12 +242,33 @@ class TicketPlugin implements Plugin
                  */
                 $plugin = $panel->getPlugin(TicketPlugin::$id);
 
-                if (array_key_exists($currentPanel->getId(), $plugin->getPanelsForLinkedTicketCreation())) {
+                if (array_key_exists($currentPanel->getId(), $plugin->getLinkedTicketParentPanels())) {
                     $panels[$panel->getId()] = $panel;
                 }
             }
 
             return $panels;
+        });
+    }
+
+    /**
+     * Get panels the current panel can create linked tickets in.
+     */
+    public function getLinkedTicketParentPanels(): array
+    {
+        return once(function (): array {
+            $panels = Filament::getPanels();
+
+            if ($this->linkTicketsToPanels === null) {
+                return [];
+            }
+
+            $filteredPanels = array_filter(
+                $panels,
+                fn (Panel $panel) => in_array($panel->getId(), $this->linkTicketsToPanels),
+            );
+
+            return $filteredPanels;
         });
     }
 

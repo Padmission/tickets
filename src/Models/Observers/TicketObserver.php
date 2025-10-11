@@ -152,9 +152,13 @@ class TicketObserver
 
             if ($oldAssigneeId !== $newAssigneeId) {
                 $ticket->addTicketActivity(
-                    ActivityType::AssigneeChanged,
-                    ActivitySender::System,
-                    auth()->id()
+                    type: ActivityType::AssigneeChanged,
+                    sender: ActivitySender::System,
+                    userId: auth()->id(),
+                    data: [
+                        'from' => $oldAssigneeId,
+                        'to' => $newAssigneeId,
+                    ]
                 );
 
                 event(new TicketAssignedEvent($ticket, auth()->user()));

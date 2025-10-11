@@ -84,6 +84,7 @@ class EditTicketAction extends EditAction
 
                         return $query;
                     })
+                    ->preload()
                     ->searchable()
                     ->required(),
             ]);

@@ -3,7 +3,6 @@
 namespace Padmission\Tickets;
 
 use Closure;
-use Exception;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Illuminate\Contracts\Support\Htmlable;
@@ -145,11 +144,7 @@ final class ChatWidgetConfig
     {
         $color = $this->primaryColor
             ?? Filament::getCurrentOrDefaultPanel()->getColors()['primary']
-            ?? null;
-
-        if ($color === null) {
-            throw new Exception('No primary color given for ChatWidgetConfig');
-        }
+            ?? Color::Blue;
 
         if ($color instanceof Closure) {
             $color = $color();

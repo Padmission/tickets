@@ -16,6 +16,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Widgets;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
@@ -72,6 +73,13 @@ class TicketResource extends Resource
                     );
             })
             ->columns([
+                TextColumn::make('panel')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                    ->visible(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
+                    ->sortable(),
+
                 TextColumn::make('status.display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.model_label'))
                     ->badge()
@@ -103,7 +111,7 @@ class TicketResource extends Resource
                     ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
                     ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
                     ->sortable()
-                    ->visible(fn () => static::shouldShowSourcePanel()),
+                    ->visible(fn (ListTickets $livewire) => static::shouldShowSourcePanel($livewire)),
 
                 TextColumn::make('latestMessage.created_at')
                     ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
@@ -115,11 +123,13 @@ class TicketResource extends Resource
                 SelectFilter::make('status')
                     ->relationship('status', 'display_name')
                     ->default(fn () => TicketPlugin::resolveModelClass(TicketStatus::class)::getOpenStatuses()->pluck('id')->toArray())
+                    ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
 
                 SelectFilter::make('priority')
                     ->relationship('priority', 'display_name')
+                    ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
 
@@ -135,6 +145,7 @@ class TicketResource extends Resource
 
                         return $query;
                     })
+                    ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->preload(),
             ])
             ->recordActions([
@@ -155,14 +166,12 @@ class TicketResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
+    public static function shouldShowSourcePanel(?ListTickets $livewire = null): bool
     {
-        return parent::getEloquentQuery()
-            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
-    }
+        if (str_contains($livewire?->activeTab, 'linked')) {
+            return false;
+        }
 
-    public static function shouldShowSourcePanel(): bool
-    {
         // Count panels that have the chat widget enabled
         $panelsWithChatWidget = 0;
 

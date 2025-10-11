@@ -20,7 +20,7 @@ beforeEach(function () {
 });
 
 it('is visible when linked tickets enabled and ticket has no parent', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -29,7 +29,7 @@ it('is visible when linked tickets enabled and ticket has no parent', function (
 });
 
 it('is hidden when linked tickets disabled', function () {
-    TicketPlugin::get()->allowLinkedTickets(false);
+    TicketPlugin::get()->allowLinkedTicketsTo([]);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -38,7 +38,7 @@ it('is hidden when linked tickets disabled', function () {
 });
 
 it('is hidden when ticket already has parent', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $parentTicket = Ticket::factory()->create();
     $childTicket = Ticket::factory()->create(['linked_ticket_id' => $parentTicket->id]);
@@ -48,7 +48,7 @@ it('is hidden when ticket already has parent', function () {
 });
 
 it('sets default subject', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $originalTicket = Ticket::factory()->create();
 
@@ -61,7 +61,7 @@ it('creates linked ticket successfully', function () {
     (new TicketStatusSeeder)->run();
     (new TicketPrioritySeeder)->run();
 
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
     $currentPanel = Filament::getCurrentOrDefaultPanel()->getId();
@@ -103,7 +103,7 @@ it('creates linked ticket successfully', function () {
 });
 
 it('creates linked ticket for different panel', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -129,7 +129,7 @@ it('creates linked ticket for different panel', function () {
 });
 
 it('updates livewire data after creation', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -141,11 +141,11 @@ it('updates livewire data after creation', function () {
         ->assertHasNoFormErrors();
 
     $newTicket = Ticket::where('subject', 'Data Update Test')->first();
-    expect($component->get('data.linkedTicket'))->toBe($newTicket->id);
+    expect($component->get('data.parentTicket'))->toBe($newTicket->id);
 });
 
 it('sends success notification with action link', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -159,7 +159,7 @@ it('sends success notification with action link', function () {
 });
 
 it('does not link ticket in notification when user has no access to target panel', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $mockedUser = partialMock(User::class)
         ->shouldReceive('canAccessPanel')
@@ -184,7 +184,7 @@ it('does not link ticket in notification when user has no access to target panel
 });
 
 it('requires subject field', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -197,7 +197,7 @@ it('requires subject field', function () {
 });
 
 it('requires message field', function () {
-    TicketPlugin::get()->allowLinkedTickets(only: ['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 

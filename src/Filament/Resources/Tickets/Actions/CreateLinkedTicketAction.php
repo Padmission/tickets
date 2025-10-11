@@ -37,7 +37,7 @@ class CreateLinkedTicketAction extends Action
             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
             ->icon(Heroicon::Link)
             ->color('gray')
-            ->visible(fn (Ticket $record) => TicketPlugin::get()->hasLinkedTickets() && $record->parentTicket === null)
+            ->visible(fn (Ticket $record) => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0 && $record->parentTicket === null)
             ->slideOver()
             ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)
@@ -46,9 +46,9 @@ class CreateLinkedTicketAction extends Action
                 Select::make('panel')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
                     ->required()
-                    ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 1)
+                    ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 1)
                     ->options(
-                        collect(TicketPlugin::get()->getPanelsForLinkedTicketCreation())
+                        collect(TicketPlugin::get()->getLinkedTicketParentPanels())
                             ->mapWithKeys(fn (Panel $panel) => [$panel->getId() => ucfirst($panel->getId())])
                     ),
 
@@ -64,7 +64,7 @@ class CreateLinkedTicketAction extends Action
             ->action(function (array $data, ViewTicket $livewire) {
                 $ticket = TicketPlugin::resolveModelClass(Ticket::class);
                 $currentPanelId = Filament::getCurrentOrDefaultPanel()->getId();
-                $targetPanelId = $data['panel'] ?? array_keys(TicketPlugin::get()->getPanelsForLinkedTicketCreation())[0];
+                $targetPanelId = $data['panel'] ?? array_keys(TicketPlugin::get()->getLinkedTicketParentPanels())[0];
 
                 $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
                 $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
@@ -97,7 +97,7 @@ class CreateLinkedTicketAction extends Action
 
                 DB::commit();
 
-                $livewire->data['linkedTicket'] = $newTicket->id;
+                $livewire->data['parentTicket'] = $newTicket->id;
 
                 $canAccessPanel = Filament::auth()->user()->canAccessPanel(
                     Filament::getPanel($targetPanelId),

@@ -51,111 +51,51 @@ describe('Linked Tickets', function () {
 
         expect($plugin->hasLinkedTickets())->toBeFalse();
 
-        $plugin->allowLinkedTickets();
+        $plugin = TicketPlugin::make()->allowLinkedTicketsTo(['test']);
         expect($plugin->hasLinkedTickets())->toBeTrue();
 
-        $plugin->allowLinkedTickets(false);
+        $plugin = TicketPlugin::make()->allowLinkedTicketsTo([]);
         expect($plugin->hasLinkedTickets())->toBeFalse();
     });
 
-    it('returns all panels for linked ticket creation by default', function () {
-        $adminPanel = mock(Panel::class);
-        $adminPanel->shouldReceive('getId')->andReturn('admin');
-
-        $supportPanel = mock(Panel::class);
-        $supportPanel->shouldReceive('getId')->andReturn('support');
-
-        $allPanels = [
-            'admin' => $adminPanel,
-            'support' => $supportPanel,
-        ];
-
-        Filament::partialMock()
-            ->shouldReceive('getPanels')
-            ->andReturn($allPanels)
-            ->getMock()
-            ->shouldReceive('getCurrentPanel')
-            ->andReturn(Panel::make()->id('panel1'));
-
-        $plugin = TicketPlugin::make()->allowLinkedTickets();
-
-        $panels = $plugin->getPanelsForLinkedTicketCreation();
-
-        expect($panels)
-            ->toBeArray()
-            ->toHaveCount(2)
-            ->toBe($allPanels);
-    });
-
     it('returns empty array when linked tickets disabled', function () {
-        $plugin = TicketPlugin::make()->allowLinkedTickets(false);
+        $plugin = TicketPlugin::make()->allowLinkedTicketsTo([]);
 
-        $panels = $plugin->getPanelsForLinkedTicketCreation();
+        $panels = $plugin->getLinkedTicketParentPanels();
 
         expect($panels)->toBe([]);
     });
 
     it('filters panels when only specific panels allowed', function () {
-        $adminPanel = mock(Panel::class);
-        $adminPanel->shouldReceive('getId')->andReturn('admin');
-
-        $supportPanel = mock(Panel::class);
-        $supportPanel->shouldReceive('getId')->andReturn('support');
-
-        $customerPanel = mock(Panel::class);
-        $customerPanel->shouldReceive('getId')->andReturn('customer');
-
         $allPanels = [
-            'admin' => $adminPanel,
-            'support' => $supportPanel,
-            'customer' => $customerPanel,
+            'admin' => Panel::make()->id('admin'),
+            'support' => Panel::make()->id('support'),
+            'customer' => Panel::make()->id('customer'),
         ];
 
         Filament::shouldReceive('getPanels')->andReturn($allPanels);
 
-        $plugin = TicketPlugin::make()
-            ->allowLinkedTickets(true, ['admin', 'support']);
+        $plugin = TicketPlugin::make()->allowLinkedTicketsTo(['admin', 'support']);
 
-        $allowedPanels = $plugin->getPanelsForLinkedTicketCreation();
+        $allowedPanels = $plugin->getLinkedTicketParentPanels();
 
         expect($allowedPanels)->toHaveCount(2);
         expect(array_keys($allowedPanels))->toEqual(['admin', 'support']);
-    });
-
-    it('returns all panels but current when only parameter is null', function () {
-        $filamentMock = Filament::partialMock();
-        $filamentMock
-            ->shouldReceive('getPanels')
-            ->andReturn([
-                'panel1' => Panel::make()->id('panel1'),
-                'panel2' => Panel::make()->id('panel2'),
-            ]);
-
-        $filamentMock
-            ->shouldReceive('getCurrentPanel')
-            ->andReturn(Panel::make()->id('panel1'));
-
-        $plugin = TicketPlugin::make()
-            ->allowLinkedTickets();
-
-        $panels = $plugin->getPanelsForLinkedTicketCreation();
-
-        expect(array_keys($panels))->toBe(['panel2']);
     });
 
     it('returns linked ticket source panels', function () {
         $panel1 = Panel::make()
             ->id('panel1')
             ->default()
-            ->plugin(TicketPlugin::make()->allowLinkedTickets());
+            ->plugin(TicketPlugin::make()->allowLinkedTicketsTo());
 
         $panel2 = Panel::make()
             ->id('panel2')
-            ->plugin(TicketPlugin::make()->allowLinkedTickets(only: ['panel1']));
+            ->plugin(TicketPlugin::make()->allowLinkedTicketsTo(panelIds: ['panel1']));
 
         $panel3 = Panel::make()
             ->id('panel3')
-            ->plugin(TicketPlugin::make()->allowLinkedTickets(only: ['panel2']));
+            ->plugin(TicketPlugin::make()->allowLinkedTicketsTo(panelIds: ['panel2']));
 
         $panel4 = Panel::make()
             ->id('panel4')
@@ -174,7 +114,7 @@ describe('Linked Tickets', function () {
         Filament::setCurrentPanel($panel1);
 
         $plugin = TicketPlugin::get('panel1');
-        $sourcePanels = $plugin->getLinkedTicketSourcePanels();
+        $sourcePanels = $plugin->getLinkedTicketChildPanels();
 
         // Panel 2 links to panel 1
         // Panel 3 links to other panel

@@ -4,6 +4,7 @@ providers:
   - App\Providers\WorkbenchServiceProvider
   - App\Providers\Filament\DefaultPanelProvider
   - App\Providers\Filament\SecondPanelProvider
+  - App\Providers\Filament\ThirdPanelProvider
   - Padmission\Tickets\TicketPluginServiceProvider
 
 migrations:

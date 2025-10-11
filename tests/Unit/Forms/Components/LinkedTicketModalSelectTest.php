@@ -2,7 +2,6 @@
 
 use Filament\Forms\Components\ModalTableSelect;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
-use Padmission\Tickets\Filament\Tables\TicketsTable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Tests\User;
 
@@ -15,12 +14,6 @@ beforeEach(function () {
 it('extends ModalTableSelect', function () {
     expect(LinkedTicketModalSelect::make('test'))
         ->toBeInstanceOf(ModalTableSelect::class);
-});
-
-it('uses TicketsTable configuration', function () {
-    $tableConfiguration = LinkedTicketModalSelect::make('test')->getTableConfiguration();
-
-    expect($tableConfiguration)->toBe(TicketsTable::class);
 });
 
 it('has correct placeholder for single selection', function () {
@@ -69,17 +62,19 @@ it('renders ticket link when user can access panel', function () {
 });
 
 it('does not render ticket link when user cannot access panel', function () {
-    $mockedUser = partialMock(User::class)
-        ->shouldReceive('canAccessPanel')
-        ->andReturn(false)
-        ->getMock();
-
-    $this->actingAs($mockedUser);
 
     $ticket = Ticket::factory()->create([
         'panel' => 'test',
         'subject' => 'Test Ticket Subject',
     ]);
+
+    $mockedUser = partialMock(User::class)
+        ->shouldReceive('can')
+        ->withArgs(['view', $ticket])
+        ->andReturn(false)
+        ->getMock();
+
+    $this->actingAs($mockedUser);
 
     $html = LinkedTicketModalSelect::make('linked_tickets')
         ->configure()

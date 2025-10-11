@@ -19,6 +19,8 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
+use Padmission\Tickets\Filament\Tables\ParentTicketTable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -27,6 +29,16 @@ class ViewTicket extends EditRecord
     protected static string $resource = TicketResource::class;
 
     protected $listeners = ['refresh' => '$refresh'];
+
+    protected function authorizeAccess(): void
+    {
+        abort_unless(static::getResource()::canView($this->getRecord()), 403);
+    }
+
+    protected function canEdit(?Ticket $record): bool
+    {
+        return static::getResource()::canEdit($record);
+    }
 
     public function getBreadcrumb(): string
     {
@@ -46,9 +58,9 @@ class ViewTicket extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            CreateLinkedTicketAction::make(),
-            CloseTicketAction::make(),
-            EditTicketAction::make(),
+            CreateLinkedTicketAction::make()->authorize(static::canEdit(...)),
+            CloseTicketAction::make()->authorize(static::canEdit(...)),
+            EditTicketAction::make()->authorize(static::canEdit(...)),
         ];
     }
 
@@ -129,18 +141,28 @@ class ViewTicket extends EditRecord
                         ->compact()
                         ->schema([
                             LinkedTicketModalSelect::make('parentTicket')
-                                ->relationship('parentTicket', 'subject')
+                                ->relationship(
+                                    name: 'parentTicket',
+                                    titleAttribute: 'subject'
+                                )
+                                ->tableConfiguration(ParentTicketTable::class)
                                 ->label(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
-                                ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 0)
+                                ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0)
+                                ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     $record->update(['linked_ticket_id' => $state]);
                                 }),
 
                             LinkedTicketModalSelect::make('childTickets')
-                                ->relationship('childTickets', 'subject')
+                                ->relationship(
+                                    name: 'childTickets',
+                                    titleAttribute: 'subject'
+                                )
+                                ->tableConfiguration(ChildTicketsTable::class)
                                 ->multiple()
                                 ->nullable()
-                                ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketSourcePanels()) > 0)
+                                ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0)
+                                ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     // @TODO: Should this be recorded by Activity Log?

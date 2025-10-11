@@ -8,7 +8,6 @@ use Filament\Forms\Components\ModalTableSelect;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
-use Padmission\Tickets\Filament\Tables\TicketsTable;
 
 class LinkedTicketModalSelect extends ModalTableSelect
 {
@@ -17,14 +16,12 @@ class LinkedTicketModalSelect extends ModalTableSelect
         parent::setUp();
 
         $this
-            ->tableConfiguration(TicketsTable::class)
             ->columnSpanFull()
             ->placeholder(fn () => $this->isMultiple() ? 'No tickets linked' : 'Not linked')
             ->selectAction(fn (Action $action) => $action->link())
             ->getOptionLabelFromRecordUsing(function ($record) {
-                $panel = Filament::getPanel($record->panel);
-                $canAccessPanel = $panel && Filament::auth()->user()->canAccessPanel($panel);
-                $url = $panel ? TicketResource::getUrl('view', ['record' => $record->id], panel: $record->panel) : null;
+                $canViewTicket = Filament::auth()->user()->can('view', $record);
+                $url = $canViewTicket ? TicketResource::getUrl('view', ['record' => $record->id]) : null;
 
                 return new HtmlString(Blade::render(<<<'BLADE'
                     <div class="ticket-card">
@@ -37,7 +34,7 @@ class LinkedTicketModalSelect extends ModalTableSelect
                         </x-filament::badge>
 
                         <div class="ticket-card__subject">
-                            @unless ($canAccessPanel)
+                            @unless ($canViewTicket)
                                 {{ $record->subject }}
                             @else
                                 <a href="{{ $url }}">
@@ -48,7 +45,7 @@ class LinkedTicketModalSelect extends ModalTableSelect
                             @endunless
                         </div>
                     </div>
-                BLADE, compact('record', 'url', 'canAccessPanel')));
+                BLADE, compact('record', 'url', 'canViewTicket')));
             });
     }
 }

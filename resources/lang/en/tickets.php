@@ -58,6 +58,7 @@ return [
             'assignee' => 'Assignee',
             'submitter' => 'Submitter',
             'source_panel' => 'Source Panel',
+            'panel' => 'Panel',
             'last_message' => 'Last Message',
             'closed_at' => 'Closed At',
             'disposition' => 'Disposition',
