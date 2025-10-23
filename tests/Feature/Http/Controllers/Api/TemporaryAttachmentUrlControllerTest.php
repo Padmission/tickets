@@ -17,18 +17,21 @@ it('requires login ', function () {
 });
 
 it('requires create permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('create', fn (User $user) => false);
-
     $user = User::factory()->create();
-    $ticket = Ticket::factory()->create();
+    $ticket = Ticket::factory()
+        ->has(TicketAttachment::factory([
+            'filepath' => 'test.jpg',
+        ]), 'attachments')
+        ->create();
+
+    Gate::before(fn (User $authUser, string $ability) => $ability === 'manage' ? false : null);
 
     $this->actingAs($user);
 
     $this
         ->postJson(route('padmission-tickets::api.temporary-attachment-url', [
             'ticket' => $ticket,
-        ]), ['filepath' => 'asdf'])
+        ]), ['filepath' => 'test.jpg'])
         ->assertForbidden();
 });
 
