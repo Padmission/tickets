@@ -674,10 +674,6 @@ customElements.define(
 		}
 
 		async getTemporarySignedUrl(filepath) {
-			const payload = {
-				filepath,
-			};
-
 			return fetchJson(
 				`/padmission-tickets/api/tickets/${this.ticketId}/temporary-url`,
 				{ filepath },

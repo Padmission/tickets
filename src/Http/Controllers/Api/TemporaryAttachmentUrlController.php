@@ -7,6 +7,7 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\TicketPlugin;
 
 class TemporaryAttachmentUrlController
@@ -16,17 +17,25 @@ class TemporaryAttachmentUrlController
 
     public function __invoke(Request $request, int $ticket): array
     {
-        $this->authorize('create', TicketPlugin::resolveModelClass(Ticket::class));
-
         $request->validate([
             'filepath' => ['required', 'string', 'max:255'],
         ]);
 
+        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+        $ticketRecord = $ticketModel::findOrFail($ticket);
+
+        app(TicketAuth::class)->authorizeTicketAccess($ticketRecord, $request->user());
+
         $filepath = $request->input('filepath');
+
+        // Verify the filepath belongs to an attachment on this ticket
+        $attachment = $ticketRecord->attachments()
+            ->where('filepath', $filepath)
+            ->firstOrFail();
 
         return [
             'url' => Storage::disk(config('padmission-tickets.attachments.disk'))
-                ->temporaryUrl($filepath, now()->addMinutes(5)),
+                ->temporaryUrl($attachment->filepath, now()->addMinutes(5)),
         ];
     }
 }
