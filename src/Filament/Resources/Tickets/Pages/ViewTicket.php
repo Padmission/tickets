@@ -168,18 +168,24 @@ class ViewTicket extends EditRecord
                                     // @TODO: Should this be recorded by Activity Log?
                                     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-                                    DB::beginTransaction();
+                                    $selectedIds = $state === null ? [] : array_values((array) $state);
 
-                                    $ticketModel::query()
-                                        ->where('linked_ticket_id', $record->getKey())
-                                        ->whereNotIn('id', $state)
-                                        ->update(['linked_ticket_id' => null]);
+                                    DB::transaction(function () use ($ticketModel, $record, $selectedIds) {
+                                        $detachQuery = $ticketModel::query()
+                                            ->where('linked_ticket_id', $record->getKey());
 
-                                    $ticketModel::query()
-                                        ->whereIn('id', $state)
-                                        ->update(['linked_ticket_id' => $record->getKey()]);
+                                        if ($selectedIds !== []) {
+                                            $detachQuery->whereNotIn('id', $selectedIds);
+                                        }
 
-                                    DB::commit();
+                                        $detachQuery->update(['linked_ticket_id' => null]);
+
+                                        if ($selectedIds !== []) {
+                                            $ticketModel::query()
+                                                ->whereIn('id', $selectedIds)
+                                                ->update(['linked_ticket_id' => $record->getKey()]);
+                                        }
+                                    });
                                 }),
                         ]),
                 ]),
