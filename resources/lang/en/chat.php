@@ -23,6 +23,12 @@ return [
         'command_key' => 'Command-Key',
         'enter_key' => 'Enter-Key',
         'lock_turn' => 'Lock turn to supporter',
+
+        'screenshot' => [
+            'capture' => 'Capture screenshot',
+            'permission_denied' => 'Permission denied',
+            'failed' => 'Failed to capture screenshot',
+        ],
     ],
 
     'list' => [

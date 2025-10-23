@@ -1,3 +1,8 @@
+:root.has-open-dialog {
+	height: 100vh;
+	overflow-y: hidden;
+}
+
 .avatar-entry {
 	font-size: var(--text-sm);
 	color: var(--color-gray-950);
@@ -53,6 +58,7 @@
 
 	padding-block: var(--spacing);
 	padding-inline: calc(var(--spacing) * 2);
+	border: 1px solid color-mix(in srgb, var(--border-color) 20%, transparent);
 	border: 1px solid rgba(from var(--border-color) r g b / 0.2);
 	border-radius: var(--radius-md);
 
