@@ -16,7 +16,7 @@ class TicketAuth
 
     public function authorizeTicketAccess(Ticket $ticket, ?Authenticatable $user): void
     {
-        $currentSender = $user?->id === $ticket->submitter_id
+        $currentSender = $user?->getAuthIdentifier() === $ticket->submitter_id
             ? ActivitySender::User
             : ActivitySender::Supporter;
 
