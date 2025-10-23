@@ -3,6 +3,7 @@
 namespace Padmission\Tickets;
 
 use Closure;
+use Composer\InstalledVersions;
 use Exception;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
@@ -29,6 +30,8 @@ final class ChatWidgetConfig
     public bool|Closure $allowFileUploads = false;
 
     public int|Closure $maxUploadFileSize = 10 * 1024 * 1024;
+
+    public bool|Closure $allowScreenshots = false;
 
     public static function make(): self
     {
@@ -61,6 +64,11 @@ final class ChatWidgetConfig
         bool|Closure $enable = true,
         int|Closure $maxFileSize = 10 * 1024 * 1024,
     ): self {
+
+        if (! InstalledVersions::isInstalled('league/flysystem-aws-s3-v3')) {
+            throw new Exception('Ticket Plugin: allowFileUploads() option requires league/flysystem-aws-s3-v3 package.');
+        }
+
         $this->allowFileUploads = $enable;
         $this->maxUploadFileSize = $maxFileSize;
 
@@ -75,6 +83,18 @@ final class ChatWidgetConfig
     public function getMaxUploadFileSize(): int
     {
         return value($this->maxUploadFileSize);
+    }
+
+    public function allowScreenshots(bool|Closure $enable = true): self
+    {
+        $this->allowScreenshots = $enable;
+
+        return $this;
+    }
+
+    public function getAllowScreenshots(): bool
+    {
+        return value($this->allowScreenshots);
     }
 
     /**
@@ -172,6 +192,7 @@ final class ChatWidgetConfig
             'userId' => $auth->getUserId(),
             'placeholder' => $this->getPlaceholder(),
             'introMessage' => $this->getIntroMessage(),
+            'allowScreenshots' => $this->getAllowScreenshots(),
             'allowFileUploads' => $this->getAllowFileUploads(),
             'maxUploadFileSize' => $this->getMaxUploadFileSize(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),

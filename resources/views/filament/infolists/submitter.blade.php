@@ -4,28 +4,28 @@
     $ticket = $getRecord();
 @endphp
 <x-dynamic-component :component="$getEntryWrapperView()" :entry="$entry">
-    @if ($ticket->submitter)
-        @php
-            $avatarUrl = Filament::getUserAvatarUrl($ticket->submitter);
-            $name = Filament::getUserName($ticket->submitter);
-        @endphp
-        <div class="flex gap-2">
+    <div class="avatar-entry">
+        @if ($ticket->submitter)
+            @php
+                $avatarUrl = Filament::getUserAvatarUrl($ticket->submitter);
+                $name = Filament::getUserName($ticket->submitter);
+            @endphp
+
             <x-filament::avatar
                 :src="$avatarUrl"
                 :name="$name"
                 size="sm"
             />
 
-            <div class="text-sm leading-6 text-gray-950 dark:text-white">
+            <span>
                 {{ $name }}
-            </div>
-        </div>
-    @elseif($ticket->submitter_data)
-        <div class="text-sm leading-6 text-gray-950 dark:text-white">
+            </span>
+        @elseif($ticket->submitter_data)
             {{ $ticket->submitter_data->name }}
-            <div class="break-words">
+
+            <div class="avatar-entry__email">
                 {{ $ticket->submitter_data->email }}
             </div>
-        </div>
-    @endif
+        @endif
+    </div>
 </x-dynamic-component>

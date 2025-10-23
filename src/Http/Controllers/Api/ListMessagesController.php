@@ -12,6 +12,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\TicketPlugin;
 
 class ListMessagesController
@@ -24,14 +25,11 @@ class ListMessagesController
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
         $ticket = $ticketModel::findOrFail($ticket);
 
+        app(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
+
         $currentSender = $request->user()->id === $ticket->submitter_id
             ? ActivitySender::User
             : ActivitySender::Supporter;
-
-        $isAuthorized = $currentSender === ActivitySender::User
-            || $request->user()->can('manage', $ticket);
-
-        abort_unless($isAuthorized, 403);
 
         $messages = $ticket
             ->ticketActivities()

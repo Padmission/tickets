@@ -39,7 +39,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
         $this->ensurePolicyIsRegistered();
 
-        $this->registerCssFiles();
+        $this->registerAssets();
         $this->registerBrowserSync();
     }
 
@@ -103,43 +103,43 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         }
     }
 
-    private function registerCssFiles(): void
+    private function registerAssets(): void
     {
-        $files = [
-            __DIR__.'/../resources/css/chat-component.css',
-            __DIR__.'/../resources/css/chat-widget.css',
-            __DIR__.'/../dist/chat-widget.js',
+        $assets = [
+            Css::make('chat-component', __DIR__.'/../resources/css/chat-component.css')->loadedOnRequest(),
+            Css::make('chat-widget', __DIR__.'/../resources/css/chat-widget.css')->loadedOnRequest(),
+            Css::make('tickets', __DIR__.'/../resources/css/tickets.css'),
+
+            Js::make('chat-widget', __DIR__.'/../dist/chat-widget.js')->loadedOnRequest(),
         ];
 
-        foreach ($files as $filepath) {
-            $name = pathinfo($filepath, PATHINFO_FILENAME);
-            $extension = pathinfo($filepath, PATHINFO_EXTENSION);
-            $type = $extension === 'css' ? 'css' : 'javascript';
-            $assetClass = $extension === 'css' ? Css::class : Js::class;
+        if (! $this->isDevMode()) {
+            FilamentAsset::register($assets, package: 'padmission/tickets');
 
-            if (! $this->isDevMode()) {
-                FilamentAsset::register([
-                    $assetClass::make($name, $filepath)->loadedOnRequest(),
-                ], package: 'padmission/tickets');
+            return;
+        }
 
-                continue;
-            }
+        foreach ($assets as $asset) {
+            /**
+             * @var Css|Js $asset
+             */
+            $asset->package('padmission/tickets');
 
-            Route::get("{$extension}/padmission/tickets/{$name}.{$extension}", function () use ($filepath, $type) {
-                if (file_exists($filepath)) {
-                    return response()->file($filepath, ['Content-Type' => 'text/'.$type]);
+            Route::get($asset->getRelativePublicPath(), static function () use ($asset) {
+                if (file_exists($asset->getPath())) {
+                    return response()->file($asset->getPath(), ['Content-Type' => 'text/'.($asset instanceof Css ? 'css' : 'javascript')]);
                 }
 
-                return response('', 404, ['Content-Type' => 'text/'.$type]);
+                return response('', 404, ['Content-Type' => 'text/plain']);
             });
 
-            $timestamp = file_exists($filepath) ? filemtime($filepath) : time();
+            $timestamp = file_exists($asset->getPath()) ? filemtime($asset->getPath()) : time();
 
             FilamentAsset::register([
-                $assetClass::make(
-                    $name,
-                    url("{$extension}/padmission/tickets/$name.$extension?t={$timestamp}")
-                )->loadedOnRequest(),
+                ($asset::class)::make(
+                    id: $asset->getId(),
+                    path: url($asset->getRelativePublicPath()."?t={$timestamp}")
+                )->loadedOnRequest($asset->isLoadedOnRequest()),
             ], package: 'padmission/tickets');
         }
     }

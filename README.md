@@ -13,11 +13,12 @@ Tickets is a comprehensive support ticket management system for Filament applica
 
 The package is using `orchestral/testbench` for testing against a Laravel app.
 
-`composer serve` will start the application as `http://tickets.test`. Make sure that test domain is available on your machine or change it to `http://localhost` in the `testbench.yaml` and `composer.json`. 
+`composer serve` will start the application as `http://127.0.0.1:8000`.
+
 
 ### Assets
 
-When running `composer serve` Filament the latest assets are automatically published.
+When running `composer serve` the latest Filament assets are automatically published.
 
 If you want to work on JS or CSS files, you can run:
 
@@ -26,9 +27,13 @@ npm install
 npm run dev
 ```
 
-This will start Vite, put the application in Dev Mode, remove existing Filament assets and serve the assets directly from the dist folder. It will also enable BrowserSync to reload the browser on changed.
+This will start Vite, put the application in Dev Mode, remove existing Filament assets and serve the assets directly from the dist folder. It will also enable BrowserSync to reload the browser on changes.
 
 Make sure you restart `npm run dev` if you restart `composer serve` or after you published the assets.
+
+### Storage
+
+To test storage features make sure to add a S3 compatible bucket to `testbench.yaml` env config. It defaults to a local minio install.
 
 ## Quick Start Examples
 

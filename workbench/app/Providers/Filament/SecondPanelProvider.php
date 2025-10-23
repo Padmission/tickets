@@ -24,16 +24,15 @@ use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
-class DefaultPanelProvider extends PanelProvider
+class SecondPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         Gate::policy(Ticket::class, TicketPolicy::class);
 
         return $panel
-            ->default()
-            ->id('default')
-            ->path('/')
+            ->id('second')
+            ->path('/second')
             ->login(Login::class)
             ->colors([
                 'primary' => [
@@ -79,12 +78,11 @@ class DefaultPanelProvider extends PanelProvider
                 TicketPlugin::make()
                     ->registerResources()
                     ->allSupportersQuery(User::query())
-                    ->allowLinkedTickets(only: ['second'])
                     ->showChatWidget(
                         config: ChatWidgetConfig::make()
-                            ->allowFileUploads(maxFileSize: 20 * 1024 * 1024)
-                            ->allowScreenshots()
+                        // ->allowFileUploads(maxFileSize: 20 * 1024)
                     )
+                // ->useDisposition()
             );
     }
 }

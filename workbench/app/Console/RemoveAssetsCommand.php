@@ -20,8 +20,8 @@ class RemoveAssetsCommand extends Command
 
     public function handle()
     {
-        $jsPath = Workbench::laravelPath().'/public/js/padmission-tickets';
-        $cssPath = Workbench::laravelPath().'/public/css/padmission-tickets';
+        $jsPath = Workbench::laravelPath().'/public/js/padmission/tickets';
+        $cssPath = Workbench::laravelPath().'/public/css/padmission/tickets';
 
         File::deleteDirectory($jsPath);
         File::deleteDirectory($cssPath);

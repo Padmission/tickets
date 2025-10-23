@@ -23,6 +23,25 @@ return [
                 'label' => 'Disposition',
             ],
         ],
+
+        'create_linked_ticket' => [
+            'label' => 'Create Linked Ticket',
+
+            'form' => [
+                'panel' => 'Panel',
+                'subject' => 'Subject',
+                'message' => 'Message',
+
+            ],
+
+            'notifications' => [
+                'success' => [
+                    'title' => 'Ticket created',
+                    'body' => 'A new ticket has been created and was linked to the current ticket.',
+                    'action_label' => 'Show Ticket',
+                ],
+            ],
+        ],
     ],
 
     'resources' => [
@@ -42,6 +61,15 @@ return [
             'last_message' => 'Last Message',
             'closed_at' => 'Closed At',
             'disposition' => 'Disposition',
+            'linked_to_ticket' => 'Parent Ticket',
+            'linked_tickets' => 'Child Tickets',
+
+            'tabs' => [
+                'all' => 'All Tickets',
+                'my' => 'My Tickets',
+                'linked' => 'All Linked Tickets',
+                'my_linked' => 'My Linked Tickets',
+            ],
         ],
 
         'statuses' => [

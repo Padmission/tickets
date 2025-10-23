@@ -93,14 +93,14 @@ class CreateMessageController
         foreach ($attachments as $attachment) {
             $actualSize = Storage::disk(config('padmission-tickets.attachments.disk'))->size($attachment->filepath);
 
-            if ($attachment->file_size === $actualSize - 1) {
+            if ($attachment->file_size === $actualSize) {
                 continue;
             }
 
             $attachments->each->delete();
 
             throw ValidationException::withMessages([
-                'attachment_id' => $attachment->id,
+                'attachment_id' => sprintf('File size of %d does not match the expected size %d for attachment %d.', $attachment->file_size, $actualSize, $attachment->id),
             ]);
         }
     }
