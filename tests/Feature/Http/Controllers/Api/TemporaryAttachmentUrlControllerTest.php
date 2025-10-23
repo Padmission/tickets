@@ -28,7 +28,7 @@ it('requires create permission', function () {
     $this
         ->postJson(route('padmission-tickets::api.temporary-attachment-url', [
             'ticket' => $ticket,
-        ]),['filepath' => 'asdf'])
+        ]), ['filepath' => 'asdf'])
         ->assertForbidden();
 });
 
