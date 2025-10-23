@@ -281,9 +281,9 @@
 	}
 
 	.message__attachments {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25em;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25em;
 		margin-top: .25em;
 	}
 
@@ -372,9 +372,9 @@
 		padding: 0;
 	}
 
-    &[data-preview-type="file"] {
-        aspect-ratio: revert;
-    }
+	&[data-preview-type="file"] {
+		aspect-ratio: revert;
+	}
 }
 
 .composer {
