@@ -12,7 +12,6 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketMetricsService
