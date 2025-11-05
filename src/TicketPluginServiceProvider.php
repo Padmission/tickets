@@ -2,11 +2,6 @@
 
 namespace Padmission\Tickets;
 
-use Padmission\Tickets\Services\TicketActivityService;
-use Padmission\Tickets\Services\EmailLogoService;
-use Padmission\Tickets\Services\EmailStyleService;
-use Padmission\Tickets\Services\TicketUrlService;
-use Padmission\Tickets\Services\NotificationRecipientService;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -14,6 +9,11 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
+use Padmission\Tickets\Services\EmailLogoService;
+use Padmission\Tickets\Services\EmailStyleService;
+use Padmission\Tickets\Services\NotificationRecipientService;
+use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketUrlService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 

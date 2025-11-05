@@ -2,10 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets;
 
-use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
-use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
-use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
-use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Carbon\CarbonImmutable;
 use Exception;
 use Filament\Actions\BulkActionGroup;
@@ -21,7 +17,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
-use Padmission\Tickets\Filament\Widgets;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;

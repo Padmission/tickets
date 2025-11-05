@@ -2,14 +2,6 @@
 
 namespace Padmission\Tickets;
 
-use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
-use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
-use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
-use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
-use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
-use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
-use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
-use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
 use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
@@ -20,8 +12,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
-use Padmission\Tickets\Filament\Resources;
-use Padmission\Tickets\Filament\Widgets;
+use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
+use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
+use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use RuntimeException;
 
 class TicketPlugin implements Plugin
