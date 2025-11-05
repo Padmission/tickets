@@ -158,7 +158,7 @@ it('sends success notification with action link', function () {
         ->assertNotified();
 });
 
-it('does not link ticket in notification when user has no access to target panel', function () {
+it('shows a link to the ticket in the users existing panel', function () {
     TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $mockedUser = partialMock(User::class)
@@ -180,7 +180,7 @@ it('does not link ticket in notification when user has no access to target panel
     $notifications = session()->get('filament.notifications');
 
     expect($notifications)->toHaveCount(1)
-        ->and($notifications[0]['actions'])->toBeEmpty();
+        ->and($notifications[0]['actions'])->not->toBeEmpty();
 });
 
 it('requires subject field', function () {
