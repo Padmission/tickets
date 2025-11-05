@@ -108,26 +108,21 @@ class CreateLinkedTicketAction extends Action
 
                 $livewire->data['parentTicket'] = $newTicket->id;
 
-                $canAccessPanel = Filament::auth()->user()->canAccessPanel(
-                    Filament::getPanel($targetPanelId),
-                );
-
                 Notification::make()
                     ->success()
                     ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.title'))
                     ->body(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.body'))
-                    ->when($canAccessPanel, fn (Notification $notification) => $notification->actions([
+                    ->actions([
                         Action::make('link')
                             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.action_label'))
-                            ->visible()
                             ->url(
                                 TicketResource::getUrl(
                                     'view',
                                     ['record' => $newTicket],
-                                    panel: $targetPanelId
+                                    panel: $currentPanelId
                                 )
                             ),
-                    ]))
+                    ])
                     ->send();
             });
     }
