@@ -22,6 +22,8 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
+use function count;
+
 class CreateLinkedTicketAction extends Action
 {
     public static function getDefaultName(): ?string
@@ -37,7 +39,14 @@ class CreateLinkedTicketAction extends Action
             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
             ->icon(Heroicon::Link)
             ->color('gray')
-            ->visible(fn (Ticket $record) => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0 && $record->parentTicket === null)
+            ->visible(function (Ticket $record) {
+                if ($record->panel !== Filament::getCurrentOrDefaultPanel()->getId()) {
+                    return false;
+                }
+
+                return count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0
+                    && $record->parentTicket === null;
+            })
             ->slideOver()
             ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)

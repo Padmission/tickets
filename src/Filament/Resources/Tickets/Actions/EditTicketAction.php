@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
@@ -25,7 +26,13 @@ class EditTicketAction extends EditAction
             ->slideOver()
             ->modalWidth(Width::Medium)
             ->closeModalByClickingAway(false)
-            ->hidden(fn ($record): bool => $record->isClosed)
+            ->hidden(function ($record): bool {
+                if ($record->panel !== Filament::getCurrentOrDefaultPanel()->getId()) {
+                    return true;
+                }
+
+                return $record->isClosed;
+            })
             ->schema([
                 TextInput::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))

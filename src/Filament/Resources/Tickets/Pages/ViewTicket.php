@@ -81,7 +81,7 @@ class ViewTicket extends EditRecord
                         ViewEntry::make('chat')->view('padmission-tickets::filament.infolists.chat'),
                     ]),
 
-                Grid::make()->columns(1)->schema([
+                Grid::make()->columnSpan(1)->columns(1)->schema([
                     Section::make()->columns(2)->schema([
                         TextEntry::make('status.display_name')
                             ->label(__('padmission-tickets::tickets.resources.tickets.status'))
