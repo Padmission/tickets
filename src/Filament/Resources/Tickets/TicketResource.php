@@ -2,6 +2,10 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets;
 
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Carbon\CarbonImmutable;
 use Exception;
 use Filament\Actions\BulkActionGroup;
@@ -44,9 +48,9 @@ class TicketResource extends Resource
     public static function getWidgets(): array
     {
         return [
-            Widgets\OpenTicketsWidget::class,
-            Widgets\OpenSupporterTickets::class,
-            Widgets\TicketCloseTimeWidget::class,
+            OpenTicketsWidget::class,
+            OpenSupporterTickets::class,
+            TicketCloseTimeWidget::class,
         ];
     }
 
@@ -101,6 +105,11 @@ class TicketResource extends Resource
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->html()
                     ->searchable(),
+
+                TextColumn::make('submitter.name')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('assignee.name')
                     ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
@@ -161,8 +170,8 @@ class TicketResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTickets::route('/'),
-            'view' => Pages\ViewTicket::route('/{record}/view'),
+            'index' => ListTickets::route('/'),
+            'view' => ViewTicket::route('/{record}/view'),
         ];
     }
 

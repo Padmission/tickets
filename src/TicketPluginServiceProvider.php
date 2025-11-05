@@ -2,6 +2,11 @@
 
 namespace Padmission\Tickets;
 
+use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\EmailLogoService;
+use Padmission\Tickets\Services\EmailStyleService;
+use Padmission\Tickets\Services\TicketUrlService;
+use Padmission\Tickets\Services\NotificationRecipientService;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -53,11 +58,11 @@ class TicketPluginServiceProvider extends PackageServiceProvider
      */
     protected function registerServices(): void
     {
-        $this->app->singleton(\Padmission\Tickets\Services\TicketActivityService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\EmailLogoService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\EmailStyleService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\TicketUrlService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\NotificationRecipientService::class);
+        $this->app->singleton(TicketActivityService::class);
+        $this->app->singleton(EmailLogoService::class);
+        $this->app->singleton(EmailStyleService::class);
+        $this->app->singleton(TicketUrlService::class);
+        $this->app->singleton(NotificationRecipientService::class);
     }
 
     private function registerAssets(): void

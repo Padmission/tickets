@@ -2,6 +2,14 @@
 
 namespace Padmission\Tickets;
 
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
+use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
+use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
+use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
 use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
@@ -64,19 +72,19 @@ class TicketPlugin implements Plugin
 
         if ($this->shouldRegisterResources()) {
             $panel->resources([
-                Resources\Tickets\TicketResource::class,
-                Resources\Statuses\StatusResource::class,
-                Resources\Dispositions\DispositionResource::class,
-                Resources\Priorities\PriorityResource::class,
+                TicketResource::class,
+                StatusResource::class,
+                DispositionResource::class,
+                PriorityResource::class,
             ]);
         }
 
         if ($this->shouldRegisterWidgets()) {
             $panel->widgets([
-                Widgets\OpenTicketsWidget::class,
-                Widgets\OpenSupporterTickets::class,
-                Widgets\TicketCloseTimeWidget::class,
-                Widgets\TicketBurndownChartWidget::class,
+                OpenTicketsWidget::class,
+                OpenSupporterTickets::class,
+                TicketCloseTimeWidget::class,
+                TicketBurndownChartWidget::class,
             ]);
         }
 

@@ -64,13 +64,13 @@ class ListTickets extends ListRecords
         $tabs['linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.linked'))
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentPanel()->getId()))
+                ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
             );
 
         $tabs['my_linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'))
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentPanel()->getId()))
+                ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
                 ->where('submitter_id', Filament::auth()->id())
             );
 

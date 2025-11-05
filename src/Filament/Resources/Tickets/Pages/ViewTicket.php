@@ -73,7 +73,7 @@ class ViewTicket extends EditRecord
     {
         return $schema
             ->columns(3)
-            ->schema([
+            ->components([
                 Section::make()
                     ->columnSpan(2)
                     ->extraAttributes(['class' => 'pad-ti-chat-section'])
