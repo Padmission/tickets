@@ -4,9 +4,13 @@ namespace Padmission\Tickets\Filament\Resources\Tickets;
 
 use Carbon\CarbonImmutable;
 use Exception;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\IconColumn;
@@ -171,6 +175,46 @@ class TicketResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('assign')
+                        ->label(__('padmission-tickets::tickets.resources.tickets.assign_to_supporter'))
+                        ->icon('heroicon-o-user-plus')
+                        ->form([
+                            Select::make('assignee_id')
+                                ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                                ->options(function () {
+                                    $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
+
+                                    if ($allSupportersQuery) {
+                                        return app()->call($allSupportersQuery)->pluck('name', 'id');
+                                    }
+
+                                    return [];
+                                })
+                                ->searchable()
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
+
+                            if ($allSupportersQuery) {
+                                $validSupporterIds = app()->call($allSupportersQuery)->pluck('id')->toArray();
+
+                                if (! in_array($data['assignee_id'], $validSupporterIds)) {
+                                    Notification::make()
+                                        ->title(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'))
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+                            }
+
+                            $records->each->update([
+                                'assignee_id' => $data['assignee_id'],
+                            ]);
+                        })
+                        ->successNotificationTitle(__('padmission-tickets::tickets.resources.tickets.assigned_successfully'))
+                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

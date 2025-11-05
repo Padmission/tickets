@@ -65,6 +65,9 @@ return [
             'linked_tickets' => 'Linked Tickets',
             'parent_ticket' => 'Parent Ticket',
             'child_tickets' => 'Child Tickets',
+            'assign_to_supporter' => 'Assign to Supporter',
+            'assigned_successfully' => 'Tickets assigned successfully',
+            'invalid_assignee' => 'Invalid assignee selected',
 
             'tabs' => [
                 'all' => 'All Tickets',
