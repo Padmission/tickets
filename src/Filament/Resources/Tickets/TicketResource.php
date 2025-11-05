@@ -46,7 +46,8 @@ class TicketResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::query()
+        /** @phpstan-ignore-next-line */
+        return (string) TicketPlugin::get()->getTicketQuery()
             ->open()
             ->where('panel', Filament::getCurrentOrDefaultPanel()->getId())
             ->where('assignee_id', auth()->id())
@@ -56,6 +57,11 @@ class TicketResource extends Resource
     public static function getModel(): string
     {
         return TicketPlugin::resolveModelClass(Ticket::class);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return TicketPlugin::get()->getTicketQuery();
     }
 
     public static function getWidgets(): array

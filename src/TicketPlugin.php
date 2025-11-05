@@ -20,6 +20,7 @@ use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
+use Padmission\Tickets\Models\Ticket;
 use RuntimeException;
 
 class TicketPlugin implements Plugin
@@ -51,6 +52,8 @@ class TicketPlugin implements Plugin
     protected mixed $allSupportersQuery = null;
 
     protected mixed $initialAssignmentSupportersQuery = null;
+
+    protected mixed $customTicketQuery = null;
 
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
@@ -358,5 +361,23 @@ class TicketPlugin implements Plugin
         }
 
         return $this->initialAssignmentSupportersQuery;
+    }
+
+    public function customizeTicketQuery(Closure $query): static
+    {
+        $this->customTicketQuery = $query;
+
+        return $this;
+    }
+
+    public function getTicketQuery(): Builder
+    {
+        $baseQuery = static::resolveModelClass(Ticket::class)::query();
+
+        if ($this->customTicketQuery) {
+            return app()->call($this->customTicketQuery, ['query' => $baseQuery]);
+        }
+
+        return $baseQuery;
     }
 }

@@ -41,7 +41,7 @@ class TicketMetricsService
         $cacheKey = __METHOD__.'-panel:'.$panelId;
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($panelId) {
-            $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
+            $query = TicketPlugin::get()->getTicketQuery()
                 ->whereNull('closed_at');
 
             if ($panelId) {
@@ -58,7 +58,7 @@ class TicketMetricsService
         $cacheKey = __METHOD__.'-panel:'.$panelId;
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($panelId) {
-            $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
+            $query = TicketPlugin::get()->getTicketQuery()
                 ->where('turn', Turn::Supporter)
                 ->whereNull('closed_at');
 
@@ -83,7 +83,7 @@ class TicketMetricsService
         $cacheKey = __METHOD__.'-'.$days.'-panel:'.$panelId;
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days, $panelId) {
-            $query = TicketPlugin::resolveModelClass(Ticket::class)::query()
+            $query = TicketPlugin::get()->getTicketQuery()
                 ->whereNotNull('closed_at');
 
             if ($panelId) {
@@ -171,11 +171,10 @@ class TicketMetricsService
         $cacheKey = __METHOD__.'-'.$days.'-panel:'.$panelId;
 
         return Cache::remember($cacheKey, $this->cacheTimeInSeconds, function () use ($days, $panelId) {
-            $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
             $startDate = CarbonImmutable::today()->subDays($days - 1);
             $endDate = CarbonImmutable::today()->endOfDay();
 
-            $openedQuery = $ticketModel::query()
+            $openedQuery = TicketPlugin::get()->getTicketQuery()
                 ->whereBetween('created_at', [$startDate, $endDate]);
 
             if ($panelId) {
@@ -188,7 +187,7 @@ class TicketMetricsService
                 ->pluck('count', 'day')
                 ->all();
 
-            $closedQuery = $ticketModel::query()
+            $closedQuery = TicketPlugin::get()->getTicketQuery()
                 ->whereNotNull('closed_at')
                 ->whereBetween('closed_at', [$startDate, $endDate]);
 
@@ -202,7 +201,7 @@ class TicketMetricsService
                 ->pluck('count', 'day')
                 ->all();
 
-            $openAtStartQuery = $ticketModel::query()
+            $openAtStartQuery = TicketPlugin::get()->getTicketQuery()
                 ->where('created_at', '<', $startDate)
                 ->where(function ($query) use ($startDate) {
                     $query
