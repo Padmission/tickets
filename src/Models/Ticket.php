@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -71,15 +70,13 @@ class Ticket extends Model
 
     /* Scopes */
 
-    #[Scope]
-    protected function open(Builder $query): void
+    public function scopeOpen(Builder $query): Builder
     {
-        $query->whereNull('closed_at');
+        return $query->whereNull('closed_at');
     }
 
-    #[Scope]
-    protected function closed(Builder $query): void
+    public function scopeClosed(Builder $query): Builder
     {
-        $query->whereNotNull('closed_at');
+        return $query->whereNotNull('closed_at');
     }
 }
