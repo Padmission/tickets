@@ -11,8 +11,9 @@ trait HasPanelAwareRelationships
     /**
      * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
      *
-     * @param class-string<TRelatedModel> $related
+     * @param  class-string<TRelatedModel>  $related
      * @return PanelAwareBelongsTo<TRelatedModel, $this>
+     *
      * @phpstan-return PanelAwareBelongsTo<TRelatedModel, $this>
      */
     protected function panelAwareBelongsTo(string $related, string $modelName, ?string $foreignKey = null, ?string $ownerKey = null, ?string $relation = null): PanelAwareBelongsTo
@@ -44,8 +45,9 @@ trait HasPanelAwareRelationships
     /**
      * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
      *
-     * @param class-string<TRelatedModel> $related
+     * @param  class-string<TRelatedModel>  $related
      * @return PanelAwareHasMany<TRelatedModel, $this>
+     *
      * @phpstan-return PanelAwareHasMany<TRelatedModel, $this>
      */
     protected function panelAwareHasMany(string $related, string $modelName, ?string $foreignKey = null, ?string $localKey = null): PanelAwareHasMany
