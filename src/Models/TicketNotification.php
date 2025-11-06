@@ -26,7 +26,14 @@ class TicketNotification extends Model
      */
     public function ticket(): BelongsTo
     {
-        return $this->belongsTo(TicketPlugin::resolveModelClass(Ticket::class));
+        $relation = $this->belongsTo(TicketPlugin::resolveModelClass(Ticket::class));
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticket']);
+        }
+
+        return $relation;
     }
 
     /**
@@ -34,8 +41,15 @@ class TicketNotification extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveUserModelClass()
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'user']);
+        }
+
+        return $relation;
     }
 }

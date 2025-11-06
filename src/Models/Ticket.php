@@ -21,6 +21,7 @@ use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
+use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
 /**
@@ -51,12 +52,26 @@ class Ticket extends Model
 
     public function parentTicket(): BelongsTo
     {
-        return $this->belongsTo(Ticket::class, 'linked_ticket_id', 'id');
+        $relation = $this->belongsTo(Ticket::class, 'linked_ticket_id', 'id');
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'parentTicket']);
+        }
+
+        return $relation;
     }
 
     public function childTickets(): HasMany
     {
-        return $this->hasMany(Ticket::class, 'linked_ticket_id', 'id');
+        $relation = $this->hasMany(Ticket::class, 'linked_ticket_id', 'id');
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'childTickets']);
+        }
+
+        return $relation;
     }
 
     /* Scopes */

@@ -10,9 +10,16 @@ trait HasAssignedTickets
 {
     public function assignedTickets(): HasMany
     {
-        return $this->hasMany(
+        $relation = $this->hasMany(
             TicketPlugin::resolveModelClass(Ticket::class),
             'assignee_id'
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignedTickets']);
+        }
+
+        return $relation;
     }
 }

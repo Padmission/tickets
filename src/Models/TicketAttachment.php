@@ -38,9 +38,16 @@ class TicketAttachment extends Model
      */
     public function ticket(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveModelClass(Ticket::class)
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticket']);
+        }
+
+        return $relation;
     }
 
     /**
@@ -48,9 +55,16 @@ class TicketAttachment extends Model
      */
     public function ticketActivity(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveModelClass(TicketActivity::class),
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticketActivity']);
+        }
+
+        return $relation;
     }
 
     // Methods

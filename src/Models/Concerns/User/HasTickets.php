@@ -12,13 +12,27 @@ trait HasTickets
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        return $this->hasMany($ticketModel, 'assignee_id');
+        $relation = $this->hasMany($ticketModel, 'assignee_id');
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignedTickets']);
+        }
+
+        return $relation;
     }
 
     public function submittedTickets(): HasMany
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        return $this->hasMany($ticketModel, 'submitter_id');
+        $relation = $this->hasMany($ticketModel, 'submitter_id');
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'submittedTickets']);
+        }
+
+        return $relation;
     }
 }

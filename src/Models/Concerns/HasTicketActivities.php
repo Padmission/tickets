@@ -34,19 +34,33 @@ trait HasTicketActivities
      */
     public function ticketActivities(): HasMany
     {
-        return $this->hasMany(
+        $relation = $this->hasMany(
             TicketPlugin::resolveModelClass(TicketActivity::class),
             'ticket_id'
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticketActivities']);
+        }
+
+        return $relation;
     }
 
     public function latestMessage(): HasOne
     {
-        return $this->hasOne(
+        $relation = $this->hasOne(
             TicketPlugin::resolveModelClass(TicketActivity::class),
             'ticket_id'
         )->ofMany(['created_at' => 'max'], function ($query) {
             $query->where('type', ActivityType::Message->value);
         });
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'latestMessage']);
+        }
+
+        return $relation;
     }
 }

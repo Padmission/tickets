@@ -47,9 +47,16 @@ trait InteractsWithNotifications
 
     public function ticketNotifications(): HasMany
     {
-        return $this->hasMany(
+        $relation = $this->hasMany(
             TicketPlugin::resolveModelClass(TicketNotification::class),
             'ticket_id'
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticketNotifications']);
+        }
+
+        return $relation;
     }
 }
