@@ -28,6 +28,7 @@ class ListMessagesController
 
         // Get the plugin for this ticket's panel and verify against custom query
         $panelPlugin = TicketPlugin::get($ticketRecord->panel);
+        /** @var Ticket $ticket */
         $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         app(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());

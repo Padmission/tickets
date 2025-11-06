@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
+/**
+ * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
+ * @template TDeclaringModel of \Illuminate\Database\Eloquent\Model
+ *
+ * @extends BelongsTo<TRelatedModel, TDeclaringModel>
+ */
 class PanelAwareBelongsTo extends BelongsTo
 {
     protected string $modelName;

@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
+/**
+ * @template TRelatedModel of \Illuminate\Database\Eloquent\Model
+ * @template TDeclaringModel of \Illuminate\Database\Eloquent\Model
+ *
+ * @extends HasMany<TRelatedModel, TDeclaringModel>
+ */
 class PanelAwareHasMany extends HasMany
 {
     protected string $modelName;

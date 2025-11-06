@@ -17,6 +17,7 @@ use Padmission\Tickets\Models\Concerns\CanBeAssigned;
 use Padmission\Tickets\Models\Concerns\CanBeClosed;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketActivities;
+use Padmission\Tickets\Models\Relations;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
@@ -51,7 +52,7 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
-    public function parentTicket(): BelongsTo
+    public function parentTicket(): Relations\PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
             Ticket::class,
@@ -61,7 +62,7 @@ class Ticket extends Model
         );
     }
 
-    public function childTickets(): HasMany
+    public function childTickets(): Relations\PanelAwareHasMany
     {
         return $this->panelAwareHasMany(
             Ticket::class,

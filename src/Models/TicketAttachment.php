@@ -13,6 +13,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Observers\TicketAttachmentObserver;
+use Padmission\Tickets\Models\Relations;
 use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketAttachmentObserver::class)]
@@ -36,9 +37,9 @@ class TicketAttachment extends Model
     ];
 
     /**
-     * @return BelongsTo<Ticket,$this>
+     * @return Relations\PanelAwareBelongsTo<Ticket,$this>
      */
-    public function ticket(): BelongsTo
+    public function ticket(): Relations\PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
             TicketPlugin::resolveModelClass(Ticket::class),
@@ -47,9 +48,9 @@ class TicketAttachment extends Model
     }
 
     /**
-     * @return BelongsTo<TicketActivity,$this>
+     * @return Relations\PanelAwareBelongsTo<TicketActivity,$this>
      */
-    public function ticketActivity(): BelongsTo
+    public function ticketActivity(): Relations\PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
             TicketPlugin::resolveModelClass(TicketActivity::class),

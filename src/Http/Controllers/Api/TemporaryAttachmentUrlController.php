@@ -27,6 +27,7 @@ class TemporaryAttachmentUrlController
 
         // Get the plugin for this ticket's panel and verify against custom query
         $panelPlugin = TicketPlugin::get($tempTicket->panel);
+        /** @var Ticket $ticketRecord */
         $ticketRecord = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         app(TicketAuth::class)->authorizeTicketAccess($ticketRecord, $request->user());

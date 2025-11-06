@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models\Observers;
 
 use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 
 class TicketActivityObserver
@@ -14,6 +15,8 @@ class TicketActivityObserver
 
     public function created(TicketActivity $activity): void
     {
-        event(new TicketActivityEvent($activity->ticket, $activity->type, null, auth()->user()));
+        /** @var Ticket|null $ticket */
+        $ticket = $activity->ticket;
+        event(new TicketActivityEvent($ticket, $activity->type, null, auth()->user()));
     }
 }
