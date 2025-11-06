@@ -6,10 +6,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Database\Factories\TicketNotificationFactory;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
-use Padmission\Tickets\Models\Relations;
 use Padmission\Tickets\TicketPlugin;
 
 #[UseFactory(TicketNotificationFactory::class)]
