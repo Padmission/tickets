@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Database\Factories\TicketNotificationFactory;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\TicketPlugin;
 
 #[UseFactory(TicketNotificationFactory::class)]
 class TicketNotification extends Model
 {
     use HasFactory;
+    use HasPanelAwareRelationships;
 
     protected $table = 'ticket_notifications';
 
@@ -26,14 +28,10 @@ class TicketNotification extends Model
      */
     public function ticket(): BelongsTo
     {
-        $relation = $this->belongsTo(TicketPlugin::resolveModelClass(Ticket::class));
-
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticket']);
-        }
-
-        return $relation;
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'ticket'
+        );
     }
 
     /**
@@ -41,15 +39,9 @@ class TicketNotification extends Model
      */
     public function user(): BelongsTo
     {
-        $relation = $this->belongsTo(
-            TicketPlugin::resolveUserModelClass()
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveUserModelClass(),
+            'user'
         );
-
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'user']);
-        }
-
-        return $relation;
     }
 }

@@ -15,13 +15,13 @@ use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\CanBeAssigned;
 use Padmission\Tickets\Models\Concerns\CanBeClosed;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketActivities;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
-use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
 /**
@@ -34,6 +34,7 @@ class Ticket extends Model
     use CanBeAssigned;
     use CanBeClosed;
     use HasFactory;
+    use HasPanelAwareRelationships;
     use HasTicketActivities;
     use HasTicketAttachments;
     use InteractsWithNotifications;
@@ -52,26 +53,22 @@ class Ticket extends Model
 
     public function parentTicket(): BelongsTo
     {
-        $relation = $this->belongsTo(Ticket::class, 'linked_ticket_id', 'id');
-
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'parentTicket']);
-        }
-
-        return $relation;
+        return $this->panelAwareBelongsTo(
+            Ticket::class,
+            'parentTicket',
+            'linked_ticket_id',
+            'id'
+        );
     }
 
     public function childTickets(): HasMany
     {
-        $relation = $this->hasMany(Ticket::class, 'linked_ticket_id', 'id');
-
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'childTickets']);
-        }
-
-        return $relation;
+        return $this->panelAwareHasMany(
+            Ticket::class,
+            'childTickets',
+            'linked_ticket_id',
+            'id'
+        );
     }
 
     /* Scopes */

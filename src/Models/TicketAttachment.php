@@ -11,6 +11,7 @@ use Padmission\Tickets\Database\Factories\TicketAttachmentFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Observers\TicketAttachmentObserver;
 use Padmission\Tickets\TicketPlugin;
 
@@ -19,6 +20,7 @@ use Padmission\Tickets\TicketPlugin;
 class TicketAttachment extends Model
 {
     use HasFactory;
+    use HasPanelAwareRelationships;
 
     protected $table = 'ticket_attachments';
 
@@ -38,16 +40,10 @@ class TicketAttachment extends Model
      */
     public function ticket(): BelongsTo
     {
-        $relation = $this->belongsTo(
-            TicketPlugin::resolveModelClass(Ticket::class)
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'ticket'
         );
-
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticket']);
-        }
-
-        return $relation;
     }
 
     /**
@@ -55,16 +51,10 @@ class TicketAttachment extends Model
      */
     public function ticketActivity(): BelongsTo
     {
-        $relation = $this->belongsTo(
+        return $this->panelAwareBelongsTo(
             TicketPlugin::resolveModelClass(TicketActivity::class),
+            'ticketActivity'
         );
-
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'ticketActivity']);
-        }
-
-        return $relation;
     }
 
     // Methods
