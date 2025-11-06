@@ -11,10 +11,17 @@ trait ManagesStatus
 {
     public function status(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveModelClass(TicketStatus::class)
         )
             ->withTrashed()
             ->withoutGlobalScope(CurrentPanelScope::class);
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'status']);
+        }
+
+        return $relation;
     }
 }

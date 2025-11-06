@@ -32,10 +32,17 @@ trait InteractsWithNotifications
      */
     public function submitter(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveUserModelClass(),
             'submitter_id'
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'submitter']);
+        }
+
+        return $relation;
     }
 
     public function ticketNotifications(): HasMany

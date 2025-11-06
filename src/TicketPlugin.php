@@ -55,6 +55,8 @@ class TicketPlugin implements Plugin
 
     protected mixed $customTicketQuery = null;
 
+    protected mixed $relationshipScopeModifier = null;
+
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
     public static function make(): self
@@ -379,5 +381,17 @@ class TicketPlugin implements Plugin
         }
 
         return $baseQuery;
+    }
+
+    public function modifyRelationshipScopes(Closure $callback): static
+    {
+        $this->relationshipScopeModifier = $callback;
+
+        return $this;
+    }
+
+    public function getRelationshipScopeModifier(): ?Closure
+    {
+        return $this->relationshipScopeModifier;
     }
 }

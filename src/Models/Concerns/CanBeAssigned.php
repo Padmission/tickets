@@ -9,9 +9,16 @@ trait CanBeAssigned
 {
     public function assignee(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveUserModelClass(),
             'assignee_id'
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
+        }
+
+        return $relation;
     }
 }

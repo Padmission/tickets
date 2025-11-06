@@ -11,10 +11,17 @@ trait ManagesPriority
 {
     public function priority(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveModelClass(TicketPriority::class)
         )
             ->withTrashed()
             ->withoutGlobalScope(CurrentPanelScope::class);
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'priority']);
+        }
+
+        return $relation;
     }
 }
