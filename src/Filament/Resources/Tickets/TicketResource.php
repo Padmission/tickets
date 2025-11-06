@@ -31,6 +31,7 @@ use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 use function app;
+use function auth;
 
 class TicketResource extends Resource
 {
@@ -41,6 +42,16 @@ class TicketResource extends Resource
     public static function getNavigationParentItem(): ?string
     {
         return null;
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        /** @phpstan-ignore-next-line */
+        return (string) TicketPlugin::get()->getTicketQuery()
+            ->open()
+            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId())
+            ->where('assignee_id', auth()->id())
+            ->count();
     }
 
     public static function getModel(): string
