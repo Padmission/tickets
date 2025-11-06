@@ -18,8 +18,8 @@ class PanelAwareBelongsTo extends BelongsTo
 
     public function __construct($query, $child, $foreignKey, $ownerKey, $relationName, string $modelName)
     {
-        parent::__construct($query, $child, $foreignKey, $ownerKey, $relationName);
         $this->modelName = $modelName;
+        parent::__construct($query, $child, $foreignKey, $ownerKey, $relationName);
     }
 
     public function getResults()

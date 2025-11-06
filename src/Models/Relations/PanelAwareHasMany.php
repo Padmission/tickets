@@ -18,8 +18,8 @@ class PanelAwareHasMany extends HasMany
 
     public function __construct($query, $parent, $foreignKey, $localKey, string $modelName)
     {
-        parent::__construct($query, $parent, $foreignKey, $localKey);
         $this->modelName = $modelName;
+        parent::__construct($query, $parent, $foreignKey, $localKey);
     }
 
     public function getResults()
