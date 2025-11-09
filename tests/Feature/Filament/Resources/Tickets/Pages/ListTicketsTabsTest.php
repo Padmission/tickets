@@ -20,6 +20,32 @@ it('shows all and my tickets tab', function () {
     expect($tabs['my']->getLabel())->toBe(__('padmission-tickets::tickets.resources.tickets.tabs.my'));
 });
 
+it('shows all tickets in "all" tab', function () {
+    (new TicketStatusSeeder)->run();
+
+    $user = $this->login();
+    $otherUser = User::factory()->create();
+
+    $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+
+    $tickets = $ticketModel::factory()
+        ->sequence(
+            ['assignee_id' => $user->id],
+            ['assignee_id' => $otherUser->id],
+            ['assignee_id' => null],
+        )
+        ->count(3)
+        ->open()
+        ->create([
+            'status_id' => TicketStatus::getOpenStatuses()->first()->id,
+        ]);
+
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
+        ->assertTableColumnHidden('panel')
+        ->assertCountTableRecords(3)
+        ->assertCanSeeTableRecords([$tickets->first()->id]);
+});
+
 it('shows my tickets tab filtered by assignee', function () {
     (new TicketStatusSeeder)->run();
 
@@ -41,6 +67,7 @@ it('shows my tickets tab filtered by assignee', function () {
         ]);
 
     Livewire::test(ListTickets::class, ['activeTab' => 'my'])
+        ->assertTableColumnHidden('panel')
         ->assertCountTableRecords(1)
         ->assertCanSeeTableRecords([$tickets->first()->id]);
 });
@@ -56,7 +83,7 @@ it('hides linked tickets tabs when feature disabled', function () {
 });
 
 it('shows linked tickets tabs when feature enabled', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test']);
 
     $this->login();
 
@@ -69,8 +96,9 @@ it('shows linked tickets tabs when feature enabled', function () {
     expect($tabs['my_linked']->getLabel())->toBe(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'));
 });
 
-it('filters linked tickets tab by linked ticket id', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+it('linked tickets only shows tickets that have a child ticket from the current panel', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test']);
+
     (new TicketStatusSeeder)->run();
 
     $this->login();
@@ -78,25 +106,25 @@ it('filters linked tickets tab by linked ticket id', function () {
     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
     $currentPanel = Filament::getCurrentPanel();
 
-    $parentTicket = $ticketModel::factory()->create();
+    $linkedTicket = $ticketModel::factory()
+        ->has(Ticket::factory(['panel' => $currentPanel->getId()]), 'childTickets')
+        ->create(['panel' => 'test2']);
 
-    $linkedTickets = $ticketModel::factory()
-        ->sequence(
-            ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => $parentTicket->id],
-            ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => null],
-            ['source_panel' => 'other-panel', 'linked_ticket_id' => $parentTicket->id],
-        )
-        ->open()
-        ->count(3)
-        ->create();
+    $ticketModel::factory()
+        ->has(Ticket::factory(['panel' => 'other-panel']), 'childTickets')
+        ->create(['panel' => 'test2']);
+
+    $ticketModel::factory()->create();
 
     Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
+        ->assertTableColumnVisible('panel')
+        ->assertTableColumnHidden('source_panel')
         ->assertCountTableRecords(1)
-        ->assertCanSeeTableRecords([$linkedTickets->first()->id]);
+        ->assertCanSeeTableRecords([$linkedTicket->id]);
 });
 
 it('filters my linked tickets tab by linked ticket id and submitter', function () {
-    TicketPlugin::get()->allowLinkedTickets();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test']);
     (new TicketStatusSeeder)->run();
 
     $user = $this->login();
@@ -105,18 +133,17 @@ it('filters my linked tickets tab by linked ticket id and submitter', function (
     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
     $currentPanel = Filament::getCurrentPanel();
 
-    $parentTicket = $ticketModel::factory()->create();
-
     $linkedTickets = $ticketModel::factory()
+        ->has(Ticket::factory(['panel' => $currentPanel->getId()]), 'childTickets')
         ->sequence(
-            ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => $parentTicket->id, 'submitter_id' => $user->id],
-            ['source_panel' => $currentPanel->getId(), 'linked_ticket_id' => $parentTicket->id, 'submitter_id' => $otherUser->id],
+            ['submitter_id' => $user->id],
+            ['submitter_id' => $otherUser->id],
         )
-        ->open()
-        ->count(2)
-        ->create();
+        ->create(['panel' => 'test2']);
 
     Livewire::test(ListTickets::class, ['activeTab' => 'my_linked'])
+        ->assertTableColumnVisible('panel')
+        ->assertTableColumnHidden('source_panel')
         ->assertCountTableRecords(1)
         ->assertCanSeeTableRecords([$linkedTickets->first()->id]);
 });

@@ -12,18 +12,17 @@ use Filament\Forms\FormsServiceProvider;
 use Filament\Infolists\InfolistsServiceProvider;
 use Filament\Notifications\NotificationsServiceProvider;
 use Filament\Panel;
+use Filament\PanelRegistry;
 use Filament\Schemas\SchemasServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Foundation\Testing\Concerns\InteractsWithViews;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Kirschbaum\PowerJoins\PowerJoinsServiceProvider;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\LivewireServiceProvider;
-use Mpbarlow\LaravelQueueDebouncer\Contracts\CacheKeyProvider;
-use Mpbarlow\LaravelQueueDebouncer\Contracts\UniqueIdentifierProvider;
 use Mpbarlow\LaravelQueueDebouncer\ServiceProvider as LaravelQueueDebounceServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
@@ -37,17 +36,19 @@ use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 class TestCase extends \Orchestra\Testbench\TestCase
 {
     use InteractsWithPest;
-    use InteractsWithViews;
     use LazilyRefreshDatabase;
+
+    public static array $registerPanels = [];
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        Testable::mixin(new LivewireAssertionMixin);
     }
 
     protected function getPackageProviders($app): array
     {
-
         $providers = [
             LaravelQueueDebounceServiceProvider::class,
 
@@ -82,38 +83,21 @@ class TestCase extends \Orchestra\Testbench\TestCase
 
         Gate::policy(Ticket::class, TestTicketPolicy::class);
 
+        $plugin = TicketPlugin::make()
+            ->allSupportersQuery(fn () => User::query())
+            ->registerResources();
+
         $panel = Panel::make()
             ->default()
             ->id('test')
             ->path('test')
-            ->colors([ // set default primary color for the panel, needed in CloseTicketActionTest.php
-                'primary' => '#4F46E5',
-            ])
-            ->plugin(
-                TicketPlugin::make()
-                    ->allSupportersQuery(fn () => User::query())
-                    ->registerResources()
-            );
+            ->plugin($plugin);
 
-        Filament::registerPanel(fn () => $panel);
-
+        Filament::registerPanel($panel);
         Filament::setCurrentPanel($panel);
 
-        $app->bind(CacheKeyProvider::class, fn () => new class implements CacheKeyProvider
-        {
-            public function getKey($job): string
-            {
-                return 'test_key_'.md5(serialize($job));
-            }
-        });
-
-        $app->bind(UniqueIdentifierProvider::class, fn () => new class implements UniqueIdentifierProvider
-        {
-            public function getIdentifier(): string
-            {
-                return 'test_identifier_'.uniqid();
-            }
-        });
+        Filament::registerPanel(Panel::make()->id('test2')->path('test2')->plugin(clone $plugin));
+        Filament::registerPanel(Panel::make()->id('test3')->path('test3')->plugin(clone $plugin));
     }
 
     // Helper methods
@@ -124,6 +108,24 @@ class TestCase extends \Orchestra\Testbench\TestCase
         $this->actingAs($user);
 
         return $user;
+    }
+
+    public function resetPanels(): void
+    {
+        static::$registerPanels = [];
+    }
+
+    public function registerPanels(array $panels): void
+    {
+        foreach ($panels as $panel) {
+            $this->registerPanel($panel);
+        }
+    }
+
+    public function registerPanel(Panel $panel): void
+    {
+        static::$registerPanels[$panel->getId()] = $panel;
+        // app(PanelRegistry::class)->register($panel);
     }
 
     public function modifyPlugin(Closure $callback): void

@@ -81,8 +81,15 @@ trait CanBeClosed
 
     public function disposition(): BelongsTo
     {
-        return $this->belongsTo(
+        $relation = $this->belongsTo(
             TicketPlugin::resolveModelClass(TicketDisposition::class)
         )->withTrashed();
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'disposition']);
+        }
+
+        return $relation;
     }
 }

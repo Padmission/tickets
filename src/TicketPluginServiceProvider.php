@@ -2,16 +2,18 @@
 
 namespace Padmission\Tickets;
 
-use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
-use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\EmailLogoService;
+use Padmission\Tickets\Services\EmailStyleService;
+use Padmission\Tickets\Services\NotificationRecipientService;
+use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketUrlService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -37,8 +39,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             $this->package->runsMigrations();
         }
 
-        $this->ensurePolicyIsRegistered();
-
         $this->registerAssets();
         $this->registerBrowserSync();
     }
@@ -58,49 +58,11 @@ class TicketPluginServiceProvider extends PackageServiceProvider
      */
     protected function registerServices(): void
     {
-        $this->app->singleton(\Padmission\Tickets\Services\TicketActivityService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\EmailLogoService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\EmailStyleService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\TicketUrlService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\NotificationRecipientService::class);
-    }
-
-    private function ensurePolicyIsRegistered(): void
-    {
-        if ($this->app->runningInConsole()) {
-            return;
-        }
-
-        $policy = Gate::getPolicyFor(
-            TicketPlugin::resolveModelClass(Ticket::class)
-        );
-
-        if ($policy === null) {
-            throw new Exception(
-                'Register a TicketPolicy via Gate::policy() facade in a ServiceProvider::register() method.'
-            );
-        }
-
-        /*
-         * We want to make sure users register a policy with certain methods.
-         * Because PHPs parameter types are contravariant we don't want to
-         * provide a class or interface to implement because we cannot provide
-         * type hints like `Authenticatable` in the methods leading to devs not
-         * able to define their own type hints as well.
-         */
-        $requiredMethods = [
-            'viewAny',
-            'create',
-            'manage',
-            'escalate',
-            'delete',
-        ];
-
-        foreach ($requiredMethods as $method) {
-            if (! method_exists($policy, $method)) {
-                throw new Exception("The policy should implement '$method()' method");
-            }
-        }
+        $this->app->singleton(TicketActivityService::class);
+        $this->app->singleton(EmailLogoService::class);
+        $this->app->singleton(EmailStyleService::class);
+        $this->app->singleton(TicketUrlService::class);
+        $this->app->singleton(NotificationRecipientService::class);
     }
 
     private function registerAssets(): void

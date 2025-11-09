@@ -6,14 +6,15 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Database\Factories\TicketNotificationFactory;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\TicketPlugin;
 
 #[UseFactory(TicketNotificationFactory::class)]
 class TicketNotification extends Model
 {
     use HasFactory;
+    use HasPanelAwareRelationships;
 
     protected $table = 'ticket_notifications';
 
@@ -22,20 +23,24 @@ class TicketNotification extends Model
     /* Relations */
 
     /**
-     * @return BelongsTo<Ticket, $this>
+     * @return Relations\PanelAwareBelongsTo<Ticket, $this>
      */
-    public function ticket(): BelongsTo
+    public function ticket(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(TicketPlugin::resolveModelClass(Ticket::class));
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'ticket'
+        );
     }
 
     /**
-     * @return BelongsTo<Model&Authenticatable, $this>
+     * @return Relations\PanelAwareBelongsTo<Model&Authenticatable, $this>
      */
-    public function user(): BelongsTo
+    public function user(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(
-            TicketPlugin::resolveUserModelClass()
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveUserModelClass(),
+            'user'
         );
     }
 }

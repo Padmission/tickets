@@ -22,8 +22,14 @@ class ListMessagesController
 
     public function __invoke(Request $request, $ticket)
     {
+        // Remove global scopes to find the ticket and get its panel
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-        $ticket = $ticketModel::findOrFail($ticket);
+        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+
+        // Get the plugin for this ticket's panel and verify against custom query
+        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
+        /** @var Ticket $ticket */
+        $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         app(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
 

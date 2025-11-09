@@ -39,7 +39,13 @@ class CreateMessageController
 
         $this->validateAttachments($validated['attachment_ids']);
 
-        $ticket = $ticketModel::findOrFail($ticket);
+        // Remove global scopes to find the ticket and get its panel
+        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+
+        // Get the plugin for this ticket's panel and verify against custom query
+        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
+        /** @var Ticket $ticket */
+        $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         $messages = collect();
 

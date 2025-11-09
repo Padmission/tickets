@@ -8,15 +8,16 @@ use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Database\Factories\TicketActivityFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\TicketPlugin;
 
 /**
@@ -27,6 +28,7 @@ use Padmission\Tickets\TicketPlugin;
 class TicketActivity extends Model
 {
     use HasFactory;
+    use HasPanelAwareRelationships;
     use HasTicketAttachments;
 
     protected $table = 'ticket_activities';
@@ -42,22 +44,24 @@ class TicketActivity extends Model
     ];
 
     /**
-     * @return BelongsTo<Ticket,$this>
+     * @return Relations\PanelAwareBelongsTo<Ticket,$this>
      */
-    public function ticket(): BelongsTo
+    public function ticket(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Ticket::class)
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'ticket'
         );
     }
 
     /**
-     * @return BelongsTo<Model&Authenticatable, $this>
+     * @return Relations\PanelAwareBelongsTo<Model&Authenticatable, $this>
      */
-    public function user(): BelongsTo
+    public function user(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(
-            TicketPlugin::resolveUserModelClass()
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveUserModelClass(),
+            'user'
         );
     }
 
@@ -93,12 +97,12 @@ class TicketActivity extends Model
                 'to' => Turn::tryFrom($this->data['to'])->getLabel(),
             ]),
             ActivityType::StatusChanged => __('padmission-tickets::activities.status_changed', [
-                'from' => TicketStatus::find($this->data['from'])->display_name,
-                'to' => TicketStatus::find($this->data['to'])->display_name,
+                'from' => TicketStatus::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['from'])->display_name,
+                'to' => TicketStatus::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['to'])->display_name,
             ]),
             ActivityType::PriorityChanged => __('padmission-tickets::activities.priority_changed', [
-                'from' => TicketPriority::find($this->data['from'])->display_name,
-                'to' => TicketPriority::find($this->data['to'])->display_name,
+                'from' => TicketPriority::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['from'])->display_name,
+                'to' => TicketPriority::withoutGlobalScope(CurrentPanelScope::class)->find($this->data['to'])->display_name,
             ]),
             default => $value
         });

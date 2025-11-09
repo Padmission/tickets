@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Actions;
 
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
@@ -11,6 +12,7 @@ class GetDefaultPriorityForPanel
     public function __invoke(string $panelId): TicketPriority
     {
         $defaultPriority = TicketPlugin::resolveModelClass(TicketPriority::class)::query()
+            ->withoutGlobalScope(CurrentPanelScope::class)
             ->where('panel', $panelId)
             ->orderBy('order', 'asc')
             ->first();

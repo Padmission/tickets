@@ -21,15 +21,15 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\TicketPlugin;
 
-class SecondPanelProvider extends PanelProvider
+class ThirdPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->id('second')
-            ->path('/second')
-            ->brandName('Tickets Package: Second')
+            ->id('third')
+            ->path('/third')
             ->login(Login::class)
+            ->brandName('Tickets Package: Third')
             ->colors([
                 'primary' => [
                     50 => '238, 246, 251',
@@ -74,7 +74,6 @@ class SecondPanelProvider extends PanelProvider
                 TicketPlugin::make()
                     ->registerResources()
                     ->allSupportersQuery(User::query())
-                    ->allowLinkedTicketsTo(panelIds: ['third'])
                     ->showChatWidget(
                         config: ChatWidgetConfig::make()
                         // ->allowFileUploads(maxFileSize: 20 * 1024)

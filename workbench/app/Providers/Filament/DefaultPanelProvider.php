@@ -4,7 +4,6 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Login;
 use App\Models\User;
-use App\Policies\TicketPolicy;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -18,22 +17,19 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Padmission\Tickets\ChatWidgetConfig;
-use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class DefaultPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        Gate::policy(Ticket::class, TicketPolicy::class);
-
         return $panel
             ->default()
             ->id('default')
             ->path('/')
+            ->brandName('Tickets Package: Default')
             ->login(Login::class)
             ->colors([
                 'primary' => [
@@ -79,7 +75,7 @@ class DefaultPanelProvider extends PanelProvider
                 TicketPlugin::make()
                     ->registerResources()
                     ->allSupportersQuery(User::query())
-                    ->allowLinkedTickets(only: ['second'])
+                    ->allowLinkedTicketsTo(panelIds: ['second', 'third'])
                     ->showChatWidget(
                         config: ChatWidgetConfig::make()
                             ->allowFileUploads(maxFileSize: 20 * 1024 * 1024)

@@ -2,18 +2,18 @@
 
 namespace Padmission\Tickets\Models;
 
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\CanBeAssigned;
 use Padmission\Tickets\Models\Concerns\CanBeClosed;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketActivities;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
@@ -32,6 +32,7 @@ class Ticket extends Model
     use CanBeAssigned;
     use CanBeClosed;
     use HasFactory;
+    use HasPanelAwareRelationships;
     use HasTicketActivities;
     use HasTicketAttachments;
     use InteractsWithNotifications;
@@ -48,25 +49,45 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
-    public function linkedToTicket(): BelongsTo
+    public function parentTicket(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(Ticket::class, 'linked_ticket_id', 'id');
+        return $this->panelAwareBelongsTo(
+            Ticket::class,
+            'parentTicket',
+            'linked_ticket_id',
+            'id'
+        );
     }
 
-    public function linkedTickets(): HasMany
+    public function childTickets(): Relations\PanelAwareHasMany
     {
-        return $this->hasMany(Ticket::class, 'linked_ticket_id', 'id');
+        return $this->panelAwareHasMany(
+            Ticket::class,
+            'childTickets',
+            'linked_ticket_id',
+            'id'
+        );
     }
 
     /* Scopes */
 
-    protected function scopeOpen(Builder $query): void
+    public function scopeOpen(Builder $query): Builder
     {
-        $query->whereNull('closed_at');
+        return $query->whereNull('closed_at');
     }
 
-    protected function scopeClosed(Builder $query): void
+    public function scopeClosed(Builder $query): Builder
     {
-        $query->whereNotNull('closed_at');
+        return $query->whereNotNull('closed_at');
+    }
+
+    public function isInCurrentPanel(): bool
+    {
+        return $this->panel === Filament::getCurrentOrDefaultPanel()->getId();
+    }
+
+    public function isNotInCurrentPanel(): bool
+    {
+        return $this->panel !== Filament::getCurrentOrDefaultPanel()->getId();
     }
 }

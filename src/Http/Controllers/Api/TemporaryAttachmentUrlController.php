@@ -21,8 +21,14 @@ class TemporaryAttachmentUrlController
             'filepath' => ['required', 'string', 'max:255'],
         ]);
 
+        // Remove global scopes to find the ticket and get its panel
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-        $ticketRecord = $ticketModel::findOrFail($ticket);
+        $tempTicket = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+
+        // Get the plugin for this ticket's panel and verify against custom query
+        $panelPlugin = TicketPlugin::get($tempTicket->panel);
+        /** @var Ticket $ticketRecord */
+        $ticketRecord = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         app(TicketAuth::class)->authorizeTicketAccess($ticketRecord, $request->user());
 

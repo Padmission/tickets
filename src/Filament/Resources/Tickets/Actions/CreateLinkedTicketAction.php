@@ -22,6 +22,8 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
+use function count;
+
 class CreateLinkedTicketAction extends Action
 {
     public static function getDefaultName(): ?string
@@ -37,7 +39,14 @@ class CreateLinkedTicketAction extends Action
             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
             ->icon(Heroicon::Link)
             ->color('gray')
-            ->visible(fn (Ticket $record) => TicketPlugin::get()->hasLinkedTickets() && $record->linkedToTicket === null)
+            ->visible(function (Ticket $record) {
+                if ($record->isNotInCurrentPanel()) {
+                    return false;
+                }
+
+                return count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0
+                    && $record->parentTicket === null;
+            })
             ->slideOver()
             ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)
@@ -46,9 +55,9 @@ class CreateLinkedTicketAction extends Action
                 Select::make('panel')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
                     ->required()
-                    ->visible(fn () => count(TicketPlugin::get()->getPanelsForLinkedTicketCreation()) > 1)
+                    ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 1)
                     ->options(
-                        collect(TicketPlugin::get()->getPanelsForLinkedTicketCreation())
+                        collect(TicketPlugin::get()->getLinkedTicketParentPanels())
                             ->mapWithKeys(fn (Panel $panel) => [$panel->getId() => ucfirst($panel->getId())])
                     ),
 
@@ -64,7 +73,7 @@ class CreateLinkedTicketAction extends Action
             ->action(function (array $data, ViewTicket $livewire) {
                 $ticket = TicketPlugin::resolveModelClass(Ticket::class);
                 $currentPanelId = Filament::getCurrentOrDefaultPanel()->getId();
-                $targetPanelId = $data['panel'] ?? $currentPanelId;
+                $targetPanelId = $data['panel'] ?? array_keys(TicketPlugin::get()->getLinkedTicketParentPanels())[0];
 
                 $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
                 $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
@@ -92,12 +101,12 @@ class CreateLinkedTicketAction extends Action
                  */
                 $record = $livewire->record;
 
-                $record->linkedToTicket()->associate($newTicket);
+                $record->parentTicket()->associate($newTicket);
                 $record->save();
 
                 DB::commit();
 
-                $livewire->data['linkedTicket'] = $newTicket->id;
+                $livewire->data['parentTicket'] = $newTicket->id;
 
                 Notification::make()
                     ->success()
@@ -106,7 +115,13 @@ class CreateLinkedTicketAction extends Action
                     ->actions([
                         Action::make('link')
                             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.action_label'))
-                            ->url(TicketResource::getUrl('view', ['record' => $newTicket])),
+                            ->url(
+                                TicketResource::getUrl(
+                                    'view',
+                                    ['record' => $newTicket],
+                                    panel: $currentPanelId
+                                )
+                            ),
                     ])
                     ->send();
             });

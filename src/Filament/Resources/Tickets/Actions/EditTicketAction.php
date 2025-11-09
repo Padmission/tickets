@@ -8,6 +8,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Blade;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class EditTicketAction extends EditAction
@@ -25,7 +26,13 @@ class EditTicketAction extends EditAction
             ->slideOver()
             ->modalWidth(Width::Medium)
             ->closeModalByClickingAway(false)
-            ->hidden(fn ($record): bool => $record->isClosed)
+            ->hidden(function (Ticket $record): bool {
+                if ($record->isNotInCurrentPanel()) {
+                    return true;
+                }
+
+                return $record->isClosed;
+            })
             ->schema([
                 TextInput::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
@@ -84,6 +91,7 @@ class EditTicketAction extends EditAction
 
                         return $query;
                     })
+                    ->preload()
                     ->searchable()
                     ->required(),
             ]);

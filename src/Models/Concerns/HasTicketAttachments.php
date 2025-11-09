@@ -13,9 +13,18 @@ trait HasTicketAttachments
      */
     public function attachments(): HasMany
     {
-        return $this->hasMany(
+        $foreignKey = $this->getTable() === 'tickets' ? 'ticket_id' : 'activity_id';
+
+        $relation = $this->hasMany(
             TicketPlugin::resolveModelClass(TicketAttachment::class),
-            foreignKey: 'activity_id',
+            foreignKey: $foreignKey,
         );
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'attachments']);
+        }
+
+        return $relation;
     }
 }
