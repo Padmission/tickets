@@ -762,6 +762,7 @@ customElements.define(
 				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
+                this.dispatchEvent(new CustomEvent('message-sent'))
 			} catch (error) {
 				console.log("Sending failed", error);
 				this.setError(__("chat.error"));

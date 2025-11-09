@@ -12,6 +12,7 @@ use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\On;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
@@ -67,6 +68,14 @@ class ViewTicket extends EditRecord
     protected function getFormActions(): array
     {
         return [];
+    }
+
+    #[On('message-sent')]
+    public function rerenderAfterMessage()
+    {
+        $this->skipRender();
+        $this->partiallyRenderSchemaComponent('form.turn');
+        $this->partiallyRenderSchemaComponent('form.latestMessage.created_at');
     }
 
     public function form(Schema $schema): Schema

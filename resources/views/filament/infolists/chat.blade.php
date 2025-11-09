@@ -39,12 +39,22 @@
     </style>
 
     <chat-component
+        id="supporter-chat"
         ticket-id="{{ $this->record->id }}"
         config="{{ $config->toJs() }}"
         scroll-threshold="100"
         polling-interval="10000"
         has-elevated-rights="true"
     ></chat-component>
+
+    <script>
+        const chat = document.getElementById('supporter-chat')
+
+        chat.addEventListener('message-sent', (event) => {
+            console.log('got a message from chat', Livewire)
+            Livewire.dispatch('message-sent');
+        })
+    </script>
 
     <script
         src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission/tickets') }}"
