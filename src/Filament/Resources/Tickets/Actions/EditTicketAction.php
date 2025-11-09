@@ -3,12 +3,12 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
 use Filament\Actions\EditAction;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Blade;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class EditTicketAction extends EditAction
@@ -26,8 +26,8 @@ class EditTicketAction extends EditAction
             ->slideOver()
             ->modalWidth(Width::Medium)
             ->closeModalByClickingAway(false)
-            ->hidden(function ($record): bool {
-                if ($record->panel !== Filament::getCurrentOrDefaultPanel()->getId()) {
+            ->hidden(function (Ticket $record): bool {
+                if ($record->isNotInCurrentPanel()) {
                     return true;
                 }
 

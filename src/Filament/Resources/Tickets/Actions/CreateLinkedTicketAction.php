@@ -40,7 +40,7 @@ class CreateLinkedTicketAction extends Action
             ->icon(Heroicon::Link)
             ->color('gray')
             ->visible(function (Ticket $record) {
-                if ($record->panel !== Filament::getCurrentOrDefaultPanel()->getId()) {
+                if ($record->isNotInCurrentPanel()) {
                     return false;
                 }
 

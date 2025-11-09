@@ -372,6 +372,9 @@ class TicketPlugin implements Plugin
         return $this;
     }
 
+    /**
+     * @return Builder<Ticket>
+     */
     public function getTicketQuery(): Builder
     {
         $baseQuery = static::resolveModelClass(Ticket::class)::query();

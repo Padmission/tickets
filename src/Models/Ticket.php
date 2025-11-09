@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models;
 
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -78,5 +79,15 @@ class Ticket extends Model
     public function scopeClosed(Builder $query): Builder
     {
         return $query->whereNotNull('closed_at');
+    }
+
+    public function isInCurrentPanel(): bool
+    {
+        return $this->panel === Filament::getCurrentOrDefaultPanel()->getId();
+    }
+
+    public function isNotInCurrentPanel(): bool
+    {
+        return $this->panel !== Filament::getCurrentOrDefaultPanel()->getId();
     }
 }
