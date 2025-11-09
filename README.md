@@ -376,6 +376,22 @@ TicketPlugin::make()
 - Configurable OTP expiration time
 - Session-based authentication for verified users
 
+#### Documentation URL
+
+You can add a button to the chat widget that opens your documentation in a new tab using `->documentationUrl()`.
+
+```php
+use Filament\Support\Colors\Color;
+use Padmission\Tickets\ChatWidgetConfig;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->showChatWidget(
+        config: ChatWidgetConfig::make()->documentationUrl(url('/docs'))
+    );
+```
+
+
 #### File Uploads
 
 If you want to allow users to upload files you can use the `->allowFileUploads()` method on the `ChatWidgetConfig`:
