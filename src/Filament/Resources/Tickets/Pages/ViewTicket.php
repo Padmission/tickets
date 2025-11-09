@@ -171,14 +171,10 @@ class ViewTicket extends EditRecord
                                     $selectedIds = $state === null ? [] : array_values((array) $state);
 
                                     DB::transaction(function () use ($ticketModel, $record, $selectedIds) {
-                                        $detachQuery = $ticketModel::query()
-                                            ->where('linked_ticket_id', $record->getKey());
-
-                                        if ($selectedIds !== []) {
-                                            $detachQuery->whereNotIn('id', $selectedIds);
-                                        }
-
-                                        $detachQuery->update(['linked_ticket_id' => null]);
+                                        $ticketModel::query()
+                                            ->where('linked_ticket_id', $record->getKey())
+                                            ->when($selectedIds !== [], fn ($query) => $query->whereNotIn('id', $selectedIds))
+                                            ->update(['linked_ticket_id' => null]);
 
                                         if ($selectedIds !== []) {
                                             $ticketModel::query()

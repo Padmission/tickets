@@ -25,6 +25,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
+use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
@@ -49,7 +50,7 @@ class TicketResource extends Resource
         /** @phpstan-ignore-next-line */
         return (string) TicketPlugin::get()->getTicketQuery()
             ->open()
-            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId())
+            ->tap(new CurrentPanelScope)
             ->where('assignee_id', auth()->id())
             ->count();
     }
