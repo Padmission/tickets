@@ -131,7 +131,7 @@ button {
 }
 
 .button {
-    display: inline-block;
+	display: inline-block;
 	width: 100%;
 	padding: 0.75rem 1rem;
 	background-color: var(--color-primary);
@@ -139,10 +139,10 @@ button {
 	font-size: 0.875rem;
 	font-weight: 500;
 	line-height: 1.25rem;
-    text-decoration: none;
+	text-decoration: none;
 	border: none;
 	border-radius: 0.5rem;
-    margin-bottom: .5em;
+	margin-bottom: .5em;
 	text-align: center;
 	box-shadow: var(--shadow-sm);
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -166,11 +166,11 @@ button {
 		transition-duration: 0.1s;
 	}
 
-    &:has(span:not(.sr-only) + svg) {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
+	&:has(span:not(.sr-only) + svg) {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
 
 	svg {
 		display: block;
