@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
+use Livewire\Component;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\TicketPlugin;
@@ -47,11 +48,13 @@ class CloseTicketAction extends Action
             ]);
         }
 
-        $this->action(function (Ticket $record, $data) {
+        $this->action(function (Ticket $record, Component $livewire, $data) {
             $record->close(
                 dispositionId: $data['disposition'] ?? null,
                 closedById: Filament::auth()->id()
             );
+
+            $livewire->dispatch('refresh-sidebar');
         });
     }
 
