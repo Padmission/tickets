@@ -35,6 +35,7 @@ return [
         'heading' => 'Support center',
         'subheading' => 'How can we help you?',
         'create_ticket' => 'Open New Ticket',
+        'go_to_docs' => 'Open Documentation',
         'tickets_heading' => 'Your Tickets',
         'no_messages' => 'No messages yet',
         'needs_attention' => 'Needs attention',
