@@ -45,6 +45,9 @@
 	--dialog-min-height: 41em;
 	--dialog-max-height: 60svh;
 
+	--scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
+	--scrollbar-thumb-hover-bg: rgba(255, 255, 255, 0.3);
+
 	display: block !important;
 	color: var(--color-text-primary);
 	background-color: var(--color-surface);
@@ -111,6 +114,7 @@ h2 {
 
 h3 {
 	margin-top: 2rem;
+    margin-bottom: 1em;
 	font-size: 1.125rem;
 	line-height: 1.75rem;
 	color: var(--color-text-primary);
@@ -485,15 +489,11 @@ h2 {
 	margin-bottom: 1rem;
 }
 
-.chat-list-tickets {
-	header {
-		align-items: start;
-	}
-}
-
+.chat-list-tickets,
 .chat-view-ticket {
 	display: flex;
 	flex-direction: column;
+    height: 100%;
 
 	header {
 		position: absolute;
@@ -513,6 +513,37 @@ h2 {
 			}
 		}
 	}
+
+    main {
+        position: absolute;
+        inset: 0;
+        top: 4rem;
+        overflow-y: auto;
+        padding-inline: 1rem;
+
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb-bg) transparent;
+
+        &::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb-bg);
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        &::-webkit-scrollbar-thumb:hover {
+            background-color: var(--scrollbar-thumb-hover-bg);
+        }
+    }
 
 	h2 {
 		font-size: 1rem;

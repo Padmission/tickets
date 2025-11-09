@@ -85,6 +85,8 @@ customElements.define(
 			return render(`
                 <div class="chat-list-tickets">
                     <header>
+                        <h2>Support Center</h2>
+
                         <form data-close-dialog>
                             <button
                                 class="button-icon"
@@ -96,23 +98,25 @@ customElements.define(
                         </form>
                     </header>
 
-                    <h2>
-                        ${__('list.heading')}
-                    </h2>
+                    <main>
+                        <h3>
+                            ${__('list.heading')}
+                        </h3>
 
-                    <button
-                        class="button"
-                        @click="createTicket"
-                    >
-                        <span>${__('list.create_ticket')}</span>
+                        <button
+                            class="button"
+                            @click="createTicket"
+                        >
+                            <span>${__('list.create_ticket')}</span>
 
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
-                    </button>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
 
-                    <h3>${__('list.tickets_heading')}</h3>
+                        <h3>${__('list.tickets_heading')}</h3>
 
-                    <div data-ticket-list>
-                    </div>
+                        <div data-ticket-list>
+                        </div>
+                    </main>
                 </div>
             `);
 		}
