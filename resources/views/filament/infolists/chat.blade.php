@@ -3,6 +3,10 @@
     use Filament\Support\Facades\FilamentAsset;use Padmission\Tickets\TicketPlugin;
 
     $config = TicketPlugin::get()->getChatWidgetConfig();
+
+    $config = clone $config;
+    $config->allowScreenshots(false);
+
     $primaryColor = $config->getPrimaryColor();
 @endphp
 <div
