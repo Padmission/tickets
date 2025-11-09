@@ -32,9 +32,12 @@ return [
     ],
 
     'list' => [
-        'heading' => 'How can we help you?',
+        'heading' => 'Support center',
+        'subheading' => 'How can we help you?',
         'create_ticket' => 'Open New Ticket',
         'tickets_heading' => 'Your Tickets',
+        'no_messages' => 'No messages yet',
+        'needs_attention' => 'Needs attention',
     ],
 
     'view' => [

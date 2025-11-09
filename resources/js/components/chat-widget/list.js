@@ -18,23 +18,28 @@ customElements.define(
 			const node = render(`
                 <ul class="ticket-list">
                     ${tickets.map((ticket) => `
-                        <li>
-                            <button
-                                data-open-ticket="${ticket.id}"
-                                class="ticket"
-                            >
-                                <span class="ticket__id">#${ticket.id}</span>
-
-                                <span class="ticket__header">
-                                    <h4 class="ticket__title">${ticket.subject}</h4>
-                                    <date class="ticket__date">${ticket.updated_at}</date>
-                                </span>
-                                <span class="ticket__description">
-                                    ${ticket.latest_message ? ticket.latest_message : "No messages yet"}
-                                </span>
-                            </button>
-                        </li>
-                    `,).join("")}
+                            <li>
+                                <button
+                                    data-open-ticket="${ticket.id}"
+                                    class="ticket"
+                                >
+                                    <div class="ticket__header">
+                                        <div>
+                                            <span class="badge ticket__id">#${ticket.id}</span>
+                                            <span class="badge" style="--color: ${ticket.status.color}">${ticket.status.display_name}</span>
+                                            ${ticket.needs_attention ? `<span class="badge" style="--color: #f59e0b">${__('list.needs_attention')}</span>` : ''}
+                                        </div>
+                                        <div>
+                                            <h4 class="ticket__title">${ticket.subject}</h4>
+                                            <date class="ticket__date">${ticket.updated_at}</date>
+                                        </div>
+                                    </div>
+                                    <div class="ticket__description">
+                                        ${ticket.latest_message ? ticket.latest_message : __('list.no_messages')}
+                                    </div>
+                                </button>
+                            </li>
+                        `).join("")}
                 </ul>
             `);
 
@@ -85,7 +90,7 @@ customElements.define(
 			return render(`
                 <div class="chat-list-tickets">
                     <header>
-                        <h2>Support Center</h2>
+                        <h2>${__('list.heading')}</h2>
 
                         <form data-close-dialog>
                             <button
@@ -100,7 +105,7 @@ customElements.define(
 
                     <main>
                         <h3>
-                            ${__('list.heading')}
+                            ${__('list.subheading')}
                         </h3>
 
                         <button
