@@ -797,6 +797,7 @@ You can also implement complex notification logic based on your business require
         return NotificationRecipient::Both;
     }
 )
+```
 
 ### Activity Tracking
 
