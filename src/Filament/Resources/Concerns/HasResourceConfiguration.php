@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Concerns;
 
 use Closure;
+use Filament\Pages\Enums\SubNavigationPosition;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -22,6 +23,10 @@ trait HasResourceConfiguration
 
     public static Closure|string|null $getNavigationParentItemUsing = null;
 
+    public static Closure|SubNavigationPosition|null $getSubNavigationPositionUsing = null;
+
+    public static Closure|string|null $getClusterUsing = null;
+
     public static function configure(
         Closure|string|null $modelLabel = null,
         Closure|string|null $pluralModelLabel = null,
@@ -29,6 +34,8 @@ trait HasResourceConfiguration
         Closure|string|Htmlable|null $navigationIcon = null,
         Closure|int|null $navigationSort = null,
         Closure|string|null $navigationParentItem = null,
+        Closure|SubNavigationPosition|null $subNavigationPosition = null,
+        Closure|string|null $cluster = null,
     ): void {
         static::$getModelLabelUsing = $modelLabel;
         static::$getPluralModelLabelUsing = $pluralModelLabel;
@@ -36,6 +43,8 @@ trait HasResourceConfiguration
         static::$getNavigationIconUsing = $navigationIcon;
         static::$getNavigationSortUsing = $navigationSort;
         static::$getNavigationParentItemUsing = $navigationParentItem;
+        static::$getSubNavigationPositionUsing = $subNavigationPosition;
+        static::$getClusterUsing = $cluster;
     }
 
     public static function getModel(): string
@@ -95,5 +104,23 @@ trait HasResourceConfiguration
         }
 
         return TicketResource::getNavigationLabel();
+    }
+
+    public static function getCluster(): ?string
+    {
+        if (isset(static::$getClusterUsing)) {
+            return value(static::$getClusterUsing);
+        }
+
+        return self::$cluster;
+    }
+
+    public static function getSubNavigationPosition(): SubNavigationPosition
+    {
+        if (isset(static::$getSubNavigationPositionUsing)) {
+            return value(static::$getSubNavigationPositionUsing);
+        }
+
+        return self::$subNavigationPosition ?? SubNavigationPosition::Start;
     }
 }
