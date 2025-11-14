@@ -21,7 +21,7 @@ customElements.define(
 			super();
 
 			this.scrollThreshold = 100;
-			this.pollingIntervalMs = 5000;
+			this.pollingIntervalMs = 10000;
 
 			this.ticketId = null;
 			this.ticket = null;
@@ -220,12 +220,18 @@ customElements.define(
 		}
 
 		renderMessages(messages = null) {
+            const existingMessageIds = this.messages.map(message => message.id);
+
 			messages = messages || [];
 
 			messages.forEach((message) => {
 				if (message.content === null && message.attachments.length === 0) {
 					return;
 				}
+
+                if (existingMessageIds.includes(message.id)) {
+                    return;
+                }
 
 				const lastDate =
 					this.messages.length > 0
@@ -754,10 +760,6 @@ customElements.define(
 				this.editor.commands.clearContent();
 
 				const messages = data.messages;
-				const lastMessage = messages[messages.length - 1];
-
-				this.lastMessageId = lastMessage.id;
-				this.lastTimestamp = lastMessage.created_at;
 
 				this.clearAttachments();
 				this.renderMessages(messages);
