@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +24,6 @@ use Padmission\Tickets\ValueObjects\SubmitterData;
 /**
  * @mixin Model
  */
-#[UseFactory(TicketFactory::class)]
 #[ObservedBy(TicketObserver::class)]
 class Ticket extends Model
 {
@@ -89,5 +87,10 @@ class Ticket extends Model
     public function isNotInCurrentPanel(): bool
     {
         return $this->panel !== Filament::getCurrentOrDefaultPanel()->getId();
+    }
+
+    protected static function newFactory(): TicketFactory
+    {
+        return TicketFactory::new();
     }
 }

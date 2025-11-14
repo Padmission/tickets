@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +15,6 @@ use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[ObservedBy([TicketStatusObserver::class])]
 #[ScopedBy([CurrentPanelScope::class])]
-#[UseFactory(TicketStatusFactory::class)]
 class TicketStatus extends Model
 {
     use HasColor;
@@ -43,5 +41,10 @@ class TicketStatus extends Model
             ->tap(new CurrentPanelScope)
             ->orderBy('order', 'DESC')
             ->firstOrFail();
+    }
+
+    protected static function newFactory(): TicketStatusFactory
+    {
+        return TicketStatusFactory::new();
     }
 }

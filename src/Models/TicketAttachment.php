@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Database\Factories\TicketAttachmentFactory;
@@ -15,7 +14,6 @@ use Padmission\Tickets\Models\Observers\TicketAttachmentObserver;
 use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketAttachmentObserver::class)]
-#[UseFactory(TicketAttachmentFactory::class)]
 class TicketAttachment extends Model
 {
     use HasFactory;
@@ -66,5 +64,10 @@ class TicketAttachment extends Model
     public function canBePreviewed(): bool
     {
         return str($this->mime_type)->startsWith(['image/', 'video/']);
+    }
+
+    protected static function newFactory(): TicketAttachmentFactory
+    {
+        return TicketAttachmentFactory::new();
     }
 }

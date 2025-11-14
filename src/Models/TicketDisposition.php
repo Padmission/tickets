@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,7 +14,6 @@ use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
 #[ObservedBy(TicketDispositionObserver::class)]
 #[ScopedBy(CurrentPanelScope::class)]
-#[UseFactory(TicketDispositionFactory::class)]
 class TicketDisposition extends Model
 {
     use HasColor;
@@ -25,4 +23,9 @@ class TicketDisposition extends Model
     protected $table = 'ticket_dispositions';
 
     protected $guarded = ['id'];
+
+    protected static function newFactory(): TicketDispositionFactory
+    {
+        return TicketDispositionFactory::new();
+    }
 }
