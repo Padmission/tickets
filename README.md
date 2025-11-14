@@ -427,10 +427,6 @@ The package automatically handles:
 - UUID/ULID support for tenant IDs
 - Tenant isolation for all ticket operations
 
-### Escalation Levels
-
-COMING SOON
-
 ### Turn Management
 
 The package automatically tracks whose "turn" it is to respond to a ticket:
