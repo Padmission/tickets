@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,7 +21,6 @@ use Padmission\Tickets\TicketPlugin;
 /**
  * @property ActivitySide $side
  */
-#[ObservedBy(TicketActivityObserver::class)]
 class TicketActivity extends Model
 {
     use HasFactory;
@@ -40,6 +38,13 @@ class TicketActivity extends Model
         'turn' => Turn::class,
         'created_at' => 'immutable_datetime',
     ];
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::observe(TicketActivityObserver::class);
+    }
 
     /**
      * @return Relations\PanelAwareBelongsTo<Ticket,$this>
