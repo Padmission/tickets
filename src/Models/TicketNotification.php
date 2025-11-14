@@ -18,6 +18,8 @@ class TicketNotification extends Model
 
     protected $guarded = [];
 
+    protected static string $factory = TicketNotificationFactory::class;
+
     /* Relations */
 
     /**
@@ -40,10 +42,5 @@ class TicketNotification extends Model
             TicketPlugin::resolveUserModelClass(),
             'user'
         );
-    }
-
-    protected static function newFactory(): TicketNotificationFactory
-    {
-        return TicketNotificationFactory::new();
     }
 }

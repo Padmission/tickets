@@ -21,6 +21,8 @@ class TicketStatus extends Model
 
     protected $guarded = ['id'];
 
+    protected static string $factory = TicketStatusFactory::class;
+
     protected static function boot(): void
     {
         parent::boot();
@@ -45,10 +47,5 @@ class TicketStatus extends Model
             ->tap(new CurrentPanelScope)
             ->orderBy('order', 'DESC')
             ->firstOrFail();
-    }
-
-    protected static function newFactory(): TicketStatusFactory
-    {
-        return TicketStatusFactory::new();
     }
 }

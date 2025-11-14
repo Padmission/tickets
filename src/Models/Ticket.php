@@ -45,6 +45,8 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
+    protected static string $factory = TicketFactory::class;
+
     protected static function boot(): void
     {
         parent::boot();
@@ -92,10 +94,5 @@ class Ticket extends Model
     public function isNotInCurrentPanel(): bool
     {
         return $this->panel !== Filament::getCurrentOrDefaultPanel()->getId();
-    }
-
-    protected static function newFactory(): TicketFactory
-    {
-        return TicketFactory::new();
     }
 }

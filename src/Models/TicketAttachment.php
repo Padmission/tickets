@@ -30,6 +30,8 @@ class TicketAttachment extends Model
         'created_at' => 'immutable_datetime',
     ];
 
+    protected static string $factory = TicketAttachmentFactory::class;
+
     protected static function boot(): void
     {
         parent::boot();
@@ -69,10 +71,5 @@ class TicketAttachment extends Model
     public function canBePreviewed(): bool
     {
         return str($this->mime_type)->startsWith(['image/', 'video/']);
-    }
-
-    protected static function newFactory(): TicketAttachmentFactory
-    {
-        return TicketAttachmentFactory::new();
     }
 }

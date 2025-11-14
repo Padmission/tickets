@@ -39,6 +39,8 @@ class TicketActivity extends Model
         'created_at' => 'immutable_datetime',
     ];
 
+    protected static string $factory = TicketActivityFactory::class;
+
     protected static function boot(): void
     {
         parent::boot();
@@ -109,10 +111,5 @@ class TicketActivity extends Model
             ]),
             default => $value
         });
-    }
-
-    protected static function newFactory(): TicketActivityFactory
-    {
-        return TicketActivityFactory::new();
     }
 }

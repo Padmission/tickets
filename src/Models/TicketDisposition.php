@@ -20,16 +20,13 @@ class TicketDisposition extends Model
 
     protected $guarded = ['id'];
 
+    protected static string $factory = TicketDispositionFactory::class;
+
     protected static function boot(): void
     {
         parent::boot();
 
         static::observe(TicketDispositionObserver::class);
         static::addGlobalScope(new CurrentPanelScope);
-    }
-
-    protected static function newFactory(): TicketDispositionFactory
-    {
-        return TicketDispositionFactory::new();
     }
 }

@@ -20,16 +20,13 @@ class TicketPriority extends Model
 
     protected $guarded = ['id'];
 
+    protected static string $factory = TicketPriorityFactory::class;
+
     protected static function boot(): void
     {
         parent::boot();
 
         static::observe(TicketPriorityObserver::class);
         static::addGlobalScope(new CurrentPanelScope);
-    }
-
-    protected static function newFactory(): TicketPriorityFactory
-    {
-        return TicketPriorityFactory::new();
     }
 }
