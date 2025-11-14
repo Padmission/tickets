@@ -51,7 +51,6 @@
         const chat = document.getElementById('supporter-chat')
 
         chat.addEventListener('message-sent', (event) => {
-            console.log('got a message from chat', Livewire)
             Livewire.dispatch('message-sent');
         })
     </script>
