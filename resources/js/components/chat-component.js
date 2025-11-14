@@ -220,7 +220,7 @@ customElements.define(
 		}
 
 		renderMessages(messages = null) {
-            const existingMessageIds = this.messages.map(message => message.id);
+			const existingMessageIds = this.messages.map((message) => message.id);
 
 			messages = messages || [];
 
@@ -229,9 +229,9 @@ customElements.define(
 					return;
 				}
 
-                if (existingMessageIds.includes(message.id)) {
-                    return;
-                }
+				if (existingMessageIds.includes(message.id)) {
+					return;
+				}
 
 				const lastDate =
 					this.messages.length > 0
