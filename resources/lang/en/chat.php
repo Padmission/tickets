@@ -32,7 +32,7 @@ return [
     ],
 
     'list' => [
-        'heading' => 'Support center',
+        'heading' => 'Support Center',
         'subheading' => 'How can we help you?',
         'create_ticket' => 'Open New Ticket',
         'go_to_docs' => 'Open Documentation',
