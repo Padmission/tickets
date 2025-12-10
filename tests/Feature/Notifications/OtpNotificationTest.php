@@ -10,7 +10,7 @@ test('OtpNotification contains the OTP', function () {
 
     expect($notification->otp)->toBe($otp);
 
-    $html = strip_tags($notification->toMail(null)->render());
+    $html = preg_replace('/\s+/', '', strip_tags($notification->toMail(null)->render()));
 
     expect(str_contains($html, $otp))->toBeTrue();
 });
