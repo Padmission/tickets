@@ -40,11 +40,79 @@ class EmailStyleService
     protected function getTicketCustomStyles(): string
     {
         return '
-        .inner-body { margin-top: 1.25rem; }
-        a.button-blue, a.button-primary { color: #fff; }
-        .ticket-activity { margin-bottom: 1rem; padding: 1rem; border-left: 4px solid #e5e7eb; }
-        .activity-meta { font-size: 0.9em; color: #666; margin-bottom: 0.5rem; }
-        .activity-content { line-height: 1.5; }
+        /* Modern base styles */
+        .inner-body {
+            margin-top: 0;
+        }
+
+        /* Button styles */
+        a.button-blue,
+        a.button-primary {
+            color: #ffffff !important;
+            background-color: #4f46e5 !important;
+            border-radius: 8px !important;
+            padding: 14px 32px !important;
+            font-weight: 600 !important;
+            text-decoration: none !important;
+        }
+
+        /* Activity bubble styles */
+        .activity-bubble {
+            max-width: 85%;
+        }
+
+        .ticket-activity {
+            margin-bottom: 16px;
+            padding: 16px 20px;
+            border-radius: 16px;
+            background-color: #f1f5f9;
+        }
+
+        .ticket-activity.supporter {
+            background-color: #4f46e5;
+            color: #ffffff;
+        }
+
+        .ticket-activity.system {
+            background-color: #fef3c7;
+            color: #92400e;
+            text-align: center;
+            border-radius: 20px;
+            padding: 8px 16px;
+        }
+
+        .activity-meta {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .activity-content {
+            line-height: 1.6;
+            font-size: 15px;
+            color: #334155;
+        }
+
+        .activity-content.supporter {
+            color: #ffffff;
+        }
+
+        /* Link styles */
+        a {
+            color: #4f46e5;
+        }
+
+        /* Typography */
+        p {
+            margin: 0 0 16px 0;
+            line-height: 1.625;
+        }
+
+        /* Card shadow for Outlook */
+        .email-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+        }
     ';
     }
 }
