@@ -3,14 +3,12 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Database\Factories\TicketNotificationFactory;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\TicketPlugin;
 
-#[UseFactory(TicketNotificationFactory::class)]
 class TicketNotification extends Model
 {
     use HasFactory;
@@ -19,6 +17,8 @@ class TicketNotification extends Model
     protected $table = 'ticket_notifications';
 
     protected $guarded = [];
+
+    protected static string $factory = TicketNotificationFactory::class;
 
     /* Relations */
 

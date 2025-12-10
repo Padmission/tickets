@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Blade;
+use Livewire\Component;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -32,6 +33,9 @@ class EditTicketAction extends EditAction
                 }
 
                 return $record->isClosed;
+            })
+            ->after(function (Component $livewire) {
+                $livewire->dispatch('refresh-sidebar');
             })
             ->schema([
                 TextInput::make('subject')

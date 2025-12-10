@@ -49,12 +49,14 @@ customElements.define(
                          </form>
                     </header>
 
-                    <chat-component
-                        ticket-id="${this.ticketId || ""}"
-                        default-message="${config.introMessage || ""}"
-                        scroll-threshold="100"
-                        polling-interval="10000"
-                    />
+                    <main>
+                        <chat-component
+                            ticket-id="${this.ticketId || ""}"
+                            default-message="${config.introMessage || ""}"
+                            scroll-threshold="100"
+                            polling-interval="10000"
+                        />
+                    </main>
 
                     <style>
                         chat-component {

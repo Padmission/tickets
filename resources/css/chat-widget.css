@@ -45,6 +45,9 @@
 	--dialog-min-height: 41em;
 	--dialog-max-height: 60svh;
 
+	--scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
+	--scrollbar-thumb-hover-bg: rgba(255, 255, 255, 0.3);
+
 	display: block !important;
 	color: var(--color-text-primary);
 	background-color: var(--color-surface);
@@ -111,6 +114,7 @@ h2 {
 
 h3 {
 	margin-top: 2rem;
+	margin-bottom: 1em;
 	font-size: 1.125rem;
 	line-height: 1.75rem;
 	color: var(--color-text-primary);
@@ -126,14 +130,8 @@ button {
 	}
 }
 
-/* Button with icon */
-button:has(span:not(.sr-only) + svg) {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-}
-
 .button {
+	display: inline-block;
 	width: 100%;
 	padding: 0.75rem 1rem;
 	background-color: var(--color-primary);
@@ -141,8 +139,10 @@ button:has(span:not(.sr-only) + svg) {
 	font-size: 0.875rem;
 	font-weight: 500;
 	line-height: 1.25rem;
+	text-decoration: none;
 	border: none;
 	border-radius: 0.5rem;
+	margin-bottom: .5em;
 	text-align: center;
 	box-shadow: var(--shadow-sm);
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -164,6 +164,12 @@ button:has(span:not(.sr-only) + svg) {
 	&:active {
 		transform: translateY(0px);
 		transition-duration: 0.1s;
+	}
+
+	&:has(span:not(.sr-only) + svg) {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 	}
 
 	svg {
@@ -306,25 +312,55 @@ button:has(span:not(.sr-only) + svg) {
 	}
 
 	.ticket__id {
-		display: inline-block;
-		padding: 0.125rem 0.375rem;
-		background-color: var(--color-gray-100);
-		border: 1px solid var(--color-gray-200);
-		border-radius: 0.375rem;
-
-		font-size: 0.75rem;
-		font-weight: 500;
 		text-transform: uppercase;
 		font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas,
 			"Liberation Mono", "Courier New", monospace;
-		color: var(--color-gray-700);
+	}
+
+	.badge {
+		--color: var(--color-gray-500);
+
+		--color-50: oklch(from var(--color) calc(l + 0.45) calc(c * 0.1) h);
+		--color-100: oklch(from var(--color) calc(l + 0.35) calc(c * 0.2) h);
+		--color-200: oklch(from var(--color) calc(l + 0.25) calc(c * 0.4) h);
+		--color-300: oklch(from var(--color) calc(l + 0.15) calc(c * 0.6) h);
+		--color-400: oklch(from var(--color) calc(l + 0.05) calc(c * 0.8) h);
+		--color-500: var(--color); /* Base color */
+		--color-600: oklch(from var(--color) calc(l - 0.05) calc(c * 1.1) h);
+		--color-700: oklch(from var(--color) calc(l - 0.15) calc(c * 1.2) h);
+		--color-800: oklch(from var(--color) calc(l - 0.25) calc(c * 1.1) h);
+		--color-900: oklch(from var(--color) calc(l - 0.35) calc(c * 0.9) h);
+		--color-950: oklch(from var(--color) calc(l - 0.45) calc(c * 0.7) h);
+
+		display: inline-block;
+		padding: 0.1rem 0.275rem;
+		border: 1px solid color-mix(in oklab, var(--color-700) 10%, transparent);
+		border-radius: 0.375rem;
+
+		font-size: 0.65rem;
+		font-weight: 500;
+		color: var(--color-600);
+		background-color: var(--color-50);
+
+		:host-context(.dark) & {
+			background-color: color-mix(in oklab, var(--color-600) 10%, transparent);
+			border-color: color-mix(in oklab, var(--color-600) 30%, transparent);
+			color: var(--color-200);
+		}
 	}
 
 	.ticket__header {
 		display: flex;
-		align-items: end;
-		gap: 0.5rem;
+		flex-direction: column;
+		gap: 0.25rem;
 		width: 100%;
+
+		> div {
+			display: flex;
+			align-items: end;
+			gap: 0.25rem;
+			width: 100%;
+		}
 	}
 
 	.ticket__description {
@@ -378,12 +414,6 @@ button:has(span:not(.sr-only) + svg) {
 	&:hover {
 		background-color: var(--color-gray-800);
 		transform: translateY(-1px);
-	}
-
-	.ticket__id {
-		background-color: var(--color-gray-800);
-		border-color: var(--color-gray-700);
-		color: var(--color-gray-300);
 	}
 }
 
@@ -485,15 +515,11 @@ h2 {
 	margin-bottom: 1rem;
 }
 
-.chat-list-tickets {
-	header {
-		align-items: start;
-	}
-}
-
+.chat-list-tickets,
 .chat-view-ticket {
 	display: flex;
 	flex-direction: column;
+	height: 100%;
 
 	header {
 		position: absolute;
@@ -511,6 +537,37 @@ h2 {
 			&:hover {
 				background-color: rgba(255, 255, 255, 0.1);
 			}
+		}
+	}
+
+	main {
+		position: absolute;
+		inset: 0;
+		top: 4rem;
+		overflow-y: auto;
+		padding-inline: 1rem;
+
+		scroll-behavior: smooth;
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-thumb-bg) transparent;
+
+		&::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		&::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background-color: var(--scrollbar-thumb-bg);
+			border-radius: 4px;
+			border: 2px solid transparent;
+			background-clip: content-box;
+		}
+
+		&::-webkit-scrollbar-thumb:hover {
+			background-color: var(--scrollbar-thumb-hover-bg);
 		}
 	}
 

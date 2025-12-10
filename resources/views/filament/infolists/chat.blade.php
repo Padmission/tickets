@@ -3,6 +3,10 @@
     use Filament\Support\Facades\FilamentAsset;use Padmission\Tickets\TicketPlugin;
 
     $config = TicketPlugin::get()->getChatWidgetConfig();
+
+    $config = clone $config;
+    $config->allowScreenshots(false);
+
     $primaryColor = $config->getPrimaryColor();
 @endphp
 <div
@@ -35,12 +39,21 @@
     </style>
 
     <chat-component
+        id="supporter-chat"
         ticket-id="{{ $this->record->id }}"
         config="{{ $config->toJs() }}"
         scroll-threshold="100"
         polling-interval="10000"
         has-elevated-rights="true"
     ></chat-component>
+
+    <script>
+        const chat = document.getElementById('supporter-chat')
+
+        chat.addEventListener('message-sent', (event) => {
+            Livewire.dispatch('message-sent');
+        })
+    </script>
 
     <script
         src="{{ FilamentAsset::getScriptSrc('chat-widget', package: 'padmission/tickets') }}"
