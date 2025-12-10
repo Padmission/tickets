@@ -275,7 +275,8 @@ describe('Configuration and Edge Cases', function () {
 
     test('user can customize notification strategy via ticketNotificationStrategy method', function () {
         // Create a user class that implements ticketNotificationStrategy
-        $userWithImmediateStrategy = new class extends User {
+        $userWithImmediateStrategy = new class extends User
+        {
             public function ticketNotificationStrategy(): NotificationStrategy
             {
                 return NotificationStrategy::Immediate;
