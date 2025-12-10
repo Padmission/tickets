@@ -9,6 +9,7 @@ class ChatWidgetConfig {
 	allowScreenshots = false;
 	allowFileUploads = false;
 	maxUploadFileSize = 10 * 1024 * 1024;
+	documentationUrl = null;
 	lang = {};
 
 	constructor() {

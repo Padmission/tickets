@@ -21,7 +21,7 @@ customElements.define(
 			super();
 
 			this.scrollThreshold = 100;
-			this.pollingIntervalMs = 5000;
+			this.pollingIntervalMs = 10000;
 
 			this.ticketId = null;
 			this.ticket = null;
@@ -220,10 +220,16 @@ customElements.define(
 		}
 
 		renderMessages(messages = null) {
+			const existingMessageIds = this.messages.map((message) => message.id);
+
 			messages = messages || [];
 
 			messages.forEach((message) => {
 				if (message.content === null && message.attachments.length === 0) {
+					return;
+				}
+
+				if (existingMessageIds.includes(message.id)) {
 					return;
 				}
 
@@ -754,14 +760,11 @@ customElements.define(
 				this.editor.commands.clearContent();
 
 				const messages = data.messages;
-				const lastMessage = messages[messages.length - 1];
-
-				this.lastMessageId = lastMessage.id;
-				this.lastTimestamp = lastMessage.created_at;
 
 				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
+				this.dispatchEvent(new CustomEvent("message-sent"));
 			} catch (error) {
 				console.log("Sending failed", error);
 				this.setError(__("chat.error"));
@@ -948,15 +951,6 @@ customElements.define(
                                 </svg>
 
                                 <span>${__('chat.send')}</span>
-
-                                <kbd>
-                                    <span class="sr-only">${__('chat.command_key')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path></svg>
-                                </kbd>
-                                <kbd>
-                                    <span class="sr-only">${__('chat.enter_key')}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-corner-down-left-icon lucide-corner-down-left"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></svg>
-                                </kbd>
                             </button>
                         </div>
 

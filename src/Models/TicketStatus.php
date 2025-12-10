@@ -2,9 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\ScopedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,9 +11,6 @@ use Padmission\Tickets\Models\Concerns\HasColor;
 use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
-#[ObservedBy([TicketStatusObserver::class])]
-#[ScopedBy([CurrentPanelScope::class])]
-#[UseFactory(TicketStatusFactory::class)]
 class TicketStatus extends Model
 {
     use HasColor;
@@ -26,6 +20,16 @@ class TicketStatus extends Model
     protected $table = 'ticket_statuses';
 
     protected $guarded = ['id'];
+
+    protected static string $factory = TicketStatusFactory::class;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::observe(TicketStatusObserver::class);
+        static::addGlobalScope(new CurrentPanelScope);
+    }
 
     public static function getOpenStatuses(): Collection
     {

@@ -33,6 +33,8 @@ final class ChatWidgetConfig
 
     public bool|Closure $allowScreenshots = false;
 
+    public Closure|string|null $documentationUrl = null;
+
     public static function make(): self
     {
         return new self;
@@ -176,6 +178,18 @@ final class ChatWidgetConfig
         return 'rgb('.$color[600].');';
     }
 
+    public function documentationUrl(string|Closure $url): self
+    {
+        $this->documentationUrl = $url;
+
+        return $this;
+    }
+
+    public function getDocumentationUrl(): ?string
+    {
+        return value($this->documentationUrl);
+    }
+
     public function toJs(): string
     {
         $auth = resolve(TicketAuth::class);
@@ -191,6 +205,7 @@ final class ChatWidgetConfig
             'allowScreenshots' => $this->getAllowScreenshots(),
             'allowFileUploads' => $this->getAllowFileUploads(),
             'maxUploadFileSize' => $this->getMaxUploadFileSize(),
+            'documentationUrl' => $this->getDocumentationUrl(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),
         ]);
     }

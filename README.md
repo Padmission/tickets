@@ -376,6 +376,22 @@ TicketPlugin::make()
 - Configurable OTP expiration time
 - Session-based authentication for verified users
 
+#### Documentation URL
+
+You can add a button to the chat widget that opens your documentation in a new tab using `->documentationUrl()`.
+
+```php
+use Filament\Support\Colors\Color;
+use Padmission\Tickets\ChatWidgetConfig;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->showChatWidget(
+        config: ChatWidgetConfig::make()->documentationUrl(url('/docs'))
+    );
+```
+
+
 #### File Uploads
 
 If you want to allow users to upload files you can use the `->allowFileUploads()` method on the `ChatWidgetConfig`:
@@ -410,10 +426,6 @@ The package automatically handles:
 - Foreign key constraints based on your tenant model
 - UUID/ULID support for tenant IDs
 - Tenant isolation for all ticket operations
-
-### Escalation Levels
-
-COMING SOON
 
 ### Turn Management
 
@@ -785,6 +797,7 @@ You can also implement complex notification logic based on your business require
         return NotificationRecipient::Both;
     }
 )
+```
 
 ### Activity Tracking
 

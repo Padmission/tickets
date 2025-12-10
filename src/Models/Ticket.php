@@ -3,8 +3,6 @@
 namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,8 +23,6 @@ use Padmission\Tickets\ValueObjects\SubmitterData;
 /**
  * @mixin Model
  */
-#[UseFactory(TicketFactory::class)]
-#[ObservedBy(TicketObserver::class)]
 class Ticket extends Model
 {
     use CanBeAssigned;
@@ -48,6 +44,15 @@ class Ticket extends Model
         'submitter_data' => SubmitterData::class,
         'closed_at' => 'datetime',
     ];
+
+    protected static string $factory = TicketFactory::class;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::observe(TicketObserver::class);
+    }
 
     public function parentTicket(): Relations\PanelAwareBelongsTo
     {
