@@ -175,6 +175,13 @@ class TicketResource extends Resource
                         return $query;
                     })
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('submitter')
+                    ->relationship('submitter', 'name')
+                    ->searchable()
+                    ->multiple()
                     ->preload(),
             ])
             ->recordActions([

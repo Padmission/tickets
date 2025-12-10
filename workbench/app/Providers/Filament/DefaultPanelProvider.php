@@ -80,6 +80,7 @@ class DefaultPanelProvider extends PanelProvider
                         config: ChatWidgetConfig::make()
                             ->allowFileUploads(maxFileSize: 20 * 1024 * 1024)
                             ->allowScreenshots()
+                            ->documentationUrl(url('/docs'))
                     )
             );
     }

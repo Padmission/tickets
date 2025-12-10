@@ -2,8 +2,6 @@
 
 namespace Padmission\Tickets\Models;
 
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Database\Factories\TicketAttachmentFactory;
@@ -14,8 +12,6 @@ use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Observers\TicketAttachmentObserver;
 use Padmission\Tickets\TicketPlugin;
 
-#[ObservedBy(TicketAttachmentObserver::class)]
-#[UseFactory(TicketAttachmentFactory::class)]
 class TicketAttachment extends Model
 {
     use HasFactory;
@@ -33,6 +29,15 @@ class TicketAttachment extends Model
         'turn' => Turn::class,
         'created_at' => 'immutable_datetime',
     ];
+
+    protected static string $factory = TicketAttachmentFactory::class;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::observe(TicketAttachmentObserver::class);
+    }
 
     /**
      * @return Relations\PanelAwareBelongsTo<Ticket,$this>
