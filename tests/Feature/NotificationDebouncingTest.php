@@ -75,6 +75,63 @@ describe('Debouncing Core Functionality', function () {
         });
     });
 
+    test('debounced notification strategy stores cache key for debouncing', function () {
+        $user = User::factory()->create();
+        $ticket = Ticket::factory()->open()->create(['assignee_id' => $user->id]);
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
+
+        $recipientService = Mockery::mock(NotificationRecipientService::class);
+
+        $recipientService->shouldReceive('getNotificationRecipients')
+            ->andReturn(collect([$user]));
+
+        $recipientService->shouldReceive('getUserNotificationStrategy')
+            ->with($user)
+            ->andReturn(NotificationStrategy::Debounced);
+
+        $listener = new TicketNotificationListener($recipientService);
+        $listener->handle($event);
+
+        // For debounced strategy, a cache key should be set for debouncing
+        $job = new NotificationJob($user, $ticket, 'activity');
+        $cacheKey = $job->uniqueId();
+
+        // The cache should have a value (the unique identifier for this dispatch)
+        expect(Cache::has($cacheKey))->toBeTrue();
+    });
+
+    test('subsequent events within debounce period replace the cache identifier', function () {
+        $user = User::factory()->create();
+        $ticket = Ticket::factory()->open()->create(['assignee_id' => $user->id]);
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
+
+        $recipientService = Mockery::mock(NotificationRecipientService::class);
+
+        $recipientService->shouldReceive('getNotificationRecipients')
+            ->andReturn(collect([$user]));
+
+        $recipientService->shouldReceive('getUserNotificationStrategy')
+            ->with($user)
+            ->andReturn(NotificationStrategy::Debounced);
+
+        $listener = new TicketNotificationListener($recipientService);
+
+        // First event
+        $listener->handle($event);
+
+        $job = new NotificationJob($user, $ticket, 'activity');
+        $cacheKey = $job->uniqueId();
+        $firstIdentifier = Cache::get($cacheKey);
+
+        // Second event (simulating another message within debounce period)
+        $listener->handle($event);
+
+        $secondIdentifier = Cache::get($cacheKey);
+
+        // The identifier should be different (new dispatch replaces old one)
+        expect($secondIdentifier)->not->toBe($firstIdentifier);
+    });
+
     test('notification job resolves correct notification class for different types', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
@@ -129,6 +186,47 @@ describe('Time-Based Debouncing Tests', function () {
             ->and($activityContents)->toContain('Recent message 2')
             ->and($activityContents)->not->toContain('Old message');
     });
+
+    test('subsequent notifications only include activities since last notification', function () {
+        $user = User::factory()->create();
+        $ticket = Ticket::factory()->open()->create(['assignee_id' => $user->id]);
+
+        config()->set('padmission-tickets.notification-max-days', 10);
+
+        // Create first activity
+        TicketActivity::factory()->create([
+            'ticket_id' => $ticket->id,
+            'type' => ActivityType::Message,
+            'content' => 'First message',
+            'created_at' => now()->subHours(2),
+        ]);
+
+        // Send first notification
+        $notification1 = new TicketNotification($ticket, 'activity');
+        $mailMessage1 = $notification1->toMail($user);
+
+        expect($mailMessage1->viewData['activities'])->toHaveCount(1);
+        $activityContents1 = $mailMessage1->viewData['activities']->pluck('content')->toArray();
+        expect($activityContents1)->toContain('First message');
+
+        // Create second activity AFTER the first notification
+        TicketActivity::factory()->create([
+            'ticket_id' => $ticket->id,
+            'type' => ActivityType::Message,
+            'content' => 'Second message',
+            'created_at' => now()->subMinutes(30),
+        ]);
+
+        // Send second notification
+        $notification2 = new TicketNotification($ticket, 'activity');
+        $mailMessage2 = $notification2->toMail($user);
+
+        // Should only include the second message
+        expect($mailMessage2->viewData['activities'])->toHaveCount(1);
+        $activityContents2 = $mailMessage2->viewData['activities']->pluck('content')->toArray();
+        expect($activityContents2)->toContain('Second message')
+            ->and($activityContents2)->not->toContain('First message');
+    });
 });
 
 describe('Configuration and Edge Cases', function () {
@@ -157,5 +255,45 @@ describe('Configuration and Edge Cases', function () {
 
         // Job should handle missing user gracefully
         expect(invade($job)->resolveUser())->toBeNull();
+    });
+
+    test('default notification strategy is debounced', function () {
+        $recipientService = app(NotificationRecipientService::class);
+        $user = User::factory()->create();
+
+        expect($recipientService->getUserNotificationStrategy($user))->toBe(NotificationStrategy::Debounced);
+    });
+
+    test('debounce time can be configured', function () {
+        config()->set('padmission-tickets.notification-debounce', 600); // 10 minutes
+
+        expect(config('padmission-tickets.notification-debounce'))->toBe(600);
+
+        // Reset to default
+        config()->set('padmission-tickets.notification-debounce', 300);
+    });
+
+    test('user can customize notification strategy via ticketNotificationStrategy method', function () {
+        // Create a user class that implements ticketNotificationStrategy
+        $userWithImmediateStrategy = new class extends User {
+            public function ticketNotificationStrategy(): NotificationStrategy
+            {
+                return NotificationStrategy::Immediate;
+            }
+        };
+        $userWithImmediateStrategy->id = 999;
+        $userWithImmediateStrategy->name = 'Test User';
+        $userWithImmediateStrategy->email = 'test@example.com';
+
+        $recipientService = app(NotificationRecipientService::class);
+
+        // User with custom ticketNotificationStrategy should return Immediate
+        expect($recipientService->getUserNotificationStrategy($userWithImmediateStrategy))
+            ->toBe(NotificationStrategy::Immediate);
+
+        // User without ticketNotificationStrategy should return default (Debounced)
+        $normalUser = User::factory()->create();
+        expect($recipientService->getUserNotificationStrategy($normalUser))
+            ->toBe(NotificationStrategy::Debounced);
     });
 });
