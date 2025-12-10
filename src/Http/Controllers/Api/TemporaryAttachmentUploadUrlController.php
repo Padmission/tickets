@@ -11,7 +11,7 @@ use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
 
-class AttachmentUrlController
+class TemporaryAttachmentUploadUrlController
 {
     use AuthorizesRequests;
     use ValidatesRequests;

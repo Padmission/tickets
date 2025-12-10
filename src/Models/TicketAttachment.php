@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Database\Factories\TicketAttachmentFactory;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Observers\TicketAttachmentObserver;
 use Padmission\Tickets\TicketPlugin;
 
@@ -19,6 +19,7 @@ use Padmission\Tickets\TicketPlugin;
 class TicketAttachment extends Model
 {
     use HasFactory;
+    use HasPanelAwareRelationships;
 
     protected $table = 'ticket_attachments';
 
@@ -34,22 +35,24 @@ class TicketAttachment extends Model
     ];
 
     /**
-     * @return BelongsTo<Ticket,$this>
+     * @return Relations\PanelAwareBelongsTo<Ticket,$this>
      */
-    public function ticket(): BelongsTo
+    public function ticket(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(
-            TicketPlugin::resolveModelClass(Ticket::class)
+        return $this->panelAwareBelongsTo(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'ticket'
         );
     }
 
     /**
-     * @return BelongsTo<TicketActivity,$this>
+     * @return Relations\PanelAwareBelongsTo<TicketActivity,$this>
      */
-    public function ticketActivity(): BelongsTo
+    public function ticketActivity(): Relations\PanelAwareBelongsTo
     {
-        return $this->belongsTo(
+        return $this->panelAwareBelongsTo(
             TicketPlugin::resolveModelClass(TicketActivity::class),
+            'ticketActivity'
         );
     }
 

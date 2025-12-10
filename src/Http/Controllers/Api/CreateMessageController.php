@@ -39,7 +39,13 @@ class CreateMessageController
 
         $this->validateAttachments($validated['attachment_ids']);
 
-        $ticket = $ticketModel::findOrFail($ticket);
+        // Remove global scopes to find the ticket and get its panel
+        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+
+        // Get the plugin for this ticket's panel and verify against custom query
+        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
+        /** @var Ticket $ticket */
+        $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         $messages = collect();
 
@@ -93,14 +99,14 @@ class CreateMessageController
         foreach ($attachments as $attachment) {
             $actualSize = Storage::disk(config('padmission-tickets.attachments.disk'))->size($attachment->filepath);
 
-            if ($attachment->file_size === $actualSize - 1) {
+            if ($attachment->file_size === $actualSize) {
                 continue;
             }
 
             $attachments->each->delete();
 
             throw ValidationException::withMessages([
-                'attachment_id' => $attachment->id,
+                'attachment_id' => sprintf('File size of %d does not match the expected size %d for attachment %d.', $attachment->file_size, $actualSize, $attachment->id),
             ]);
         }
     }

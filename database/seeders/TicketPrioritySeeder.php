@@ -22,6 +22,8 @@ class TicketPrioritySeeder extends Seeder
             return;
         }
 
+        $panelBefore = Filament::getCurrentPanel();
+
         foreach ($this->getTenants($tenantId) as $tenantId) {
             foreach ($this->getPanels() as $panel) {
                 Filament::setCurrentPanel($panel);
@@ -38,5 +40,7 @@ class TicketPrioritySeeder extends Seeder
                 }
             }
         }
+
+        Filament::setCurrentPanel($panelBefore);
     }
 }

@@ -2,16 +2,18 @@
 
 namespace Padmission\Tickets;
 
-use Exception;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
-use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\EmailLogoService;
+use Padmission\Tickets\Services\EmailStyleService;
+use Padmission\Tickets\Services\NotificationRecipientService;
+use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketUrlService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -37,9 +39,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             $this->package->runsMigrations();
         }
 
-        $this->ensurePolicyIsRegistered();
-
-        $this->registerCssFiles();
+        $this->registerAssets();
         $this->registerBrowserSync();
     }
 
@@ -58,88 +58,50 @@ class TicketPluginServiceProvider extends PackageServiceProvider
      */
     protected function registerServices(): void
     {
-        $this->app->singleton(\Padmission\Tickets\Services\TicketActivityService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\EmailLogoService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\EmailStyleService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\TicketUrlService::class);
-        $this->app->singleton(\Padmission\Tickets\Services\NotificationRecipientService::class);
+        $this->app->singleton(TicketActivityService::class);
+        $this->app->singleton(EmailLogoService::class);
+        $this->app->singleton(EmailStyleService::class);
+        $this->app->singleton(TicketUrlService::class);
+        $this->app->singleton(NotificationRecipientService::class);
     }
 
-    private function ensurePolicyIsRegistered(): void
+    private function registerAssets(): void
     {
-        if ($this->app->runningInConsole()) {
+        $assets = [
+            Css::make('chat-component', __DIR__.'/../resources/css/chat-component.css')->loadedOnRequest(),
+            Css::make('chat-widget', __DIR__.'/../resources/css/chat-widget.css')->loadedOnRequest(),
+            Css::make('tickets', __DIR__.'/../resources/css/tickets.css'),
+
+            Js::make('chat-widget', __DIR__.'/../dist/chat-widget.js')->loadedOnRequest(),
+        ];
+
+        if (! $this->isDevMode()) {
+            FilamentAsset::register($assets, package: 'padmission/tickets');
+
             return;
         }
 
-        $policy = Gate::getPolicyFor(
-            TicketPlugin::resolveModelClass(Ticket::class)
-        );
+        foreach ($assets as $asset) {
+            /**
+             * @var Css|Js $asset
+             */
+            $asset->package('padmission/tickets');
 
-        if ($policy === null) {
-            throw new Exception(
-                'Register a TicketPolicy via Gate::policy() facade in a ServiceProvider::register() method.'
-            );
-        }
-
-        /*
-         * We want to make sure users register a policy with certain methods.
-         * Because PHPs parameter types are contravariant we don't want to
-         * provide a class or interface to implement because we cannot provide
-         * type hints like `Authenticatable` in the methods leading to devs not
-         * able to define their own type hints as well.
-         */
-        $requiredMethods = [
-            'viewAny',
-            'create',
-            'manage',
-            'escalate',
-            'delete',
-        ];
-
-        foreach ($requiredMethods as $method) {
-            if (! method_exists($policy, $method)) {
-                throw new Exception("The policy should implement '$method()' method");
-            }
-        }
-    }
-
-    private function registerCssFiles(): void
-    {
-        $files = [
-            __DIR__.'/../resources/css/chat-component.css',
-            __DIR__.'/../resources/css/chat-widget.css',
-            __DIR__.'/../dist/chat-widget.js',
-        ];
-
-        foreach ($files as $filepath) {
-            $name = pathinfo($filepath, PATHINFO_FILENAME);
-            $extension = pathinfo($filepath, PATHINFO_EXTENSION);
-            $type = $extension === 'css' ? 'css' : 'javascript';
-            $assetClass = $extension === 'css' ? Css::class : Js::class;
-
-            if (! $this->isDevMode()) {
-                FilamentAsset::register([
-                    $assetClass::make($name, $filepath)->loadedOnRequest(),
-                ], package: 'padmission/tickets');
-
-                continue;
-            }
-
-            Route::get("{$extension}/padmission/tickets/{$name}.{$extension}", function () use ($filepath, $type) {
-                if (file_exists($filepath)) {
-                    return response()->file($filepath, ['Content-Type' => 'text/'.$type]);
+            Route::get($asset->getRelativePublicPath(), static function () use ($asset) {
+                if (file_exists($asset->getPath())) {
+                    return response()->file($asset->getPath(), ['Content-Type' => 'text/'.($asset instanceof Css ? 'css' : 'javascript')]);
                 }
 
-                return response('', 404, ['Content-Type' => 'text/'.$type]);
+                return response('', 404, ['Content-Type' => 'text/plain']);
             });
 
-            $timestamp = file_exists($filepath) ? filemtime($filepath) : time();
+            $timestamp = file_exists($asset->getPath()) ? filemtime($asset->getPath()) : time();
 
             FilamentAsset::register([
-                $assetClass::make(
-                    $name,
-                    url("{$extension}/padmission/tickets/$name.$extension?t={$timestamp}")
-                )->loadedOnRequest(),
+                ($asset::class)::make(
+                    id: $asset->getId(),
+                    path: url($asset->getRelativePublicPath()."?t={$timestamp}")
+                )->loadedOnRequest($asset->isLoadedOnRequest()),
             ], package: 'padmission/tickets');
         }
     }

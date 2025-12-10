@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models;
 
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,6 +13,7 @@ use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\CanBeAssigned;
 use Padmission\Tickets\Models\Concerns\CanBeClosed;
+use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketActivities;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
@@ -30,6 +32,7 @@ class Ticket extends Model
     use CanBeAssigned;
     use CanBeClosed;
     use HasFactory;
+    use HasPanelAwareRelationships;
     use HasTicketActivities;
     use HasTicketAttachments;
     use InteractsWithNotifications;
@@ -46,15 +49,45 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
-    /* Scopes */
-
-    protected function scopeOpen(Builder $query): void
+    public function parentTicket(): Relations\PanelAwareBelongsTo
     {
-        $query->whereNull('closed_at');
+        return $this->panelAwareBelongsTo(
+            Ticket::class,
+            'parentTicket',
+            'linked_ticket_id',
+            'id'
+        );
     }
 
-    protected function scopeClosed(Builder $query): void
+    public function childTickets(): Relations\PanelAwareHasMany
     {
-        $query->whereNotNull('closed_at');
+        return $this->panelAwareHasMany(
+            Ticket::class,
+            'childTickets',
+            'linked_ticket_id',
+            'id'
+        );
+    }
+
+    /* Scopes */
+
+    public function scopeOpen(Builder $query): Builder
+    {
+        return $query->whereNull('closed_at');
+    }
+
+    public function scopeClosed(Builder $query): Builder
+    {
+        return $query->whereNotNull('closed_at');
+    }
+
+    public function isInCurrentPanel(): bool
+    {
+        return $this->panel === Filament::getCurrentOrDefaultPanel()->getId();
+    }
+
+    public function isNotInCurrentPanel(): bool
+    {
+        return $this->panel !== Filament::getCurrentOrDefaultPanel()->getId();
     }
 }

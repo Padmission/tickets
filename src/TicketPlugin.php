@@ -12,17 +12,30 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
-use Padmission\Tickets\Filament\Resources;
-use Padmission\Tickets\Filament\Widgets;
+use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
+use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
+use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
+use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
+use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
+use Padmission\Tickets\Models\Ticket;
 use RuntimeException;
 
-final class TicketPlugin implements Plugin
+class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
+
+    protected ?Panel $panel = null;
 
     protected bool $shouldRegisterResources = false;
 
     protected bool $shouldRegisterWidgets = false;
+
+    protected bool $shouldEnableLinkedTickets = false;
+
+    public ?array $linkTicketsToPanels = null;
 
     protected string $escalationLevel = 'default';
 
@@ -40,9 +53,13 @@ final class TicketPlugin implements Plugin
 
     protected mixed $initialAssignmentSupportersQuery = null;
 
+    protected mixed $customTicketQuery = null;
+
+    protected mixed $relationshipScopeModifier = null;
+
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
-    public static function make(): static
+    public static function make(): self
     {
         return new self;
     }
@@ -54,21 +71,23 @@ final class TicketPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
+        $this->panel = $panel;
+
         if ($this->shouldRegisterResources()) {
             $panel->resources([
-                Resources\Tickets\TicketResource::class,
-                Resources\Statuses\StatusResource::class,
-                Resources\Dispositions\DispositionResource::class,
-                Resources\Priorities\PriorityResource::class,
+                TicketResource::class,
+                StatusResource::class,
+                DispositionResource::class,
+                PriorityResource::class,
             ]);
         }
 
         if ($this->shouldRegisterWidgets()) {
             $panel->widgets([
-                Widgets\OpenTicketsWidget::class,
-                Widgets\OpenSupporterTickets::class,
-                Widgets\TicketCloseTimeWidget::class,
-                Widgets\TicketBurndownChartWidget::class,
+                OpenTicketsWidget::class,
+                OpenSupporterTickets::class,
+                TicketCloseTimeWidget::class,
+                TicketBurndownChartWidget::class,
             ]);
         }
 
@@ -199,6 +218,71 @@ final class TicketPlugin implements Plugin
         return $this->shouldRegisterWidgets;
     }
 
+    /**
+     * @param  array<string>|null  $panelIds
+     */
+    public function allowLinkedTicketsTo(?array $panelIds = null): static
+    {
+        $this->linkTicketsToPanels = $panelIds;
+
+        return $this;
+    }
+
+    public function hasLinkedTickets(): bool
+    {
+        return count($this->getLinkedTicketChildPanels()) > 0
+            || count($this->getLinkedTicketParentPanels()) > 0;
+    }
+
+    /**
+     * Get panels that can link to the current panel.
+     */
+    public function getLinkedTicketChildPanels(): array
+    {
+        // return once(function (): array {
+        $panels = [];
+        $currentPanel = $this->panel;
+
+        foreach (Filament::getPanels() as $panel) {
+            if (! $panel->hasPlugin(TicketPlugin::$id)) {
+                continue;
+            }
+
+            /**
+             * @var TicketPlugin $plugin
+             */
+            $plugin = $panel->getPlugin(TicketPlugin::$id);
+
+            if (array_key_exists($currentPanel->getId(), $plugin->getLinkedTicketParentPanels())) {
+                $panels[$panel->getId()] = $panel;
+            }
+        }
+
+        return $panels;
+        // });
+    }
+
+    /**
+     * Get panels the current panel can create linked tickets in.
+     */
+    public function getLinkedTicketParentPanels(): array
+    {
+        // return once(function (): array {
+        $panels = Filament::getPanels();
+
+        if ($this->linkTicketsToPanels === null) {
+            return [];
+        }
+
+        $filteredPanels = array_filter(
+            $panels,
+            fn (Panel $panel) => in_array($panel->getId(), $this->linkTicketsToPanels),
+        );
+
+        return $filteredPanels;
+        // });
+    }
+
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;
@@ -279,5 +363,38 @@ final class TicketPlugin implements Plugin
         }
 
         return $this->initialAssignmentSupportersQuery;
+    }
+
+    public function customizeTicketQuery(Closure $query): static
+    {
+        $this->customTicketQuery = $query;
+
+        return $this;
+    }
+
+    /**
+     * @return Builder<Ticket>
+     */
+    public function getTicketQuery(): Builder
+    {
+        $baseQuery = static::resolveModelClass(Ticket::class)::query();
+
+        if ($this->customTicketQuery) {
+            return app()->call($this->customTicketQuery, ['query' => $baseQuery]);
+        }
+
+        return $baseQuery;
+    }
+
+    public function modifyRelationshipScopes(Closure $callback): static
+    {
+        $this->relationshipScopeModifier = $callback;
+
+        return $this;
+    }
+
+    public function getRelationshipScopeModifier(): ?Closure
+    {
+        return $this->relationshipScopeModifier;
     }
 }

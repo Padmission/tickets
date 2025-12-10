@@ -3,6 +3,8 @@ laravel: '@testbench'
 providers:
   - App\Providers\WorkbenchServiceProvider
   - App\Providers\Filament\DefaultPanelProvider
+  - App\Providers\Filament\SecondPanelProvider
+  - App\Providers\Filament\ThirdPanelProvider
   - Padmission\Tickets\TicketPluginServiceProvider
 
 migrations:
@@ -13,7 +15,14 @@ seeders:
 
 env:
   - APP_NAME="Tickets Package"
-  - APP_URL=http://tickets.test:8000
+  - APP_URL=http://127.0.0.1:8000
+  - CACHE_STORE=file
+  - AWS_BUCKET=tickets
+  - AWS_ACCESS_KEY_ID=minioadmin
+  - AWS_SECRET_ACCESS_KEY=minioadmin
+  - AWS_DEFAULT_REGION=eu-central-1
+  - AWS_URL=http://127.0.0.1:9000/tickets
+  - AWS_ENDPOINT=http://127.0.0.1:9000
 
 workbench:
   start: '/'

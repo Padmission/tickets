@@ -12,6 +12,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\TicketPlugin;
 
 class ListMessagesController
@@ -21,17 +22,20 @@ class ListMessagesController
 
     public function __invoke(Request $request, $ticket)
     {
+        // Remove global scopes to find the ticket and get its panel
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-        $ticket = $ticketModel::findOrFail($ticket);
+        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+
+        // Get the plugin for this ticket's panel and verify against custom query
+        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
+        /** @var Ticket $ticket */
+        $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
+
+        app(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
 
         $currentSender = $request->user()->id === $ticket->submitter_id
             ? ActivitySender::User
             : ActivitySender::Supporter;
-
-        $isAuthorized = $currentSender === ActivitySender::User
-            || $request->user()->can('manage', $ticket);
-
-        abort_unless($isAuthorized, 403);
 
         $messages = $ticket
             ->ticketActivities()

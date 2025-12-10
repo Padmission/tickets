@@ -34,18 +34,24 @@ it('requires login ', function () {
 });
 
 it('requires create permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('create', fn (User $user) => false);
+    createStorageMock();
 
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
 
+    Gate::before(fn (User $authUser, string $ability) => $ability === 'create' ? false : null);
+
     $this->actingAs($user);
 
     $this
-        ->postJson(route('padmission-tickets::api.attachment-url', [
-            'ticket' => $ticket,
-        ]))
+        ->postJson(
+            route('padmission-tickets::api.attachment-url', ['ticket' => $ticket]),
+            [
+                'filename' => 'test.jpg',
+                'content_type' => 'image/jpeg',
+                'content_length' => '1024',
+            ]
+        )
         ->assertForbidden();
 });
 

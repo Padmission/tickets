@@ -7,6 +7,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -45,6 +46,15 @@ class StatusResource extends Resource
         return $schema
             ->columns(1)
             ->components([
+                Select::make('test')
+                    ->label('Test')
+                    ->options([
+                        'draft' => 'Draft',
+                        'reviewing' => 'Reviewing',
+                        'published' => 'Published',
+                    ])
+                    ->searchable(),
+
                 TextInput::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.display_name'))
                     ->required(),
