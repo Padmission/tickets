@@ -51,16 +51,24 @@ test('respects debounce time window', function () {
 
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
+
+    // Create initial activity
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'content' => 'Initial activity',
+        'created_at' => now(),
+    ]);
+
     $notification = new TicketNotification($ticket, 'history');
 
     // Send first notification
     $firstMail = $notification->toMail($user);
 
     // Verify notification record was created
-    expect($ticket->ticketNotifications()->where('user_id', $user->id)->count())
+    expect($ticket->ticketLastSeen()->where('user_id', $user->id)->count())
         ->toBe(1);
 
-    $originalNotification = $ticket->ticketNotifications()->where('user_id', $user->id)->first();
+    $originalNotification = $ticket->ticketLastSeen()->where('user_id', $user->id)->first();
     $originalTimestamp = $originalNotification->updated_at->timestamp;
 
     // Travel forward in time (within debounce window)
@@ -80,7 +88,7 @@ test('respects debounce time window', function () {
     $secondMail = $secondNotification->toMail($user);
 
     // Should STILL only have 1 notification record (updated, not created new)
-    expect($ticket->ticketNotifications()->where('user_id', $user->id)->count())
+    expect($ticket->ticketLastSeen()->where('user_id', $user->id)->count())
         ->toBe(1);
 
     // Refresh the notification record and check it was updated
@@ -99,6 +107,13 @@ test('notifications are isolated per user', function () {
     $user2 = User::factory()->create();
     $ticket = Ticket::factory()->create();
 
+    // Create an activity so notification has something to track
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'content' => 'Test activity',
+        'created_at' => now(),
+    ]);
+
     $notification = new TicketNotification($ticket, 'history');
 
     // Send notification to user1
@@ -108,8 +123,8 @@ test('notifications are isolated per user', function () {
     $notification->toMail($user2);
 
     // Should have separate notification records
-    expect($ticket->ticketNotifications()->where('user_id', $user1->id)->count())->toBe(1);
-    expect($ticket->ticketNotifications()->where('user_id', $user2->id)->count())->toBe(1);
+    expect($ticket->ticketLastSeen()->where('user_id', $user1->id)->count())->toBe(1);
+    expect($ticket->ticketLastSeen()->where('user_id', $user2->id)->count())->toBe(1);
 });
 
 test('generates correct email subject for different types', function () {

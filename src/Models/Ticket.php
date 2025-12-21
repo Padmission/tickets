@@ -14,7 +14,7 @@ use Padmission\Tickets\Models\Concerns\CanBeClosed;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketActivities;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
-use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
+use Padmission\Tickets\Models\Concerns\InteractsWithLastSeen;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
@@ -31,7 +31,7 @@ class Ticket extends Model
     use HasPanelAwareRelationships;
     use HasTicketActivities;
     use HasTicketAttachments;
-    use InteractsWithNotifications;
+    use InteractsWithLastSeen;
     use ManagesPriority;
     use ManagesStatus;
     use SoftDeletes;

@@ -44,7 +44,11 @@ class TicketNotification extends Notification
             $maxDays
         );
 
-        $this->activityService->markNotificationUpdated($this->ticket, $notifiable);
+        $latestActivity = $activities->last();
+
+        if ($latestActivity) {
+            $this->activityService->markNotificationSent($this->ticket, $notifiable, $latestActivity->id);
+        }
 
         $hasMoreActivities = $activities->count() >= $maxEvents;
 
@@ -67,7 +71,7 @@ class TicketNotification extends Notification
             'ticket' => $this->ticket,
             'activitiesHeader' => __('padmission-tickets::notifications.ticket-history.activities-header'),
             'activities' => $activities,
-            'lastNotificationDate' => $this->activityService->getLastNotification($this->ticket, $notifiable)?->created_at,
+            'lastNotificationDate' => $this->activityService->getLastSeen($this->ticket, $notifiable)?->lastNotifiedActivity?->created_at,
             'logo' => $this->logoService->getEmailLogo($this->ticket),
             'totalActivities' => $activities->count(),
             'hasMoreActivities' => $hasMoreActivities,

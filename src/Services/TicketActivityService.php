@@ -3,14 +3,13 @@
 namespace Padmission\Tickets\Services;
 
 use Illuminate\Support\Collection;
-use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketNotification;
+use Padmission\Tickets\Models\TicketLastSeen;
 
 class TicketActivityService
 {
     /**
-     * Get unread activities for a ticket within the specified time range
+     * Get unread activities for a ticket (for email notifications)
      */
     public function getUnreadActivities(
         Ticket $ticket,
@@ -18,52 +17,76 @@ class TicketActivityService
         int $maxEvents,
         int $maxDays
     ): Collection {
-        $lastNotification = $this->getLastNotification($ticket, $notifiable);
+        $lastSeen = $this->getLastSeen($ticket, $notifiable);
 
         return $ticket
             ->ticketActivities()
             ->with('user')
-            ->where('created_at', '>', now()->subDays($maxDays))
-            ->where('created_at', '<=', now())
-            ->where('type', '!=', ActivityType::TurnChanged)
-            ->when($lastNotification, function ($query) use ($lastNotification) {
-                $query->where('created_at', '>', $lastNotification->updated_at);
+            ->when($lastSeen?->last_notified_activity_id, function ($query) use ($lastSeen) {
+                $query->where('id', '>', $lastSeen->last_notified_activity_id);
             })
+            ->where('created_at', '>=', now()->subDays($maxDays))
             ->orderBy('created_at', 'asc')
             ->limit($maxEvents)
             ->get();
     }
 
     /**
-     * Get the last notification record for a user and ticket
+     * Get the last seen record for a user and ticket
      */
-    public function getLastNotification(Ticket $ticket, $notifiable): ?TicketNotification
+    public function getLastSeen(Ticket $ticket, $notifiable): ?TicketLastSeen
     {
-        /** @var TicketNotification|null $notification */
-        $notification = $ticket
-            ->ticketNotifications()
+        /** @var TicketLastSeen|null $lastSeen */
+        $lastSeen = $ticket
+            ->ticketLastSeen()
             ->where('user_id', $notifiable->getKey())
-            ->latest()
             ->first();
 
-        return $notification;
+        return $lastSeen;
     }
 
     /**
-     * Mark notification as updated or create a new notification record
+     * Mark specific activity as seen by user
+     */
+    public function markActivitySeen(Ticket $ticket, $notifiable, int $activityId): void
+    {
+        $ticket->ticketLastSeen()->updateOrCreate(
+            [
+                'user_id' => $notifiable->getKey(),
+                'ticket_id' => $ticket->id,
+            ],
+            [
+                'last_seen_activity_id' => $activityId,
+            ]
+        );
+    }
+
+    /**
+     * Mark notification email as sent (separate from viewing)
+     */
+    public function markNotificationSent(Ticket $ticket, $notifiable, int $activityId): void
+    {
+        $ticket->ticketLastSeen()->updateOrCreate(
+            [
+                'user_id' => $notifiable->getKey(),
+                'ticket_id' => $ticket->id,
+            ],
+            [
+                'last_notified_activity_id' => $activityId,
+            ]
+        );
+    }
+
+    /**
+     * @deprecated Use markNotificationSent() instead
      */
     public function markNotificationUpdated(Ticket $ticket, $notifiable): void
     {
-        $lastNotification = $this->getLastNotification($ticket, $notifiable);
+        // For backward compatibility - get the latest activity and mark it as notified
+        $latestActivity = $ticket->ticketActivities()->latest('id')->first();
 
-        if ($lastNotification) {
-            $lastNotification->update([
-                'updated_at' => now(),
-            ]);
-        } else {
-            $ticket->ticketNotifications()->create([
-                'user_id' => $notifiable->getKey(),
-            ]);
+        if ($latestActivity) {
+            $this->markNotificationSent($ticket, $notifiable, $latestActivity->id);
         }
     }
 }

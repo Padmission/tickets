@@ -71,7 +71,7 @@ it('creates linked ticket successfully', function () {
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Linked Test Ticket',
-            'message' => tiptapDocument($messageContent),
+            'message' => $messageContent,
         ])
         ->assertHasNoFormErrors();
 
@@ -112,7 +112,7 @@ it('creates linked ticket for different panel', function () {
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
         ->callAction(CreateLinkedTicketAction::class, [
             'subject' => 'Cross-Panel Ticket',
-            'message' => tiptapDocument($messageContent),
+            'message' => $messageContent,
         ])
         ->assertHasNoFormErrors();
 
