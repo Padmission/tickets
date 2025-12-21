@@ -57,7 +57,7 @@
 }
 
 /* Dark mode - Filament uses .dark class */
-:host-context(.dark) {
+:host(.dark) {
 	--message-supporter-bg: var(--color-primary);
 	--message-supporter-text: white;
 	--message-user-bg: #334155;
@@ -218,7 +218,7 @@
 }
 
 /* Dark mode adjustments for scroll button */
-:host-context(.dark) .scroll-to-bottom {
+:host(.dark) .scroll-to-bottom {
 	border-color: var(--color-surface);
 }
 
@@ -594,7 +594,7 @@ dialog.preview {
 }
 
 /* Dark mode toolbar buttons */
-:host-context(.dark) .composer__toolbar .button-icon {
+:host(.dark) .composer__toolbar .button-icon {
 	--button-bg: var(--color-gray-700);
 	color: var(--color-gray-300);
 
@@ -604,7 +604,7 @@ dialog.preview {
 	}
 }
 
-:host-context(.dark) [data-chat-submit] kbd {
+:host(.dark) [data-chat-submit] kbd {
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	background-color: rgba(255, 255, 255, 0.1);
 }
@@ -773,8 +773,8 @@ dialog.preview {
 	}
 }
 
-:host-context(.dark) .tiptap,
-:host-context(.dark) .markdown {
+:host(.dark) .tiptap,
+:host(.dark) .markdown {
 	code {
 		background-color: var(--color-gray-800);
 	}
