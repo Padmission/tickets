@@ -26,12 +26,17 @@ class BaseElement extends HTMLElement {
 	async connectedCallback() {
 		this._initializeAttributes();
 		this._initializeStylesheet();
+		this._initializeDarkModeObserver();
 		await this._render();
 	}
 
 	disconnectedCallback() {
 		for (const { elem, event, callback } of this._listeners) {
 			elem?.removeEventListener(event, callback);
+		}
+
+		if (this._darkModeObserver) {
+			this._darkModeObserver.disconnect();
 		}
 	}
 
@@ -86,6 +91,36 @@ class BaseElement extends HTMLElement {
 				}
 			});
 		}
+	}
+
+	_initializeDarkModeObserver() {
+		const syncDarkMode = () => {
+			if (document.documentElement.classList.contains("dark")) {
+				this.classList.add("dark");
+			} else {
+				this.classList.remove("dark");
+			}
+		};
+
+		// Set initial state
+		syncDarkMode();
+
+		// Observe changes to the document element's class list
+		this._darkModeObserver = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				if (
+					mutation.type === "attributes" &&
+					mutation.attributeName === "class"
+				) {
+					syncDarkMode();
+				}
+			}
+		});
+
+		this._darkModeObserver.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["class"],
+		});
 	}
 
 	reloadCSS() {
