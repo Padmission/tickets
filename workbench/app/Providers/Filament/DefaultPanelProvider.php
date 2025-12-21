@@ -11,6 +11,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Support\Colors\Color;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -32,19 +33,7 @@ class DefaultPanelProvider extends PanelProvider
             ->brandName('Tickets Package: Default')
             ->login(Login::class)
             ->colors([
-                'primary' => [
-                    50 => '238, 246, 251',
-                    100 => '218, 234, 246',
-                    200 => '181, 214, 238',
-                    300 => '143, 193, 229',
-                    400 => '106, 173, 220',
-                    500 => '70, 153, 212',
-                    600 => '42, 124, 182',
-                    700 => '32, 93, 137',
-                    800 => '21, 62, 91',
-                    900 => '11, 31, 46',
-                    950 => '6, 17, 25',
-                ],
+                'primary' => Color::Sky,
             ])
             ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

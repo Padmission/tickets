@@ -175,7 +175,7 @@ final class ChatWidgetConfig
 
         $color = is_array($color) ? $color : Color::generatePalette($color);
 
-        return 'rgb('.$color[600].');';
+        return $color[600];
     }
 
     public function documentationUrl(string|Closure $url): self
