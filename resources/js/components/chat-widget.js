@@ -117,7 +117,8 @@ customElements.define(
 				const badge = this.shadowRoot.querySelector("[data-unread-badge]");
 
 				if (data.unread_count > 0) {
-					badge.textContent = data.unread_count > 99 ? "99+" : data.unread_count;
+					badge.textContent =
+						data.unread_count > 99 ? "99+" : data.unread_count;
 					badge.style.display = "block";
 				} else {
 					badge.style.display = "none";
