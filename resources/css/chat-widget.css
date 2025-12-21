@@ -298,7 +298,6 @@ button {
 	padding: 1rem;
 	margin-inline: -1rem;
 	width: calc(100% + 2rem);
-	/*border-radius: 0.5rem;*/
 
 	outline-offset: -2px;
 	outline-color: rgba(59, 130, 246, 0.3);
