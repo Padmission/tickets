@@ -59,4 +59,19 @@ trait InteractsWithLastSeen
 
         return $relation;
     }
+
+    public function hasUnreadMessagesFor(Authenticatable $user): bool
+    {
+        $lastSeen = $this->ticketLastSeen()
+            ->where('user_id', $user->getAuthIdentifier())
+            ->first();
+
+        if (! $lastSeen || ! $lastSeen->last_seen_activity_id) {
+            return $this->ticketActivities()->exists();
+        }
+
+        return $this->ticketActivities()
+            ->where('id', '>', $lastSeen->last_seen_activity_id)
+            ->exists();
+    }
 }

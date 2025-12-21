@@ -21,7 +21,7 @@ customElements.define(
                             <li>
                                 <button
                                     data-open-ticket="${ticket.id}"
-                                    class="ticket"
+                                    class="ticket ${ticket.is_unread ? 'ticket--unread' : ''}"
                                 >
                                     <div class="ticket__header">
                                         <div>

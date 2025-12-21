@@ -282,9 +282,11 @@ button {
 .ticket-list {
 	display: flex;
 	flex-direction: column;
+    gap: 0.25rem;
 	list-style: none;
 	margin: 1rem 0 0;
-	padding: 0;
+	padding: 0 .25rem;
+
 }
 
 .ticket {
@@ -296,7 +298,7 @@ button {
 	padding: 1rem;
 	margin-inline: -1rem;
 	width: calc(100% + 2rem);
-	border-radius: 0.5rem;
+	/*border-radius: 0.5rem;*/
 
 	outline-offset: -2px;
 	outline-color: rgba(59, 130, 246, 0.3);
@@ -409,11 +411,30 @@ button {
 	}
 }
 
+.ticket--unread {
+	border-left: 2px solid var(--color-primary);
+	background-color: color-mix(in srgb, var(--color-primary) 3%, transparent);
+
+	&:focus-visible,
+	&:hover {
+		background-color: color-mix(in srgb, var(--color-primary) 5%, var(--color-gray-50));
+	}
+}
+
 :host-context(.dark) .ticket {
 	&:focus-visible,
 	&:hover {
 		background-color: var(--color-gray-800);
 		transform: translateY(-1px);
+	}
+}
+
+:host-context(.dark) .ticket--unread {
+	background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+
+	&:focus-visible,
+	&:hover {
+		background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-gray-800));
 	}
 }
 
