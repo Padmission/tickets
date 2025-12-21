@@ -8,85 +8,102 @@
 
     @if($activities->count())
     <x-slot name="activity">
+        <!-- Activities header -->
         @if(isset($activitiesHeader))
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:16px;">
-                <tr>
-                    <td align="center">
-                        <table width="80%" align="center" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
-                            <tr>
-                                <td align="center">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                            <td style="border-bottom: 1px solid #e2e8f0; padding-bottom: 16px;">
+                                <p style="margin: 0; font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; text-align: center;">
                                     {!! $activitiesHeader !!}
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        @endif
+
+        <!-- Activity messages -->
+        @foreach($activities as $activity)
+            @if($activity->sender == \Padmission\Tickets\Enums\ActivitySender::User)
+            <!-- User message (left aligned) -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 16px;">
+                <tr>
+                    <td align="left">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="85%" class="activity-bubble" style="max-width: 85%;">
+                            <tr>
+                                <td style="background-color: #f1f5f9; border-radius: 16px 16px 16px 4px; padding: 16px 20px;">
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                                        {!! strip_tags($activity->content) !!}
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 4px 0 4px;">
+                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                        @if($activity->user)
+                                            {{ $activity->userName }}
+                                        @else
+                                            {{ __('padmission-tickets::emails.activity.sender-you') }}
+                                        @endif
+                                    </p>
                                 </td>
                             </tr>
                         </table>
                     </td>
                 </tr>
             </table>
-        @endif
-        @foreach($activities as $activity)
-            @if($activity->sender == \Padmission\Tickets\Enums\ActivitySender::User)
-                <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:16px;">
-                    <tr>
-                        <td align="left">
-                            <table width="80%" align="left" cellpadding="0" cellspacing="0" role="presentation">
-                                <tr>
-                                    <td align="left" style="padding: 12px 12px 0 12px; background:#edf2f7;">
-                                        {!! strip_tags($activity->content) !!}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td align="left" style="padding:4px 12px 12px 12px;background:#edf2f7; font-size:8px; font-style:italic;">
-                                        @if($activity->user)
-                                            - {{ $activity->userName }}
-                                        @else
-                                            - {{ __('padmission-tickets::emails.activity.sender-you') }}
-                                        @endif
-                                    </td>
-                                </tr>
 
-                            </table>
-                        </td>
-                    </tr>
-                </table>
             @elseif($activity->sender == \Padmission\Tickets\Enums\ActivitySender::Supporter)
-
-                <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:16px;">
-                    <tr>
-                        <td align="right">
-                            <table width="80%" align="right" cellpadding="0" cellspacing="0" role="presentation">
-                                <tr>
-                                    <td align="right" style="padding:12px 12px 0 12px;background:#edf2f7;">
+            <!-- Supporter message (right aligned, accent color) -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 16px;">
+                <tr>
+                    <td align="right">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="85%" class="activity-bubble" style="max-width: 85%;">
+                            <tr>
+                                <td style="background-color: #4f46e5; border-radius: 16px 16px 4px 16px; padding: 16px 20px;">
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #ffffff;">
                                         {!! $activity->content !!}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td align="right" style="padding:4px 12px 12px 12px;background:#edf2f7; font-size:8px; font-style:italic;">
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align="right" style="padding: 6px 4px 0 4px;">
+                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
                                         @if($activity->user)
-                                            - {{ $activity->userName }}
+                                            {{ $activity->userName }}
                                         @else
-                                            - {{ __('padmission-tickets::emails.activity.sender-support') }}
+                                            {{ __('padmission-tickets::emails.activity.sender-support') }}
                                         @endif
-                                    </td>
-                                </tr>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
 
-                            </table>
-                        </td>
-                    </tr>
-                </table>
             @else
-                <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:16px;">
-                    <tr>
-                        <td align="center">
-                            <table width="80%" align="center" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
-                                <tr>
-                                    <td align="center" style="padding:12px 0;background:#f5f5f5;">
+            <!-- System message (centered, subtle) -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 16px;">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                            <tr>
+                                <td style="background-color: #fef3c7; border-radius: 20px; padding: 8px 16px;">
+                                    <p style="margin: 0; font-size: 13px; color: #92400e; font-weight: 500;">
                                         {!! $activity->content !!}
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
             @endif
         @endforeach
     </x-slot>

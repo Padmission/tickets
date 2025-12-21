@@ -1,6 +1,7 @@
 @php
     use Filament\Facades\Filament;
-    use Filament\Support\Facades\FilamentAsset;use Padmission\Tickets\TicketPlugin;
+    use Filament\Support\Facades\FilamentAsset;
+    use Padmission\Tickets\TicketPlugin;
 
     $config = TicketPlugin::get()->getChatWidgetConfig();
 
@@ -29,13 +30,8 @@
         chat-component {
             --color-surface: transparent;
             --composer-bg: transparent;
+            --color-primary: {{ $config->getPrimaryColor() }}
         }
-
-        @if ($primaryColor)
-            chat-component {
-                --color-primary: rgb({{ $primaryColor }});
-            }
-        @endif
     </style>
 
     <chat-component

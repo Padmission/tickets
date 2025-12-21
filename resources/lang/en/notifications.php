@@ -44,4 +44,8 @@ return [
         'subject' => 'Verify Your Email Address',
         'message' => 'Please verify your email address by entering the following verification code. This code will expire in 10 minutes.',
     ],
+
+    'otp' => [
+        'expires-hint' => 'This code will expire in :minutes minutes',
+    ],
 ];
