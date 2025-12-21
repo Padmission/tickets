@@ -52,26 +52,26 @@ customElements.define(
 		}
 
 		disconnectedCallback() {
-            this.stopPolling();
+			this.stopPolling();
 
-            if (this.editor) {
-                this.editor.destroy();
-            }
+			if (this.editor) {
+				this.editor.destroy();
+			}
 
-            if (this.messageObserver) {
-                this.messageObserver.disconnect();
-            }
+			if (this.messageObserver) {
+				this.messageObserver.disconnect();
+			}
 
-            if (this.messageListObserver) {
-                this.messageListObserver.disconnect();
-            }
+			if (this.messageListObserver) {
+				this.messageListObserver.disconnect();
+			}
 
-            // Flush pending mark-seen call before disconnecting
-            if (this.markSeenDebounceTimer) {
-                clearTimeout(this.markSeenDebounceTimer);
-                this.markTicketSeen(this.lastSeenMessageId);
-            }
-      }
+			// Flush pending mark-seen call before disconnecting
+			if (this.markSeenDebounceTimer) {
+				clearTimeout(this.markSeenDebounceTimer);
+				this.markTicketSeen(this.lastSeenMessageId);
+			}
+		}
 
 		afterRender(node) {
 			this.messagesElement = node.querySelector("[data-chat-messages]");
