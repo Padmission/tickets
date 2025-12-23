@@ -54,7 +54,10 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     public function packageRegistered(): void
     {
         $this->app->extend(Markdown::class, function (Markdown $markdown, $app) {
+            $invaded = invade($markdown);
+
             $markdown->loadComponentsFrom([
+                ...$invaded->componentPaths,
                 __DIR__.'/../resources/views/mail-components',
             ]);
 
