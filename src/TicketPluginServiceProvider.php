@@ -57,7 +57,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             $invaded = invade($markdown);
 
             $markdown->loadComponentsFrom([
-                ...$invaded->componentPaths,
+                ...$invaded->componentPaths, // @phpstan-ignore-line (intentionally accessing protected property via spatie/invade)
                 __DIR__.'/../resources/views/mail-components',
             ]);
 
@@ -73,8 +73,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     protected function registerServices(): void
     {
         $this->app->singleton(TicketActivityService::class);
-        $this->app->singleton(EmailLogoService::class);
-        $this->app->singleton(EmailStyleService::class);
         $this->app->singleton(TicketUrlService::class);
         $this->app->singleton(NotificationRecipientService::class);
     }

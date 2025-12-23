@@ -13,23 +13,23 @@ beforeEach(function () {
     $this->user = User::factory()->create();
 });
 
-test('can get unread activities within date range', function () {
-    // Create an old activity (should be excluded)
+test('can get unread activities', function () {
+    // Create an old activity
     TicketActivity::factory()->create([
         'ticket_id' => $this->ticket->id,
         'created_at' => now()->subDays(15),
     ]);
 
-    // Create a new activity (should be included)
+    // Create a new activity
     $newActivity = TicketActivity::factory()->create([
         'ticket_id' => $this->ticket->id,
         'created_at' => now()->subDays(2),
     ]);
 
-    $activities = $this->service->getUnreadActivities($this->ticket, $this->user, 10, 7);
+    $activities = $this->service->getUnreadActivities($this->ticket, $this->user, 10);
 
-    expect($activities)->toHaveCount(1);
-    expect($activities->first()->id)->toBe($newActivity->id);
+    expect($activities)->toHaveCount(2);
+    expect($activities->last()->id)->toBe($newActivity->id);
 });
 
 test('can get unread activities after last notified activity', function () {
@@ -50,7 +50,7 @@ test('can get unread activities after last notified activity', function () {
         'created_at' => now()->subDays(2),
     ]);
 
-    $activities = $this->service->getUnreadActivities($this->ticket, $this->user, 10, 7);
+    $activities = $this->service->getUnreadActivities($this->ticket, $this->user, 10);
 
     expect($activities)->toHaveCount(1);
     expect($activities->first()->id)->toBe($newActivity->id);
@@ -100,19 +100,17 @@ test('respects max events configuration', function () {
         ]);
     }
 
-    $notification = new \Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
-
     // Use the activity service to get unread activities
     $activityService = app(TicketActivityService::class);
-    $activities = $activityService->getUnreadActivities($ticket, $user, 2, 7);
+    $activities = $activityService->getUnreadActivities($ticket, $user, 2);
 
-    expect($activities)->toHaveCount(2); // Should limit to 2
+    // Should return 3 activities (maxEvents + 1) to check if there are more
+    expect($activities)->toHaveCount(3);
 });
 
 test('returns null when user has no previous last seen for ticket', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new \Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
 
     // Use the activity service to get the last seen
     $activityService = app(TicketActivityService::class);

@@ -5,9 +5,9 @@ namespace Padmission\Tickets\Models;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations;
 use Padmission\Tickets\Database\Factories\TicketLastSeenFactory;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
+use Padmission\Tickets\Models\Relations\PanelAwareBelongsTo;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketLastSeen extends Model
@@ -29,9 +29,9 @@ class TicketLastSeen extends Model
     /* Relations */
 
     /**
-     * @return Relations\PanelAwareBelongsTo<Ticket, $this>
+     * @return PanelAwareBelongsTo<Ticket, $this>
      */
-    public function ticket(): Relations\PanelAwareBelongsTo
+    public function ticket(): PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
             TicketPlugin::resolveModelClass(Ticket::class),
@@ -40,9 +40,9 @@ class TicketLastSeen extends Model
     }
 
     /**
-     * @return Relations\PanelAwareBelongsTo<Model&Authenticatable, $this>
+     * @return PanelAwareBelongsTo<Model&Authenticatable, $this>
      */
-    public function user(): Relations\PanelAwareBelongsTo
+    public function user(): PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
             TicketPlugin::resolveUserModelClass(),

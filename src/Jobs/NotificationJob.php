@@ -29,6 +29,8 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
     protected string|int $ticketKey;
 
+    public string $notificationType;
+
     public function __construct(
         Authenticatable $user,
         Ticket $model,
@@ -37,6 +39,12 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         $this->userId = $user->getKey();
         $this->ticketClass = get_class($model);
         $this->ticketKey = $model->getKey();
+        $this->notificationType = str(is_object($this->event) ? get_class($this->event) : $this->event)
+            ->afterLast('\\')
+            ->replace('Ticket', '')
+            ->replace('Event', '')
+            ->lower()
+            ->toString();
     }
 
     public function handle(): void
@@ -84,7 +92,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
     protected function getNotificationClass(): ?string
     {
         $notifications = config('padmission-tickets.notifications', []);
-        $eventClass = $this->event::class;
+        $eventClass = get_class($this->event);
 
         if (array_key_exists($eventClass, $notifications)) {
             return $notifications[$eventClass];
@@ -103,5 +111,20 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}";
+    }
+
+    public function getUserId(): string|int
+    {
+        return $this->userId;
+    }
+
+    public function getTicketClass(): string
+    {
+        return $this->ticketClass;
+    }
+
+    public function getTicketKey(): string|int
+    {
+        return $this->ticketKey;
     }
 }

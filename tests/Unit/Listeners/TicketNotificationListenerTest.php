@@ -140,8 +140,9 @@ describe('NotificationJob Unit Tests', function () {
     test('resolves user correctly', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
-        $job = new NotificationJob($user, $ticket, 'activity');
+        $job = new NotificationJob($user, $ticket, $event);
 
         $resolvedUser = invade($job)->resolveUser();
 
@@ -152,8 +153,9 @@ describe('NotificationJob Unit Tests', function () {
     test('resolves ticket correctly', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
-        $job = new NotificationJob($user, $ticket, 'activity');
+        $job = new NotificationJob($user, $ticket, $event);
 
         $resolvedTicket = invade($job)->resolveModel();
 
@@ -164,8 +166,9 @@ describe('NotificationJob Unit Tests', function () {
     test('returns null for non-existent user', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
-        $job = new NotificationJob($user, $ticket, 'activity');
+        $job = new NotificationJob($user, $ticket, $event);
 
         // Delete the user after job creation
         $user->delete();
@@ -178,8 +181,9 @@ describe('NotificationJob Unit Tests', function () {
     test('returns null for non-existent ticket', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
-        $job = new NotificationJob($user, $ticket, 'activity');
+        $job = new NotificationJob($user, $ticket, $event);
 
         // Delete the ticket after job creation
         $ticket->delete();
@@ -192,8 +196,9 @@ describe('NotificationJob Unit Tests', function () {
     test('returns correct notification class for valid type', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
-        $job = new NotificationJob($user, $ticket, 'activity');
+        $job = new NotificationJob($user, $ticket, $event);
 
         $notificationClass = invade($job)->getNotificationClass();
 
@@ -204,7 +209,13 @@ describe('NotificationJob Unit Tests', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
 
-        $job = new NotificationJob($user, $ticket, 'invalid-type');
+        // Create a mock event that won't be in the config
+        $event = new class($ticket)
+        {
+            public function __construct(public $ticket) {}
+        };
+
+        $job = new NotificationJob($user, $ticket, $event);
 
         $notificationClass = invade($job)->getNotificationClass();
 
@@ -214,8 +225,9 @@ describe('NotificationJob Unit Tests', function () {
     test('unique id format is consistent and predictable', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
-        $job = new NotificationJob($user, $ticket, 'activity');
+        $job = new NotificationJob($user, $ticket, $event);
         $uniqueId = $job->uniqueId();
 
         expect($uniqueId)
@@ -225,7 +237,8 @@ describe('NotificationJob Unit Tests', function () {
             ->toContain((string) $user->id);
 
         // Same inputs should produce same unique ID
-        $job2 = new NotificationJob($user, $ticket, 'activity');
+        $event2 = new TicketActivityEvent($ticket, ActivityType::Message);
+        $job2 = new NotificationJob($user, $ticket, $event2);
         expect($job->uniqueId())->toBe($job2->uniqueId());
     });
 
@@ -234,10 +247,13 @@ describe('NotificationJob Unit Tests', function () {
         $user2 = User::factory()->create();
         $ticket1 = Ticket::factory()->open()->create();
         $ticket2 = Ticket::factory()->open()->create();
+        $event = new TicketActivityEvent($ticket1, ActivityType::Message);
 
-        $job1 = new NotificationJob($user1, $ticket1, 'activity');
-        $job2 = new NotificationJob($user2, $ticket1, 'activity'); // Different user
-        $job3 = new NotificationJob($user1, $ticket2, 'activity'); // Different ticket
+        $job1 = new NotificationJob($user1, $ticket1, $event);
+        $event2 = new TicketActivityEvent($ticket1, ActivityType::Message);
+        $job2 = new NotificationJob($user2, $ticket1, $event2); // Different user
+        $event3 = new TicketActivityEvent($ticket2, ActivityType::Message);
+        $job3 = new NotificationJob($user1, $ticket2, $event3); // Different ticket
 
         expect($job1->uniqueId())->not->toBe($job2->uniqueId())
             ->and($job1->uniqueId())->not->toBe($job3->uniqueId())
