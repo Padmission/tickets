@@ -39,6 +39,10 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             $this->package->runsMigrations();
         }
 
+        if (app()->environment('local')) {
+            $this->loadRoutesFrom("{$this->package->basePath('/../routes/')}dev.php");
+        }
+
         $this->registerAssets();
         $this->registerBrowserSync();
     }
