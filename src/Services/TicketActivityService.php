@@ -3,37 +3,74 @@
 namespace Padmission\Tickets\Services;
 
 use Illuminate\Support\Collection;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivitySide;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketLastSeen;
 
 class TicketActivityService
 {
-    /**
-     * Get unread activities for a ticket (for email notifications)
-     */
-    public function getUnreadActivities(
+    public function getActivities(
         Ticket $ticket,
-        $notifiable,
-        int $maxEvents,
-        int $maxDays
+        ?int $offsetId = null,
+        ?int $limit = null,
     ): Collection {
-        $lastSeen = $this->getLastSeen($ticket, $notifiable);
+        $currentSender = auth()->id() === $ticket->submitter_id
+            ? ActivitySender::User
+            : ActivitySender::Supporter;
 
         return $ticket
             ->ticketActivities()
             ->with('user')
-            ->when($lastSeen?->last_notified_activity_id, function ($query) use ($lastSeen) {
-                $query->where('id', '>', $lastSeen->last_notified_activity_id);
-            })
-            ->where('created_at', '>=', now()->subDays($maxDays))
-            ->orderBy('created_at', 'asc')
-            ->limit($maxEvents)
-            ->get();
+            ->whereIn('type', $this->getActivityTypesForSender($ticket, $currentSender))
+            ->when($offsetId, fn ($query) => $query->where('id', '>', $offsetId))
+            ->when($limit, fn ($query) => $query->limit($limit))
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function (TicketActivity $message) use ($currentSender) {
+                $message->side = match (true) {
+                    $message->sender === ActivitySender::System => ActivitySide::System,
+                    $message->sender === $currentSender => ActivitySide::Me,
+                    default => ActivitySide::Other,
+                };
+
+                return $message;
+            });
+
     }
 
-    /**
-     * Get the last seen record for a user and ticket
-     */
+    public function getUnreadActivities(
+        Ticket $ticket,
+        $notifiable,
+        int $maxEvents
+    ): Collection {
+        $lastSeen = $this->getLastSeen($ticket, $notifiable);
+        $offsetId = max($lastSeen?->last_notified_activity_id, $lastSeen?->last_seen_activity_id, 0);
+
+        return $this->getActivities($ticket, $offsetId, $maxEvents + 1)->reverse();
+    }
+
+    public function getActivityTypesForSender(Ticket $ticket, $currentSender): array
+    {
+        if (
+            $currentSender === ActivitySender::Supporter
+            && auth()->user()?->can('manage', $ticket)
+        ) {
+            return array_filter(
+                ActivityType::cases(),
+                fn (ActivityType $type) => $type !== ActivityType::TurnChanged
+            );
+        }
+
+        return [
+            ActivityType::Opened,
+            ActivityType::Message,
+            ActivityType::Closed,
+        ];
+    }
+
     public function getLastSeen(Ticket $ticket, $notifiable): ?TicketLastSeen
     {
         /** @var TicketLastSeen|null $lastSeen */
@@ -45,10 +82,7 @@ class TicketActivityService
         return $lastSeen;
     }
 
-    /**
-     * Mark specific activity as seen by user
-     */
-    public function markActivitySeen(Ticket $ticket, $notifiable, int $activityId): void
+    public function markAsSeen(Ticket $ticket, $notifiable, int $activityId): void
     {
         $ticket->ticketLastSeen()->updateOrCreate(
             [
@@ -61,10 +95,7 @@ class TicketActivityService
         );
     }
 
-    /**
-     * Mark notification email as sent (separate from viewing)
-     */
-    public function markNotificationSent(Ticket $ticket, $notifiable, int $activityId): void
+    public function markAsSent(Ticket $ticket, $notifiable, int $activityId): void
     {
         $ticket->ticketLastSeen()->updateOrCreate(
             [
@@ -75,18 +106,5 @@ class TicketActivityService
                 'last_notified_activity_id' => $activityId,
             ]
         );
-    }
-
-    /**
-     * @deprecated Use markNotificationSent() instead
-     */
-    public function markNotificationUpdated(Ticket $ticket, $notifiable): void
-    {
-        // For backward compatibility - get the latest activity and mark it as notified
-        $latestActivity = $ticket->ticketActivities()->latest('id')->first();
-
-        if ($latestActivity) {
-            $this->markNotificationSent($ticket, $notifiable, $latestActivity->id);
-        }
     }
 }

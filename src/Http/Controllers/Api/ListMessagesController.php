@@ -2,16 +2,12 @@
 
 namespace Padmission\Tickets\Http\Controllers\Api;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
-use Padmission\Tickets\Enums\ActivitySender;
-use Padmission\Tickets\Enums\ActivitySide;
-use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\TicketPlugin;
 
@@ -31,29 +27,11 @@ class ListMessagesController
         /** @var Ticket $ticket */
         $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
-        app(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
+        resolve(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
 
-        $currentSender = $request->user()->id === $ticket->submitter_id
-            ? ActivitySender::User
-            : ActivitySender::Supporter;
+        $activityService = resolve(TicketActivityService::class);
 
-        $messages = $ticket
-            ->ticketActivities()
-            ->when(
-                $request->has('offset'),
-                fn (Builder $query) => $query->where('id', '>', $request->integer('offset'))
-            )
-            ->get()
-            ->filter(fn (TicketActivity $activity) => $this->shouldShowActivity($activity, $currentSender))
-            ->map(function (TicketActivity $message) use ($currentSender) {
-                $message->side = match (true) {
-                    $message->sender === ActivitySender::System => ActivitySide::System,
-                    $message->sender === $currentSender => ActivitySide::Me,
-                    default => ActivitySide::Other,
-                };
-
-                return $message;
-            });
+        $messages = $activityService->getActivities($ticket, $request->integer('offset'));
 
         return [
             'ticket' => [
@@ -62,21 +40,5 @@ class ListMessagesController
             ],
             'messages' => $messages->values()->map(fn ($message) => TicketActivityMapper::map($message)),
         ];
-    }
-
-    protected function shouldShowActivity(TicketActivity $activity, ActivitySender $currentSender): bool
-    {
-        if (
-            $currentSender === ActivitySender::Supporter
-            && auth()->user()->can('manage', $activity->ticket)
-        ) {
-            return $activity->type !== ActivityType::TurnChanged;
-        }
-
-        return in_array($activity->type, [
-            ActivityType::Opened,
-            ActivityType::Message,
-            ActivityType::Closed,
-        ]);
     }
 }

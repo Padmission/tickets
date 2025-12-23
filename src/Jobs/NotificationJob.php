@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Jobs;
 
-use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -33,51 +32,36 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
     public function __construct(
         Authenticatable $user,
         Ticket $model,
-        public string $notificationType
+        public $event
     ) {
         $this->userId = $user->getKey();
         $this->ticketClass = get_class($model);
         $this->ticketKey = $model->getKey();
-
-        $this->initializeJob($user, $model);
-    }
-
-    /**
-     * Override this method to add custom initialization logic
-     */
-    protected function initializeJob(Authenticatable $user, Ticket $model): void
-    {
-        // Override in child classes for custom initialization
     }
 
     public function handle(): void
     {
-        try {
-            $notificationClass = $this->getNotificationClass();
+        $notificationClass = $this->getNotificationClass();
 
-            if (! $notificationClass) {
-                return;
-            }
-
-            $user = $this->resolveUser();
-            if (! $user) {
-                return;
-            }
-
-            $record = $this->resolveModel();
-            if (! $record) {
-                return;
-            }
-
-            $this->sendNotification($user, $record, $notificationClass);
-        } catch (Exception $e) {
-            $this->handleException($e);
+        if (! $notificationClass) {
+            return;
         }
+
+        $user = $this->resolveUser();
+
+        if (! $user) {
+            return;
+        }
+
+        $record = $this->resolveModel();
+
+        if (! $record) {
+            return;
+        }
+
+        $this->sendNotification($user, $record, $notificationClass);
     }
 
-    /**
-     * Resolve the user model
-     */
     protected function resolveUser(): ?Model
     {
         $userModel = TicketPlugin::resolveUserModelClass();
@@ -85,9 +69,6 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         return $userModel::find($this->userId);
     }
 
-    /**
-     * Resolve the ticket model
-     */
     protected function resolveModel(): ?Ticket
     {
         $model = $this->ticketClass;
@@ -95,39 +76,21 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         return $model::find($this->ticketKey);
     }
 
-    /**
-     * Send the notification
-     */
     protected function sendNotification(Model $user, Ticket $record, string $notificationClass): void
     {
-        Notification::send($user, new $notificationClass($record, $this->notificationType));
-    }
-
-    /**
-     * Handle exceptions that occur during job execution
-     */
-    protected function handleException(Exception $e): void
-    {
-        // Override in child classes for custom error handling
-        // Default behavior is to silently continue
+        Notification::send($user, new $notificationClass($record, $this->event));
     }
 
     protected function getNotificationClass(): ?string
     {
         $notifications = config('padmission-tickets.notifications', []);
-        if (! array_key_exists($this->notificationType, $notifications)) {
-            return null;
-        }
-        if (! $notifications[$this->notificationType]) {
-            return null;
+        $eventClass = $this->event::class;
+
+        if (array_key_exists($eventClass, $notifications)) {
+            return $notifications[$eventClass];
         }
 
-        return $notifications[$this->notificationType];
-    }
-
-    public function uniqueId(): string
-    {
-        return $this->buildUniqueId();
+        return null;
     }
 
     /**
@@ -137,23 +100,8 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      * that new activities for the same ticket-user pair will replace existing
      * debounced notifications, which is exactly what we want for debouncing.
      */
-    protected function buildUniqueId(): string
+    public function uniqueId(): string
     {
         return "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}";
-    }
-
-    public function getUserId(): string|int
-    {
-        return $this->userId;
-    }
-
-    public function getTicketClass(): string
-    {
-        return $this->ticketClass;
-    }
-
-    public function getTicketKey(): string|int
-    {
-        return $this->ticketKey;
     }
 }

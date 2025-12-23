@@ -1,51 +1,45 @@
 <?php
 
 return [
-    'ticket-history' => [
-        'subject' => 'Your ticket has been updated',
-        'message' => 'Your ticket ":subject" has been updated with new activity.',
-        'more-activities' => 'There are more activities on this ticket that are not shown in this email. View the ticket to see all activities.',
+    'general' => [
+        'recent-activity' => 'Recent Activity',
+        'more-activities' => 'There are more messages on this ticket that are not shown in this email. View the ticket to see all messages.',
         'action' => 'View Ticket',
-        'activities-header' => 'Recent Ticket Activity',
-        'intro' => 'There has been new activity on your ticket.',
-        'outro' => 'To view the entire ticket, visit the link above.',
+        'sender-you' => 'You',
+        'sender-support' => 'Support',
     ],
 
     'ticket-created' => [
-        'subject' => 'New ticket created: :subject (#:ticket_id)',
+        'subject' => 'New ticket #:ticket_id – :subject',
+        'headline' => 'New Ticket',
         'intro' => 'A new ticket has been created.',
         'outro' => 'Please review the ticket details and respond as needed.',
     ],
 
+    'ticket-activity' => [
+        'subject' => 'Ticket updated #:ticket_id – :subject',
+        'headline' => 'Recent Ticket Activity',
+        'intro' => 'Your ticket has had some activity since you were last online. Please visit the website to view the full conversation.',
+        'outro' => '',
+    ],
+
     'ticket-assigned' => [
-        'subject' => 'Ticket assigned to you: :subject (#:ticket_id)',
+        'subject' => 'Ticket assigned to you #:ticket_id – :subject was assigned to you',
+        'headline' => 'Ticket Assigned',
         'intro' => 'A ticket has been assigned to you for handling.',
         'outro' => 'Please review the ticket and provide your assistance.',
     ],
 
     'ticket-closed' => [
-        'subject' => 'Ticket closed: :subject (#:ticket_id)',
+        'subject' => 'Ticket closed #:ticket_id – :subject',
+        'headline' => 'Ticket Closed',
         'intro' => 'Your ticket has been closed.',
         'outro' => 'If you need further assistance, please create a new ticket.',
-    ],
-
-    'ticket-activity' => [
-        'subject' => 'New activity on ticket: :subject (#:ticket_id)',
-        'intro' => 'There has been new activity on your ticket.',
-        'outro' => 'Please check the ticket for the latest updates.',
-    ],
-
-    'rate-limit' => [
-        'title' => 'Too Many Notifications',
-        'message' => 'You have reached the maximum number of notifications per hour. Please try again later.',
     ],
 
     'otp-verification' => [
         'subject' => 'Verify Your Email Address',
         'message' => 'Please verify your email address by entering the following verification code. This code will expire in 10 minutes.',
-    ],
-
-    'otp' => [
         'expires-hint' => 'This code will expire in :minutes minutes',
     ],
 ];

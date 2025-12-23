@@ -38,7 +38,7 @@ class MarkTicketSeenController
             ->firstOrFail();
 
         // Update last seen
-        app(TicketActivityService::class)->markActivitySeen(
+        app(TicketActivityService::class)->markAsSeen(
             $ticket,
             $request->user(),
             $validated['last_seen_activity_id']
