@@ -3,6 +3,7 @@
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
@@ -21,7 +22,7 @@ it('displays ticket subject as page heading', function () {
 
     $heading = $component->instance()->getHeading();
 
-    expect($heading)->toBeInstanceOf(\Illuminate\Support\HtmlString::class);
+    expect($heading)->toBeInstanceOf(HtmlString::class);
     expect((string) $heading)->toBe('Test Ticket Subject');
 });
 

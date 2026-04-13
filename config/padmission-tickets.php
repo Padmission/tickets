@@ -1,8 +1,12 @@
 <?php
 
+use App\Models\Tenant;
+use App\Models\User;
 use Carbon\CarbonInterval;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events;
+use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models;
 use Padmission\Tickets\Notifications;
 
@@ -17,7 +21,7 @@ return [
      * @var array<class-string, class-string>
      */
     'models' => [
-        Authenticatable::class => App\Models\User::class,
+        Authenticatable::class => User::class,
         Models\Ticket::class => Models\Ticket::class,
         Models\TicketActivity::class => Models\TicketActivity::class,
         Models\TicketAttachment::class => Models\TicketAttachment::class,
@@ -35,12 +39,12 @@ return [
      * @var array<class-string, class-string>
      */
     'jobs' => [
-        Padmission\Tickets\Jobs\NotificationJob::class => Padmission\Tickets\Jobs\NotificationJob::class,
+        NotificationJob::class => NotificationJob::class,
     ],
 
     'tenancy' => [
         'enabled' => false,
-        'tenancy_model' => App\Models\Tenant::class,
+        'tenancy_model' => Tenant::class,
     ],
 
     /**
@@ -82,7 +86,7 @@ return [
      *
      * @var string
      */
-    'default-notification-strategy' => Padmission\Tickets\Enums\NotificationStrategy::Debounced,
+    'default-notification-strategy' => NotificationStrategy::Debounced,
 
     /**
      * Debounce time in seconds for grouped notifications

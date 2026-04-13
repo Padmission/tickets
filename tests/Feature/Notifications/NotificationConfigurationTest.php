@@ -44,7 +44,7 @@ beforeEach(function () {
 
 function createListener()
 {
-    $recipientService = \Mockery::mock(NotificationRecipientService::class)->makePartial();
+    $recipientService = Mockery::mock(NotificationRecipientService::class)->makePartial();
     $recipientService->shouldReceive('getUserNotificationStrategy')
         ->andReturn(NotificationStrategy::Immediate);
 
