@@ -5,12 +5,11 @@ namespace Padmission\Tickets;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
-use Illuminate\Support\Arr;
+use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
-use Padmission\Tickets\Services\EmailLogoService;
-use Padmission\Tickets\Services\EmailStyleService;
+use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketUrlService;
@@ -39,6 +38,10 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             $this->package->runsMigrations();
         }
 
+        if (app()->environment('local')) {
+            $this->loadRoutesFrom("{$this->package->basePath('/../routes/')}dev.php");
+        }
+
         $this->registerAssets();
         $this->registerBrowserSync();
     }
@@ -50,6 +53,17 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
+        $this->app->extend(Markdown::class, function (Markdown $markdown, $app) {
+            $invaded = invade($markdown);
+
+            $markdown->loadComponentsFrom([
+                ...$invaded->componentPaths, // @phpstan-ignore-line (intentionally accessing protected property via spatie/invade)
+                __DIR__.'/../resources/views/mail-components',
+            ]);
+
+            return $markdown;
+        });
+
         $this->registerServices();
     }
 
@@ -59,8 +73,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     protected function registerServices(): void
     {
         $this->app->singleton(TicketActivityService::class);
-        $this->app->singleton(EmailLogoService::class);
-        $this->app->singleton(EmailStyleService::class);
         $this->app->singleton(TicketUrlService::class);
         $this->app->singleton(NotificationRecipientService::class);
     }
@@ -127,12 +139,14 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     protected function bootEventListeners(): void
     {
-        $listeners = config('padmission-tickets.event-listeners', []);
+        $events = [
+            Events\TicketActivityEvent::class,
+            Events\TicketAssignedEvent::class,
+            Events\TicketClosedEvent::class,
+        ];
 
-        foreach ($listeners as $event => $eventListeners) {
-            foreach (Arr::wrap($eventListeners) as $listener) {
-                Event::listen($event, $listener);
-            }
+        foreach ($events as $event) {
+            Event::listen($event, TicketNotificationListener::class);
         }
     }
 }

@@ -1,6 +1,9 @@
 <?php
 
+use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
 test('it resolves default notification job class', function () {
@@ -28,24 +31,32 @@ test('it resolves custom notification job class when configured', function () {
 });
 
 test('notification job has extensible methods', function () {
-    $job = new NotificationJob(
-        \Padmission\Tickets\Tests\User::factory()->create(),
-        \Padmission\Tickets\Models\Ticket::factory()->create(),
-        'test'
-    );
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->create();
+    $event = new TicketCreatedEvent($ticket);
+
+    $job = new NotificationJob($user, $ticket, $event);
 
     // Test that protected methods exist and are accessible to child classes
     $reflection = new ReflectionClass($job);
 
-    expect($reflection->hasMethod('initializeJob'))->toBeTrue();
-    expect($reflection->hasMethod('buildUniqueId'))->toBeTrue();
     expect($reflection->hasMethod('resolveUser'))->toBeTrue();
     expect($reflection->hasMethod('resolveModel'))->toBeTrue();
     expect($reflection->hasMethod('sendNotification'))->toBeTrue();
-    expect($reflection->hasMethod('handleException'))->toBeTrue();
+    expect($reflection->hasMethod('getNotificationClass'))->toBeTrue();
+});
 
-    // Test getter methods
-    expect($reflection->hasMethod('getUserId'))->toBeTrue();
-    expect($reflection->hasMethod('getTicketClass'))->toBeTrue();
-    expect($reflection->hasMethod('getTicketKey'))->toBeTrue();
+test('notification job generates unique id for debouncing', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->create();
+    $event = new TicketCreatedEvent($ticket);
+
+    $job = new NotificationJob($user, $ticket, $event);
+
+    $uniqueId = $job->uniqueId();
+
+    // Should contain ticket class, ticket key, and user id
+    expect($uniqueId)->toContain('notification-');
+    expect($uniqueId)->toContain((string) $ticket->getKey());
+    expect($uniqueId)->toContain((string) $user->getKey());
 });

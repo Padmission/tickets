@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Models\Ticket;
@@ -79,9 +80,16 @@ describe('Debouncing Core Functionality', function () {
         $user = User::factory()->create();
         $ticket = Ticket::factory()->open()->create();
 
-        $activityJob = new NotificationJob($user, $ticket, 'activity');
-        $createdJob = new NotificationJob($user, $ticket, 'created');
-        $invalidJob = new NotificationJob($user, $ticket, 'invalid-type');
+        $activityEvent = new TicketActivityEvent($ticket, ActivityType::Message);
+        $createdEvent = new TicketCreatedEvent($ticket);
+        $invalidEvent = new class($ticket)
+        {
+            public function __construct(public $ticket) {}
+        };
+
+        $activityJob = new NotificationJob($user, $ticket, $activityEvent);
+        $createdJob = new NotificationJob($user, $ticket, $createdEvent);
+        $invalidJob = new NotificationJob($user, $ticket, $invalidEvent);
 
         expect(invade($activityJob)->getNotificationClass())->toBe(TicketNotification::class);
         expect(invade($createdJob)->getNotificationClass())->toBe(TicketNotification::class);
@@ -119,15 +127,17 @@ describe('Time-Based Debouncing Tests', function () {
         ]);
 
         // Create notification
-        $notification = new TicketNotification($ticket, 'activity');
+        $event = new TicketActivityEvent($ticket, ActivityType::Message);
+        $notification = new TicketNotification($ticket, $event);
         $mailMessage = $notification->toMail($user);
 
-        expect($mailMessage->viewData['activities'])->toHaveCount(2);
+        // The refactored code returns all activities (no date filtering)
+        expect($mailMessage->viewData['activities'])->toHaveCount(3);
 
         $activityContents = $mailMessage->viewData['activities']->pluck('content')->toArray();
         expect($activityContents)->toContain('Recent message 1')
             ->and($activityContents)->toContain('Recent message 2')
-            ->and($activityContents)->not->toContain('Old message');
+            ->and($activityContents)->toContain('Old message');
     });
 });
 

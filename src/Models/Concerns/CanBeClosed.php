@@ -64,7 +64,7 @@ trait CanBeClosed
             ['closed_by' => $closedById, 'disposition_id' => $dispositionId]
         );
 
-        event(new TicketClosedEvent($this));
+        event(new TicketClosedEvent($this, auth()->user()));
     }
 
     /* Attributes */
