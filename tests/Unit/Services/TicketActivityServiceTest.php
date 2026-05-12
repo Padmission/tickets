@@ -101,7 +101,7 @@ test('respects max events configuration', function () {
         ]);
     }
 
-    $notification = new \Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
+    $notification = new Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
 
     // Use the activity service to get unread activities
     $activityService = app(TicketActivityService::class);
@@ -113,7 +113,7 @@ test('respects max events configuration', function () {
 test('returns null when user has no previous notifications for ticket', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->create();
-    $notification = new \Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
+    $notification = new Padmission\Tickets\Notifications\TicketNotification($ticket, 'history');
 
     // Use the activity service to get the last notification
     $activityService = app(TicketActivityService::class);

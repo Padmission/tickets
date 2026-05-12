@@ -39,5 +39,5 @@ it('throws exception if user is not in allSupportersQuery', function () {
     $ticket = Ticket::factory()->make(['panel' => 'test']);
 
     expect(fn () => (new AssignDefaultUser($user->id))->assign($ticket))
-        ->toThrow(\RuntimeException::class, 'not in the allSupportersQuery');
+        ->toThrow(RuntimeException::class, 'not in the allSupportersQuery');
 });

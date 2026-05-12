@@ -10,6 +10,7 @@ use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Tests\User;
@@ -18,13 +19,13 @@ beforeEach(function () {
     Queue::fake();
 
     // Create necessary TicketStatus records
-    \Padmission\Tickets\Models\TicketStatus::factory()->create([
+    TicketStatus::factory()->create([
         'display_name' => 'Open',
         'order' => 1,
         'panel' => 'test',
     ]);
 
-    \Padmission\Tickets\Models\TicketStatus::factory()->create([
+    TicketStatus::factory()->create([
         'display_name' => 'Closed',
         'order' => 2,
         'panel' => 'test',
@@ -32,7 +33,7 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    \Mockery::close();
+    Mockery::close();
 });
 
 test('notification listener correctly maps event types to notification types', function () {
@@ -79,7 +80,7 @@ describe('TicketNotificationListener Unit Tests', function () {
         $ticket = Ticket::factory()->open()->create(['assignee_id' => $user->id]);
 
         // Mock the recipient service to return immediate strategy
-        $recipientService = \Mockery::mock(NotificationRecipientService::class);
+        $recipientService = Mockery::mock(NotificationRecipientService::class);
         $recipientService->shouldReceive('getNotificationRecipients')
             ->andReturn(collect([$user]));
         $recipientService->shouldReceive('getUserNotificationStrategy')

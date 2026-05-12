@@ -1,6 +1,8 @@
 <?php
 
 use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
 test('it resolves default notification job class', function () {
@@ -29,8 +31,8 @@ test('it resolves custom notification job class when configured', function () {
 
 test('notification job has extensible methods', function () {
     $job = new NotificationJob(
-        \Padmission\Tickets\Tests\User::factory()->create(),
-        \Padmission\Tickets\Models\Ticket::factory()->create(),
+        User::factory()->create(),
+        Ticket::factory()->create(),
         'test'
     );
 

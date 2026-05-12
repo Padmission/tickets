@@ -1,7 +1,23 @@
 <?php
 
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Config;
+use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketAssignedEvent;
+use Padmission\Tickets\Events\TicketClosedEvent;
+use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Listeners\TicketNotificationListener;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketAttachment;
+use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Models\TicketNotification;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 
 return [
     'run_migrations' => true,
@@ -14,14 +30,14 @@ return [
      * @var array<class-string, class-string>
      */
     'models' => [
-        Authenticatable::class => App\Models\User::class,
-        Padmission\Tickets\Models\Ticket::class => Padmission\Tickets\Models\Ticket::class,
-        Padmission\Tickets\Models\TicketActivity::class => Padmission\Tickets\Models\TicketActivity::class,
-        Padmission\Tickets\Models\TicketAttachment::class => Padmission\Tickets\Models\TicketAttachment::class,
-        Padmission\Tickets\Models\TicketDisposition::class => Padmission\Tickets\Models\TicketDisposition::class,
-        Padmission\Tickets\Models\TicketNotification::class => Padmission\Tickets\Models\TicketNotification::class,
-        Padmission\Tickets\Models\TicketPriority::class => Padmission\Tickets\Models\TicketPriority::class,
-        Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
+        Authenticatable::class => User::class,
+        Ticket::class => Ticket::class,
+        TicketActivity::class => TicketActivity::class,
+        TicketAttachment::class => TicketAttachment::class,
+        TicketDisposition::class => TicketDisposition::class,
+        TicketNotification::class => TicketNotification::class,
+        TicketPriority::class => TicketPriority::class,
+        TicketStatus::class => TicketStatus::class,
     ],
 
     /**
@@ -32,12 +48,12 @@ return [
      * @var array<class-string, class-string>
      */
     'jobs' => [
-        Padmission\Tickets\Jobs\NotificationJob::class => Padmission\Tickets\Jobs\NotificationJob::class,
+        NotificationJob::class => NotificationJob::class,
     ],
 
     'tenancy' => [
         'enabled' => false,
-        'tenancy_model' => App\Models\Tenant::class,
+        'tenancy_model' => Tenant::class,
     ],
 
     'levels' => [
@@ -67,17 +83,17 @@ return [
     ],
 
     'event-listeners' => [
-        \Padmission\Tickets\Events\TicketActivityEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
+        TicketActivityEvent::class => [
+            TicketNotificationListener::class,
         ],
-        \Padmission\Tickets\Events\TicketAssignedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
+        TicketAssignedEvent::class => [
+            TicketNotificationListener::class,
         ],
-        \Padmission\Tickets\Events\TicketClosedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
+        TicketClosedEvent::class => [
+            TicketNotificationListener::class,
         ],
-        \Padmission\Tickets\Events\TicketCreatedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
+        TicketCreatedEvent::class => [
+            TicketNotificationListener::class,
         ],
     ],
 
@@ -99,7 +115,7 @@ return [
      *
      * @var string
      */
-    'default-notification-strategy' => Padmission\Tickets\Enums\NotificationStrategy::Debounced,
+    'default-notification-strategy' => NotificationStrategy::Debounced,
 
     /**
      * Debounce time in seconds for grouped notifications
