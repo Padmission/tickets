@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Restore a previously soft-deleted {{ modelLabel }}.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()->description('The ID of the {{ modelLabel }} to restore')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $model = {{ resourceShortName }}::getModel();
+
+        if (! in_array(SoftDeletes::class, class_uses_recursive($model))) {
+            return '{{ modelLabel }} does not support soft deletes.';
+        }
+
+        $record = $model::onlyTrashed()->find($request['id']);
+
+        if (! $record) {
+            return 'Soft-deleted {{ modelLabel }} #' . $request['id'] . ' not found.';
+        }
+
+        $record->restore();
+
+        return 'Restored {{ modelLabel }} #' . $record->getKey() . ' successfully.';
+    }
+}

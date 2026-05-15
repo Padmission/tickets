@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Update an existing {{ modelLabel }}.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()->description('The ID of the {{ modelLabel }} to update')->required(),
+            // TODO: Define the fields that can be updated.
+            'name' => $schema->string()->description('The new name'),
+            // Add more fields as needed:
+            // 'email' => $schema->string()->description('New email address'),
+            // 'status' => $schema->string()->description('New status'),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $model = {{ resourceShortName }}::getModel();
+        $record = $model::find($request['id']);
+
+        if (! $record) {
+            return '{{ modelLabel }} #' . $request['id'] . ' not found.';
+        }
+
+        // TODO: Map the fields from the request. Only update provided fields.
+        $data = array_filter([
+            'name' => $request['name'] ?? null,
+            // Add more fields as needed
+        ], fn ($v) => $v !== null);
+
+        $record->update($data);
+
+        return 'Updated {{ modelLabel }} #' . $record->getKey() . ' successfully.';
+    }
+}

@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Search {{ modelPluralLabel }} by a keyword.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'query' => $schema->string()->description('The search term to look for')->required(),
+            'limit' => $schema->integer()->description('Maximum results to return (default: 10, max: 50)'),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $query = (string) $request['query'];
+        $limit = min(50, max(1, (int) ($request['limit'] ?? 10)));
+
+        $model = {{ resourceShortName }}::getModel();
+        $instance = new $model;
+        $fillable = $instance->getFillable();
+
+        // Search across text-like fillable columns
+        $searchColumns = array_filter(
+            $fillable,
+            fn ($col) => ! str_ends_with($col, '_id') && ! in_array($col, ['password', 'remember_token'])
+        );
+
+        $q = $model::query();
+
+        if (! empty($searchColumns)) {
+            $q->where(function ($q) use ($searchColumns, $query) {
+                foreach ($searchColumns as $col) {
+                    $q->orWhere($col, 'LIKE', "%{$query}%");
+                }
+            });
+        }
+
+        $records = $q->limit($limit)->get();
+
+        if ($records->isEmpty()) {
+            return "No {{ modelPluralLabel }} found matching '{$query}'.";
+        }
+
+        $lines = [
+            "Search results for '{$query}' in {{ modelPluralLabel }} ({$records->count()} found):",
+            '',
+        ];
+
+        foreach ($records as $record) {
+            $attrs = collect($record->toArray())
+                ->reject(fn ($v) => is_array($v) || is_null($v))
+                ->map(fn ($v, $k) => "{$k}: " . (is_string($v) ? mb_substr($v, 0, 80) : $v))
+                ->implode(', ');
+            $lines[] = "- #{$record->getKey()}: {$attrs}";
+        }
+
+        return implode("\n", $lines);
+    }
+}

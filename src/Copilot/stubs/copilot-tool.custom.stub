@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Describe what this tool does.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            // Define your tool's input parameters here:
+            // 'param_name' => $schema->string()->description('Description of the parameter')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        // Implement your tool logic here.
+        // Access parameters via $request['param_name'].
+
+        return 'Tool executed successfully.';
+    }
+}

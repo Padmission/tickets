@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Create a new {{ modelLabel }}.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        // TODO: Define the fields required to create a {{ modelLabel }}.
+        // Customize this based on your model's fillable attributes.
+        return [
+            'name' => $schema->string()->description('The name of the {{ modelLabel }}')->required(),
+            // Add more fields as needed:
+            // 'email' => $schema->string()->description('Email address')->required(),
+            // 'status' => $schema->string()->description('Status (active, inactive)'),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $model = {{ resourceShortName }}::getModel();
+
+        // TODO: Map and validate the fields from the request.
+        $data = [
+            'name' => (string) $request['name'],
+            // Add more fields as needed:
+            // 'email' => (string) $request['email'],
+        ];
+
+        $record = $model::create($data);
+
+        return 'Created {{ modelLabel }} #' . $record->getKey() . ' successfully.';
+    }
+}

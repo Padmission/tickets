@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'View a single {{ modelLabel }} by its ID.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()->description('The ID of the {{ modelLabel }} to view')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $model = {{ resourceShortName }}::getModel();
+        $record = $model::find($request['id']);
+
+        if (! $record) {
+            return '{{ modelLabel }} #' . $request['id'] . ' not found.';
+        }
+
+        $lines = ['{{ modelLabel }} #' . $record->getKey() . ':', ''];
+
+        foreach ($record->toArray() as $key => $value) {
+            if (is_array($value)) {
+                $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+            }
+            $lines[] = "  {$key}: {$value}";
+        }
+
+        return implode("\n", $lines);
+    }
+}

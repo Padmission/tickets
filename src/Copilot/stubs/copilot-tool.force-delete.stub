@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Permanently delete a {{ modelLabel }}. This cannot be undone.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()->description('The ID of the {{ modelLabel }} to permanently delete')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $model = {{ resourceShortName }}::getModel();
+
+        if (in_array(SoftDeletes::class, class_uses_recursive($model))) {
+            $record = $model::withTrashed()->find($request['id']);
+        } else {
+            $record = $model::find($request['id']);
+        }
+
+        if (! $record) {
+            return '{{ modelLabel }} #' . $request['id'] . ' not found.';
+        }
+
+        $recordKey = $record->getKey();
+
+        if (method_exists($record, 'forceDelete')) {
+            $record->forceDelete();
+        } else {
+            $record->delete();
+        }
+
+        return 'Permanently deleted {{ modelLabel }} #' . $recordKey . '. This cannot be undone.';
+    }
+}

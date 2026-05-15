@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use {{ resourceClass }};
+use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
+use Stringable;
+
+class {{ className }} extends BaseTool
+{
+    public function description(): Stringable|string
+    {
+        return 'Delete a {{ modelLabel }}.';
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'id' => $schema->string()->description('The ID of the {{ modelLabel }} to delete')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Stringable|string
+    {
+        $model = {{ resourceShortName }}::getModel();
+        $record = $model::find($request['id']);
+
+        if (! $record) {
+            return '{{ modelLabel }} #' . $request['id'] . ' not found.';
+        }
+
+        $recordKey = $record->getKey();
+        $record->delete();
+
+        return 'Deleted {{ modelLabel }} #' . $recordKey . ' successfully.';
+    }
+}
