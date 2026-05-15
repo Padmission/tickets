@@ -40,6 +40,9 @@ customElements.define(
 
 			this.isNearBottom = true;
 			this.dropIndex = 0;
+
+			this.markSeenDebounceTimer = null;
+			this.markSeenDebounceMs = 2000; // 2 seconds
 		}
 
 		beforeRender() {
@@ -61,6 +64,12 @@ customElements.define(
 
 			if (this.messageListObserver) {
 				this.messageListObserver.disconnect();
+			}
+
+			// Flush pending mark-seen call before disconnecting
+			if (this.markSeenDebounceTimer) {
+				clearTimeout(this.markSeenDebounceTimer);
+				this.markTicketSeen(this.lastSeenMessageId);
 			}
 		}
 
@@ -381,6 +390,9 @@ customElements.define(
 
 					this.lastSeenMessageId = messageId;
 
+					// Debounce the API call to mark as seen
+					this.debouncedMarkSeen(messageId);
+
 					if (this.lastSeenMessageId >= this.lastMessageId) {
 						this.scrollToBottomBtn.dataset.chatHasNewMessages = "false";
 					}
@@ -396,6 +408,35 @@ customElements.define(
 				.forEach((message) => {
 					this.messageObserver.observe(message);
 				});
+		}
+
+		debouncedMarkSeen(activityId) {
+			// Clear existing timer
+			if (this.markSeenDebounceTimer) {
+				clearTimeout(this.markSeenDebounceTimer);
+			}
+
+			// Set new timer
+			this.markSeenDebounceTimer = setTimeout(() => {
+				this.markTicketSeen(activityId);
+			}, this.markSeenDebounceMs);
+		}
+
+		async markTicketSeen(activityId) {
+			if (!this.ticketId) {
+				return;
+			}
+
+			try {
+				await fetchJson(
+					`/padmission-tickets/api/tickets/${this.ticketId}/mark-seen`,
+					{ last_seen_activity_id: activityId },
+					"POST",
+				);
+			} catch (error) {
+				console.error("Failed to mark ticket as seen:", error);
+				// Silent failure - this is a background operation
+			}
 		}
 
 		toggleBold(event) {

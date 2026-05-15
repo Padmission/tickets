@@ -24,16 +24,23 @@ class NotificationRecipientService
         $eventName = $event::class;
         $triggerType = $this->determineTriggerType($event);
 
-        $config = TicketPlugin::get()
+        $recipientFlag = TicketPlugin::get()
             ->getNotificationConfiguration()
-            ->getConfigurationFor($eventName, $triggerType);
+            ->getConfigurationFor($eventName, $triggerType)
+            ->value;
 
         $recipients = collect();
 
-        if (($config->value & NotificationRecipient::User->value) && $event->ticket->submitter) {
+        if (
+            $event->ticket->submitter
+            && ($recipientFlag & NotificationRecipient::User->value) === NotificationRecipient::User->value
+        ) {
             $recipients->push($event->ticket->submitter);
         }
-        if (($config->value & NotificationRecipient::Supporter->value) && $event->ticket->assignee) {
+        if (
+            $event->ticket->assignee
+            && ($recipientFlag & NotificationRecipient::Supporter->value) === NotificationRecipient::Supporter->value
+        ) {
             $recipients->push($event->ticket->assignee);
         }
 

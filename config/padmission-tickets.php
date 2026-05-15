@@ -1,7 +1,14 @@
 <?php
 
+use App\Models\Tenant;
+use App\Models\User;
+use Carbon\CarbonInterval;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\Facades\Config;
+use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Events;
+use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models;
+use Padmission\Tickets\Notifications;
 
 return [
     'run_migrations' => true,
@@ -14,14 +21,14 @@ return [
      * @var array<class-string, class-string>
      */
     'models' => [
-        Authenticatable::class => App\Models\User::class,
-        Padmission\Tickets\Models\Ticket::class => Padmission\Tickets\Models\Ticket::class,
-        Padmission\Tickets\Models\TicketActivity::class => Padmission\Tickets\Models\TicketActivity::class,
-        Padmission\Tickets\Models\TicketAttachment::class => Padmission\Tickets\Models\TicketAttachment::class,
-        Padmission\Tickets\Models\TicketDisposition::class => Padmission\Tickets\Models\TicketDisposition::class,
-        Padmission\Tickets\Models\TicketNotification::class => Padmission\Tickets\Models\TicketNotification::class,
-        Padmission\Tickets\Models\TicketPriority::class => Padmission\Tickets\Models\TicketPriority::class,
-        Padmission\Tickets\Models\TicketStatus::class => Padmission\Tickets\Models\TicketStatus::class,
+        Authenticatable::class => User::class,
+        Models\Ticket::class => Models\Ticket::class,
+        Models\TicketActivity::class => Models\TicketActivity::class,
+        Models\TicketAttachment::class => Models\TicketAttachment::class,
+        Models\TicketDisposition::class => Models\TicketDisposition::class,
+        Models\TicketNotification::class => Models\TicketNotification::class,
+        Models\TicketPriority::class => Models\TicketPriority::class,
+        Models\TicketStatus::class => Models\TicketStatus::class,
     ],
 
     /**
@@ -32,17 +39,12 @@ return [
      * @var array<class-string, class-string>
      */
     'jobs' => [
-        Padmission\Tickets\Jobs\NotificationJob::class => Padmission\Tickets\Jobs\NotificationJob::class,
+        NotificationJob::class => NotificationJob::class,
     ],
 
     'tenancy' => [
         'enabled' => false,
-        'tenancy_model' => App\Models\Tenant::class,
-    ],
-
-    'levels' => [
-        // 'default' => fn () => __('padmission-tickets::tickets.levels.default'),
-        // 'escalated' => fn () => __('padmission-tickets::tickets.levels.escalated'),
+        'tenancy_model' => Tenant::class,
     ],
 
     /**
@@ -66,31 +68,16 @@ return [
         'disk' => env('MEDIA_DISK', 's3'),
     ],
 
-    'event-listeners' => [
-        \Padmission\Tickets\Events\TicketActivityEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
-        ],
-        \Padmission\Tickets\Events\TicketAssignedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
-        ],
-        \Padmission\Tickets\Events\TicketClosedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
-        ],
-        \Padmission\Tickets\Events\TicketCreatedEvent::class => [
-            \Padmission\Tickets\Listeners\TicketNotificationListener::class,
-        ],
-    ],
-
     /**
      * Notification configuration
      *
      * @var array<string, class-string|null>
      */
     'notifications' => [
-        'activity' => Padmission\Tickets\Notifications\TicketNotification::class,
-        'assigned' => Padmission\Tickets\Notifications\TicketNotification::class,
-        'closed' => Padmission\Tickets\Notifications\TicketNotification::class,
-        'created' => Padmission\Tickets\Notifications\TicketNotification::class,
+        Events\TicketCreatedEvent::class => Notifications\TicketNotification::class,
+        Events\TicketActivityEvent::class => Notifications\TicketNotification::class,
+        Events\TicketAssignedEvent::class => Notifications\TicketNotification::class,
+        Events\TicketClosedEvent::class => Notifications\TicketNotification::class,
     ],
 
     /**
@@ -99,21 +86,14 @@ return [
      *
      * @var string
      */
-    'default-notification-strategy' => Padmission\Tickets\Enums\NotificationStrategy::Debounced,
+    'default-notification-strategy' => NotificationStrategy::Debounced,
 
     /**
      * Debounce time in seconds for grouped notifications
      *
      * @var int
      */
-    'notification-debounce' => 300,
-
-    /**
-     * Maximum days to look back for activities in notification emails
-     *
-     * @var int
-     */
-    'notification-max-days' => 10,
+    'notification-debounce' => CarbonInterval::minutes(10)->totalSeconds,
 
     /**
      * Maximum number of activities to include in a single notification
@@ -121,11 +101,4 @@ return [
      * @var int
      */
     'notification-max-events' => 10,
-
-    /**
-     * Cache TTL for notification job deduplication (seconds)
-     *
-     * @var int
-     */
-    'notification-cache-ttl' => 300,
 ];

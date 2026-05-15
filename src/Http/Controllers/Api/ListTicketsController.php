@@ -21,13 +21,13 @@ class ListTicketsController
         $this->authorize('create', $ticketModel);
 
         $tickets = $ticketModel::query()
-            ->with('latestMessage')
+            ->with(['latestMessage', 'ticketLastSeen', 'ticketActivities'])
             ->where('submitter_id', $request->user()->id)
             ->orderBy('updated_at', 'desc')
             ->get();
 
         return [
-            'tickets' => $tickets->map(fn ($ticket) => TicketMapper::map($ticket)),
+            'tickets' => $tickets->map(fn ($ticket) => TicketMapper::map($ticket, $request->user())),
         ];
     }
 }

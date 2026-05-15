@@ -5,19 +5,22 @@ namespace Padmission\Tickets\Http\Controllers\Api;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
-use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\TicketPlugin;
 
-class ListMessagesController
+class MarkTicketSeenController
 {
     use AuthorizesRequests;
     use ValidatesRequests;
 
     public function __invoke(Request $request, $ticket)
     {
+        $validated = $request->validate([
+            'last_seen_activity_id' => ['required', 'exists:ticket_activities,id'],
+        ]);
+
         // Remove global scopes to find the ticket and get its panel
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
         $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
@@ -27,18 +30,20 @@ class ListMessagesController
         /** @var Ticket $ticket */
         $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
-        resolve(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
+        app(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
 
-        $activityService = resolve(TicketActivityService::class);
+        // Verify activity belongs to this ticket
+        $ticket->ticketActivities()
+            ->where('id', $validated['last_seen_activity_id'])
+            ->firstOrFail();
 
-        $messages = $activityService->getActivities($ticket, $request->integer('offset'));
+        // Update last seen
+        app(TicketActivityService::class)->markAsSeen(
+            $ticket,
+            $request->user(),
+            $validated['last_seen_activity_id']
+        );
 
-        return [
-            'ticket' => [
-                'status' => $ticket->status->display_name,
-                'is_closed' => $ticket->isClosed,
-            ],
-            'messages' => $messages->values()->map(fn ($message) => TicketActivityMapper::map($message)),
-        ];
+        return response()->json(['success' => true]);
     }
 }

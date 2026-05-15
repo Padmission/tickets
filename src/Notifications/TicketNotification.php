@@ -5,26 +5,23 @@ namespace Padmission\Tickets\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Services\EmailLogoService;
-use Padmission\Tickets\Services\EmailStyleService;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketUrlService;
 
 class TicketNotification extends Notification
 {
+    public $notificationType;
+
     public function __construct(
         protected Ticket $ticket,
-        protected string $notificationType,
-        protected ?TicketActivityService $activityService = null,
-        protected ?EmailLogoService $logoService = null,
-        protected ?EmailStyleService $styleService = null,
-        protected ?TicketUrlService $urlService = null
+        protected $event,
     ) {
-        // Use app() for dependency injection if services not provided
-        $this->activityService ??= app(TicketActivityService::class);
-        $this->logoService ??= app(EmailLogoService::class);
-        $this->styleService ??= app(EmailStyleService::class);
-        $this->urlService ??= app(TicketUrlService::class);
+        $this->notificationType = str($this->event::class)
+            ->afterLast('\\')
+            ->replace('Ticket', '')
+            ->replace('Event', '')
+            ->lower()
+            ->toString();
     }
 
     public function via($notifiable): array
@@ -32,54 +29,61 @@ class TicketNotification extends Notification
         return ['mail'];
     }
 
-    public function toMail($notifiable): MailMessage
+    public function shouldSend($notifiable): bool
     {
+        $activityService = resolve(TicketActivityService::class);
         $maxEvents = config('padmission-tickets.notification-max-events', 10);
-        $maxDays = config('padmission-tickets.notification-max-days', 7);
 
-        $activities = $this->activityService->getUnreadActivities(
+        $activities = $activityService->getUnreadActivities(
             $this->ticket,
             $notifiable,
             $maxEvents,
-            $maxDays
         );
 
-        $this->activityService->markNotificationUpdated($this->ticket, $notifiable);
+        return $activities->isNotEmpty();
+    }
 
-        $hasMoreActivities = $activities->count() >= $maxEvents;
+    public function toMail($notifiable): MailMessage
+    {
+        $activityService = resolve(TicketActivityService::class);
+        $urlService = resolve(TicketUrlService::class);
 
-        $key = "padmission-tickets::notifications.ticket-{$this->notificationType}.intro";
-        $message = (new MailMessage)
-            ->subject($this->getEmailSubject())
-            ->line(__($key))
-            ->action(
-                __('padmission-tickets::notifications.ticket-history.action'),
-                $this->urlService->getActionUrl($this->ticket)
-            );
+        $maxEvents = config('padmission-tickets.notification-max-events', 10);
 
-        if ($hasMoreActivities) {
-            $message->line(__('padmission-tickets::notifications.ticket-history.more-activities'));
+        $activities = $activityService->getUnreadActivities(
+            $this->ticket,
+            $notifiable,
+            $maxEvents,
+        );
+
+        $latestActivity = $activities->last();
+
+        if ($latestActivity) {
+            $activityService->markAsSent($this->ticket, $notifiable, $latestActivity->id);
         }
 
-        $message->line(__('padmission-tickets::notifications.ticket-history.outro'));
+        $hasMoreActivities = $activities->count() > $maxEvents;
 
-        return $message->view($this->getView(), [
-            'ticket' => $this->ticket,
-            'activitiesHeader' => __('padmission-tickets::notifications.ticket-history.activities-header'),
-            'activities' => $activities,
-            'lastNotificationDate' => $this->activityService->getLastNotification($this->ticket, $notifiable)?->created_at,
-            'logo' => $this->logoService->getEmailLogo($this->ticket),
-            'totalActivities' => $activities->count(),
-            'hasMoreActivities' => $hasMoreActivities,
-            'maxDays' => $maxDays,
-            'maxEvents' => $maxEvents,
-            'styles' => $this->styleService->getStyles(),
-        ]);
+        if ($hasMoreActivities) {
+            $activities = $activities->slice(1, $maxEvents);
+        }
+
+        return (new MailMessage)
+            ->subject($this->getEmailSubject())
+            ->markdown($this->getView(), [
+                'notification' => $this,
+                'notificationType' => $this->notificationType,
+                'ticket' => $this->ticket,
+                'actionUrl' => $urlService->getActionUrl($this->ticket),
+                'activities' => $activities,
+                'hasMoreActivities' => $hasMoreActivities,
+                'maxEvents' => $maxEvents,
+            ]);
     }
 
     public function getView(): string
     {
-        return 'padmission-tickets::emails.ticket-history';
+        return 'padmission-tickets::mails.ticket-history';
     }
 
     protected function getEmailSubject(): string

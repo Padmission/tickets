@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Listeners;
 
+use Carbon\CarbonInterval;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Mpbarlow\LaravelQueueDebouncer\Debouncer;
 use Padmission\Tickets\Enums\NotificationStrategy;
@@ -24,14 +25,9 @@ class TicketNotificationListener
         TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
     ): void {
         $recipients = $this->recipientService->getNotificationRecipients($event);
-        $notificationType = $this->getNotificationType($event);
-
-        if (! $notificationType) {
-            return;
-        }
 
         $recipients->each(
-            fn (Authenticatable $user) => $this->sendNotificationToUser($user, $event, $notificationType)
+            fn (Authenticatable $user) => $this->sendNotificationToUser($user, $event)
         );
     }
 
@@ -47,21 +43,21 @@ class TicketNotificationListener
         return $type ?: null;
     }
 
-    protected function sendNotificationToUser(Authenticatable $user, $event, string $type): void
+    protected function sendNotificationToUser(Authenticatable $user, $event): void
     {
         $strategy = $this->recipientService->getUserNotificationStrategy($user);
 
         if ($strategy === NotificationStrategy::Immediate) {
-            $this->dispatchNotificationJob($user, $event->ticket, $type);
+            $this->dispatchNotificationJob($user, $event->ticket, $event);
         } else {
-            $this->dispatchDebouncedNotification($user, $event->ticket, $type);
+            $this->dispatchDebouncedNotification($user, $event->ticket, $event);
         }
     }
 
-    protected function dispatchNotificationJob(Authenticatable $user, Ticket $ticket, string $type): void
+    protected function dispatchNotificationJob(Authenticatable $user, Ticket $ticket, $event): void
     {
         $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
-        $jobClass::dispatch($user, $ticket, $type);
+        $jobClass::dispatch($user, $ticket, $event);
     }
 
     /**
@@ -72,16 +68,16 @@ class TicketNotificationListener
      * 2. If a job already exists, cancel it and schedule a new one (resets the timer)
      * 3. This ensures active conversations don't trigger emails until 5 minutes of silence
      */
-    protected function dispatchDebouncedNotification(Authenticatable $user, Ticket $ticket, string $type): void
+    protected function dispatchDebouncedNotification(Authenticatable $user, Ticket $ticket, $event): void
     {
-        $debounceTime = config('padmission-tickets.notification-debounce', 300);
+        $debounceTimeInSeconds = config('padmission-tickets.notification-debounce', CarbonInterval::minutes(5)->totalSeconds);
         $jobClass = TicketPlugin::resolveJobClass(NotificationJob::class);
-        $job = new $jobClass($user, $ticket, $type);
+        $job = new $jobClass($user, $ticket, $event);
 
         $debouncer = resolve(Debouncer::class);
 
         $debouncer
             ->usingCacheKeyProvider(fn () => $job->uniqueId())
-            ->debounce($job, $debounceTime);
+            ->debounce($job, $debounceTimeInSeconds);
     }
 }

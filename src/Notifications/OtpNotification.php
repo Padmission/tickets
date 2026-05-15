@@ -21,7 +21,9 @@ class OtpNotification extends Notification
     {
         return (new MailMessage)
             ->subject(__('padmission-tickets::notifications.otp-verification.subject'))
-            ->line(__('padmission-tickets::notifications.otp-verification.message'))
-            ->line(view('padmission-tickets::mails.otp', ['code' => $this->otp]));
+            ->markdown('padmission-tickets::mails.otp', [
+                'notification' => $this,
+                'code' => $this->otp,
+            ]);
     }
 }
