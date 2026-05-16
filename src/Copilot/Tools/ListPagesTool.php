@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
-use Padmission\Tickets\Copilot\Discovery\PageInspector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
+use Padmission\Tickets\Copilot\Discovery\PageInspector;
 use Stringable;
 
 class ListPagesTool extends BaseTool
@@ -38,10 +38,10 @@ class ListPagesTool extends BaseTool
         $lines = ['Available Pages:', ''];
 
         foreach ($pages as $page) {
-            $line = '- ' . $page['label'] . ' (' . $page['page'] . ')';
+            $line = '- '.$page['label'].' ('.$page['page'].')';
 
             if (! empty($page['copilot_description'])) {
-                $line .= ' — ' . $page['copilot_description'];
+                $line .= ' — '.$page['copilot_description'];
             }
 
             if (! empty($page['has_tools'])) {

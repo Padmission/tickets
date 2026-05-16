@@ -7,11 +7,11 @@ declare(strict_types=1);
 namespace Padmission\Tickets\Copilot\Agent\Middleware;
 
 use Closure;
+use Illuminate\Database\Eloquent\Model;
+use Laravel\Ai\Prompts\AgentPrompt;
 use Padmission\Tickets\Copilot\Enums\AuditAction;
 use Padmission\Tickets\Copilot\Models\CopilotAuditLog;
 use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Illuminate\Database\Eloquent\Model;
-use Laravel\Ai\Prompts\AgentPrompt;
 
 class AuditMiddleware
 {

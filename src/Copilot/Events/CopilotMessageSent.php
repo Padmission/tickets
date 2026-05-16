@@ -6,8 +6,8 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Events;
 
-use Padmission\Tickets\Copilot\Models\CopilotConversation;
 use Illuminate\Foundation\Events\Dispatchable;
+use Padmission\Tickets\Copilot\Models\CopilotConversation;
 
 class CopilotMessageSent
 {

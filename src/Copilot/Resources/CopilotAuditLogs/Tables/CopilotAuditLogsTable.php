@@ -6,8 +6,6 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\Tables;
 
-use Padmission\Tickets\Copilot\Enums\AuditAction;
-use Padmission\Tickets\Copilot\Models\CopilotAuditLog;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
@@ -15,6 +13,8 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Padmission\Tickets\Copilot\Enums\AuditAction;
+use Padmission\Tickets\Copilot\Models\CopilotAuditLog;
 
 class CopilotAuditLogsTable
 {

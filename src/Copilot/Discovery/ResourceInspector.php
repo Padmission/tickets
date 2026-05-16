@@ -6,9 +6,10 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Discovery;
 
+use Filament\Facades\Filament;
+use Filament\Resources\Resource;
 use Padmission\Tickets\Copilot\Contracts\CopilotResource;
 use Padmission\Tickets\Copilot\CopilotPlugin;
-use Filament\Facades\Filament;
 
 class ResourceInspector
 {
@@ -90,10 +91,10 @@ class ResourceInspector
         $lines = ['## Available Resources'];
 
         foreach ($resources as $resource) {
-            $line = '- ' . $resource['plural_label'] . ' (' . $resource['resource'] . ')';
+            $line = '- '.$resource['plural_label'].' ('.$resource['resource'].')';
 
             if (! empty($resource['copilot_description'])) {
-                $line .= ': ' . $resource['copilot_description'];
+                $line .= ': '.$resource['copilot_description'];
             }
 
             if ($resource['has_tools']) {

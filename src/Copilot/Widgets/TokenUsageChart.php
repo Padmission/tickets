@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Widgets;
 
-use Padmission\Tickets\Copilot\Models\CopilotTokenUsage;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
+use Padmission\Tickets\Copilot\Models\CopilotTokenUsage;
 
 class TokenUsageChart extends ChartWidget
 {

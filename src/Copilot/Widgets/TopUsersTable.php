@@ -6,11 +6,11 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Widgets;
 
-use Padmission\Tickets\Copilot\Models\CopilotTokenUsage;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Copilot\Models\CopilotTokenUsage;
 
 class TopUsersTable extends BaseWidget
 {
@@ -21,10 +21,10 @@ class TopUsersTable extends BaseWidget
     public function getTableRecordKey(Model|array $record): string
     {
         if (is_array($record)) {
-            return ($record['participant_type'] ?? '') . ':' . ($record['participant_id'] ?? '');
+            return ($record['participant_type'] ?? '').':'.($record['participant_id'] ?? '');
         }
 
-        return $record->participant_type . ':' . $record->participant_id;
+        return $record->participant_type.':'.$record->participant_id;
     }
 
     public function table(Table $table): Table

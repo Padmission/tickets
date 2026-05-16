@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
-use Padmission\Tickets\Copilot\Discovery\WidgetInspector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
+use Padmission\Tickets\Copilot\Discovery\WidgetInspector;
 use Stringable;
 
 class ListWidgetsTool extends BaseTool
@@ -38,10 +38,10 @@ class ListWidgetsTool extends BaseTool
         $lines = ['Available Widgets:', ''];
 
         foreach ($widgets as $widget) {
-            $line = '- ' . $widget['name'] . ' (' . $widget['widget'] . ')';
+            $line = '- '.$widget['name'].' ('.$widget['widget'].')';
 
             if (! empty($widget['description'])) {
-                $line .= '  ' . $widget['description'];
+                $line .= '  '.$widget['description'];
             }
 
             if (! empty($widget['has_tools'])) {

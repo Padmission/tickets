@@ -6,8 +6,6 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Agent;
 
-use Padmission\Tickets\Copilot\Agent\Middleware\AuditMiddleware;
-use Padmission\Tickets\Copilot\Agent\Middleware\RateLimitMiddleware;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Attributes\Temperature;
@@ -16,6 +14,8 @@ use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasMiddleware;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
+use Padmission\Tickets\Copilot\Agent\Middleware\AuditMiddleware;
+use Padmission\Tickets\Copilot\Agent\Middleware\RateLimitMiddleware;
 use Stringable;
 
 #[Temperature(0.3)]

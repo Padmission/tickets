@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
-use Padmission\Tickets\Copilot\Models\CopilotAgentMemory;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
+use Padmission\Tickets\Copilot\Models\CopilotAgentMemory;
 use Stringable;
 
 class RememberTool extends BaseTool

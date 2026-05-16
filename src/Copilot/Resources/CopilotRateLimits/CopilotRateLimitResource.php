@@ -6,6 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotRateLimits;
 
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Table;
 use Padmission\Tickets\Copilot\CopilotPlugin;
 use Padmission\Tickets\Copilot\Models\CopilotRateLimit;
 use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Pages\CreateCopilotRateLimit;
@@ -13,17 +16,14 @@ use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Pages\EditCopilotRate
 use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Pages\ListCopilotRateLimits;
 use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Schemas\CopilotRateLimitForm;
 use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Tables\CopilotRateLimitsTable;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Tables\Table;
 
 class CopilotRateLimitResource extends Resource
 {
     protected static ?string $model = CopilotRateLimit::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
+    protected static string|\UnitEnum|null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 2;
 

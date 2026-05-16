@@ -6,21 +6,21 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotAuditLogs;
 
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Table;
 use Padmission\Tickets\Copilot\CopilotPlugin;
 use Padmission\Tickets\Copilot\Models\CopilotAuditLog;
 use Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\Pages\ListCopilotAuditLogs;
 use Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\Tables\CopilotAuditLogsTable;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Tables\Table;
 
 class CopilotAuditLogResource extends Resource
 {
     protected static ?string $model = CopilotAuditLog::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shield-check';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
+    protected static string|\UnitEnum|null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 3;
 

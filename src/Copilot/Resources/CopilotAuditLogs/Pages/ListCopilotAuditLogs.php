@@ -6,8 +6,8 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\Pages;
 
-use Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\CopilotAuditLogResource;
 use Filament\Resources\Pages\ListRecords;
+use Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\CopilotAuditLogResource;
 
 class ListCopilotAuditLogs extends ListRecords
 {

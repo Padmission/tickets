@@ -7,10 +7,10 @@ declare(strict_types=1);
 namespace Padmission\Tickets\Copilot\Agent\Middleware;
 
 use Closure;
-use Padmission\Tickets\Copilot\Events\CopilotRateLimitExceeded;
-use Padmission\Tickets\Copilot\Services\RateLimitService;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Ai\Prompts\AgentPrompt;
+use Padmission\Tickets\Copilot\Events\CopilotRateLimitExceeded;
+use Padmission\Tickets\Copilot\Services\RateLimitService;
 
 class RateLimitMiddleware
 {

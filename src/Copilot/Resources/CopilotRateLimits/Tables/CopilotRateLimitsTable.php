@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Tables;
 
-use Padmission\Tickets\Copilot\Models\CopilotRateLimit;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -16,6 +15,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Padmission\Tickets\Copilot\Models\CopilotRateLimit;
 
 class CopilotRateLimitsTable
 {

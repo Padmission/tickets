@@ -6,11 +6,11 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Widgets;
 
+use Filament\Widgets\StatsOverviewWidget;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Padmission\Tickets\Copilot\Models\CopilotAuditLog;
 use Padmission\Tickets\Copilot\Models\CopilotConversation;
 use Padmission\Tickets\Copilot\Models\CopilotTokenUsage;
-use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CopilotStatsOverview extends StatsOverviewWidget
 {

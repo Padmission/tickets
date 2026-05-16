@@ -6,12 +6,12 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Commands;
 
-use Padmission\Tickets\Copilot\Contracts\CopilotPage;
-use Padmission\Tickets\Copilot\Contracts\CopilotResource;
-use Padmission\Tickets\Copilot\Contracts\CopilotWidget;
 use Filament\Facades\Filament;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use Padmission\Tickets\Copilot\Contracts\CopilotPage;
+use Padmission\Tickets\Copilot\Contracts\CopilotResource;
+use Padmission\Tickets\Copilot\Contracts\CopilotWidget;
 
 class MakeCopilotToolCommand extends Command
 {
@@ -105,7 +105,7 @@ class MakeCopilotToolCommand extends Command
             $this->newLine();
             $this->error("No copilot-enabled {$type}s found in the '{$panelId}' panel.");
             $this->newLine();
-            $this->line('Make sure your ' . match ($type) {
+            $this->line('Make sure your '.match ($type) {
                 'resource' => 'resource implements the CopilotResource interface.',
                 'page' => 'page implements the CopilotPage interface.',
                 'widget' => 'widget implements the CopilotWidget interface.',
@@ -205,7 +205,7 @@ class MakeCopilotToolCommand extends Command
         $this->info('🎉 Copilot tool created successfully!');
         $this->newLine();
 
-        $relativePath = Str::after($outputPath, base_path() . DIRECTORY_SEPARATOR);
+        $relativePath = Str::after($outputPath, base_path().DIRECTORY_SEPARATOR);
 
         $this->table(
             ['Setting', 'Value'],
@@ -220,7 +220,7 @@ class MakeCopilotToolCommand extends Command
         );
 
         $this->newLine();
-        $this->line('Don\'t forget to register the tool in your ' . match ($type) {
+        $this->line('Don\'t forget to register the tool in your '.match ($type) {
             'resource' => 'resource\'s copilotTools() method.',
             'page' => 'page\'s copilotTools() method.',
             'widget' => 'widget\'s copilotTools() method.',
@@ -294,10 +294,10 @@ class MakeCopilotToolCommand extends Command
 
     protected function generateTool(string $type, string $targetClass, string $template, string $toolName): string
     {
-        $stubPath = __DIR__ . "/../../stubs/copilot-tool.{$template}.stub";
+        $stubPath = __DIR__."/../../stubs/copilot-tool.{$template}.stub";
 
         if (! file_exists($stubPath)) {
-            $stubPath = __DIR__ . '/../../stubs/copilot-tool.custom.stub';
+            $stubPath = __DIR__.'/../../stubs/copilot-tool.custom.stub';
         }
 
         $stub = file_get_contents($stubPath);
@@ -333,7 +333,7 @@ class MakeCopilotToolCommand extends Command
             mkdir($directory, 0755, true);
         }
 
-        $filePath = $directory . '/' . $toolName . '.php';
+        $filePath = $directory.'/'.$toolName.'.php';
         file_put_contents($filePath, $stub);
 
         return $filePath;
@@ -346,11 +346,11 @@ class MakeCopilotToolCommand extends Command
         if ($type === 'resource') {
             // Resource tools: {ResourceDir}/{ResourceBaseName}/CopilotTools/
             $resourceNamespace = Str::beforeLast($targetClass, '\\');
-            $namespace = $resourceNamespace . '\\' . $baseName . '\\CopilotTools';
+            $namespace = $resourceNamespace.'\\'.$baseName.'\\CopilotTools';
 
             $reflected = new \ReflectionClass($targetClass);
             $resourceDir = dirname((string) $reflected->getFileName());
-            $directory = $resourceDir . '/' . $baseName . '/CopilotTools';
+            $directory = $resourceDir.'/'.$baseName.'/CopilotTools';
 
             return [$namespace, $directory];
         }
@@ -358,22 +358,22 @@ class MakeCopilotToolCommand extends Command
         if ($type === 'page') {
             // Page tools: {PagesDir}/CopilotTools/{PageBaseName}/
             $pageNamespace = Str::beforeLast($targetClass, '\\');
-            $namespace = $pageNamespace . '\\CopilotTools\\' . $baseName;
+            $namespace = $pageNamespace.'\\CopilotTools\\'.$baseName;
 
             $reflected = new \ReflectionClass($targetClass);
             $pageDir = dirname((string) $reflected->getFileName());
-            $directory = $pageDir . '/CopilotTools/' . $baseName;
+            $directory = $pageDir.'/CopilotTools/'.$baseName;
 
             return [$namespace, $directory];
         }
 
         // Widget tools: {WidgetsDir}/CopilotTools/{WidgetBaseName}/
         $widgetNamespace = Str::beforeLast($targetClass, '\\');
-        $namespace = $widgetNamespace . '\\CopilotTools\\' . $baseName;
+        $namespace = $widgetNamespace.'\\CopilotTools\\'.$baseName;
 
         $reflected = new \ReflectionClass($targetClass);
         $widgetDir = dirname((string) $reflected->getFileName());
-        $directory = $widgetDir . '/CopilotTools/' . $baseName;
+        $directory = $widgetDir.'/CopilotTools/'.$baseName;
 
         return [$namespace, $directory];
     }

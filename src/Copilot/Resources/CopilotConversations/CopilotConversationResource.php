@@ -6,6 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotConversations;
 
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Table;
 use Padmission\Tickets\Copilot\CopilotPlugin;
 use Padmission\Tickets\Copilot\Models\CopilotConversation;
 use Padmission\Tickets\Copilot\Resources\CopilotConversations\Pages\ListCopilotConversations;
@@ -13,17 +16,14 @@ use Padmission\Tickets\Copilot\Resources\CopilotConversations\Pages\ViewCopilotC
 use Padmission\Tickets\Copilot\Resources\CopilotConversations\Schemas\CopilotConversationForm;
 use Padmission\Tickets\Copilot\Resources\CopilotConversations\Schemas\CopilotConversationInfolist;
 use Padmission\Tickets\Copilot\Resources\CopilotConversations\Tables\CopilotConversationsTable;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Tables\Table;
 
 class CopilotConversationResource extends Resource
 {
     protected static ?string $model = CopilotConversation::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
+    protected static string|\UnitEnum|null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 1;
 

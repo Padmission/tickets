@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Padmission\Tickets\Copilot\Http\Controllers\StreamController;
 use Illuminate\Support\Facades\Route;
+use Padmission\Tickets\Copilot\Http\Controllers\StreamController;
 
 Route::middleware(['web'])
     ->prefix('copilot')

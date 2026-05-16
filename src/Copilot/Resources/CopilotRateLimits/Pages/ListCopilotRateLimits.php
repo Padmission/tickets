@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotRateLimits\Pages;
 
-use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\CopilotRateLimitResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\CopilotRateLimitResource;
 
 class ListCopilotRateLimits extends ListRecords
 {

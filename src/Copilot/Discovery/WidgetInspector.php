@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Discovery;
 
+use Filament\Facades\Filament;
 use Padmission\Tickets\Copilot\Contracts\CopilotWidget;
 use Padmission\Tickets\Copilot\CopilotPlugin;
-use Filament\Facades\Filament;
 
 class WidgetInspector
 {
@@ -87,10 +87,10 @@ class WidgetInspector
         $lines = ['## Available Widgets'];
 
         foreach ($widgets as $widget) {
-            $line = '- ' . $widget['name'] . ' (' . $widget['widget'] . ')';
+            $line = '- '.$widget['name'].' ('.$widget['widget'].')';
 
             if (! empty($widget['description'])) {
-                $line .= ': ' . $widget['description'];
+                $line .= ': '.$widget['description'];
             }
 
             if ($widget['has_tools']) {

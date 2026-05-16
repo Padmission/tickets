@@ -6,13 +6,13 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Tools\Request;
 use Padmission\Tickets\Copilot\Contracts\CopilotPage;
 use Padmission\Tickets\Copilot\Contracts\CopilotResource;
 use Padmission\Tickets\Copilot\Contracts\CopilotWidget;
-use Padmission\Tickets\Copilot\Enums\AuditAction;
 use Padmission\Tickets\Copilot\CopilotPlugin;
-use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Tools\Request;
+use Padmission\Tickets\Copilot\Enums\AuditAction;
 use Stringable;
 
 class RunToolTool extends BaseTool
@@ -51,14 +51,14 @@ class RunToolTool extends BaseTool
         }
 
         if (! $this->isSourceAuthorized($sourceClass)) {
-            return "Access denied: you do not have permission to access '" . class_basename($sourceClass) . "'.";
+            return "Access denied: you do not have permission to access '".class_basename($sourceClass)."'.";
         }
 
         // Get tools from source and verify the tool is registered
         try {
             $tools = $sourceClass::copilotTools();
         } catch (\Throwable $e) {
-            return "Failed to load tools from '{$sourceClass}': " . $e->getMessage();
+            return "Failed to load tools from '{$sourceClass}': ".$e->getMessage();
         }
 
         $targetTool = null;
@@ -70,7 +70,7 @@ class RunToolTool extends BaseTool
         }
 
         if (! $targetTool) {
-            return "Tool '{$toolClass}' is not registered in '" . class_basename($sourceClass) . "'. Use get_tools to see available tools.";
+            return "Tool '{$toolClass}' is not registered in '".class_basename($sourceClass)."'. Use get_tools to see available tools.";
         }
 
         // Set context on the tool if it's a BaseTool
@@ -92,7 +92,7 @@ class RunToolTool extends BaseTool
             $toolRequest = new Request($args);
             $result = (string) $targetTool->handle($toolRequest);
         } catch (\Throwable $e) {
-            return 'Tool execution failed: ' . $e->getMessage();
+            return 'Tool execution failed: '.$e->getMessage();
         }
 
         $this->audit(AuditAction::ToolExecuted, $sourceClass, null, [

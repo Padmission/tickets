@@ -6,8 +6,8 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Concerns;
 
-use Padmission\Tickets\Copilot\Models\CopilotConversation;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Padmission\Tickets\Copilot\Models\CopilotConversation;
 
 /**
  * Add to User (or authenticatable) models to link them with copilot conversations.

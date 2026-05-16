@@ -6,17 +6,17 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Pages;
 
+use Filament\Pages\Page;
 use Padmission\Tickets\Copilot\CopilotPlugin;
 use Padmission\Tickets\Copilot\Widgets\CopilotStatsOverview;
 use Padmission\Tickets\Copilot\Widgets\TokenUsageChart;
 use Padmission\Tickets\Copilot\Widgets\TopUsersTable;
-use Filament\Pages\Page;
 
 class CopilotDashboardPage extends Page
 {
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
+    protected static string|\UnitEnum|null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 0;
 

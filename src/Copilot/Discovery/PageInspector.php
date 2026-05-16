@@ -6,9 +6,10 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Discovery;
 
+use Filament\Facades\Filament;
+use Filament\Pages\Page;
 use Padmission\Tickets\Copilot\Contracts\CopilotPage;
 use Padmission\Tickets\Copilot\CopilotPlugin;
-use Filament\Facades\Filament;
 
 class PageInspector
 {
@@ -36,7 +37,7 @@ class PageInspector
                 continue;
             }
 
-            /** @var class-string<\Filament\Pages\Page&CopilotPage> $pageClass */
+            /** @var class-string<Page&CopilotPage> $pageClass */
             $hasTools = false;
             try {
                 $description = $pageClass::copilotPageDescription();
@@ -45,7 +46,7 @@ class PageInspector
                 $description = null;
             }
 
-            /** @var class-string<\Filament\Pages\Page> $pageClass */
+            /** @var class-string<Page> $pageClass */
             $pages[] = [
                 'page' => $pageClass,
                 'label' => $pageClass::getNavigationLabel(),
@@ -90,10 +91,10 @@ class PageInspector
         $lines = ['## Available Pages'];
 
         foreach ($pages as $page) {
-            $line = '- ' . $page['label'] . ' (' . $page['page'] . ')';
+            $line = '- '.$page['label'].' ('.$page['page'].')';
 
             if (! empty($page['copilot_description'])) {
-                $line .= ': ' . $page['copilot_description'];
+                $line .= ': '.$page['copilot_description'];
             }
 
             if ($page['has_tools']) {

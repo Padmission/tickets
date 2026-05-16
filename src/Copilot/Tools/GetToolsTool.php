@@ -6,14 +6,14 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
-use Padmission\Tickets\Copilot\Contracts\CopilotPage;
-use Padmission\Tickets\Copilot\Contracts\CopilotResource;
-use Padmission\Tickets\Copilot\Contracts\CopilotWidget;
-use Padmission\Tickets\Copilot\CopilotPlugin;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Illuminate\JsonSchema\Types\ObjectType;
 use Laravel\Ai\Tools\Request;
+use Padmission\Tickets\Copilot\Contracts\CopilotPage;
+use Padmission\Tickets\Copilot\Contracts\CopilotResource;
+use Padmission\Tickets\Copilot\Contracts\CopilotWidget;
+use Padmission\Tickets\Copilot\CopilotPlugin;
 use Stringable;
 
 class GetToolsTool extends BaseTool
@@ -47,24 +47,24 @@ class GetToolsTool extends BaseTool
         }
 
         if (! $this->isSourceAuthorized($sourceClass)) {
-            return "Access denied: you do not have permission to access '" . class_basename($sourceClass) . "'.";
+            return "Access denied: you do not have permission to access '".class_basename($sourceClass)."'.";
         }
 
         try {
             $tools = $sourceClass::copilotTools();
         } catch (\Throwable $e) {
-            return "Failed to get tools from '{$sourceClass}': " . $e->getMessage();
+            return "Failed to get tools from '{$sourceClass}': ".$e->getMessage();
         }
 
         if (empty($tools)) {
-            return "No copilot tools available for '" . class_basename($sourceClass) . "'.";
+            return "No copilot tools available for '".class_basename($sourceClass)."'.";
         }
 
-        $lines = ['Tools for ' . class_basename($sourceClass) . ':', ''];
+        $lines = ['Tools for '.class_basename($sourceClass).':', ''];
 
         foreach ($tools as $tool) {
-            $lines[] = '## ' . get_class($tool);
-            $lines[] = 'Description: ' . $tool->description();
+            $lines[] = '## '.get_class($tool);
+            $lines[] = 'Description: '.$tool->description();
 
             try {
                 $factory = new JsonSchemaTypeFactory;

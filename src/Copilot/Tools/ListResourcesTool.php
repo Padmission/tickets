@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
-use Padmission\Tickets\Copilot\Discovery\ResourceInspector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
+use Padmission\Tickets\Copilot\Discovery\ResourceInspector;
 use Stringable;
 
 class ListResourcesTool extends BaseTool
@@ -38,10 +38,10 @@ class ListResourcesTool extends BaseTool
         $lines = ['Available Resources:', ''];
 
         foreach ($resources as $resource) {
-            $line = '- ' . $resource['plural_label'] . ' (' . $resource['resource'] . ')';
+            $line = '- '.$resource['plural_label'].' ('.$resource['resource'].')';
 
             if (! empty($resource['copilot_description'])) {
-                $line .= '  ' . $resource['copilot_description'];
+                $line .= '  '.$resource['copilot_description'];
             }
 
             if (! empty($resource['has_tools'])) {

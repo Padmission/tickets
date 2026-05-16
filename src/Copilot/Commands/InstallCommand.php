@@ -6,8 +6,8 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Commands;
 
-use Illuminate\Console\Command;
 use Filament\Support\Commands\Concerns\CanOpenUrlInBrowser;
+use Illuminate\Console\Command;
 
 class InstallCommand extends Command
 {
@@ -199,7 +199,7 @@ class InstallCommand extends Command
 
             $apiKey = $this->ask("Enter your {$provider} API key");
 
-            if (!empty($apiKey)) {
+            if (! empty($apiKey)) {
 
                 $this->addEnvVariable((string) $envKey, $apiKey);
                 $this->info("✓ {$envKey} added to your .env file.");
@@ -237,7 +237,7 @@ class InstallCommand extends Command
             [
                 ['AI Provider', $provider],
                 ['AI Model', $model],
-                ['API Key', $envKey ? (!empty($apiKey ?? '') ? 'Configured' : 'Not set') : 'Not required'],
+                ['API Key', $envKey ? (! empty($apiKey ?? '') ? 'Configured' : 'Not set') : 'Not required'],
                 ['Environment', '.env updated'],
                 ['Config File', 'config/filament-copilot.php'],
                 ['Migrations', $runMigrations ? 'Executed' : 'Pending'],
@@ -298,7 +298,7 @@ class InstallCommand extends Command
                 1
             );
         } else {
-            $envContent .= PHP_EOL . $line;
+            $envContent .= PHP_EOL.$line;
         }
 
         file_put_contents($envPath, $envContent);
@@ -307,7 +307,7 @@ class InstallCommand extends Command
     private function quoteEnvValue(string $value): string
     {
         if ($value === '' || preg_match('/[\s#"\\\\$]/', $value)) {
-            return '"' . addcslashes($value, '"\\$') . '"';
+            return '"'.addcslashes($value, '"\\$').'"';
         }
 
         return $value;
