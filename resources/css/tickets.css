@@ -127,7 +127,17 @@
 	font-weight: 700;
 }
 
-.sf-shell {
+.dark .sf-topbtn {
+	color: var(--color-gray-300, #cbd5e1);
+}
+
+.dark .sf-topbtn:hover {
+	color: var(--primary-300, #93c5fd);
+	background: rgba(96, 165, 250, 0.14);
+}
+
+.sf-shell,
+.sf-admin-thread {
 	--pm-bg: #fff;
 	--pm-bg-muted: #f7f8f9;
 	--pm-s-50: #f8fafc;
@@ -148,6 +158,33 @@
 	--pm-warn-bg: #fff6e6;
 	--pm-danger: #b42318;
 	--pm-danger-bg: #fff1f0;
+}
+
+.dark .sf-shell,
+.dark .sf-admin-thread {
+	--pm-bg: #111827;
+	--pm-bg-muted: #0b1220;
+	--pm-s-50: #172033;
+	--pm-s-100: #1f2a3d;
+	--pm-border: #334155;
+	--pm-border-strong: #475569;
+	--pm-text: #f8fafc;
+	--pm-muted: #cbd5e1;
+	--pm-subtle: #94a3b8;
+	--pm-accent: #60a5fa;
+	--pm-accent-hover: #93c5fd;
+	--pm-accent-soft-edge: rgba(96, 165, 250, 0.28);
+	--pm-p-50: #172554;
+	--pm-p-700: #2563eb;
+	--pm-good: #5eead4;
+	--pm-good-bg: rgba(20, 184, 166, 0.14);
+	--pm-warn: #fbbf24;
+	--pm-warn-bg: rgba(251, 191, 36, 0.14);
+	--pm-danger: #fca5a5;
+	--pm-danger-bg: rgba(248, 113, 113, 0.14);
+}
+
+.sf-shell {
 	position: fixed;
 	inset: 0;
 	z-index: 70;
@@ -161,6 +198,10 @@
 	background: rgba(11, 31, 46, 0.18);
 }
 
+.dark .sf-backdrop {
+	background: rgba(2, 6, 23, 0.62);
+}
+
 .sf-shell .sf-panel {
 	position: absolute;
 	inset-block: 0;
@@ -171,6 +212,11 @@
 	background: var(--pm-bg);
 	box-shadow: 0 1px 2px rgba(11, 31, 46, 0.06), 0 10px 30px -12px
 		rgba(11, 31, 46, 0.25);
+}
+
+.dark .sf-shell .sf-panel {
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 18px 48px -18px
+		rgba(0, 0, 0, 0.7);
 }
 
 .sf-head {
@@ -273,7 +319,7 @@
 .sf-record {
 	padding: .8rem 1rem .9rem;
 	border-bottom: 1px solid var(--pm-border);
-	background: #f8fafc;
+	background: var(--pm-s-50);
 }
 
 .sf-record__label {
@@ -349,7 +395,7 @@
 	min-height: 2rem;
 	border: 1px solid var(--pm-border);
 	border-radius: .25rem;
-	background: #fff;
+	background: var(--pm-bg);
 	padding: .25rem .45rem;
 	color: var(--pm-text);
 	font-size: .78rem;
@@ -970,6 +1016,7 @@
 	border: 1px solid var(--pm-border-strong);
 	border-radius: .375rem;
 	padding: .45rem;
+	background: var(--pm-bg);
 }
 
 .sf-inputrow textarea {
@@ -980,9 +1027,16 @@
 	border: none;
 	outline: none;
 	overflow-y: auto;
+	background: transparent;
+	color: var(--pm-text);
 	font-size: .82rem;
 	line-height: 1.45;
 	padding-block: .25rem;
+}
+
+.sf-inputrow textarea::placeholder,
+.sf-feedback__form textarea::placeholder {
+	color: var(--pm-subtle);
 }
 
 .sf-inputrow textarea:disabled {
