@@ -23,6 +23,7 @@ class TicketStatusFactory extends Factory
             'color' => ucfirst($this->faker->randomElement(array_keys(Color::all()))),
             'order' => $this->faker->randomNumber(),
             'panel' => 'test',
+            'seed_key' => null,
         ];
     }
 }

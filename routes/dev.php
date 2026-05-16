@@ -6,7 +6,6 @@ use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Notifications\OtpNotification;
 use Padmission\Tickets\Notifications\TicketNotification;
 
 Route::prefix('/dev/tickets')->group(function () {
@@ -38,7 +37,4 @@ Route::prefix('/dev/tickets')->group(function () {
         return (new TicketNotification($ticket, new TicketAssignedEvent($ticket, $user)))->toMail($user);
     });
 
-    Route::get('/mail/otp', function () {
-        return (new OtpNotification(Ticket::first(), 'closed'))->toMail(User::first());
-    });
 });

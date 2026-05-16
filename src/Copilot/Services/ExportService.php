@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Services;
 
-use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Padmission\Tickets\Copilot\Models\CopilotMessage;
 use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Copilot\Models\CopilotConversation;
+use Padmission\Tickets\Enums\ActivitySender;
 
 class ExportService
 {
@@ -21,7 +21,7 @@ class ExportService
             ->forPanel($panelId)
             ->forParticipant($user)
             ->forTenant($tenant)
-            ->with('messages')
+            ->with('ticket.ticketActivities')
             ->find($conversationId);
 
         if (! $conversation) {
@@ -38,21 +38,16 @@ class ExportService
             '',
         ];
 
-        foreach ($conversation->messages as $message) {
-            $role = match ($message->role->value) {
-                'user' => '**You:**',
-                'assistant' => '**Copilot:**',
-                'system' => '**System:**',
-                'tool' => '**Tool:**',
-            };
+        foreach ($conversation->ticket?->ticketActivities ?? [] as $message) {
+            $role = $message->sender === ActivitySender::Ai ? '**Copilot:**' : '**You:**';
 
             $lines[] = $role;
             $lines[] = '';
-            $lines[] = $message->content;
+            $lines[] = $message->content ?: json_encode($message->data, JSON_PRETTY_PRINT);
             $lines[] = '';
         }
 
-        $totalTokens = $conversation->messages->sum(fn (CopilotMessage $m) => ($m->input_tokens ?? 0) + ($m->output_tokens ?? 0));
+        $totalTokens = $conversation->total_tokens;
         $lines[] = '---';
         $lines[] = '';
         $lines[] = "*Total tokens used: {$totalTokens}*";

@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Resources\CopilotConversations\Tables;
 
-use Padmission\Tickets\Copilot\Models\CopilotConversation;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -14,6 +13,8 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Padmission\Tickets\Copilot\Models\CopilotConversation;
+use Padmission\Tickets\Enums\ActivityType;
 
 class CopilotConversationsTable
 {
@@ -36,7 +37,9 @@ class CopilotConversationsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('messages_count')
                     ->label(__('filament-copilot::filament-copilot.messages'))
-                    ->counts('messages')
+                    ->state(fn (CopilotConversation $record): int => $record->ticket?->ticketActivities()
+                        ->where('type', ActivityType::Message)
+                        ->count() ?? 0)
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label(__('filament-copilot::filament-copilot.created_at'))

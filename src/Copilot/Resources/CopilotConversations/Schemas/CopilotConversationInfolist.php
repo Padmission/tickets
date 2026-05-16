@@ -10,6 +10,8 @@ use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
 
 class CopilotConversationInfolist
 {
@@ -35,6 +37,18 @@ class CopilotConversationInfolist
                 Section::make(__('filament-copilot::filament-copilot.messages'))
                     ->schema([
                         RepeatableEntry::make('messages')
+                            ->state(fn ($record): array => $record->ticket?->ticketActivities()
+                                ->where('type', ActivityType::Message)
+                                ->oldest()
+                                ->get()
+                                ->map(fn ($activity): array => [
+                                    'role' => $activity->sender === ActivitySender::Ai ? 'assistant' : $activity->sender->value,
+                                    'content' => $activity->content ?: json_encode($activity->data['blocks'] ?? [], JSON_PRETTY_PRINT),
+                                    'input_tokens' => $activity->data['input_tokens'] ?? null,
+                                    'output_tokens' => $activity->data['output_tokens'] ?? null,
+                                    'created_at' => $activity->created_at,
+                                ])
+                                ->all() ?? [])
                             ->schema([
                                 TextEntry::make('role')
                                     ->label(__('filament-copilot::filament-copilot.role'))
@@ -54,12 +68,12 @@ class CopilotConversationInfolist
                                     ->label(__('filament-copilot::filament-copilot.input_tokens'))
                                     ->numeric()
                                     ->placeholder('—')
-                                    ->visible(fn ($record): bool => $record->input_tokens !== null),
+                                    ->visible(fn ($state): bool => $state !== null),
                                 TextEntry::make('output_tokens')
                                     ->label(__('filament-copilot::filament-copilot.output_tokens'))
                                     ->numeric()
                                     ->placeholder('—')
-                                    ->visible(fn ($record): bool => $record->output_tokens !== null),
+                                    ->visible(fn ($state): bool => $state !== null),
                                 TextEntry::make('created_at')
                                     ->label(__('filament-copilot::filament-copilot.time'))
                                     ->dateTime(),

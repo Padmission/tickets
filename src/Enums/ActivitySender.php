@@ -8,5 +8,7 @@ enum ActivitySender: string
 
     case User = 'user';
 
+    case Ai = 'ai';
+
     case Supporter = 'supporter';
 }

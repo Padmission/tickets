@@ -7,7 +7,6 @@ namespace Padmission\Tickets\Copilot\Models\Concerns;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Padmission\Tickets\Copilot\Models\CopilotMessage;
 use Padmission\Tickets\Copilot\Models\Scopes\CopilotTenantScope;
 use Padmission\Tickets\Copilot\Support\CopilotTenantContext;
 
@@ -60,10 +59,9 @@ trait HasCopilotTenant
     }
 
     /**
-     * Walk the conversation/message FK chain to inherit tenant from a parent record.
-     * Child rows (messages, tool_calls, audit_logs, token_usages) shouldn't drift
-     * from their conversation's tenant even if the current resolver returns something
-     * different.
+     * Walk the conversation FK chain to inherit tenant from a parent record.
+     * Child rows should not drift from their conversation's tenant even if the
+     * current resolver returns something different.
      *
      * @return array{type: string, id: int|string}|null
      */
@@ -77,19 +75,6 @@ trait HasCopilotTenant
             $row = CopilotConversation::query()
                 ->withoutGlobalScope(CopilotTenantScope::class)
                 ->whereKey($model->getAttribute('conversation_id'))
-                ->first(['tenant_type', 'tenant_id']);
-
-            return $row ? static::tenantArrayFor($row) : null;
-        }
-
-        if ($model->relationLoaded('message') && $model->getRelation('message')) {
-            return static::tenantArrayFor($model->getRelation('message'));
-        }
-
-        if ($model->getAttribute('message_id')) {
-            $row = CopilotMessage::query()
-                ->withoutGlobalScope(CopilotTenantScope::class)
-                ->whereKey($model->getAttribute('message_id'))
                 ->first(['tenant_type', 'tenant_id']);
 
             return $row ? static::tenantArrayFor($row) : null;

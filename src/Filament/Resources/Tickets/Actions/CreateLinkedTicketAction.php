@@ -12,6 +12,7 @@ use Filament\Panel;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
 use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -77,10 +78,7 @@ class CreateLinkedTicketAction extends Action
 
                 $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
                 $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
-
-                DB::beginTransaction();
-
-                $newTicket = $ticket::create([
+                $ticketAttributes = [
                     'panel' => $targetPanelId,
                     'source_panel' => $currentPanelId,
                     'subject' => $data['subject'],
@@ -88,7 +86,16 @@ class CreateLinkedTicketAction extends Action
                     'turn' => Turn::Supporter,
                     'status_id' => $defaultStatus->id,
                     'priority_id' => $defaultPriority->id,
-                ]);
+                ];
+
+                if (config('padmission-tickets.tenancy.enabled', false) && Filament::auth()->user()) {
+                    $tenantKey = Str::snake(class_basename(config('padmission-tickets.tenancy.tenancy_model'))).'_id';
+                    $ticketAttributes[$tenantKey] = Filament::auth()->user()->getAttribute($tenantKey);
+                }
+
+                DB::beginTransaction();
+
+                $newTicket = $ticket::create($ticketAttributes);
 
                 $newTicket->ticketActivities()->create([
                     'sender' => ActivitySender::User,

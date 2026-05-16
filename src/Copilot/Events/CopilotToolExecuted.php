@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Events;
 
-use Padmission\Tickets\Copilot\Models\CopilotToolCall;
 use Illuminate\Foundation\Events\Dispatchable;
 
 class CopilotToolExecuted
@@ -14,7 +13,7 @@ class CopilotToolExecuted
     use Dispatchable;
 
     public function __construct(
-        public readonly CopilotToolCall $toolCall,
+        public readonly array $toolCall,
         public readonly string $toolName,
         public readonly string $result,
     ) {}

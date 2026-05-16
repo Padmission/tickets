@@ -18,21 +18,7 @@ class CopilotRateLimit extends Model
     use HasUlids;
     use SoftDeletes;
 
-    protected $fillable = [
-        'panel_id',
-        'tenant_type',
-        'tenant_id',
-        'participant_type',
-        'participant_id',
-        'max_messages_per_hour',
-        'max_messages_per_day',
-        'max_tokens_per_hour',
-        'max_tokens_per_day',
-        'is_blocked',
-        'copilot_enabled',
-        'blocked_until',
-        'blocked_reason',
-    ];
+    protected $guarded = ['id'];
 
     protected function casts(): array
     {

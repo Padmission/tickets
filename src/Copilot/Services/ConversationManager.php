@@ -6,13 +6,19 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Services;
 
-use Padmission\Tickets\Copilot\Enums\MessageRole;
-use Padmission\Tickets\Copilot\Enums\ToolCallStatus;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
+use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Copilot\Events\CopilotConversationCreated;
 use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Padmission\Tickets\Copilot\Models\CopilotMessage;
-use Padmission\Tickets\Copilot\Models\CopilotToolCall;
-use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\TicketPlugin;
 
 class ConversationManager
 {
@@ -25,7 +31,32 @@ class ConversationManager
         ?Model $tenant = null,
         ?string $title = null,
     ): CopilotConversation {
+        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        $aiStatus = $statusModel::getAiInProgressStatus();
+        $priority = app(GetDefaultPriorityForPanel::class)($panelId);
+
+        $ticketAttributes = [
+            'panel' => $panelId,
+            'source_panel' => $panelId,
+            'subject' => $title ?? 'Ask AI: '.Str::limit('New Conversation', 60),
+            'status_id' => $aiStatus?->getKey() ?? app(GetDefaultStatusForPanel::class)($panelId)->getKey(),
+            'priority_id' => $priority->getKey(),
+            'submitter_id' => $user->getKey(),
+            'turn' => Turn::User,
+            'data' => [],
+        ];
+
+        if (config('padmission-tickets.tenancy.enabled', false) && $tenant) {
+            $tenantKey = Str::snake(class_basename(config('padmission-tickets.tenancy.tenancy_model'))).'_id';
+            $ticketAttributes[$tenantKey] = $tenant->getKey();
+        }
+
+        /** @var Ticket $ticket */
+        $ticket = $ticketModel::create($ticketAttributes);
+
         $conversation = CopilotConversation::create([
+            'ticket_id' => $ticket->getKey(),
             'participant_type' => $user->getMorphClass(),
             'participant_id' => $user->getKey(),
             'panel_id' => $panelId,
@@ -42,22 +73,45 @@ class ConversationManager
     /**
      * Add a user message to a conversation.
      */
-    public function addUserMessage(CopilotConversation $conversation, string $content): CopilotMessage
+    public function addUserMessage(CopilotConversation $conversation, string $content): TicketActivity
     {
-        $message = $conversation->messages()->create([
-            'role' => MessageRole::User,
-            'content' => $content,
+        /** @var Ticket $ticket */
+        $ticket = $conversation->ticket()->firstOrFail();
+
+        $message = $ticket->addTicketActivity(
+            type: ActivityType::Message,
+            sender: ActivitySender::User,
+            userId: $conversation->participant_id,
+            content: $content,
+        );
+
+        $ticket->update([
+            'subject' => $ticket->subject === 'Ask AI: New Conversation'
+                ? 'Ask AI: '.$this->generateTitle($content)
+                : $ticket->subject,
         ]);
 
-        // Auto-generate title from first user message if still default
-        if (config('filament-copilot.chat.title_auto_generate', true)
-            && $conversation->title === 'New Conversation'
-            && $conversation->messages()->where('role', MessageRole::User)->count() === 1
-        ) {
-            $this->updateTitle($conversation, $this->generateTitle($content));
-        }
-
         return $message;
+    }
+
+    public function createAiActivity(CopilotConversation $conversation, ?string $provider = null, ?string $model = null): TicketActivity
+    {
+        /** @var Ticket $ticket */
+        $ticket = $conversation->ticket()->firstOrFail();
+
+        return $ticket->addTicketActivity(
+            type: ActivityType::Message,
+            sender: ActivitySender::Ai,
+            userId: null,
+            data: [
+                'kind' => 'ai_response',
+                'status' => 'in_progress',
+                'provider' => $provider,
+                'model' => $model,
+                'blocks' => [],
+                'trace_tools' => [],
+            ],
+        );
     }
 
     /**
@@ -69,14 +123,25 @@ class ConversationManager
         int $inputTokens = 0,
         int $outputTokens = 0,
         ?array $metadata = null,
-    ): CopilotMessage {
-        return $conversation->messages()->create([
-            'role' => MessageRole::Assistant,
-            'content' => $content,
-            'input_tokens' => $inputTokens,
-            'output_tokens' => $outputTokens,
-            'metadata' => $metadata,
-        ]);
+    ): TicketActivity {
+        /** @var Ticket $ticket */
+        $ticket = $conversation->ticket()->firstOrFail();
+
+        return $ticket->addTicketActivity(
+            type: ActivityType::Message,
+            sender: ActivitySender::Ai,
+            userId: null,
+            content: $content,
+            data: [
+                'kind' => 'ai_response',
+                'status' => 'complete',
+                'blocks' => $metadata['blocks'] ?? [],
+                'trace_tools' => $metadata['trace_tools'] ?? [],
+                'input_tokens' => $inputTokens,
+                'output_tokens' => $outputTokens,
+                ...($metadata ?? []),
+            ],
+        );
     }
 
     /**
@@ -92,7 +157,7 @@ class ConversationManager
             ->forPanel($panelId)
             ->forParticipant($user)
             ->forTenant($tenant)
-            ->with('latestMessage')
+            ->with('ticket.latestMessage')
             ->orderByDesc('updated_at')
             ->limit($limit)
             ->get();
@@ -103,14 +168,22 @@ class ConversationManager
      */
     public function getMessagesForAgent(CopilotConversation $conversation): array
     {
-        return $conversation->messages()
-            ->orderByDesc('created_at')
+        $ticket = $conversation->ticket;
+
+        if (! $ticket) {
+            return [];
+        }
+
+        return $ticket->ticketActivities()
+            ->where('type', ActivityType::Message)
+            ->whereIn('sender', [ActivitySender::User, ActivitySender::Ai, ActivitySender::Supporter])
+            ->orderBy('created_at')
             ->get()
-            ->reverse()
-            ->map(fn (CopilotMessage $message) => [
-                'role' => $message->role->value,
-                'content' => $message->content,
+            ->map(fn (TicketActivity $message) => [
+                'role' => $message->sender === ActivitySender::Ai ? 'assistant' : 'user',
+                'content' => trim((string) ($message->content ?: $this->blocksToText($message->data['blocks'] ?? []))),
             ])
+            ->filter(fn (array $message): bool => $message['content'] !== '')
             ->values()
             ->toArray();
     }
@@ -120,34 +193,20 @@ class ConversationManager
      */
     public function getMessagesForChat(CopilotConversation $conversation): array
     {
-        return $conversation->messages()
-            ->with('toolCalls')
+        $ticket = $conversation->ticket;
+
+        if (! $ticket) {
+            return [];
+        }
+
+        return $ticket->ticketActivities()
             ->orderBy('created_at')
             ->get()
-            ->flatMap(function (CopilotMessage $message): array {
-                $messages = [[
-                    'role' => $message->role->value,
-                    'content' => $message->content,
-                ]];
-
-                foreach ($message->toolCalls->sortBy('created_at') as $toolCall) {
-                    /** @var CopilotToolCall $toolCall */
-                    $isFailed = $toolCall->status === ToolCallStatus::Failed;
-
-                    $messages[] = [
-                        'role' => 'tool_call',
-                        'tool_name' => $toolCall->tool_name,
-                        'arguments' => $toolCall->tool_input,
-                        'result' => $toolCall->tool_output,
-                        'success' => ! $isFailed,
-                        'error' => $isFailed ? ($toolCall->tool_output ?: 'Tool execution failed.') : null,
-                        'content' => $toolCall->tool_output ?? '',
-                        'status' => $toolCall->status->value,
-                    ];
-                }
-
-                return $messages;
-            })
+            ->map(fn (TicketActivity $activity) => [
+                'role' => $activity->sender->value,
+                'content' => $activity->content,
+                'data' => $activity->data,
+            ])
             ->values()
             ->toArray();
     }
@@ -189,5 +248,13 @@ class ConversationManager
         }
 
         return $title;
+    }
+
+    protected function blocksToText(array $blocks): string
+    {
+        return collect($blocks)
+            ->map(fn (array $block): string => json_encode($block, JSON_UNESCAPED_UNICODE) ?: '')
+            ->filter()
+            ->implode("\n");
     }
 }

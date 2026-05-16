@@ -125,6 +125,38 @@ return [
 
     'system_prompt' => null,
 
+    'few_shot_examples' => [],
+
+    'escalation_triggers' => [
+        'low_confidence_threshold' => 0.6,
+        'repeated_unresolved_threshold' => 3,
+    ],
+
+    'usage_log' => [
+        'store_payloads' => env('COPILOT_USAGE_LOG_STORE_PAYLOADS', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Host App Record/API Context
+    |--------------------------------------------------------------------------
+    |
+    | Host applications may expose read-only record context tools. The package
+    | does not assume an API exists; apps can enable and configure these keys.
+    |
+    */
+
+    'record_context' => [
+        'enabled' => false,
+        'types' => [],
+    ],
+
+    'journey_api' => [
+        'enabled' => false,
+        'max_per_page' => 25,
+        'resources' => [],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Global Tools
@@ -134,5 +166,7 @@ return [
     */
 
     'global_tools' => [],
+
+    'replace_tools' => false,
 
 ];

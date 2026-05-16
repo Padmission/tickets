@@ -94,6 +94,10 @@ class TicketActivity extends Model
         return Attribute::get(fn ($value) => match ($this->type) {
             ActivityType::Opened => __('padmission-tickets::activities.opened'),
             ActivityType::Closed => __('padmission-tickets::activities.closed'),
+            ActivityType::Escalated => __('padmission-tickets::activities.escalated'),
+            ActivityType::Joined => __('padmission-tickets::activities.joined', [
+                'name' => resolve(GetUserDisplayName::class)($this->data['user_id'] ?? $this->user_id),
+            ]),
             ActivityType::AssigneeChanged => filled($this->data['to'])
                 ? __('padmission-tickets::activities.assigned_to', ['name' => resolve(GetUserDisplayName::class)($this->data['to'])])
                 : __('padmission-tickets::activities.unassigned'),
@@ -111,5 +115,79 @@ class TicketActivity extends Model
             ]),
             default => $value
         });
+    }
+
+    public function isAiTurn(): bool
+    {
+        return $this->sender === ActivitySender::Ai && $this->type === ActivityType::Message;
+    }
+
+    public function appendAiBlock(array $block): void
+    {
+        $data = $this->data ?? [];
+        $data['blocks'] ??= [];
+        $data['blocks'][] = $block;
+
+        $this->forceFill(['data' => $data])->save();
+    }
+
+    public function appendToolTrace(array $trace): void
+    {
+        $data = $this->data ?? [];
+        $data['trace_tools'] ??= [];
+        $data['trace_tools'][] = $trace;
+
+        $this->forceFill(['data' => $data])->save();
+    }
+
+    public function recordParseError(string $line, string $message): void
+    {
+        $data = $this->data ?? [];
+        $data['parse_errors'] ??= [];
+        $data['parse_errors'][] = ['line' => $line, 'message' => $message];
+
+        $this->forceFill(['data' => $data])->save();
+    }
+
+    public function recordParseWarning(string $line, string $message): void
+    {
+        $data = $this->data ?? [];
+        $data['parse_warnings'] ??= [];
+        $data['parse_warnings'][] = ['line' => $line, 'message' => $message];
+
+        $this->forceFill(['data' => $data])->save();
+    }
+
+    public function persistAiMeta(array $props): void
+    {
+        $data = $this->data ?? [];
+
+        if (array_key_exists('confidence', $props) && ! array_key_exists('confidence', $data)) {
+            $data['confidence'] = $props['confidence'];
+        } elseif (array_key_exists('confidence', $props)) {
+            $data['parse_warnings'][] = ['line' => 'Meta', 'message' => 'duplicate-confidence-ignored'];
+        }
+
+        if (array_key_exists('escalation_reason', $props) && ! array_key_exists('escalation_reason', $data)) {
+            $data['escalation_reason'] = $props['escalation_reason'];
+        } elseif (array_key_exists('escalation_reason', $props)) {
+            $data['parse_warnings'][] = ['line' => 'Meta', 'message' => 'duplicate-escalation-reason-ignored'];
+        }
+
+        $this->forceFill(['data' => $data])->save();
+    }
+
+    public function flagAiAnswerAsIncorrect(string $reason, ?int $userId = null, array $context = []): void
+    {
+        $data = $this->data ?? [];
+        $data['feedback'] = [
+            'incorrect' => true,
+            'reason' => $reason,
+            'reported_by' => $userId,
+            'reported_at' => now()->toIso8601String(),
+            'context' => $context,
+        ];
+
+        $this->forceFill(['data' => $data])->save();
     }
 }

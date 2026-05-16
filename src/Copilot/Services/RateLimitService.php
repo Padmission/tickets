@@ -6,11 +6,13 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Padmission\Tickets\Copilot\Models\CopilotMessage;
 use Padmission\Tickets\Copilot\Models\CopilotRateLimit;
 use Padmission\Tickets\Copilot\Models\CopilotTokenUsage;
-use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Models\TicketActivity;
 
 class RateLimitService
 {
@@ -176,29 +178,23 @@ class RateLimitService
 
     protected function getMessagesInLastHour(Model $user, string $panelId, ?Model $tenant): int
     {
-        return CopilotMessage::query()
-            ->whereHas('conversation', function ($q) use ($user, $panelId, $tenant) {
-                $q->forPanel($panelId)->forParticipant($user);
-                if ($tenant) {
-                    $q->forTenant($tenant);
-                }
-            })
-            ->where('role', 'user')
-            ->where('created_at', '>=', now()->subHour())
-            ->count();
+        return $this->messageCountSince($user, $panelId, $tenant, now()->subHour());
     }
 
     protected function getMessagesInLastDay(Model $user, string $panelId, ?Model $tenant): int
     {
-        return CopilotMessage::query()
-            ->whereHas('conversation', function ($q) use ($user, $panelId, $tenant) {
-                $q->forPanel($panelId)->forParticipant($user);
-                if ($tenant) {
-                    $q->forTenant($tenant);
-                }
+        return $this->messageCountSince($user, $panelId, $tenant, now()->subDay());
+    }
+
+    protected function messageCountSince(Model $user, string $panelId, ?Model $tenant, \DateTimeInterface $since): int
+    {
+        return TicketActivity::query()
+            ->where('type', ActivityType::Message)
+            ->where('sender', ActivitySender::User)
+            ->whereHas('ticket.copilotConversation', function ($query) use ($user, $panelId, $tenant): void {
+                $query->forPanel($panelId)->forParticipant($user)->forTenant($tenant);
             })
-            ->where('role', 'user')
-            ->where('created_at', '>=', now()->subDay())
+            ->where('created_at', '>=', $since)
             ->count();
     }
 

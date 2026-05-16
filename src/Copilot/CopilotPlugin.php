@@ -7,17 +7,18 @@ declare(strict_types=1);
 namespace Padmission\Tickets\Copilot;
 
 use Closure;
-use Padmission\Tickets\Copilot\Pages\CopilotDashboardPage;
-use Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\CopilotAuditLogResource;
-use Padmission\Tickets\Copilot\Resources\CopilotConversations\CopilotConversationResource;
-use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\CopilotRateLimitResource;
 use Filament\Contracts\Plugin;
-use Filament\Panel;
 use Filament\Facades\Filament;
+use Filament\Panel;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Blade;
+use Laravel\Ai\Contracts\Tool;
+use Padmission\Tickets\Copilot\Pages\CopilotDashboardPage;
+use Padmission\Tickets\Copilot\Resources\CopilotAuditLogs\CopilotAuditLogResource;
+use Padmission\Tickets\Copilot\Resources\CopilotConversations\CopilotConversationResource;
+use Padmission\Tickets\Copilot\Resources\CopilotRateLimits\CopilotRateLimitResource;
 use Padmission\Tickets\Copilot\Support\CopilotTenantContext;
 
 class CopilotPlugin implements Plugin
@@ -32,8 +33,10 @@ class CopilotPlugin implements Plugin
 
     protected ?string $systemPrompt = null;
 
-    /** @var array<\Laravel\Ai\Contracts\Tool> */
+    /** @var array<Tool> */
     protected array $globalTools = [];
+
+    protected bool $replaceTools = false;
 
     protected array $quickActions = [];
 
@@ -142,7 +145,13 @@ class CopilotPlugin implements Plugin
 
     public function globalTools(array $tools): static
     {
+        return $this->tools($tools);
+    }
+
+    public function tools(array $tools, bool $replace = false): static
+    {
         $this->globalTools = $tools;
+        $this->replaceTools = $replace;
 
         return $this;
     }
@@ -150,6 +159,11 @@ class CopilotPlugin implements Plugin
     public function getGlobalTools(): array
     {
         return ! empty($this->globalTools) ? $this->globalTools : config('filament-copilot.global_tools', []);
+    }
+
+    public function shouldReplaceTools(): bool
+    {
+        return $this->replaceTools || config('filament-copilot.replace_tools', false);
     }
 
     public function quickActions(array $actions): static
@@ -302,15 +316,14 @@ class CopilotPlugin implements Plugin
         FilamentView::registerRenderHook(
             PanelsRenderHook::GLOBAL_SEARCH_AFTER,
             fn (): string => $this->isAuthorized()
-                ? Blade::render('@livewire(\'filament-copilot-button\')')
+                ? Blade::render('@livewire(\'padmission-tickets.support-button\')')
                 : '',
         );
 
-        // Place the chat modal at the end of the body
         FilamentView::registerRenderHook(
             PanelsRenderHook::BODY_END,
             fn (): string => $this->isAuthorized()
-                ? Blade::render('@livewire(\'filament-copilot-chat\')')
+                ? Blade::render('@livewire(\'padmission-tickets.support-panel\')')
                 : '',
         );
     }

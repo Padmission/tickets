@@ -6,7 +6,6 @@ use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
-use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -40,10 +39,6 @@ class TicketPlugin implements Plugin
     protected string $escalationLevel = 'default';
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
-
-    protected mixed $shouldShowChatWidget = false;
-
-    protected mixed $chatWidgetConfig = null;
 
     protected ?NotificationConfiguration $notificationConfiguration = null;
 
@@ -91,20 +86,6 @@ class TicketPlugin implements Plugin
             ]);
         }
 
-        // Always register the render hook, but check the condition inside the closure
-        $panel->renderHook(
-            PanelsRenderHook::BODY_END,
-            function () use ($panel) {
-                // Check the condition when the hook is actually rendered (after auth)
-                if (! $this->shouldShowChatWidget()) {
-                    return '';
-                }
-
-                return view('padmission-tickets::filament.chat-widget', [
-                    'primaryColor' => data_get($panel->getColors(), 'primary', null),
-                ]);
-            }
-        );
     }
 
     public function boot(Panel $panel): void
@@ -283,23 +264,6 @@ class TicketPlugin implements Plugin
         // });
     }
 
-    public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static
-    {
-        $this->shouldShowChatWidget = $shouldShow;
-        $this->chatWidgetConfig = $config;
-
-        return $this;
-    }
-
-    public function getChatWidgetConfig(): ChatWidgetConfig
-    {
-        if ($this->chatWidgetConfig instanceof Closure) {
-            return app()->call($this->chatWidgetConfig);
-        }
-
-        return $this->chatWidgetConfig ?? new ChatWidgetConfig;
-    }
-
     public function notificationConfiguration(NotificationConfiguration $configuration): static
     {
         $this->notificationConfiguration = $configuration;
@@ -322,15 +286,6 @@ class TicketPlugin implements Plugin
     public function getTargetPanelId(): ?string
     {
         return $this->targetPanelId;
-    }
-
-    public function shouldShowChatWidget(): bool
-    {
-        if ($this->shouldShowChatWidget instanceof Closure) {
-            return (bool) app()->call($this->shouldShowChatWidget);
-        }
-
-        return $this->shouldShowChatWidget;
     }
 
     public function allSupportersQuery(Closure|Builder $query): static

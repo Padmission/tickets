@@ -18,15 +18,7 @@ class CopilotAgentMemory extends Model
     use HasUlids;
     use SoftDeletes;
 
-    protected $fillable = [
-        'participant_type',
-        'participant_id',
-        'panel_id',
-        'tenant_type',
-        'tenant_id',
-        'key',
-        'value',
-    ];
+    protected $guarded = ['id'];
 
     public function participant(): MorphTo
     {

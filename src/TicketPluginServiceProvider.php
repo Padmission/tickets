@@ -27,7 +27,6 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             ->hasConfigFile()
             ->hasViews()
             ->hasTranslations()
-            ->hasRoutes('api')
             ->hasCommand(SeedTicketsCommand::class)
             ->discoversMigrations();
     }
@@ -36,6 +35,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     {
         if (config('padmission-tickets.run_migrations', true)) {
             $this->package->runsMigrations();
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         }
 
         if (app()->environment('local')) {
@@ -79,12 +79,12 @@ class TicketPluginServiceProvider extends PackageServiceProvider
 
     private function registerAssets(): void
     {
-        $assets = [
-            Css::make('chat-component', __DIR__.'/../resources/css/chat-component.css')->loadedOnRequest(),
-            Css::make('chat-widget', __DIR__.'/../resources/css/chat-widget.css')->loadedOnRequest(),
-            Css::make('tickets', __DIR__.'/../resources/css/tickets.css'),
+        $ticketsCssPath = __DIR__.'/../resources/css/tickets.css';
 
-            Js::make('chat-widget', __DIR__.'/../dist/chat-widget.js')->loadedOnRequest(),
+        $assets = [
+            Css::make('tickets', $ticketsCssPath)
+                ->html(fn (): string => asset('css/padmission/tickets/tickets.css').'?t='.(file_exists($ticketsCssPath) ? filemtime($ticketsCssPath) : time())),
+            Js::make('support-panel-stream', __DIR__.'/../resources/js/support-panel-stream.js')->loadedOnRequest(),
         ];
 
         if (! $this->isDevMode()) {

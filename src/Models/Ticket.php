@@ -6,7 +6,9 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Padmission\Tickets\Copilot\Models\CopilotConversation;
 use Padmission\Tickets\Database\Factories\TicketFactory;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\CanBeAssigned;
@@ -43,6 +45,8 @@ class Ticket extends Model
         'turn' => Turn::class,
         'submitter_data' => SubmitterData::class,
         'closed_at' => 'datetime',
+        'ai_provider' => 'string',
+        'ai_model' => 'string',
     ];
 
     protected static string $factory = TicketFactory::class;
@@ -74,6 +78,11 @@ class Ticket extends Model
         );
     }
 
+    public function copilotConversation(): HasOne
+    {
+        return $this->hasOne(CopilotConversation::class);
+    }
+
     /* Scopes */
 
     public function scopeOpen(Builder $query): Builder
@@ -84,6 +93,17 @@ class Ticket extends Model
     public function scopeClosed(Builder $query): Builder
     {
         return $query->whereNotNull('closed_at');
+    }
+
+    public function scopeAiInProgress(Builder $query): Builder
+    {
+        $status = TicketStatus::getAiInProgressStatus();
+
+        if (! $status) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('status_id', $status->getKey());
     }
 
     public function isInCurrentPanel(): bool

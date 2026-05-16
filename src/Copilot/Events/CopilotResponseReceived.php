@@ -6,9 +6,9 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Events;
 
-use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Padmission\Tickets\Copilot\Models\CopilotMessage;
 use Illuminate\Foundation\Events\Dispatchable;
+use Padmission\Tickets\Copilot\Models\CopilotConversation;
+use Padmission\Tickets\Models\TicketActivity;
 
 class CopilotResponseReceived
 {
@@ -16,7 +16,7 @@ class CopilotResponseReceived
 
     public function __construct(
         public readonly CopilotConversation $conversation,
-        public readonly CopilotMessage $message,
+        public readonly TicketActivity $message,
         public readonly int $inputTokens,
         public readonly int $outputTokens,
     ) {}

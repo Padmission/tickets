@@ -24,6 +24,19 @@ return [
             ],
         ],
 
+        'open_ticket' => [
+            'label' => 'Open Ticket',
+            'message' => 'Message',
+            'notifications' => [
+                'success' => 'Ticket opened',
+            ],
+        ],
+
+        'reply' => [
+            'label' => 'Reply',
+            'message' => 'Message',
+        ],
+
         'create_linked_ticket' => [
             'label' => 'Create Linked Ticket',
 

@@ -8,6 +8,8 @@ return [
     'turn_changed' => 'Turn Changed from :from to :to',
     'assigned_to' => 'Assigned to :name',
     'unassigned' => 'Unassigned',
+    'escalated' => 'Ticket opened from AI chat',
+    'joined' => ':name joined the conversation',
     'user_display' => [
         'unassigned' => 'unassigned',
         'user_not_found' => 'user :id',

@@ -16,15 +16,20 @@ class TicketActivityService
         Ticket $ticket,
         ?int $offsetId = null,
         ?int $limit = null,
+        ?string $view = null,
     ): Collection {
         $currentSender = auth()->id() === $ticket->submitter_id
             ? ActivitySender::User
             : ActivitySender::Supporter;
 
+        $view ??= $currentSender === ActivitySender::Supporter && auth()->user()?->can('manage', $ticket)
+            ? 'supporter'
+            : 'support';
+
         return $ticket
             ->ticketActivities()
             ->with('user')
-            ->whereIn('type', $this->getActivityTypesForSender($ticket, $currentSender))
+            ->whereIn('type', $this->getActivityTypesForView($view))
             ->when($offsetId, fn ($query) => $query->where('id', '>', $offsetId))
             ->when($limit, fn ($query) => $query->limit($limit))
             ->orderBy('id', 'desc')
@@ -54,19 +59,25 @@ class TicketActivityService
 
     public function getActivityTypesForSender(Ticket $ticket, $currentSender): array
     {
-        if (
-            $currentSender === ActivitySender::Supporter
-            && auth()->user()?->can('manage', $ticket)
-        ) {
-            return array_filter(
-                ActivityType::cases(),
-                fn (ActivityType $type) => $type !== ActivityType::TurnChanged
-            );
+        $view = $currentSender === ActivitySender::Supporter && auth()->user()?->can('manage', $ticket)
+            ? 'supporter'
+            : 'support';
+
+        return $this->getActivityTypesForView($view);
+    }
+
+    public function getActivityTypesForView(string $view): array
+    {
+        if ($view === 'supporter') {
+            return ActivityType::cases();
         }
 
         return [
             ActivityType::Opened,
             ActivityType::Message,
+            ActivityType::Escalated,
+            ActivityType::AssigneeChanged,
+            ActivityType::Joined,
             ActivityType::Closed,
         ];
     }

@@ -10,10 +10,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketActi
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
-use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
-
-use function Pest\Laravel\partialMock;
 
 beforeEach(function () {
     $this->login();
@@ -161,12 +158,7 @@ it('sends success notification with action link', function () {
 it('shows a link to the ticket in the users existing panel', function () {
     TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
-    $mockedUser = partialMock(User::class)
-        ->shouldReceive('canAccessPanel')
-        ->andReturn(false)
-        ->getMock();
-
-    $this->actingAs($mockedUser);
+    $this->login();
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
@@ -177,7 +169,7 @@ it('shows a link to the ticket in the users existing panel', function () {
         ])
         ->assertHasNoFormErrors();
 
-    $notifications = session()->get('filament.notifications');
+    $notifications = session()->get('filament.claimed_notifications');
 
     expect($notifications)->toHaveCount(1)
         ->and($notifications[0]['actions'])->not->toBeEmpty();

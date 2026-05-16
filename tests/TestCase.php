@@ -26,6 +26,7 @@ use Livewire\LivewireServiceProvider;
 use Mpbarlow\LaravelQueueDebouncer\ServiceProvider as LaravelQueueDebounceServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
+use Padmission\Tickets\Copilot\CopilotServiceProvider;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\TicketPlugin;
@@ -67,6 +68,7 @@ class TestCase extends \Orchestra\Testbench\TestCase
             WidgetsServiceProvider::class,
 
             TicketPluginServiceProvider::class,
+            CopilotServiceProvider::class,
             PowerJoinsServiceProvider::class,
 
             LivewireServiceProvider::class,

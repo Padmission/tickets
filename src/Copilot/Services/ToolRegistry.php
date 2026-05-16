@@ -6,6 +6,8 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Services;
 
+use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Copilot\CopilotPlugin;
 use Padmission\Tickets\Copilot\Tools\BaseTool;
 use Padmission\Tickets\Copilot\Tools\GetToolsTool;
 use Padmission\Tickets\Copilot\Tools\ListPagesTool;
@@ -14,8 +16,7 @@ use Padmission\Tickets\Copilot\Tools\ListWidgetsTool;
 use Padmission\Tickets\Copilot\Tools\RecallTool;
 use Padmission\Tickets\Copilot\Tools\RememberTool;
 use Padmission\Tickets\Copilot\Tools\RunToolTool;
-use Filament\Facades\Filament;
-use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Copilot\Tools\TraceableTool;
 
 class ToolRegistry
 {
@@ -47,9 +48,10 @@ class ToolRegistry
     public function buildTools(string $panelId, Model $user, ?Model $tenant = null, ?string $conversationId = null): array
     {
         // Merge plugin-configured global tools
+        $plugin = null;
         $pluginTools = [];
         try {
-            $plugin = \Padmission\Tickets\Copilot\CopilotPlugin::get();
+            $plugin = CopilotPlugin::get();
             $pluginTools = $plugin->getGlobalTools();
         } catch (\Throwable) {
             $pluginTools = config('filament-copilot.global_tools', []);
@@ -57,7 +59,11 @@ class ToolRegistry
 
         $tools = [];
 
-        foreach (array_merge($this->toolClasses, $this->globalTools, $pluginTools) as $toolClass) {
+        $toolClasses = $plugin?->shouldReplaceTools()
+            ? $pluginTools
+            : array_merge($this->toolClasses, $this->globalTools, $pluginTools);
+
+        foreach ($toolClasses as $toolClass) {
             $tool = app($toolClass);
 
             if ($tool instanceof BaseTool) {
@@ -70,7 +76,9 @@ class ToolRegistry
                 $tool->forConversation($conversationId);
             }
 
-            $tools[] = $tool;
+            $tools[] = $conversationId
+                ? new TraceableTool($tool, $conversationId)
+                : $tool;
         }
 
         return $tools;

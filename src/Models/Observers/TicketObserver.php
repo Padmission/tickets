@@ -17,8 +17,9 @@ class TicketObserver
     public function creating(Ticket $ticket): void
     {
         $assignmentStrategy = TicketPlugin::get()->getAssignmentStrategy();
+        $aiInProgressStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getAiInProgressStatus();
 
-        if ($assignmentStrategy && ! $ticket->assignee_id) {
+        if ($assignmentStrategy && ! $ticket->assignee_id && $ticket->status_id !== $aiInProgressStatus?->getKey()) {
             $assignmentStrategy->assign($ticket);
         }
     }
@@ -71,8 +72,8 @@ class TicketObserver
                 ]
             );
 
-            $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
-            $isClosedStatus = $newStatusId === $closedStatus->getKey();
+            $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::findClosedStatus();
+            $isClosedStatus = $closedStatus && $newStatusId === $closedStatus->getKey();
 
             if ($isClosedStatus && $ticket->isOpen) {
                 $ticket->close(closedById: auth()->id());
@@ -85,7 +86,12 @@ class TicketObserver
     protected function handleStatusClosureAttributesOnly(Ticket $ticket): void
     {
         $newStatusId = $ticket->status_id;
-        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::findClosedStatus();
+
+        if (! $closedStatus) {
+            return;
+        }
+
         $isClosedStatus = $newStatusId === $closedStatus->getKey();
 
         // If changing to closed status and ticket isn't already closed
@@ -107,7 +113,12 @@ class TicketObserver
     {
         $oldStatusId = $ticket->getOriginal('status_id');
         $newStatusId = $ticket->status_id;
-        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::findClosedStatus();
+
+        if (! $closedStatus) {
+            return;
+        }
+
         $isClosedStatus = $newStatusId === $closedStatus->getKey();
         $wasClosedStatus = $oldStatusId === $closedStatus->getKey();
 

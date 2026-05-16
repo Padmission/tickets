@@ -18,7 +18,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\TicketPlugin;
 
 class ThirdPanelProvider extends PanelProvider
@@ -74,10 +73,6 @@ class ThirdPanelProvider extends PanelProvider
                 TicketPlugin::make()
                     ->registerResources()
                     ->allSupportersQuery(User::query())
-                    ->showChatWidget(
-                        config: ChatWidgetConfig::make()
-                        // ->allowFileUploads(maxFileSize: 20 * 1024)
-                    )
                 // ->useDisposition()
             );
     }

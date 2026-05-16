@@ -6,14 +6,10 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Tools;
 
-use Padmission\Tickets\Copilot\Enums\MessageRole;
-use Padmission\Tickets\Copilot\Enums\ToolCallStatus;
-use Padmission\Tickets\Copilot\Events\CopilotToolExecuted;
-use Padmission\Tickets\Copilot\Models\CopilotConversation;
-use Padmission\Tickets\Copilot\Models\CopilotToolCall;
-use Padmission\Tickets\Copilot\Tools\Concerns\LogsAudit;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Ai\Contracts\Tool;
+use Padmission\Tickets\Copilot\Events\CopilotToolExecuted;
+use Padmission\Tickets\Copilot\Tools\Concerns\LogsAudit;
 
 abstract class BaseTool implements Tool
 {
@@ -57,22 +53,14 @@ abstract class BaseTool implements Tool
 
     protected function dispatchToolExecuted(string $toolName, string $result, ?string $messageId = null, ?array $input = null): void
     {
-        $messageId ??= $this->resolveMessageId();
-
-        $toolCall = new CopilotToolCall([
-            'message_id' => $messageId,
-            'tool_name' => $toolName,
-            'tool_input' => $input ?? [],
-            'tool_output' => $result,
-            'status' => ToolCallStatus::Executed,
-        ]);
-
-        if ($messageId && config('filament-copilot.audit.enabled', true) && config('filament-copilot.audit.log_tool_calls', true)) {
-            $toolCall->save();
-        }
-
         event(new CopilotToolExecuted(
-            toolCall: $toolCall,
+            toolCall: [
+                'message_id' => $messageId ?? $this->resolveMessageId(),
+                'tool_name' => $toolName,
+                'tool_input' => $input ?? [],
+                'tool_output' => $result,
+                'status' => 'executed',
+            ],
             toolName: $toolName,
             result: $result,
         ));
@@ -80,23 +68,6 @@ abstract class BaseTool implements Tool
 
     protected function resolveMessageId(): ?string
     {
-        if (! isset($this->panelId, $this->user) || ! $this->conversationId) {
-            return null;
-        }
-
-        $conversation = CopilotConversation::query()
-            ->forPanel($this->panelId)
-            ->forParticipant($this->user)
-            ->forTenant($this->tenant)
-            ->find($this->conversationId);
-
-        if (! $conversation) {
-            return null;
-        }
-
-        return $conversation->messages()
-            ->where('role', MessageRole::User)
-            ->latest('created_at')
-            ->value('id');
+        return null;
     }
 }

@@ -6,11 +6,12 @@ declare(strict_types=1);
 
 namespace Padmission\Tickets\Copilot\Agent;
 
+use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Copilot\CopilotPlugin;
 use Padmission\Tickets\Copilot\Discovery\PageInspector;
 use Padmission\Tickets\Copilot\Discovery\ResourceInspector;
 use Padmission\Tickets\Copilot\Discovery\WidgetInspector;
 use Padmission\Tickets\Copilot\Models\CopilotAgentMemory;
-use Illuminate\Database\Eloquent\Model;
 
 class ContextBuilder
 {
@@ -61,10 +62,13 @@ class ContextBuilder
         $sections = [];
 
         $sections[] = $this->buildBasePrompt();
-        $sections[] = $this->buildResourceContext();
-        $sections[] = $this->buildPageContext();
-        $sections[] = $this->buildWidgetContext();
+        if (! CopilotPlugin::get()->shouldReplaceTools()) {
+            $sections[] = $this->buildResourceContext();
+            $sections[] = $this->buildPageContext();
+            $sections[] = $this->buildWidgetContext();
+        }
         $sections[] = $this->buildMemoryContext();
+        $sections[] = $this->buildFewShotExamples();
 
         if ($this->customPrompt) {
             $sections[] = "## Additional Instructions\n{$this->customPrompt}";
@@ -151,4 +155,21 @@ PROMPT;
         return implode("\n", $lines);
     }
 
+    protected function buildFewShotExamples(): string
+    {
+        $examples = config('filament-copilot.few_shot_examples', []);
+
+        if ($examples === []) {
+            return '';
+        }
+
+        $lines = ['## Valid Output Examples'];
+
+        foreach ($examples as $example) {
+            $lines[] = 'User: '.($example['question'] ?? '');
+            $lines[] = "Assistant:\n".implode("\n", $example['answer'] ?? []);
+        }
+
+        return implode("\n\n", $lines);
+    }
 }

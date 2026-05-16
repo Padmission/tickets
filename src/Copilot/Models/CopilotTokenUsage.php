@@ -19,20 +19,7 @@ class CopilotTokenUsage extends Model
     use HasUlids;
     use SoftDeletes;
 
-    protected $fillable = [
-        'conversation_id',
-        'participant_type',
-        'participant_id',
-        'panel_id',
-        'tenant_type',
-        'tenant_id',
-        'input_tokens',
-        'output_tokens',
-        'total_tokens',
-        'model',
-        'provider',
-        'usage_date',
-    ];
+    protected $guarded = ['id'];
 
     protected function casts(): array
     {

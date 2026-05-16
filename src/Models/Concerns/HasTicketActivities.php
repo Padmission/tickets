@@ -63,4 +63,23 @@ trait HasTicketActivities
 
         return $relation;
     }
+
+    public function latestUserMessage(): HasOne
+    {
+        $relation = $this->hasOne(
+            TicketPlugin::resolveModelClass(TicketActivity::class),
+            'ticket_id'
+        )->ofMany(['created_at' => 'max'], function ($query) {
+            $query
+                ->where('type', ActivityType::Message->value)
+                ->where('sender', ActivitySender::User->value);
+        });
+
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+        if ($modifier) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'latestUserMessage']);
+        }
+
+        return $relation;
+    }
 }

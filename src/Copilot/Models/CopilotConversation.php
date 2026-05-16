@@ -8,11 +8,14 @@ namespace Padmission\Tickets\Copilot\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Padmission\Tickets\Copilot\Models\Concerns\HasCopilotTenant;
-use Padmission\Tickets\Copilot\Models\Scopes\CopilotTenantScope;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Models\Ticket;
 
 class CopilotConversation extends Model
 {
@@ -23,33 +26,15 @@ class CopilotConversation extends Model
     protected static function booted(): void
     {
         static::deleting(function (self $conversation): void {
-            $force = $conversation->isForceDeleting();
-            $conversation->messages()
-                ->withoutGlobalScope(CopilotTenantScope::class)
-                ->when(! $force, fn ($q) => $q->whereNull('deleted_at'))
-                ->when($force, fn ($q) => $q->withTrashed())
-                ->get()
-                ->each(fn (CopilotMessage $message) => $force ? $message->forceDelete() : $message->delete());
+            //
         });
 
         static::restoring(function (self $conversation): void {
-            $conversation->messages()
-                ->withoutGlobalScope(CopilotTenantScope::class)
-                ->onlyTrashed()
-                ->get()
-                ->each(fn (CopilotMessage $message) => $message->restore());
+            //
         });
     }
 
-    protected $fillable = [
-        'participant_type',
-        'participant_id',
-        'panel_id',
-        'tenant_type',
-        'tenant_id',
-        'title',
-        'metadata',
-    ];
+    protected $guarded = ['id'];
 
     protected function casts(): array
     {
@@ -68,9 +53,9 @@ class CopilotConversation extends Model
         return $this->morphTo();
     }
 
-    public function messages(): HasMany
+    public function ticket(): BelongsTo
     {
-        return $this->hasMany(CopilotMessage::class, 'conversation_id');
+        return $this->belongsTo(Ticket::class);
     }
 
     public function auditLogs(): HasMany
@@ -83,9 +68,17 @@ class CopilotConversation extends Model
         return $this->hasMany(CopilotTokenUsage::class, 'conversation_id');
     }
 
-    public function latestMessage(): HasMany
+    public function getMessages(): Collection
     {
-        return $this->messages()->latest()->limit(1);
+        return $this->ticket?->ticketActivities()
+            ->where('type', ActivityType::Message)
+            ->oldest()
+            ->get() ?? collect();
+    }
+
+    public function latestMessage()
+    {
+        return $this->ticket?->latestMessage();
     }
 
     public function scopeForPanel($query, string $panelId)
@@ -113,6 +106,15 @@ class CopilotConversation extends Model
 
     public function getTotalTokensAttribute(): int
     {
-        return $this->messages()->sum('input_tokens') + $this->messages()->sum('output_tokens');
+        $ticket = $this->ticket;
+
+        if (! $ticket) {
+            return 0;
+        }
+
+        return (int) $ticket->ticketActivities()
+            ->where('sender', 'ai')
+            ->get()
+            ->sum(fn ($activity) => (int) data_get($activity->data, 'input_tokens') + (int) data_get($activity->data, 'output_tokens'));
     }
 }

@@ -22,20 +22,7 @@ class CopilotAuditLog extends Model
 
     public $timestamps = false;
 
-    protected $fillable = [
-        'conversation_id',
-        'participant_type',
-        'participant_id',
-        'panel_id',
-        'tenant_type',
-        'tenant_id',
-        'action',
-        'resource_type',
-        'record_key',
-        'payload',
-        'ip_address',
-        'created_at',
-    ];
+    protected $guarded = ['id'];
 
     protected function casts(): array
     {

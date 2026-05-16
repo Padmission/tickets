@@ -29,9 +29,10 @@ class TicketStatusSeeder extends Seeder
                 Filament::setCurrentPanel($panel);
 
                 $data = collect([
-                    ['display_name' => 'Open', 'panel' => $panel->getId(), 'color' => 'Gray', 'order' => 1],
-                    ['display_name' => 'In Progress', 'panel' => $panel->getId(), 'color' => 'Blue', 'order' => 2],
-                    ['display_name' => 'Closed', 'panel' => $panel->getId(), 'color' => 'Green', 'order' => 3],
+                    ['seed_key' => 'open', 'display_name' => 'Open', 'panel' => $panel->getId(), 'color' => 'Gray', 'order' => 1],
+                    ['seed_key' => 'ai_in_progress', 'display_name' => 'AI in progress', 'panel' => $panel->getId(), 'color' => 'Gray', 'order' => 2],
+                    ['seed_key' => 'in_progress', 'display_name' => 'In Progress', 'panel' => $panel->getId(), 'color' => 'Blue', 'order' => 3],
+                    ['seed_key' => 'closed', 'display_name' => 'Closed', 'panel' => $panel->getId(), 'color' => 'Green', 'order' => 4],
                 ]);
 
                 foreach ($data as $row) {

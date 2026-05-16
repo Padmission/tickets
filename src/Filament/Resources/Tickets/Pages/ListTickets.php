@@ -2,10 +2,13 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Padmission\Tickets\Copilot\Services\AiFeedbackExportService;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
@@ -39,7 +42,21 @@ class ListTickets extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            Action::make('exportIncorrectAiAnswers')
+                ->label('Export bad AI responses')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->action(function (AiFeedbackExportService $exporter) {
+                    return response()->streamDownload(
+                        function () use ($exporter): void {
+                            echo $exporter->toJsonLines();
+                        },
+                        'bad-ai-responses-'.now()->format('Y-m-d-His').'.jsonl',
+                        ['Content-Type' => 'application/x-ndjson']
+                    );
+                }),
+            CreateTicketAction::make(),
+        ];
     }
 
     public function getTabs(): array

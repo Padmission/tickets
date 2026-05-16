@@ -33,19 +33,35 @@ class TicketStatus extends Model
 
     public static function getOpenStatuses(): Collection
     {
-        return self::query()
-            ->tap(new CurrentPanelScope)
+        return static::query()
+            ->where(fn ($query) => $query
+                ->whereNull('seed_key')
+                ->orWhere('seed_key', '!=', 'closed'))
             ->orderBy('order')
-            ->get()
-            ->tap(fn ($collection) => $collection->pop());
+            ->get();
     }
 
     public static function getClosedStatus(): static
     {
         /** @var static */
-        return self::query()
-            ->tap(new CurrentPanelScope)
-            ->orderBy('order', 'DESC')
+        return static::query()
+            ->where('seed_key', 'closed')
             ->firstOrFail();
+    }
+
+    public static function findClosedStatus(): ?static
+    {
+        /** @var static|null */
+        return static::query()
+            ->where('seed_key', 'closed')
+            ->first();
+    }
+
+    public static function getAiInProgressStatus(): ?static
+    {
+        /** @var static|null */
+        return static::query()
+            ->where('seed_key', 'ai_in_progress')
+            ->first();
     }
 }

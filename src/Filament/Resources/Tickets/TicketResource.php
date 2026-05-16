@@ -248,15 +248,14 @@ class TicketResource extends Resource
             return false;
         }
 
-        // Count panels that have the chat widget enabled
-        $panelsWithChatWidget = 0;
+        $panelsWithTicketResources = 0;
 
         foreach (Filament::getPanels() as $panel) {
             try {
                 $plugin = TicketPlugin::get($panel->getId());
-                if ($plugin->shouldShowChatWidget()) {
-                    $panelsWithChatWidget++;
-                    if ($panelsWithChatWidget > 1) {
+                if ($plugin->shouldRegisterResources()) {
+                    $panelsWithTicketResources++;
+                    if ($panelsWithTicketResources > 1) {
                         return true;
                     }
                 }
