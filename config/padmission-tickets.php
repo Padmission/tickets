@@ -9,6 +9,7 @@ use Padmission\Tickets\Events;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models;
 use Padmission\Tickets\Notifications;
+use Padmission\Tickets\Policies;
 
 return [
     'run_migrations' => true,
@@ -41,6 +42,17 @@ return [
      */
     'jobs' => [
         NotificationJob::class => NotificationJob::class,
+    ],
+
+    /**
+     * Swap package policy classes (left) with your own policy classes (right).
+     * Your policies should extend the package base policies to inherit the same behavior.
+     * Example: class CustomTicketPolicy extends \Padmission\Tickets\Policies\TicketPolicy { }
+     *
+     * @var array<class-string, class-string>
+     */
+    'policies' => [
+        Policies\TicketPolicy::class => Policies\TicketPolicy::class,
     ],
 
     'tenancy' => [

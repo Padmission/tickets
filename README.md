@@ -285,17 +285,33 @@ By default, it will show the `TicketStatsWidget` on the `ListTickets` page.
 
 ### Authentication
 
-We define a basic policy, but you can swap it anytime with your implementation:
+We define a basic policy, but you can swap it anytime with your implementation. Name your
+policy in the `policies` config, the same way you swap models and jobs:
 
 ```php
-use Filament\Facades\Filament;
+// config/padmission-tickets.php
+
+use Padmission\Tickets\Policies;
+
+'policies' => [
+    // Your policy, which extends from `TicketPolicy`
+    Policies\TicketPolicy::class => App\Policies\YourTicketPolicy::class,
+],
+```
+
+The package binds the configured policy to the (configured) `Ticket` model while it
+registers, so you don't need to call `Gate::policy()` yourself. If you'd rather register
+it from your own service provider, that still works and takes precedence:
+
+```php
+use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
-use Illuminate\Support\Facades\Gate;
 
-// Define your policy, which extends from `TicketPolicy`
+// Resolve the model first: if you have swapped the ticket model, the package bound
+// the policy to your class, so binding to `Ticket::class` here would not override it.
 Gate::policy(
-    Ticket::class,
+    TicketPlugin::resolveModelClass(Ticket::class),
     YourTicketPolicy::class
 );
 ```

@@ -7,11 +7,14 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Services\CopilotTicketService;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketActivityService;
@@ -69,6 +72,23 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         });
 
         $this->registerServices();
+        $this->registerPolicies();
+    }
+
+    /**
+     * Bind the configured policies to their models.
+     *
+     * Registering here rather than relying on Laravel's policy discovery keeps the
+     * binding correct when the host swaps the models, and lets the host name its own
+     * policy through the `policies` config. Hosts can still call `Gate::policy()` from
+     * their own service provider to override this afterwards.
+     */
+    protected function registerPolicies(): void
+    {
+        Gate::policy(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            TicketPlugin::resolvePolicyClass(TicketPolicy::class),
+        );
     }
 
     /**
