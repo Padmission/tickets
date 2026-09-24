@@ -38,7 +38,9 @@ class CreateLinkedTicketAction extends Action
 
         $this
             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
-            ->icon(Heroicon::Link)
+            ->modalHeading(__('padmission-tickets::tickets.actions.create_linked_ticket.modal_heading'))
+            ->modalDescription(__('padmission-tickets::tickets.actions.create_linked_ticket.modal_description'))
+            ->icon(Heroicon::ArrowUpTray)
             ->color('gray')
             ->visible(function (Ticket $record) {
                 if ($record->isNotInCurrentPanel()) {

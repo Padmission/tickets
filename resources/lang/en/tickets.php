@@ -25,25 +25,26 @@ return [
         ],
 
         'create_linked_ticket' => [
-            'label' => 'Create Linked Ticket',
+            'label' => 'Escalate Ticket',
+            'modal_heading' => 'Escalate Ticket',
+            'modal_description' => 'This opens a separate ticket for the other support team. This ticket stays open with you, and you keep working with the person who submitted it. Write the instructions the other team needs.',
 
             'form' => [
-                'panel' => 'Panel',
+                'panel' => 'Support team',
                 'subject' => 'Subject',
-                'message' => 'Message',
-
+                'message' => 'Instructions',
             ],
 
             'notifications' => [
                 'success' => [
-                    'title' => 'Ticket created',
-                    'body' => 'A new ticket has been created and was linked to the current ticket.',
-                    'action_label' => 'Show Ticket',
+                    'title' => 'Ticket escalated',
+                    'body' => 'A separate ticket was opened for the other support team. This ticket is unchanged.',
+                    'action_label' => 'Show escalated ticket',
                 ],
 
                 'not_configured' => [
-                    'title' => 'Linked ticket not created',
-                    'body' => 'Tickets cannot be created in the :panel panel yet because it has no ticket statuses or priorities for your organization.',
+                    'title' => 'Ticket not escalated',
+                    'body' => 'Tickets cannot be created for the :panel support team yet because it has no ticket statuses or priorities for your organization.',
                 ],
             ],
         ],
@@ -99,9 +100,9 @@ return [
             'last_message' => 'Last Message',
             'closed_at' => 'Closed At',
             'disposition' => 'Disposition',
-            'linked_tickets' => 'Linked Tickets',
-            'parent_ticket' => 'Parent Ticket',
-            'child_tickets' => 'Child Tickets',
+            'linked_tickets' => 'Escalation',
+            'parent_ticket' => 'Escalated ticket',
+            'child_tickets' => 'Original tickets',
             'assign_to_supporter' => 'Assign to Supporter',
             'assigned_successfully' => 'Tickets assigned successfully',
             'invalid_assignee' => 'Invalid assignee selected',
@@ -110,8 +111,8 @@ return [
             'tabs' => [
                 'all' => 'All Tickets',
                 'my' => 'My Tickets',
-                'linked' => 'All Linked Tickets',
-                'my_linked' => 'My Linked Tickets',
+                'linked' => 'Escalated Tickets',
+                'my_linked' => 'My Escalated Tickets',
             ],
         ],
 
