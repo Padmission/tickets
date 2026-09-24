@@ -18,12 +18,14 @@ class TicketDispositionSeeder extends Seeder
     {
         $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
 
-        if ($dispositionModel::query()->exists()) {
-            return;
-        }
+        $panelBefore = Filament::getCurrentPanel();
 
         foreach ($this->getTenants($tenantId) as $tenantId) {
             foreach ($this->getPanels() as $panel) {
+                if ($this->hasRowsFor($dispositionModel, $panel->getId(), $tenantId)) {
+                    continue;
+                }
+
                 Filament::setCurrentPanel($panel);
 
                 $data = [
@@ -40,5 +42,7 @@ class TicketDispositionSeeder extends Seeder
                 }
             }
         }
+
+        Filament::setCurrentPanel($panelBefore);
     }
 }

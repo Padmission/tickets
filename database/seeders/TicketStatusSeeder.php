@@ -18,14 +18,14 @@ class TicketStatusSeeder extends Seeder
     {
         $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
 
-        if ($statusModel::query()->exists()) {
-            return;
-        }
-
         $panelBefore = Filament::getCurrentPanel();
 
         foreach ($this->getTenants($tenantId) as $tenantId) {
             foreach ($this->getPanels() as $panel) {
+                if ($this->hasRowsFor($statusModel, $panel->getId(), $tenantId)) {
+                    continue;
+                }
+
                 Filament::setCurrentPanel($panel);
 
                 $data = collect([
