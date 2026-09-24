@@ -245,6 +245,11 @@ class TicketResource extends Resource
                                 ->searchable()
                                 ->required(),
                         ])
+                        // A closure, so the manage ability is evaluated as the
+                        // action runs, where a host can observe it. Nothing is
+                        // selected while the toolbar renders.
+                        ->authorize(fn (Collection $records): bool => $records->isEmpty()
+                            || $records->contains(fn (Ticket $record): bool => Gate::allows('manage', $record)))
                         ->action(function (Collection $records, array $data): void {
                             $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
 

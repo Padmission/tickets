@@ -1,6 +1,8 @@
 <?php
 
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Auth\Access\Events\GateEvaluated;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
@@ -182,7 +184,7 @@ it('does not reassign a ticket the user is not authorized to manage', function (
 
     Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords([$ticket->id])
-        ->callAction(TestAction::make('assign')->table()->bulk(), ['assignee_id' => $supporter->id]);
+        ->assertActionHidden(TestAction::make('assign')->table()->bulk());
 
     expect($ticket->fresh()->assignee_id)->toBeNull();
 });
@@ -211,4 +213,57 @@ it('reassigns tickets for a genuine supporter', function () {
         ->callAction(TestAction::make('assign')->table()->bulk(), ['assignee_id' => $supporter->id]);
 
     expect($ticket->fresh()->assignee_id)->toBe($supporter->id);
+});
+
+it('checks the manage ability when authorizing the bulk assign action', function () {
+    (new TicketStatusSeeder)->run();
+
+    $submitter = User::factory()->create();
+
+    $ticket = Ticket::factory()->open()->create([
+        'submitter_id' => $submitter->id,
+        'status_id' => TicketStatus::getOpenStatuses()->first()->id,
+    ]);
+
+    $this->actingAs($submitter);
+
+    $component = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
+
+    $abilities = [];
+    Event::listen(GateEvaluated::class, function (GateEvaluated $event) use (&$abilities) {
+        $abilities[] = $event->ability;
+    });
+
+    $component
+        ->selectTableRecords([$ticket->id])
+        ->assertActionHidden(TestAction::make('assign')->table()->bulk());
+
+    expect($abilities)->toContain('manage');
+});
+
+it('reassigns only the selected tickets the user may manage', function () {
+    (new TicketStatusSeeder)->run();
+
+    [$submitter, $supporter] = User::factory()->count(2)->create();
+
+    $this->modifyPlugin(function ($plugin) use ($supporter) {
+        $plugin->allSupportersQuery(fn () => User::query()->whereKey($supporter->id));
+    });
+
+    // A supporter may not manage a ticket they submitted themselves.
+    [$mine, $theirs] = collect([$submitter, $supporter])->map(fn (User $ticketSubmitter) => Ticket::factory()->open()->create([
+        'submitter_id' => $ticketSubmitter->id,
+        'assignee_id' => null,
+        'status_id' => TicketStatus::getOpenStatuses()->first()->id,
+    ]));
+
+    $this->actingAs($supporter);
+
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
+        ->selectTableRecords([$mine->id, $theirs->id])
+        ->callAction(TestAction::make('assign')->table()->bulk(), ['assignee_id' => $supporter->id])
+        ->assertNotified(__('padmission-tickets::tickets.resources.tickets.unauthorized_assignment'));
+
+    expect($mine->fresh()->assignee_id)->toBe($supporter->id)
+        ->and($theirs->fresh()->assignee_id)->toBeNull();
 });
