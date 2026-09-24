@@ -199,3 +199,19 @@ test('the assignee is resolved through the ticket panel relationship scopes, not
 
     expect($recipients->pluck('id')->toArray())->toBe([$assignee->id]);
 })->after(fn () => User::clearBootedModels());
+
+test('an assignee is still notified when the ticket panel has no ticket plugin registered', function () {
+    $submitter = User::factory()->create();
+    $assignee = User::factory()->create();
+
+    $ticket = Ticket::factory()->open()->create([
+        'assignee_id' => $assignee->id,
+        'submitter_id' => $submitter->id,
+        'panel' => 'unregistered',
+    ]);
+
+    $event = new TicketActivityEvent($ticket, ActivityType::Message, actor: $submitter);
+    $recipients = app(NotificationRecipientService::class)->getNotificationRecipients($event);
+
+    expect($recipients->pluck('id')->toArray())->toBe([$assignee->id]);
+});

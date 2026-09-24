@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Services;
 
+use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -64,13 +65,31 @@ class NotificationRecipientService
         }
 
         $relation = $ticket->assignee();
-        $modifier = TicketPlugin::get($ticket->panel)->getRelationshipScopeModifier();
+        $modifier = $ticket->isNotInCurrentPanel()
+            ? $this->getPluginForPanel($ticket->panel)?->getRelationshipScopeModifier()
+            : null;
 
-        if ($modifier && $ticket->isNotInCurrentPanel()) {
+        if ($modifier) {
             $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
         }
 
         return $relation->first();
+    }
+
+    /*
+     * A host may leave a panel's plugin unregistered in some processes, such as
+     * queue workers, and ticket events can fire there too.
+     */
+    private function getPluginForPanel(?string $panelId): ?TicketPlugin
+    {
+        $panel = Filament::getPanels()[$panelId] ?? null;
+
+        if (! $panel?->hasPlugin(TicketPlugin::$id)) {
+            return null;
+        }
+
+        /** @var TicketPlugin */
+        return $panel->getPlugin(TicketPlugin::$id);
     }
 
     private function getFallbackSupporters(Ticket $ticket, ?Authenticatable $actor): Collection
