@@ -2,6 +2,8 @@
 
 namespace Padmission\Tickets\Services;
 
+use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -14,6 +16,22 @@ use Padmission\Tickets\Models\TicketUserState;
 
 class TicketActivityService
 {
+    /**
+     * @var (Closure(Authenticatable, Ticket): bool)|null
+     */
+    protected ?Closure $skipSeenTracking = null;
+
+    /**
+     * Keep markAsSeen() from moving a user's read pointer while the callback
+     * returns true, such as while someone else is browsing as that user.
+     *
+     * @param  (Closure(Authenticatable, Ticket): bool)|null  $callback
+     */
+    public function skipSeenTrackingWhen(?Closure $callback): void
+    {
+        $this->skipSeenTracking = $callback;
+    }
+
     public function getActivities(
         Ticket $ticket,
         ?int $offsetId = null,
@@ -94,6 +112,10 @@ class TicketActivityService
 
     public function markAsSeen(Ticket $ticket, $notifiable, int $activityId): void
     {
+        if ($this->skipSeenTracking && ($this->skipSeenTracking)($notifiable, $ticket)) {
+            return;
+        }
+
         $this->advancePointer($ticket, $notifiable, 'last_seen_activity_id', $activityId);
     }
 

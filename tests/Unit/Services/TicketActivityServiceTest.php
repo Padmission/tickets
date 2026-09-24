@@ -288,3 +288,25 @@ test('unread activities use the notifiable perspective', function () {
     expect($activities->first())
         ->side->toBe(ActivitySide::Other);
 });
+
+test('mark as seen leaves the pointer alone while seen tracking is skipped', function () {
+    $activity = TicketActivity::factory()->create(['ticket_id' => $this->ticket->id]);
+    $received = [];
+
+    $this->service->skipSeenTrackingWhen(function ($user, $ticket) use (&$received) {
+        $received = [$user->getKey(), $ticket->getKey()];
+
+        return true;
+    });
+
+    $this->service->markAsSeen($this->ticket, $this->user, $activity->id);
+
+    expect($this->service->getUserState($this->ticket, $this->user))->toBeNull()
+        ->and($received)->toBe([$this->user->getKey(), $this->ticket->getKey()]);
+
+    $this->service->skipSeenTrackingWhen(fn () => false);
+    $this->service->markAsSeen($this->ticket, $this->user, $activity->id);
+
+    expect($this->service->getUserState($this->ticket, $this->user))
+        ->last_seen_activity_id->toBe($activity->id);
+});
