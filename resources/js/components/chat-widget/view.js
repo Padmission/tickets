@@ -1,6 +1,5 @@
 import BaseElement from "../helpers/base-element";
 import render from "../helpers/render";
-import config from "../helpers/config.js";
 import escapeHtml from "../helpers/escape-html.js";
 import __ from "../helpers/trans.js";
 
@@ -53,7 +52,6 @@ customElements.define(
                     <main>
                         <chat-component
                             ticket-id="${escapeHtml(this.ticketId || "")}"
-                            default-message="${escapeHtml(config.introMessage || "")}"
                             scroll-threshold="100"
                             polling-interval="10000"
                         />
