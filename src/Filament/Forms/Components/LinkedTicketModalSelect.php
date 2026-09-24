@@ -18,7 +18,13 @@ class LinkedTicketModalSelect extends ModalTableSelect
         $this
             ->columnSpanFull()
             ->placeholder(fn () => $this->isMultiple() ? 'No tickets linked' : 'Not linked')
-            ->selectAction(fn (Action $action) => $action->link())
+            // The select action writes through afterStateUpdated, so it is
+            // authorized only while the field is enabled. The check is a
+            // closure so the abilities behind disabled() are evaluated when
+            // the action runs.
+            ->selectAction(fn (Action $action) => $action
+                ->link()
+                ->authorize(fn (): bool => ! $this->isDisabled()))
             ->getOptionLabelFromRecordUsing(function ($record) {
                 $canViewTicket = Filament::auth()->user()->can('view', $record);
                 $url = $canViewTicket ? TicketResource::getUrl('view', ['record' => $record->id]) : null;

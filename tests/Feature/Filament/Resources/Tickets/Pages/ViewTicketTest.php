@@ -3,6 +3,9 @@
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Auth\Access\Events\GateEvaluated;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
@@ -339,3 +342,48 @@ describe('Linked Tickets', function () {
             ]);
     });
 });
+
+describe('Linked ticket selects', function () {
+    beforeEach(function () {
+        TicketPlugin::get()->allowLinkedTicketsTo(['test']);
+
+        $this->parent = Ticket::factory()->create();
+        $this->ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+    });
+
+    it('links a parent ticket for a user who can edit the ticket', function () {
+        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
+            ->callAction(TestAction::make('select')->schemaComponent('parentTicket', schema: 'form'), ['selection' => $this->parent->id]);
+
+        expect($this->ticket->refresh()->linked_ticket_id)->toBe($this->parent->id);
+    });
+
+    it('does not let a user who cannot edit the ticket link one', function () {
+        Gate::policy(Ticket::class, ReadOnlyTicketPolicy::class);
+
+        $abilities = [];
+        Event::listen(GateEvaluated::class, function (GateEvaluated $event) use (&$abilities) {
+            $abilities[] = $event->ability;
+        });
+
+        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
+            ->assertActionHidden(TestAction::make('select')->schemaComponent('parentTicket', schema: 'form'))
+            ->assertActionHidden(TestAction::make('select')->schemaComponent('childTickets', schema: 'form'));
+
+        expect($abilities)->toContain('update')
+            ->and($this->ticket->refresh()->linked_ticket_id)->toBeNull();
+    });
+});
+
+class ReadOnlyTicketPolicy
+{
+    public function view(): bool
+    {
+        return true;
+    }
+
+    public function update(): bool
+    {
+        return false;
+    }
+}
