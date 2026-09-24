@@ -39,14 +39,38 @@ class NotificationRecipientService
             $recipients->push($event->ticket->submitter);
         }
         if (($recipientFlag & NotificationRecipient::Supporter->value) === NotificationRecipient::Supporter->value) {
-            if ($event->ticket->assignee) {
-                $recipients->push($event->ticket->assignee);
+            $assignee = $this->getAssignee($event->ticket);
+
+            if ($assignee) {
+                $recipients->push($assignee);
             } else {
                 $recipients = $recipients->merge($this->getFallbackSupporters($event->ticket, $event->actor));
             }
         }
 
         return $recipients->filter()->unique(fn ($user) => $user->getKey());
+    }
+
+    /*
+     * The assignee relation carries the acting panel's scopes. A ticket linked
+     * into another panel can be assigned to someone only that panel's scopes
+     * reveal (a cross-tenant support panel, say); seen from the acting panel
+     * the assignee vanishes and every fallback supporter is notified instead.
+     */
+    private function getAssignee(Ticket $ticket): ?Authenticatable
+    {
+        if (! $ticket->assignee_id) {
+            return null;
+        }
+
+        $relation = $ticket->assignee();
+        $modifier = TicketPlugin::get($ticket->panel)->getRelationshipScopeModifier();
+
+        if ($modifier && $ticket->isNotInCurrentPanel()) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
+        }
+
+        return $relation->first();
     }
 
     private function getFallbackSupporters(Ticket $ticket, ?Authenticatable $actor): Collection

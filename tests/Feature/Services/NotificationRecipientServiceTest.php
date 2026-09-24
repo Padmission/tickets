@@ -170,3 +170,32 @@ test('user notification strategy defaults to debounced', function () {
 
     expect($recipientService->getUserNotificationStrategy($user))->toBe(NotificationStrategy::Debounced);
 });
+
+test('the assignee is resolved through the ticket panel relationship scopes, not the current panel', function () {
+    $submitter = User::factory()->create();
+    $assignee = User::factory()->create();
+    User::factory()->create();
+
+    // Stands in for a host scope that hides the assignee from the acting
+    // panel, such as a tenant scope when a ticket is linked into a
+    // cross-tenant panel whose relationship modifier lifts it.
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($assignee->id));
+
+    Filament::getPanel('test2')->plugin(
+        TicketPlugin::make()
+            ->allSupportersQuery(fn () => User::query())
+            ->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'))
+            ->registerResources()
+    );
+
+    $ticket = Ticket::factory()->open()->create([
+        'assignee_id' => $assignee->id,
+        'submitter_id' => $submitter->id,
+        'panel' => 'test2',
+    ]);
+
+    $event = new TicketActivityEvent($ticket, ActivityType::Message, actor: $submitter);
+    $recipients = app(NotificationRecipientService::class)->getNotificationRecipients($event);
+
+    expect($recipients->pluck('id')->toArray())->toBe([$assignee->id]);
+})->after(fn () => User::clearBootedModels());
