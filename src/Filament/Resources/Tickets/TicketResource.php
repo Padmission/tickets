@@ -18,6 +18,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
@@ -249,7 +250,7 @@ class TicketResource extends Resource
                         // action runs, where a host can observe it. Nothing is
                         // selected while the toolbar renders.
                         ->authorize(fn (Collection $records): bool => $records->isEmpty()
-                            || $records->contains(fn (Ticket $record): bool => Gate::allows('manage', $record)))
+                            || $records->contains(fn (Model $record): bool => Gate::allows('manage', $record)))
                         ->action(function (Collection $records, array $data): void {
                             $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
 

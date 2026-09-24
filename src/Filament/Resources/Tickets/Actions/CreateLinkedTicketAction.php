@@ -90,7 +90,10 @@ class CreateLinkedTicketAction extends Action
                         ->body(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.body', ['panel' => ucfirst($targetPanelId)]))
                         ->send();
 
+                    // halt() always throws, but is typed void.
                     $action->halt();
+
+                    return;
                 }
 
                 DB::beginTransaction();
