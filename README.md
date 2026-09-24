@@ -726,6 +726,17 @@ The package provides sensible defaults if no configuration is provided:
 - User-triggered: Notifies supporter only
 - Supporter-triggered: Notifies user only
 
+#### Delivery Channels
+
+Notifications are emailed by default. To also show them in Filament's notification panel, add the `database` channel:
+
+```php
+// config/padmission-tickets.php
+'notification-channels' => ['mail', 'database'],
+```
+
+The host needs Laravel's `notifications` table and `->databaseNotifications()` on the panels its ticket users work in. Every channel of one send carries the same batch of unread activity.
+
 #### Per-Panel Configuration
 
 Since configuration is set at the panel level, you can have different rules for different panels:

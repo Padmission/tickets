@@ -1,6 +1,9 @@
 <?php
 
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
@@ -348,4 +351,85 @@ test('activity notification is still gated on unread activities', function () {
     $event = new TicketActivityEvent($ticket, ActivityType::Message);
 
     expect((new TicketNotification($ticket, $event))->shouldSend($submitter))->toBeFalse();
+});
+
+test('notifications go out through the configured channels', function () {
+    $event = new TicketActivityEvent($this->ticket, ActivityType::Message);
+    $notification = new TicketNotification($this->ticket, $event);
+
+    expect($notification->via($this->user))->toBe(['mail']);
+
+    config()->set('padmission-tickets.notification-channels', ['mail', 'database']);
+
+    expect($notification->via($this->user))->toBe(['mail', 'database']);
+});
+
+test('a database notification carries the ticket and its latest unread message', function () {
+    Queue::fake();
+    $submitter = User::factory()->create();
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->create([
+        'submitter_id' => $submitter->id,
+        'assignee_id' => $supporter->id,
+    ]);
+
+    $activity = TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $supporter->id,
+        'sender' => ActivitySender::Supporter,
+        'type' => ActivityType::Message,
+        'content' => '<p>We fixed the <strong>rent</strong> calculation.</p>',
+    ]);
+
+    $event = new TicketActivityEvent($ticket, ActivityType::Message);
+    $data = (new TicketNotification($ticket, $event))->toDatabase($submitter);
+
+    expect($data)
+        ->format->toBe('filament')
+        ->title->toBe(__('padmission-tickets::notifications.ticket-activity.subject', [
+            'subject' => $ticket->subject,
+            'ticket_id' => $ticket->id,
+        ]))
+        ->body->toBe('We fixed the rent calculation.')
+        ->and($data['actions'][0]['url'])->toEndWith("#ticket-{$ticket->id}")
+        ->and($ticket->ticketUserStates()->where('user_id', $submitter->id)->value('last_notified_activity_id'))
+        ->toBe($activity->id);
+});
+
+test('mail and database channels of one send both deliver the same unread batch', function () {
+    Queue::fake();
+    config()->set('mail.default', 'array');
+    config()->set('padmission-tickets.notification-channels', ['mail', 'database']);
+
+    Schema::create('notifications', function (Blueprint $table) {
+        $table->uuid('id')->primary();
+        $table->string('type');
+        $table->morphs('notifiable');
+        $table->text('data');
+        $table->timestamp('read_at')->nullable();
+        $table->timestamps();
+    });
+
+    $submitter = User::factory()->create();
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->create([
+        'submitter_id' => $submitter->id,
+        'assignee_id' => $supporter->id,
+    ]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $supporter->id,
+        'sender' => ActivitySender::Supporter,
+        'type' => ActivityType::Message,
+        'content' => 'Support reply',
+    ]);
+
+    NotificationFacade::sendNow($submitter, new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message)));
+
+    $mailsToSubmitter = collect(app('mailer')->getSymfonyTransport()->messages())
+        ->filter(fn ($message) => $message->getEnvelope()->getRecipients()[0]->getAddress() === $submitter->email);
+
+    expect($mailsToSubmitter)->toHaveCount(1)
+        ->and($submitter->notifications()->sole()->data['body'])->toBe('Support reply');
 });

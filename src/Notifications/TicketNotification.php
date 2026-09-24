@@ -2,8 +2,12 @@
 
 namespace Padmission\Tickets\Notifications;
 
+use ArrayObject;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Collection;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketUrlService;
@@ -12,10 +16,22 @@ class TicketNotification extends Notification
 {
     public $notificationType;
 
+    /**
+     * Unread activities per notifiable, read once so every channel of one send
+     * sees the same batch: the first channel to render marks it as sent.
+     * Laravel hands each channel a clone of the notification, and the clones
+     * share this object where they would each get their own copy of an array.
+     *
+     * @var ArrayObject<int|string, Collection>
+     */
+    protected ArrayObject $unreadActivities;
+
     public function __construct(
         protected Ticket $ticket,
         protected $event,
     ) {
+        $this->unreadActivities = new ArrayObject;
+
         $this->notificationType = str($this->event::class)
             ->afterLast('\\')
             ->replace('Ticket', '')
@@ -26,7 +42,7 @@ class TicketNotification extends Notification
 
     public function via($notifiable): array
     {
-        return ['mail'];
+        return (array) config('padmission-tickets.notification-channels', ['mail']);
     }
 
     public function shouldSend($notifiable): bool
@@ -43,36 +59,18 @@ class TicketNotification extends Notification
             return true;
         }
 
-        $activityService = resolve(TicketActivityService::class);
-        $maxEvents = config('padmission-tickets.notification-max-events', 10);
-
-        $activities = $activityService->getUnreadActivities(
-            $this->ticket,
-            $notifiable,
-            $maxEvents,
-        );
-
-        return $activities->isNotEmpty();
+        return $this->getUnreadActivities($notifiable)->isNotEmpty();
     }
 
     public function toMail($notifiable): MailMessage
     {
-        $activityService = resolve(TicketActivityService::class);
         $urlService = resolve(TicketUrlService::class);
 
         $maxEvents = config('padmission-tickets.notification-max-events', 10);
 
-        $activities = $activityService->getUnreadActivities(
-            $this->ticket,
-            $notifiable,
-            $maxEvents,
-        );
+        $activities = $this->getUnreadActivities($notifiable);
 
-        $latestActivity = $activities->last();
-
-        if ($latestActivity) {
-            $activityService->markAsSent($this->ticket, $notifiable, $latestActivity->id);
-        }
+        $this->markActivitiesAsSent($notifiable, $activities);
 
         $hasMoreActivities = $activities->count() > $maxEvents;
 
@@ -100,6 +98,45 @@ class TicketNotification extends Notification
                 'hasMoreActivities' => $hasMoreActivities,
                 'maxEvents' => $maxEvents,
             ]);
+    }
+
+    public function toDatabase($notifiable): array
+    {
+        $activities = $this->getUnreadActivities($notifiable);
+
+        $this->markActivitiesAsSent($notifiable, $activities);
+
+        return FilamentNotification::make()
+            ->title($this->getEmailSubject())
+            ->body(
+                $activities->last()?->plainTextContent(30)
+                    ?? __("padmission-tickets::notifications.ticket-{$this->notificationType}.intro")
+            )
+            ->actions([
+                Action::make('view')
+                    ->label(__('padmission-tickets::notifications.general.action'))
+                    ->url(resolve(TicketUrlService::class)->getActionUrl($this->ticket))
+                    ->markAsRead(),
+            ])
+            ->getDatabaseMessage();
+    }
+
+    protected function getUnreadActivities($notifiable): Collection
+    {
+        return $this->unreadActivities[$notifiable->getKey()] ??= resolve(TicketActivityService::class)->getUnreadActivities(
+            $this->ticket,
+            $notifiable,
+            config('padmission-tickets.notification-max-events', 10),
+        );
+    }
+
+    protected function markActivitiesAsSent($notifiable, Collection $activities): void
+    {
+        $latestActivity = $activities->last();
+
+        if ($latestActivity) {
+            resolve(TicketActivityService::class)->markAsSent($this->ticket, $notifiable, $latestActivity->id);
+        }
     }
 
     public function getView(): string

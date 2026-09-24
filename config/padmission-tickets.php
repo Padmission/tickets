@@ -87,6 +87,16 @@ return [
     ],
 
     /**
+     * Channels ticket notifications are delivered through.
+     * Add 'database' to also show them in Filament's notification panel; the
+     * host needs the `notifications` table and ->databaseNotifications() on
+     * its panels.
+     *
+     * @var array<int, string>
+     */
+    'notification-channels' => ['mail'],
+
+    /**
      * Default notification strategy when user doesn't define one
      * Options: Padmission\Tickets\Enums\NotificationStrategy::Immediate, Padmission\Tickets\Enums\NotificationStrategy::Debounced
      *
