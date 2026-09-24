@@ -3,6 +3,7 @@
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
@@ -231,4 +232,24 @@ it('requires message field', function () {
             'message' => tiptapDocument('<p></p>'),
         ])
         ->assertHasFormErrors(['message']);
+});
+
+it('explains instead of failing when the target panel has no statuses', function () {
+    Exceptions::fake();
+
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test2']);
+
+    $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
+        ->callAction(CreateLinkedTicketAction::class, [
+            'subject' => 'Escalated',
+            'message' => tiptapDocument('Please help'),
+        ])
+        ->assertNotified(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.title'));
+
+    expect(Ticket::withoutGlobalScopes()->where('panel', 'test2')->exists())->toBeFalse()
+        ->and($originalTicket->refresh()->linked_ticket_id)->toBeNull();
+
+    Exceptions::assertReported(RuntimeException::class);
 });

@@ -40,6 +40,11 @@ return [
                     'body' => 'A new ticket has been created and was linked to the current ticket.',
                     'action_label' => 'Show Ticket',
                 ],
+
+                'not_configured' => [
+                    'title' => 'Linked ticket not created',
+                    'body' => 'Tickets cannot be created in the :panel panel yet because it has no ticket statuses or priorities for your organization.',
+                ],
             ],
         ],
     ],

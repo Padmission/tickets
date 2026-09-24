@@ -21,6 +21,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
+use RuntimeException;
 
 use function count;
 
@@ -70,13 +71,27 @@ class CreateLinkedTicketAction extends Action
                     ->required()
                     ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
             ])
-            ->action(function (array $data, ViewTicket $livewire) {
+            ->action(function (array $data, ViewTicket $livewire, Action $action) {
                 $ticket = TicketPlugin::resolveModelClass(Ticket::class);
                 $currentPanelId = Filament::getCurrentOrDefaultPanel()->getId();
                 $targetPanelId = $data['panel'] ?? array_keys(TicketPlugin::get()->getLinkedTicketParentPanels())[0];
 
-                $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
-                $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
+                try {
+                    $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
+                    $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
+                } catch (RuntimeException $exception) {
+                    // The target panel was never given statuses or priorities for
+                    // this tenant: a setup gap the user cannot fix from here.
+                    report($exception);
+
+                    Notification::make()
+                        ->danger()
+                        ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.title'))
+                        ->body(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.body', ['panel' => ucfirst($targetPanelId)]))
+                        ->send();
+
+                    $action->halt();
+                }
 
                 DB::beginTransaction();
 
