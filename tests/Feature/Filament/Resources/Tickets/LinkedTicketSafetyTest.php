@@ -113,3 +113,66 @@ it('keeps an existing escalation instead of replacing it', function () {
 
     expect($ticket->refresh()->linked_ticket_id)->toBe($escalation->id);
 });
+
+describe('in a cross-tenant panel', function () {
+    beforeEach(function () {
+        config()->set('padmission-tickets.tenancy.enabled', true);
+        config()->set('padmission-tickets.models', [
+            Authenticatable::class => User::class,
+            Ticket::class => CustomTicket::class,
+        ]);
+        Schema::table('tickets', fn (Blueprint $table) => $table->unsignedBigInteger('tenant_id')->nullable());
+
+        // Stands in for a host tenant scope pinned to the viewer's tenant (1),
+        // which the admin-like panel lifts from its queries and relationships.
+        CustomTicket::addGlobalScope('viewer-tenant', fn ($query) => $query->where('tickets.tenant_id', 1));
+
+        TicketPlugin::get()
+            ->allowLinkedTicketsTo([])
+            ->customizeTicketQuery(fn ($query) => $query->withoutGlobalScope('viewer-tenant'))
+            ->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('viewer-tenant'));
+        TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+    });
+
+    afterEach(fn () => CustomTicket::clearBootedModels());
+
+    it('offers the escalated ticket\'s own tenant\'s originals, not the viewer\'s', function () {
+        $escalated = CustomTicket::factory()->create(['tenant_id' => 4]);
+        $ownTenant = CustomTicket::factory()->create(['panel' => 'test2', 'tenant_id' => 4]);
+        $viewerTenant = CustomTicket::factory()->create(['panel' => 'test2', 'tenant_id' => 1]);
+        $otherTenant = CustomTicket::factory()->create(['panel' => 'test2', 'tenant_id' => 2]);
+
+        $offered = LinkedTicketCandidates::children(CustomTicket::query(), $escalated)->pluck('id');
+
+        expect($offered->all())->toBe([$ownTenant->id])
+            ->and($offered)->not->toContain($viewerTenant->id)
+            ->not->toContain($otherTenant->id);
+    });
+
+    it('links the escalated ticket\'s own tenant\'s original and refuses the viewer\'s', function () {
+        $escalated = CustomTicket::factory()->create(['tenant_id' => 4]);
+        $ownTenant = CustomTicket::factory()->create(['panel' => 'test2', 'tenant_id' => 4, 'linked_ticket_id' => null]);
+        $viewerTenant = CustomTicket::factory()->create(['panel' => 'test2', 'tenant_id' => 1, 'linked_ticket_id' => null]);
+
+        Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+            ->fillForm(['childTickets' => [$ownTenant->id]]);
+
+        expect(CustomTicket::withoutGlobalScopes()->find($ownTenant->id)->linked_ticket_id)->toBe($escalated->id);
+
+        Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+            ->fillForm(['childTickets' => [$ownTenant->id, $viewerTenant->id]])
+            ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
+
+        expect(CustomTicket::withoutGlobalScopes()->find($viewerTenant->id)->linked_ticket_id)->toBeNull();
+    });
+});
+
+it('does not filter by tenant when tenancy is off', function () {
+    config()->set('padmission-tickets.tenancy.enabled', false);
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+    $escalated = Ticket::factory()->create();
+    $original = Ticket::factory()->create(['panel' => 'test2']);
+
+    expect(LinkedTicketCandidates::children(Ticket::query(), $escalated)->pluck('id'))->toContain($original->id);
+});

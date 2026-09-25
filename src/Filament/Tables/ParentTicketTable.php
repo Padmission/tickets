@@ -16,6 +16,11 @@ class ParentTicketTable
         return $table
             ->modifyQueryUsing(fn ($livewire, Builder $query) => LinkedTicketCandidates::parents($query, $livewire->record))
             ->columns([
+                TextColumn::make('id')
+                    ->label('#')
+                    ->prefix('#')
+                    ->searchable(),
+
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
                     ->badge()

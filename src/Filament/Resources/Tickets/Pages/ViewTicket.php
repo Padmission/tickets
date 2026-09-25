@@ -213,8 +213,6 @@ class ViewTicket extends EditRecord
                                 ->placeholder(__('padmission-tickets::tickets.resources.tickets.child_tickets_placeholder'))
                                 ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {
                                     // @TODO: Should this be recorded by Activity Log?
-                                    $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-
                                     $selectedIds = $state === null ? [] : array_values((array) $state);
 
                                     $linkableCount = LinkedTicketCandidates::children(static::ticketQuery(), $record)->whereKey($selectedIds)->count();
@@ -226,15 +224,17 @@ class ViewTicket extends EditRecord
                                         return;
                                     }
 
-                                    DB::transaction(function () use ($ticketModel, $record, $selectedIds) {
-                                        $ticketModel::query()
+                                    // The originals can sit outside the viewer's own tenant, such as
+                                    // in a cross-tenant panel, so writes go through the same scoping.
+                                    DB::transaction(function () use ($record, $selectedIds) {
+                                        LinkedTicketCandidates::children(static::ticketQuery(), $record)
                                             ->where('linked_ticket_id', $record->getKey())
-                                            ->when($selectedIds !== [], fn ($query) => $query->whereNotIn('id', $selectedIds))
+                                            ->when($selectedIds !== [], fn ($query) => $query->whereKeyNot($selectedIds))
                                             ->update(['linked_ticket_id' => null]);
 
                                         if ($selectedIds !== []) {
-                                            $ticketModel::query()
-                                                ->whereIn('id', $selectedIds)
+                                            LinkedTicketCandidates::children(static::ticketQuery(), $record)
+                                                ->whereKey($selectedIds)
                                                 ->update(['linked_ticket_id' => $record->getKey()]);
                                         }
                                     });

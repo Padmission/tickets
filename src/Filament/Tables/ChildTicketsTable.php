@@ -16,6 +16,11 @@ class ChildTicketsTable
         return $table
             ->modifyQueryUsing(fn ($livewire, Builder $query) => LinkedTicketCandidates::children($query, $livewire->record))
             ->columns([
+                TextColumn::make('id')
+                    ->label('#')
+                    ->prefix('#')
+                    ->searchable(),
+
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
                     ->badge()
