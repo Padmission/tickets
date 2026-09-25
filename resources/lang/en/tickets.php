@@ -159,6 +159,11 @@ return [
             'child_tickets' => 'Original tickets',
             'child_tickets_placeholder' => 'No original tickets',
             'link_existing_ticket' => 'Link existing',
+            'link_refused' => [
+                'title' => 'Ticket not linked',
+                'already_escalated' => 'This ticket is already escalated to #:id and keeps that link.',
+                'not_linkable' => 'That ticket cannot be linked here. It belongs to someone else or is already linked to another ticket.',
+            ],
             'assign_to_supporter' => 'Assign to Supporter',
             'assigned_successfully' => 'Tickets assigned successfully',
             'invalid_assignee' => 'Invalid assignee selected',

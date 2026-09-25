@@ -14,14 +14,7 @@ class ChildTicketsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function ($livewire, Builder $query) {
-                $panels = TicketPlugin::get($livewire->record->panel)->getLinkedTicketChildPanels();
-                $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
-
-                return $query
-                    ->whereKeyNot($livewire->record->getKey())
-                    ->whereIn('panel', $panelIds);
-            })
+            ->modifyQueryUsing(fn ($livewire, Builder $query) => LinkedTicketCandidates::children($query, $livewire->record))
             ->columns([
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
