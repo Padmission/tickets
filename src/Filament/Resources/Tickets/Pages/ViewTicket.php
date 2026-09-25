@@ -148,6 +148,7 @@ class ViewTicket extends EditRecord
                     Section::make()
                         ->columns(2)
                         ->heading(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+                        ->description(fn (Ticket $record): ?string => static::describeEscalation($record))
                         ->visible(fn (Ticket $record) => TicketPlugin::get($record->panel)->hasLinkedTickets())
                         ->compact()
                         ->schema([
@@ -158,6 +159,7 @@ class ViewTicket extends EditRecord
                                 )
                                 ->tableConfiguration(ParentTicketTable::class)
                                 ->label(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
+                                ->placeholder(__('padmission-tickets::tickets.resources.tickets.parent_ticket_placeholder'))
                                 ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketParentPanels()) > 0)
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
@@ -175,6 +177,7 @@ class ViewTicket extends EditRecord
                                 ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0)
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
+                                ->placeholder(__('padmission-tickets::tickets.resources.tickets.child_tickets_placeholder'))
                                 ->afterStateUpdated(function (Ticket $record, $state) {
                                     // @TODO: Should this be recorded by Activity Log?
                                     $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
@@ -197,5 +200,19 @@ class ViewTicket extends EditRecord
                         ]),
                 ]),
             ]);
+    }
+
+    protected static function describeEscalation(Ticket $record): ?string
+    {
+        $plugin = TicketPlugin::get($record->panel);
+        $team = $plugin->getEscalationTargetName()
+            ?? __('padmission-tickets::tickets.resources.tickets.other_support_team');
+
+        return match (true) {
+            filled($record->linked_ticket_id) => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated', ['team' => $team]),
+            count($plugin->getLinkedTicketParentPanels()) > 0 => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.not_escalated', ['team' => $team]),
+            $record->childTickets()->exists() => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from'),
+            default => null,
+        };
     }
 }

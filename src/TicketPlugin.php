@@ -39,6 +39,8 @@ class TicketPlugin implements Plugin
 
     protected string $escalationLevel = 'default';
 
+    protected mixed $supportTeamName = null;
+
     protected ?AssignmentStrategy $assignmentStrategy = null;
 
     protected mixed $shouldShowChatWidget = false;
@@ -283,6 +285,45 @@ class TicketPlugin implements Plugin
 
         return $filteredPanels;
         // });
+    }
+
+    public function supportTeamName(string|Closure|null $name): static
+    {
+        $this->supportTeamName = $name;
+
+        return $this;
+    }
+
+    public function getSupportTeamName(): ?string
+    {
+        if ($this->supportTeamName instanceof Closure) {
+            return app()->call($this->supportTeamName);
+        }
+
+        return $this->supportTeamName;
+    }
+
+    public function getEscalationTargetName(): ?string
+    {
+        $panels = $this->getLinkedTicketParentPanels();
+
+        if (count($panels) !== 1) {
+            return null;
+        }
+
+        return static::getSupportTeamNameForPanel(reset($panels));
+    }
+
+    public static function getSupportTeamNameForPanel(Panel $panel): ?string
+    {
+        if (! $panel->hasPlugin(static::$id)) {
+            return null;
+        }
+
+        /** @var static $plugin */
+        $plugin = $panel->getPlugin(static::$id);
+
+        return $plugin->getSupportTeamName();
     }
 
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static

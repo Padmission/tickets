@@ -38,19 +38,27 @@ return [
 
         'create_linked_ticket' => [
             'label' => 'Escalate Ticket',
+            'label_to' => 'Escalate to :team',
+            'tooltip' => 'For problems your team cannot resolve. Opens a separate ticket for the other support team.',
+            'tooltip_to' => 'For problems your team cannot resolve. Opens a separate ticket for :team.',
             'modal_heading' => 'Escalate Ticket',
-            'modal_description' => 'This opens a separate ticket for the other support team. This ticket stays open with you, and you keep working with the person who submitted it. Write the instructions the other team needs.',
+            'modal_heading_to' => 'Escalate to :team',
+            'modal_description' => 'Use this when your team cannot resolve the ticket. It opens a separate ticket for the other support team, with you as its requester. This ticket stays open with your team, and you keep working with the person who submitted it.',
+            'submit' => 'Escalate',
+            'modal_description_to' => 'Use this when your team cannot resolve the ticket. It opens a separate ticket for :team, with you as its requester. This ticket stays open with your team, and you keep working with the person who submitted it.',
 
             'form' => [
                 'panel' => 'Support team',
                 'subject' => 'Subject',
                 'message' => 'Instructions',
+                'message_helper' => 'Say what you need, what you have already tried, and how to reproduce the problem. Replies come to you, not to the person who submitted this ticket.',
             ],
 
             'notifications' => [
                 'success' => [
                     'title' => 'Ticket escalated',
                     'body' => 'A separate ticket was opened for the other support team. This ticket is unchanged.',
+                    'body_to' => 'A separate ticket was opened for :team. This ticket is unchanged.',
                     'action_label' => 'Show escalated ticket',
                 ],
 
@@ -113,8 +121,17 @@ return [
             'closed_at' => 'Closed At',
             'disposition' => 'Disposition',
             'linked_tickets' => 'Escalation',
+            'linked_tickets_description' => [
+                'not_escalated' => 'Not escalated. If your team cannot resolve this ticket, escalate it to open a separate ticket for :team.',
+                'escalated' => 'Escalated to :team. They reply to you on the escalated ticket. This ticket stays with your team and the person who submitted it.',
+                'escalated_from' => 'Escalated from the ticket below. The requester here is the person who escalated it, and they pass answers back to whoever submitted the original.',
+            ],
+            'other_support_team' => 'the other support team',
             'parent_ticket' => 'Escalated ticket',
+            'parent_ticket_placeholder' => 'Not escalated',
             'child_tickets' => 'Original tickets',
+            'child_tickets_placeholder' => 'No original tickets',
+            'link_existing_ticket' => 'Link existing',
             'assign_to_supporter' => 'Assign to Supporter',
             'assigned_successfully' => 'Tickets assigned successfully',
             'invalid_assignee' => 'Invalid assignee selected',

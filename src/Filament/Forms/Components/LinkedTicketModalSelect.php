@@ -24,6 +24,7 @@ class LinkedTicketModalSelect extends ModalTableSelect
             // the action runs.
             ->selectAction(fn (Action $action) => $action
                 ->link()
+                ->label(__('padmission-tickets::tickets.resources.tickets.link_existing_ticket'))
                 ->authorize(fn (): bool => ! $this->isDisabled()))
             ->getOptionLabelFromRecordUsing(function ($record) {
                 $canViewTicket = Filament::auth()->user()->can('view', $record);

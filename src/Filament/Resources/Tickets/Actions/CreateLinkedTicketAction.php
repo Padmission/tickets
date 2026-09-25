@@ -37,9 +37,11 @@ class CreateLinkedTicketAction extends Action
         parent::setUp();
 
         $this
-            ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
-            ->modalHeading(__('padmission-tickets::tickets.actions.create_linked_ticket.modal_heading'))
-            ->modalDescription(__('padmission-tickets::tickets.actions.create_linked_ticket.modal_description'))
+            ->label(fn (): string => static::translate('label'))
+            ->tooltip(fn (): string => static::translate('tooltip'))
+            ->modalHeading(fn (): string => static::translate('modal_heading'))
+            ->modalDescription(fn (): string => static::translate('modal_description'))
+            ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.create_linked_ticket.submit'))
             ->icon(Heroicon::ArrowUpTray)
             ->color('gray')
             ->visible(function (Ticket $record) {
@@ -61,7 +63,7 @@ class CreateLinkedTicketAction extends Action
                     ->visible(fn () => count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 1)
                     ->options(
                         collect(TicketPlugin::get()->getLinkedTicketParentPanels())
-                            ->mapWithKeys(fn (Panel $panel) => [$panel->getId() => ucfirst($panel->getId())])
+                            ->mapWithKeys(fn (Panel $panel) => [$panel->getId() => TicketPlugin::getSupportTeamNameForPanel($panel) ?? ucfirst($panel->getId())])
                     ),
 
                 TextInput::make('subject')
@@ -70,6 +72,7 @@ class CreateLinkedTicketAction extends Action
 
                 RichEditor::make('message')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.message'))
+                    ->helperText(__('padmission-tickets::tickets.actions.create_linked_ticket.form.message_helper'))
                     ->required()
                     ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
             ])
@@ -131,7 +134,7 @@ class CreateLinkedTicketAction extends Action
                 Notification::make()
                     ->success()
                     ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.title'))
-                    ->body(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.body'))
+                    ->body(static::translate('notifications.success.body'))
                     ->actions([
                         Action::make('link')
                             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.action_label'))
@@ -145,5 +148,14 @@ class CreateLinkedTicketAction extends Action
                     ])
                     ->send();
             });
+    }
+
+    protected static function translate(string $key): string
+    {
+        $team = TicketPlugin::get()->getEscalationTargetName();
+
+        return $team === null
+            ? __("padmission-tickets::tickets.actions.create_linked_ticket.{$key}")
+            : __("padmission-tickets::tickets.actions.create_linked_ticket.{$key}_to", ['team' => $team]);
     }
 }

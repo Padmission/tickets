@@ -253,3 +253,37 @@ it('explains instead of failing when the target panel has no statuses', function
 
     Exceptions::assertReported(RuntimeException::class);
 });
+
+it('names the support team it escalates to', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionHasLabel(CreateLinkedTicketAction::class, 'Escalate to Platform Support')
+        ->mountAction(CreateLinkedTicketAction::class)
+        ->assertMountedActionModalSee('It opens a separate ticket for Platform Support');
+});
+
+it('keeps the generic label when the target panel has no support team name', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test2']);
+
+    $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionHasLabel(CreateLinkedTicketAction::class, __('padmission-tickets::tickets.actions.create_linked_ticket.label'));
+});
+
+it('keeps the generic label when it can escalate to more than one team', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test2', 'test3']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    TicketPlugin::get('test3')->supportTeamName('Billing');
+
+    $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionHasLabel(CreateLinkedTicketAction::class, __('padmission-tickets::tickets.actions.create_linked_ticket.label'))
+        ->mountAction(CreateLinkedTicketAction::class)
+        ->assertMountedActionModalSee(['Platform Support', 'Billing']);
+});

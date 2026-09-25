@@ -387,3 +387,37 @@ class ReadOnlyTicketPolicy
         return false;
     }
 }
+
+describe('Escalation explanation', function () {
+    it('explains how to escalate a ticket that is not escalated yet', function () {
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+        $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.not_escalated', ['team' => 'Platform Support']));
+    });
+
+    it('explains that an escalated ticket stays with the team', function () {
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+
+        $escalated = Ticket::factory()->create(['panel' => 'test2']);
+        $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated', [
+                'team' => __('padmission-tickets::tickets.resources.tickets.other_support_team'),
+            ]));
+    });
+
+    it('explains where an escalated ticket came from', function () {
+        TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+        $ticket = Ticket::factory()->create();
+        Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $ticket->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from'));
+    });
+});
