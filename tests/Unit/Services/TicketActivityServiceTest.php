@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Config;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
@@ -9,6 +10,7 @@ use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
     $this->service = new TicketActivityService;
@@ -310,3 +312,31 @@ test('mark as seen leaves the pointer alone while seen tracking is skipped', fun
     expect($this->service->getUserState($this->ticket, $this->user))
         ->last_seen_activity_id->toBe($activity->id);
 });
+
+test('senders are named through the ticket panel relationship scopes, not the viewer\'s', function () {
+    $sender = User::factory()->create(['name' => 'Sender From Another Tenant']);
+
+    // Stands in for a host tenant scope that hides the sender from the viewer,
+    // which the ticket panel's relationship modifier lifts.
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($sender->id));
+
+    Filament::getPanel('test2')->plugin(
+        TicketPlugin::make()
+            ->allSupportersQuery(fn () => User::query())
+            ->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'))
+            ->registerResources()
+    );
+
+    $ticket = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => $sender->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::User,
+        'user_id' => $sender->id,
+    ]);
+
+    $activities = $this->service->getActivities($ticket, user: $this->user);
+
+    expect($activities->first()->userName)->toBe('Sender From Another Tenant');
+})->after(fn () => User::clearBootedModels());

@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Actions;
 
 use Filament\Models\Contracts\HasName;
+use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 use Padmission\Tickets\TicketPlugin;
 
@@ -21,6 +22,11 @@ class GetUserDisplayName
             return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);
         }
 
+        return $this->forUser($user);
+    }
+
+    public function forUser(Model $user): string
+    {
         if ($user instanceof HasTicketDisplayName) {
             return $user->getNameForTickets();
         }
@@ -39,6 +45,6 @@ class GetUserDisplayName
         }
 
         // Last resort fallback
-        return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);
+        return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $user->getKey()]);
     }
 }

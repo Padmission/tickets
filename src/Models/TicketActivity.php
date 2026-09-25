@@ -94,6 +94,10 @@ class TicketActivity extends Model
                 return __('padmission-tickets::tickets.side_you');
             }
 
+            if ($this->relationLoaded('user') && $this->user !== null) {
+                return resolve(GetUserDisplayName::class)->forUser($this->user);
+            }
+
             return resolve(GetUserDisplayName::class)($this->user_id);
         });
     }

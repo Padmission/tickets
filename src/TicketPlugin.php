@@ -133,6 +133,22 @@ class TicketPlugin implements Plugin
         return $plugin;
     }
 
+    /*
+     * A host may leave a panel's plugin unregistered in some processes, such
+     * as queue workers, so a ticket's panel can lack one.
+     */
+    public static function find(?string $panelId): ?static
+    {
+        $panel = Filament::getPanels()[$panelId] ?? null;
+
+        if (! $panel?->hasPlugin(static::$id)) {
+            return null;
+        }
+
+        /** @var static */
+        return $panel->getPlugin(static::$id);
+    }
+
     /**
      * @template T of Model
      *

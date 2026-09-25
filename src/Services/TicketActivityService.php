@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Services;
 
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -13,6 +14,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketActivityService
 {
@@ -32,6 +34,20 @@ class TicketActivityService
         $this->skipSeenTracking = $callback;
     }
 
+    /*
+     * Someone outside the viewer's own scope can write on a ticket, such as a
+     * tenant user on a ticket another panel's staff answer, so senders load
+     * under the ticket panel's relationship scope rather than the viewer's.
+     */
+    protected function scopeToTicketPanel(Relation $relation, Ticket $ticket): void
+    {
+        $modifier = TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            app()->call($modifier, ['relation' => $relation, 'model' => 'user']);
+        }
+    }
+
     public function getActivities(
         Ticket $ticket,
         ?int $offsetId = null,
@@ -46,7 +62,7 @@ class TicketActivityService
 
         return $ticket
             ->ticketActivities()
-            ->with('user')
+            ->with(['user' => fn (Relation $relation) => $this->scopeToTicketPanel($relation, $ticket)])
             ->whereIn('type', $this->getActivityTypesForSender($ticket, $currentSender, $user))
             ->when($offsetId, fn ($query) => $query->where('id', '>', $offsetId))
             ->when($limit, fn ($query) => $query->limit($limit))
