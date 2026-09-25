@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Actions;
 
+use Filament\Facades\Filament;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
@@ -15,8 +16,17 @@ class GetUserDisplayName
             return __('padmission-tickets::activities.user_display.unassigned');
         }
 
-        $userModel = TicketPlugin::resolveUserModelClass();
-        $user = $userModel::find($userId);
+        $query = TicketPlugin::resolveUserModelClass()::query();
+
+        // The user may sit outside the viewer's scope, such as a tenant user
+        // named on a ticket read from a cross-tenant panel.
+        $modifier = TicketPlugin::find(Filament::getCurrentOrDefaultPanel()?->getId())?->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            app()->call($modifier, ['relation' => $query, 'model' => 'user']);
+        }
+
+        $user = $query->find($userId);
 
         if (! $user) {
             return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);

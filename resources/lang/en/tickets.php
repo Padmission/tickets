@@ -36,6 +36,18 @@ return [
             'success' => 'Ticket reassigned',
         ],
 
+        'view_original_conversation' => [
+            'label' => 'Original conversation',
+            'modal_heading' => 'Original conversation',
+            'modal_description' => 'Read-only. This is the conversation on the ticket this one was escalated from. Reply on this ticket; its requester passes answers back.',
+            'requested_by' => 'Requested by',
+            'handled_by' => 'Handled by',
+            'internal_note' => 'Internal note',
+            'attachments' => ':count attachment|:count attachments',
+            'empty' => 'No messages yet.',
+            'close' => 'Close',
+        ],
+
         'create_linked_ticket' => [
             'label' => 'Escalate Ticket',
             'label_to' => 'Escalate to :team',
@@ -114,6 +126,8 @@ return [
             'priority' => 'Priority',
             'subject' => 'Subject',
             'assignee' => 'Assignee',
+            'unassigned' => 'Unassigned',
+            'assigned_elsewhere' => 'Another support team',
             'submitter' => 'Submitter',
             'source_panel' => 'Source Panel',
             'panel' => 'Panel',
@@ -124,7 +138,8 @@ return [
             'linked_tickets_description' => [
                 'not_escalated' => 'Not escalated. If your team cannot resolve this ticket, escalate it to open a separate ticket for :team.',
                 'escalated' => 'Escalated to :team. They reply to you on the escalated ticket. This ticket stays with your team and the person who submitted it.',
-                'escalated_from' => 'Escalated from the ticket below. The requester here is the person who escalated it, and they pass answers back to whoever submitted the original.',
+                'escalated_to_you' => 'Your team escalated the ticket below to :team. Talk to them here; keep the person who asked updated on the original ticket.',
+                'escalated_from' => 'Escalated from the ticket below. The requester here is the person who escalated it, and they pass answers back to whoever submitted the original. Use "Original conversation" to read it.',
             ],
             'other_support_team' => 'the other support team',
             'parent_ticket' => 'Escalated ticket',

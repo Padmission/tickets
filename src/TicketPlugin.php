@@ -6,6 +6,8 @@ use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Filament\Schemas\Components\Component;
+use Filament\Tables\Columns\Column;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,6 +42,12 @@ class TicketPlugin implements Plugin
     protected string $escalationLevel = 'default';
 
     protected mixed $supportTeamName = null;
+
+    protected ?Closure $userDescriber = null;
+
+    protected mixed $additionalTicketDetails = [];
+
+    protected mixed $additionalTableColumns = [];
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
 
@@ -340,6 +348,69 @@ class TicketPlugin implements Plugin
         $plugin = $panel->getPlugin(static::$id);
 
         return $plugin->getSupportTeamName();
+    }
+
+    /**
+     * @param  (Closure(Model $user, Ticket $ticket): ?string)|null  $callback
+     */
+    public function describeUsersUsing(?Closure $callback): static
+    {
+        $this->userDescriber = $callback;
+
+        return $this;
+    }
+
+    public function describeUser(?Model $user, Ticket $ticket): ?string
+    {
+        if ($user === null || $this->userDescriber === null) {
+            return null;
+        }
+
+        return ($this->userDescriber)($user, $ticket);
+    }
+
+    /**
+     * @param  array<Component>|Closure(): array<Component>  $components
+     */
+    public function additionalTicketDetails(array|Closure $components): static
+    {
+        $this->additionalTicketDetails = $components;
+
+        return $this;
+    }
+
+    /**
+     * @return array<Component>
+     */
+    public function getAdditionalTicketDetails(): array
+    {
+        if ($this->additionalTicketDetails instanceof Closure) {
+            return app()->call($this->additionalTicketDetails);
+        }
+
+        return $this->additionalTicketDetails;
+    }
+
+    /**
+     * @param  array<Column>|Closure(): array<Column>  $columns
+     */
+    public function additionalTableColumns(array|Closure $columns): static
+    {
+        $this->additionalTableColumns = $columns;
+
+        return $this;
+    }
+
+    /**
+     * @return array<Column>
+     */
+    public function getAdditionalTableColumns(): array
+    {
+        if ($this->additionalTableColumns instanceof Closure) {
+            return app()->call($this->additionalTableColumns);
+        }
+
+        return $this->additionalTableColumns;
     }
 
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static

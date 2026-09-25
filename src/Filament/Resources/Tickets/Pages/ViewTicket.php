@@ -20,6 +20,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
 use Padmission\Tickets\Filament\Tables\ParentTicketTable;
@@ -60,6 +61,7 @@ class ViewTicket extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            ViewOriginalConversationAction::make(),
             ReassignTicketAction::make()->authorize(static::canEdit(...)),
             CreateLinkedTicketAction::make()->authorize(static::canEdit(...)),
             CloseTicketAction::make()->authorize(static::canEdit(...)),
@@ -110,6 +112,8 @@ class ViewTicket extends EditRecord
                             ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
                             ->hidden(fn (Ticket $record) => ! $record->disposition_id),
 
+                        ...TicketPlugin::get()->getAdditionalTicketDetails(),
+
                         SubmitterEntry::make('submitter')
                             ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
                             ->columnSpanFull(),
@@ -143,6 +147,7 @@ class ViewTicket extends EditRecord
                             ->formatStateUsing(fn ($state) => $state?->diffForHumans())
                             ->tooltip(fn ($state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
                             ->columnSpanFull(),
+
                     ]),
 
                     Section::make()
@@ -207,6 +212,13 @@ class ViewTicket extends EditRecord
         $plugin = TicketPlugin::get($record->panel);
         $team = $plugin->getEscalationTargetName()
             ?? __('padmission-tickets::tickets.resources.tickets.other_support_team');
+
+        if ($record->isNotInCurrentPanel()) {
+            return __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_to_you', [
+                'team' => TicketPlugin::find($record->panel)?->getSupportTeamName()
+                    ?? __('padmission-tickets::tickets.resources.tickets.other_support_team'),
+            ]);
+        }
 
         return match (true) {
             filled($record->linked_ticket_id) => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated', ['team' => $team]),

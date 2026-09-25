@@ -166,6 +166,8 @@ class TicketResource extends Resource
                     ->html()
                     ->searchable(),
 
+                ...TicketPlugin::get()->getAdditionalTableColumns(),
+
                 TextColumn::make('submitter.name')
                     ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
                     ->searchable()

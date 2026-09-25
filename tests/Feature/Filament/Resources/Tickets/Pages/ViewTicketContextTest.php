@@ -1,0 +1,117 @@
+<?php
+
+use Filament\Infolists\Components\TextEntry;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
+use Livewire\Livewire;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
+
+beforeEach(function () {
+    $this->login();
+});
+
+it('describes the submitter and assignee with the host description', function () {
+    $submitter = User::factory()->create();
+    $assignee = User::factory()->create();
+
+    TicketPlugin::get()->describeUsersUsing(fn (Model $user): string => "Role of {$user->getKey()}");
+
+    $ticket = Ticket::factory()->create(['submitter_id' => $submitter->id, 'assignee_id' => $assignee->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSee("Role of {$submitter->id}")
+        ->assertSee("Role of {$assignee->id}");
+});
+
+it('says a ticket nobody is assigned to is unassigned', function () {
+    $ticket = Ticket::factory()->create(['assignee_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.unassigned'));
+});
+
+it('names the support team when the assignee is outside the viewer\'s scope', function () {
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    $ticket = Ticket::factory()->create(['panel' => 'test2', 'assignee_id' => User::factory()->create()->id]);
+
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($ticket->assignee_id));
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSee('Platform Support')
+        ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.unassigned'));
+})->after(fn () => User::clearBootedModels());
+
+it('adds the host ticket details to the ticket page', function () {
+    TicketPlugin::get()->additionalTicketDetails(fn (): array => [
+        TextEntry::make('organization')->label('Organization')->state('Acme Housing'),
+    ]);
+
+    $ticket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSee('Acme Housing');
+});
+
+it('adds the host columns to the ticket list', function () {
+    (new TicketStatusSeeder)->run();
+
+    TicketPlugin::get()->additionalTableColumns(fn (): array => [
+        TextColumn::make('organization')->label('Organization')->state('Acme Housing'),
+    ]);
+
+    Ticket::factory()->open()->create();
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnExists('organization')
+        ->assertSee('Acme Housing');
+});
+
+describe('Original conversation', function () {
+    it('shows the conversation of the ticket it was escalated from', function () {
+        $requester = User::factory()->create(['name' => 'Original Requester']);
+        $escalated = Ticket::factory()->create();
+        $original = Ticket::factory()->create([
+            'panel' => 'test2',
+            'submitter_id' => $requester->id,
+            'linked_ticket_id' => $escalated->id,
+        ]);
+
+        TicketActivity::factory()->create([
+            'ticket_id' => $original->id,
+            'type' => ActivityType::Message,
+            'sender' => ActivitySender::User,
+            'user_id' => $requester->id,
+            'content' => '<p>The rent looks wrong</p>',
+        ]);
+
+        Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+            ->assertActionVisible(ViewOriginalConversationAction::class)
+            ->mountAction(ViewOriginalConversationAction::class)
+            ->assertMountedActionModalSee(['Original Requester', 'The rent looks wrong']);
+    });
+
+    it('is hidden on a ticket that was not escalated from another', function () {
+        $ticket = Ticket::factory()->create();
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertActionHidden(ViewOriginalConversationAction::class);
+    });
+
+    it('is hidden from the team that escalated, who already have the original', function () {
+        $escalated = Ticket::factory()->create(['panel' => 'test2']);
+        Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+            ->assertActionHidden(ViewOriginalConversationAction::class);
+    });
+});
