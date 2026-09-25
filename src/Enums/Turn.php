@@ -26,4 +26,12 @@ enum Turn: string implements HasIcon, HasLabel
             self::Supporter => __('padmission-tickets::tickets.enums.turn.supporter'),
         };
     }
+
+    public function getDescription(): string
+    {
+        return match ($this) {
+            self::User => __('padmission-tickets::tickets.enums.turn_description.user'),
+            self::Supporter => __('padmission-tickets::tickets.enums.turn_description.supporter'),
+        };
+    }
 }

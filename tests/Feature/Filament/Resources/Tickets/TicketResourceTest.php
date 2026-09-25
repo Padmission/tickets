@@ -1,14 +1,16 @@
 <?php
 
 use Livewire\Livewire;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
 
 it('lists tickets', function () {
+    (new TicketStatusSeeder)->run();
     $this->login();
 
-    $ticket = Ticket::factory()->create();
+    $ticket = Ticket::factory()->open()->create();
 
     Livewire::test(ListTickets::class)
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.plural_model_label'))

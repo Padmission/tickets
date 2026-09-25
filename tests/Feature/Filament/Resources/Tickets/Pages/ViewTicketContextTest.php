@@ -115,3 +115,11 @@ describe('Original conversation', function () {
             ->assertActionHidden(ViewOriginalConversationAction::class);
     });
 });
+
+it('explains whose turn it is and who is responsible', function () {
+    $ticket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.turn'), escape: false)
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.assignee'), escape: false);
+});

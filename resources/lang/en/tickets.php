@@ -8,6 +8,11 @@ return [
             'user' => 'User',
             'supporter' => 'Supporter',
         ],
+
+        'turn_description' => [
+            'user' => 'Waiting for the person who submitted it to reply.',
+            'supporter' => 'Support owes the next reply.',
+        ],
     ],
 
     'level' => [
@@ -121,7 +126,7 @@ return [
             'model_label' => 'Ticket',
             'plural_model_label' => 'Tickets',
             'display_name' => 'Display Name',
-            'turn' => 'Turn',
+            'turn' => 'Waiting on',
             'status' => 'Status',
             'priority' => 'Priority',
             'subject' => 'Subject',
@@ -132,6 +137,7 @@ return [
             'source_panel' => 'Source Panel',
             'panel' => 'Panel',
             'last_message' => 'Last Message',
+            'no_messages' => 'No messages yet',
             'closed_at' => 'Closed At',
             'disposition' => 'Disposition',
             'linked_tickets' => 'Escalation',
@@ -157,6 +163,46 @@ return [
                 'my' => 'My Tickets',
                 'linked' => 'Escalated Tickets',
                 'my_linked' => 'My Escalated Tickets',
+            ],
+
+            'tab_descriptions' => [
+                'all' => 'Every ticket your team handles. Tickets waiting on support come first.',
+                'all_submitter' => 'Tickets you submitted.',
+                'my' => 'Tickets assigned to you. Use Reassign to hand one to a teammate.',
+                'linked' => 'Tickets your team escalated to :team. Each is a separate ticket; the original stays under All Tickets.',
+                'my_linked' => 'Tickets you escalated to :team.',
+            ],
+
+            'hints' => [
+                'status' => 'Where the ticket is in your team\'s process. Use Close when it is resolved.',
+                'priority' => 'How urgent the ticket is, for sorting your team\'s work.',
+                'disposition' => 'Why the ticket was closed.',
+                'submitter' => 'The person who opened this ticket. Replies in the conversation go to them.',
+                'assignee' => 'The person responsible for this ticket. Use Reassign to hand it to a teammate.',
+                'turn' => 'Who owes the next reply. A reply from support hands it to the person who submitted the ticket, and their reply hands it back.',
+            ],
+
+            'filters' => [
+                'open_only' => 'Open tickets only',
+            ],
+
+            'empty' => [
+                'all' => [
+                    'heading' => 'No tickets',
+                    'description' => 'Closed tickets are hidden while "Open tickets only" is on.',
+                ],
+                'my' => [
+                    'heading' => 'Nothing assigned to you',
+                    'description' => 'Tickets appear here when they are assigned to you.',
+                ],
+                'linked' => [
+                    'heading' => 'No escalated tickets',
+                    'description' => 'When your team escalates a ticket, the separate ticket it opens appears here.',
+                ],
+                'my_linked' => [
+                    'heading' => 'You have not escalated any tickets',
+                    'description' => 'Tickets you escalate appear here.',
+                ],
             ],
         ],
 

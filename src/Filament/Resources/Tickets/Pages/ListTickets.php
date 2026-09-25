@@ -47,11 +47,31 @@ class ListTickets extends ListRecords
 
     protected function getHeaderWidgets(): array
     {
+        // The counts cover every ticket in the panel, while someone who only
+        // submits tickets is listed just their own.
+        if (! TicketResource::currentUserIsSupporter(Filament::auth()->id())) {
+            return [];
+        }
+
         return [
             OpenTicketsWidget::class,
             OpenSupporterTickets::class,
             TicketCloseTimeWidget::class,
         ];
+    }
+
+    public function getSubheading(): ?string
+    {
+        $tab = $this->activeTabIsInvalid() ? 'all' : $this->activeTab;
+
+        if ($tab === 'all' && ! TicketResource::currentUserIsSupporter(Filament::auth()->id())) {
+            $tab = 'all_submitter';
+        }
+
+        return __("padmission-tickets::tickets.resources.tickets.tab_descriptions.{$tab}", [
+            'team' => TicketPlugin::get()->getEscalationTargetName()
+                ?? __('padmission-tickets::tickets.resources.tickets.other_support_team'),
+        ]);
     }
 
     protected function getHeaderActions(): array
@@ -77,7 +97,8 @@ class ListTickets extends ListRecords
                 )),
         ];
 
-        if (! TicketPlugin::get()->hasLinkedTickets()) {
+        // Only a panel that escalates has tickets of its own linked elsewhere.
+        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0) {
             return $tabs;
         }
 

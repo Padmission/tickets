@@ -25,7 +25,7 @@ class OpenSupporterTickets extends BaseWidget
 
         return [
             Stat::make(__('padmission-tickets::widgets.open_support_tickets.label'), $count)
-                ->description(__('padmission-tickets::widgets.open_tickets.description'))
+                ->description(__('padmission-tickets::widgets.open_support_tickets.description'))
                 ->descriptionIcon('heroicon-m-inbox')
                 ->color('warning'),
         ];

@@ -9,12 +9,12 @@ return [
 
     'open_tickets' => [
         'label' => 'Open Tickets',
-        'description' => 'Tickets with open status',
+        'description' => 'Tickets not yet closed',
     ],
 
     'open_support_tickets' => [
         'label' => 'Tickets Waiting on Support',
-        'description' => 'Tickets with open status',
+        'description' => 'Open tickets where support owes the next reply',
     ],
 
     'close_time' => [

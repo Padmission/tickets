@@ -9,10 +9,12 @@ use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\On;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
@@ -98,32 +100,40 @@ class ViewTicket extends EditRecord
                     Section::make()->columns(2)->schema([
                         TextEntry::make('status.display_name')
                             ->label(__('padmission-tickets::tickets.resources.tickets.status'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.status'))
                             ->badge()
                             ->color(fn (Ticket $record) => $record->status->colorPalette),
 
                         TextEntry::make('priority.display_name')
                             ->badge()
                             ->color(fn (Ticket $record) => $record->priority->colorPalette)
-                            ->label(__('padmission-tickets::tickets.resources.tickets.priority')),
+                            ->label(__('padmission-tickets::tickets.resources.tickets.priority'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.priority')),
 
                         TextEntry::make('disposition.display_name')
                             ->badge()
                             ->color(fn (Ticket $record) => $record->disposition?->colorPalette)
                             ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.disposition'))
                             ->hidden(fn (Ticket $record) => ! $record->disposition_id),
 
                         ...TicketPlugin::get()->getAdditionalTicketDetails(),
 
                         SubmitterEntry::make('submitter')
                             ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.submitter'))
                             ->columnSpanFull(),
 
                         AvatarEntry::make('assignee')
                             ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.assignee'))
                             ->columnSpanFull(),
 
                         TextEntry::make('turn')
                             ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.turn'))
+                            ->badge()
+                            ->color(fn (?Turn $state): string => $state === Turn::Supporter ? 'warning' : 'gray')
                             ->columnSpanFull(),
 
                         TextEntry::make('source_panel')
@@ -135,6 +145,7 @@ class ViewTicket extends EditRecord
                         TextEntry::make('latestMessage.created_at')
                             ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                             ->hidden(fn (Ticket $record) => $record->isClosed)
+                            ->placeholder(__('padmission-tickets::tickets.resources.tickets.no_messages'))
                             ->dateTime()
                             ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
                             ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))

@@ -12,8 +12,8 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,7 +31,6 @@ use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
-use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
 use function app;
@@ -92,8 +91,12 @@ class TicketResource extends Resource
         return $query->where($query->getModel()->qualifyColumn('submitter_id'), $userId);
     }
 
-    protected static function currentUserIsSupporter(int|string $userId): bool
+    public static function currentUserIsSupporter(int|string|null $userId): bool
     {
+        if ($userId === null) {
+            return false;
+        }
+
         $supportersQuery = TicketPlugin::get()->getAllSupportersQuery();
 
         if ($supportersQuery === null) {
@@ -156,9 +159,11 @@ class TicketResource extends Resource
                     ->color(fn ($record) => $record->priority->colorPalette)
                     ->sortable(),
 
-                IconColumn::make('turn')
+                TextColumn::make('turn')
                     ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
-                    ->tooltip(fn ($record) => $record->turn->getLabel())
+                    ->badge()
+                    ->color(fn (?Turn $state): string => $state === Turn::Supporter ? 'warning' : 'gray')
+                    ->tooltip(fn (?Turn $state): ?string => $state?->getDescription())
                     ->sortable(),
 
                 TextColumn::make('subject')
@@ -191,9 +196,17 @@ class TicketResource extends Resource
                     ->sortable(),
             ])
             ->filters([
+                // Statuses belong to one panel and tenant, so a status default would
+                // hide tickets from every other tenant a cross-tenant panel serves.
+                Filter::make('open')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.filters.open_only'))
+                    ->toggle()
+                    ->default()
+                    ->query(fn (Builder $query): Builder => $query->whereNull($query->getModel()->qualifyColumn('closed_at')))
+                    ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked')),
+
                 SelectFilter::make('status')
                     ->relationship('status', 'display_name')
-                    ->default(fn () => TicketPlugin::resolveModelClass(TicketStatus::class)::getOpenStatuses()->pluck('id')->toArray())
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
@@ -226,6 +239,8 @@ class TicketResource extends Resource
                     ->multiple()
                     ->preload(),
             ])
+            ->emptyStateHeading(fn (ListTickets $livewire): string => __("padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.heading"))
+            ->emptyStateDescription(fn (ListTickets $livewire): string => __("padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.description"))
             ->recordActions([
                 ViewAction::make(),
                 ReassignTicketAction::make()
