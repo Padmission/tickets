@@ -45,6 +45,8 @@ class TicketPlugin implements Plugin
 
     protected ?Closure $userDescriber = null;
 
+    protected mixed $assignableUsersDescription = null;
+
     protected mixed $additionalTicketDetails = [];
 
     protected mixed $additionalTableColumns = [];
@@ -338,6 +340,18 @@ class TicketPlugin implements Plugin
         return static::getSupportTeamNameForPanel(reset($panels));
     }
 
+    /*
+     * Each string that names a team has a `_to` variant with a :team
+     * placeholder, used when the team has a name, so neither version needs
+     * a vague stand-in such as "the other team".
+     */
+    public static function teamText(string $key, ?string $team, array $replace = []): string
+    {
+        return $team === null
+            ? __($key, $replace)
+            : __("{$key}_to", [...$replace, 'team' => $team]);
+    }
+
     public static function getSupportTeamNameForPanel(Panel $panel): ?string
     {
         if (! $panel->hasPlugin(static::$id)) {
@@ -348,6 +362,22 @@ class TicketPlugin implements Plugin
         $plugin = $panel->getPlugin(static::$id);
 
         return $plugin->getSupportTeamName();
+    }
+
+    public function assignableUsersDescription(string|Closure|null $description): static
+    {
+        $this->assignableUsersDescription = $description;
+
+        return $this;
+    }
+
+    public function getAssignableUsersDescription(): ?string
+    {
+        if ($this->assignableUsersDescription instanceof Closure) {
+            return app()->call($this->assignableUsersDescription);
+        }
+
+        return $this->assignableUsersDescription;
     }
 
     /**

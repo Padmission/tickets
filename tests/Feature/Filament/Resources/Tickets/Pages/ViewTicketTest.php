@@ -396,7 +396,7 @@ describe('Escalation explanation', function () {
         $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.not_escalated', ['team' => 'Platform Support']));
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.not_escalated_to', ['team' => 'Platform Support']));
     });
 
     it('explains that an escalated ticket stays with the team', function () {
@@ -406,9 +406,7 @@ describe('Escalation explanation', function () {
         $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated', [
-                'team' => __('padmission-tickets::tickets.resources.tickets.other_support_team'),
-            ]));
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated'));
     });
 
     it('explains where an escalated ticket came from', function () {

@@ -47,7 +47,7 @@ it('explains the active tab', function (string $tab, string $key) {
 })->with([
     'all' => ['all', 'all'],
     'my' => ['my', 'my'],
-    'escalated' => ['linked', 'linked'],
+    'escalated' => ['linked', 'linked_to'],
 ]);
 
 it('tells someone who only submits tickets that the list is theirs, without team-wide counts', function () {

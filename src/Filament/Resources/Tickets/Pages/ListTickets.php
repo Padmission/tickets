@@ -75,10 +75,9 @@ class ListTickets extends ListRecords
             return null;
         }
 
-        return __($key, [
-            'team' => TicketPlugin::get()->getEscalationTargetName()
-                ?? __('padmission-tickets::tickets.resources.tickets.other_support_team'),
-        ]);
+        $team = TicketPlugin::get()->getEscalationTargetName();
+
+        return Lang::has("{$key}_to") ? TicketPlugin::teamText($key, $team) : __($key);
     }
 
     protected function getHeaderActions(): array

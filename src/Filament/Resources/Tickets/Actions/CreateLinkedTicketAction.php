@@ -44,14 +44,7 @@ class CreateLinkedTicketAction extends Action
             ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.create_linked_ticket.submit'))
             ->icon(Heroicon::ArrowUpTray)
             ->color('gray')
-            ->visible(function (Ticket $record) {
-                if ($record->isNotInCurrentPanel()) {
-                    return false;
-                }
-
-                return count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0
-                    && $record->parentTicket === null;
-            })
+            ->visible(fn (Ticket $record): bool => static::isAvailableFor($record))
             ->slideOver()
             ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)
@@ -92,7 +85,9 @@ class CreateLinkedTicketAction extends Action
                     Notification::make()
                         ->danger()
                         ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.title'))
-                        ->body(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.body', ['panel' => ucfirst($targetPanelId)]))
+                        ->body(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.not_configured.body', [
+                            'panel' => TicketPlugin::find($targetPanelId)?->getSupportTeamName() ?? ucfirst($targetPanelId),
+                        ]))
                         ->send();
 
                     // halt() always throws, but is typed void.
@@ -150,12 +145,18 @@ class CreateLinkedTicketAction extends Action
             });
     }
 
+    public static function isAvailableFor(Ticket $record): bool
+    {
+        return $record->isInCurrentPanel()
+            && blank($record->linked_ticket_id)
+            && count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0;
+    }
+
     protected static function translate(string $key): string
     {
-        $team = TicketPlugin::get()->getEscalationTargetName();
-
-        return $team === null
-            ? __("padmission-tickets::tickets.actions.create_linked_ticket.{$key}")
-            : __("padmission-tickets::tickets.actions.create_linked_ticket.{$key}_to", ['team' => $team]);
+        return TicketPlugin::teamText(
+            "padmission-tickets::tickets.actions.create_linked_ticket.{$key}",
+            TicketPlugin::get()->getEscalationTargetName(),
+        );
     }
 }

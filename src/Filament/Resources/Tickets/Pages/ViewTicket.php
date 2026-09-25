@@ -221,20 +221,17 @@ class ViewTicket extends EditRecord
     protected static function describeEscalation(Ticket $record): ?string
     {
         $plugin = TicketPlugin::get($record->panel);
-        $team = $plugin->getEscalationTargetName()
-            ?? __('padmission-tickets::tickets.resources.tickets.other_support_team');
+        $team = $plugin->getEscalationTargetName();
+        $key = 'padmission-tickets::tickets.resources.tickets.linked_tickets_description';
 
         if ($record->isNotInCurrentPanel()) {
-            return __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_to_you', [
-                'team' => TicketPlugin::find($record->panel)?->getSupportTeamName()
-                    ?? __('padmission-tickets::tickets.resources.tickets.other_support_team'),
-            ]);
+            return TicketPlugin::teamText("{$key}.escalated_to_you", TicketPlugin::find($record->panel)?->getSupportTeamName());
         }
 
         return match (true) {
-            filled($record->linked_ticket_id) => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated', ['team' => $team]),
-            count($plugin->getLinkedTicketParentPanels()) > 0 => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.not_escalated', ['team' => $team]),
-            $record->childTickets()->exists() => __('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from'),
+            filled($record->linked_ticket_id) => TicketPlugin::teamText("{$key}.escalated", $team),
+            count($plugin->getLinkedTicketParentPanels()) > 0 => TicketPlugin::teamText("{$key}.not_escalated", $team),
+            $record->childTickets()->exists() => __("{$key}.escalated_from"),
             default => null,
         };
     }
