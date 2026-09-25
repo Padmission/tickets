@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Lang;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
@@ -68,7 +69,13 @@ class ListTickets extends ListRecords
             $tab = 'all_submitter';
         }
 
-        return __("padmission-tickets::tickets.resources.tickets.tab_descriptions.{$tab}", [
+        $key = "padmission-tickets::tickets.resources.tickets.tab_descriptions.{$tab}";
+
+        if (! Lang::has($key)) {
+            return null;
+        }
+
+        return __($key, [
             'team' => TicketPlugin::get()->getEscalationTargetName()
                 ?? __('padmission-tickets::tickets.resources.tickets.other_support_team'),
         ]);

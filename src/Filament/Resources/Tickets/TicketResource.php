@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Lang;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
@@ -239,8 +240,8 @@ class TicketResource extends Resource
                     ->multiple()
                     ->preload(),
             ])
-            ->emptyStateHeading(fn (ListTickets $livewire): string => __("padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.heading"))
-            ->emptyStateDescription(fn (ListTickets $livewire): string => __("padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.description"))
+            ->emptyStateHeading(fn (ListTickets $livewire): ?string => static::tabText($livewire, 'heading'))
+            ->emptyStateDescription(fn (ListTickets $livewire): ?string => static::tabText($livewire, 'description'))
             ->recordActions([
                 ViewAction::make(),
                 ReassignTicketAction::make()
@@ -307,6 +308,13 @@ class TicketResource extends Resource
                         ->authorizeIndividualRecords('delete'),
                 ]),
             ]);
+    }
+
+    protected static function tabText(ListTickets $livewire, string $part): ?string
+    {
+        $key = "padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.{$part}";
+
+        return Lang::has($key) ? __($key) : null;
     }
 
     public static function getPages(): array
