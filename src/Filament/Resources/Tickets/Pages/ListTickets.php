@@ -61,6 +61,40 @@ class ListTickets extends ListRecords
         ];
     }
 
+    /**
+     * @var array{linked: int, my_linked: int}|null
+     */
+    protected ?array $openEscalatedCounts = null;
+
+    /**
+     * Both escalated tabs are counted in one query from the linked tab's own
+     * query, so the badges match the lists. The result lives on this request's
+     * component instance, so it is never stale on the next one.
+     *
+     * @return array{linked: int, my_linked: int}
+     */
+    protected function openEscalatedCounts(): array
+    {
+        if ($this->openEscalatedCounts !== null) {
+            return $this->openEscalatedCounts;
+        }
+
+        $query = $this->getCachedTabs()['linked']
+            ->modifyQuery(TicketResource::getEloquentQuery())
+            ->open();
+
+        $counts = $query
+            ->toBase()
+            ->selectRaw('count(*) as linked')
+            ->selectRaw('coalesce(sum(case when '.$query->qualifyColumn('submitter_id').' = ? then 1 else 0 end), 0) as my_linked', [Filament::auth()->id()])
+            ->first();
+
+        return $this->openEscalatedCounts = [
+            'linked' => (int) ($counts->linked ?? 0),
+            'my_linked' => (int) ($counts->my_linked ?? 0),
+        ];
+    }
+
     public function getSubheading(): ?string
     {
         $tab = $this->activeTabIsInvalid() ? 'all' : $this->activeTab;
@@ -96,6 +130,8 @@ class ListTickets extends ListRecords
 
             'my' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my'))
+                ->badge(fn (): ?int => TicketResource::countOpenTicketsAssignedToCurrentUser() ?: null)
+                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.my'))
                 ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                     $query
                         ->tap(new CurrentPanelScope)
@@ -110,12 +146,16 @@ class ListTickets extends ListRecords
 
         $tabs['linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.linked'))
+            ->badge(fn (): ?int => $this->openEscalatedCounts()['linked'] ?: null)
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.linked'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                 $query->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
             ));
 
         $tabs['my_linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'))
+            ->badge(fn (): ?int => $this->openEscalatedCounts()['my_linked'] ?: null)
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.my_linked'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                 $query
                     ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))

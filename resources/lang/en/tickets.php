@@ -176,6 +176,12 @@ return [
                 'my_linked' => 'My Escalated Tickets',
             ],
 
+            'badges' => [
+                'my' => 'Open tickets assigned to you',
+                'linked' => 'Open tickets your team escalated',
+                'my_linked' => 'Open tickets you escalated',
+            ],
+
             'tab_descriptions' => [
                 'all' => 'Every ticket your team handles. Tickets waiting on support come first.',
                 'all_submitter' => 'Tickets you submitted.',

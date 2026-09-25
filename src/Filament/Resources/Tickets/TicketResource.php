@@ -50,8 +50,20 @@ class TicketResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
+        $count = static::countOpenTicketsAssignedToCurrentUser();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('padmission-tickets::tickets.resources.tickets.badges.my');
+    }
+
+    public static function countOpenTicketsAssignedToCurrentUser(): int
+    {
         /** @phpstan-ignore-next-line */
-        return (string) TicketPlugin::get()->getTicketQuery()
+        return TicketPlugin::get()->getTicketQuery()
             ->open()
             ->tap(new CurrentPanelScope)
             ->whereIn('assignee_id', TicketPlugin::get()->getCurrentUserAssigneeIds() ?: [0])

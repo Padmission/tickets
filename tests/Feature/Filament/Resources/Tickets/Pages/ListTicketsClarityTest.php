@@ -3,6 +3,7 @@
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
@@ -65,4 +66,55 @@ it('shows the team-wide counts to supporters', function () {
 
     Livewire::test(ListTickets::class)
         ->assertSeeLivewire(OpenTicketsWidget::class);
+});
+
+describe('Tab badges', function () {
+    beforeEach(function () {
+        (new TicketStatusSeeder)->run();
+    });
+
+    it('counts my open tickets the same as the navigation badge', function () {
+        $user = $this->login();
+
+        Ticket::factory()->open()->count(2)->create(['assignee_id' => $user->id]);
+        Ticket::factory()->closed()->create(['assignee_id' => $user->id]);
+        Ticket::factory()->open()->create(['assignee_id' => User::factory()->create()->id]);
+
+        $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
+
+        expect($tabs['my']->getBadge())->toBe('2')
+            ->and(TicketResource::getNavigationBadge())->toBe('2')
+            ->and(TicketResource::getNavigationBadgeTooltip())->toBe(__('padmission-tickets::tickets.resources.tickets.badges.my'))
+            ->and($tabs['all']->getBadge())->toBeNull();
+    });
+
+    it('hides the badges when there is nothing open', function () {
+        $this->login();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+
+        $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
+
+        expect($tabs['my']->getBadge())->toBeNull()
+            ->and($tabs['linked']->getBadge())->toBeNull()
+            ->and($tabs['my_linked']->getBadge())->toBeNull()
+            ->and(TicketResource::getNavigationBadge())->toBeNull();
+    });
+
+    it('counts the open escalated tickets on each escalated tab', function () {
+        $user = $this->login();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+
+        $escalate = fn (array $attributes, bool $open = true) => ($open ? Ticket::factory()->open() : Ticket::factory()->closed())
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2', ...$attributes]);
+
+        $escalate(['submitter_id' => $user->id]);
+        $escalate(['submitter_id' => User::factory()->create()->id]);
+        $escalate(['submitter_id' => $user->id], open: false);
+
+        $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
+
+        expect($tabs['linked']->getBadge())->toBe('2')
+            ->and($tabs['my_linked']->getBadge())->toBe('1');
+    });
 });
