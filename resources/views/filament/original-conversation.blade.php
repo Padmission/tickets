@@ -40,7 +40,7 @@
                     </div>
 
                     <div>
-                        <dt>{{ __('padmission-tickets::tickets.actions.view_original_conversation.handled_by') }}</dt>
+                        <dt>{{ __('padmission-tickets::tickets.actions.view_original_conversation.assigned_to') }}</dt>
                         <dd>{{ $assigneeName ?? __('padmission-tickets::tickets.resources.tickets.unassigned') }}</dd>
                     </div>
                 </dl>

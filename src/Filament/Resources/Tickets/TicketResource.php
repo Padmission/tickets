@@ -231,6 +231,7 @@ class TicketResource extends Resource
                     ->preload(),
 
                 SelectFilter::make('assignee')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
                     ->relationship('assignee', 'name', function ($query) {
                         $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
 
@@ -247,6 +248,7 @@ class TicketResource extends Resource
                     ->preload(),
 
                 SelectFilter::make('submitter')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
                     ->relationship('submitter', 'name')
                     ->searchable()
                     ->multiple()

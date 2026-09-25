@@ -287,3 +287,14 @@ it('keeps the generic label when it can escalate to more than one team', functio
         ->mountAction(CreateLinkedTicketAction::class)
         ->assertMountedActionModalSee(['Platform Support', 'Billing']);
 });
+
+it('submits with an escalate button', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test2']);
+
+    $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(CreateLinkedTicketAction::class)
+        ->assertMountedActionModalSee(__('padmission-tickets::tickets.actions.create_linked_ticket.submit'))
+        ->assertMountedActionModalDontSee('Submit');
+});

@@ -123,8 +123,12 @@ class ViewTicket extends EditRecord
                         ...TicketPlugin::get()->getAdditionalTicketDetails(),
 
                         SubmitterEntry::make('submitter')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
-                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: __('padmission-tickets::tickets.resources.tickets.hints.submitter'))
+                            ->label(fn (Ticket $record): string => static::isEscalatedHere($record)
+                                ? __('padmission-tickets::tickets.resources.tickets.escalated_by')
+                                : __('padmission-tickets::tickets.resources.tickets.submitter'))
+                            ->hintIcon(Heroicon::OutlinedQuestionMarkCircle, tooltip: fn (Ticket $record): string => static::isEscalatedHere($record)
+                                ? __('padmission-tickets::tickets.resources.tickets.hints.escalated_by')
+                                : __('padmission-tickets::tickets.resources.tickets.hints.submitter'))
                             ->columnSpanFull(),
 
                         AvatarEntry::make('assignee')
@@ -242,6 +246,13 @@ class ViewTicket extends EditRecord
                         ]),
                 ]),
             ]);
+    }
+
+    protected static function isEscalatedHere(Ticket $record): bool
+    {
+        return $record->isInCurrentPanel()
+            && count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0
+            && $record->childTickets()->exists();
     }
 
     protected static function ticketQuery(): Builder

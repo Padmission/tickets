@@ -123,3 +123,22 @@ it('explains whose turn it is and who is responsible', function () {
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.turn'), escape: false)
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.assignee'), escape: false);
 });
+
+it('labels the person who asked as requested by', function () {
+    $ticket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.submitter'))
+        ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.escalated_by'));
+});
+
+it('labels the person who escalated a ticket here as escalated by', function () {
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+    $escalated = Ticket::factory()->create();
+    Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $escalated->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.escalated_by'))
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.escalated_by'), escape: false);
+});
