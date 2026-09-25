@@ -24,6 +24,18 @@ return [
             ],
         ],
 
+        'reassign' => [
+            'label' => 'Reassign',
+            'label_unassigned' => 'Assign',
+            'modal_heading' => 'Reassign ticket',
+            'modal_description' => 'Hand this ticket to a teammate. It moves to their "My Tickets" list. The conversation and the person who submitted it stay the same.',
+            'modal_description_escalation' => 'To hand it to another support team instead, use Escalate.',
+            'assignee_helper' => 'Only people who can answer tickets here are listed.',
+            'assign_to_me' => 'Assign to me',
+            'submit' => 'Reassign',
+            'success' => 'Ticket reassigned',
+        ],
+
         'create_linked_ticket' => [
             'label' => 'Escalate Ticket',
             'modal_heading' => 'Escalate Ticket',

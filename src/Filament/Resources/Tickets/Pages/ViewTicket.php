@@ -19,6 +19,7 @@ use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
 use Padmission\Tickets\Filament\Tables\ParentTicketTable;
@@ -59,6 +60,7 @@ class ViewTicket extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            ReassignTicketAction::make()->authorize(static::canEdit(...)),
             CreateLinkedTicketAction::make()->authorize(static::canEdit(...)),
             CloseTicketAction::make()->authorize(static::canEdit(...)),
             EditTicketAction::make()->authorize(static::canEdit(...)),

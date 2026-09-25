@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
@@ -225,6 +226,9 @@ class TicketResource extends Resource
             ])
             ->recordActions([
                 ViewAction::make(),
+                ReassignTicketAction::make()
+                    ->link()
+                    ->authorize(fn (Ticket $record): bool => static::canEdit($record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
