@@ -22,7 +22,7 @@ return [
         'ordered_list' => 'Ordered List',
         'command_key' => 'Command-Key',
         'enter_key' => 'Enter-Key',
-        'lock_turn' => 'Lock turn to supporter',
+        'lock_turn' => 'Keep waiting on support',
 
         'screenshot' => [
             'capture' => 'Capture screenshot',

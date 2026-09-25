@@ -5,8 +5,8 @@ return [
 
     'enums' => [
         'turn' => [
-            'user' => 'User',
-            'supporter' => 'Supporter',
+            'user' => 'Requester',
+            'supporter' => 'Support',
         ],
 
         'turn_description' => [
