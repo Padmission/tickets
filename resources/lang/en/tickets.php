@@ -32,6 +32,7 @@ return [
         'reassign' => [
             'label' => 'Reassign',
             'label_unassigned' => 'Assign',
+            'inline_label' => 'Change',
             'modal_heading' => 'Reassign ticket',
             'modal_description' => 'Hand this ticket to someone else on your team. It moves to their "My Tickets" list. The conversation and the person who submitted it stay the same.',
             'currently_assigned' => 'It is assigned to :name now.',

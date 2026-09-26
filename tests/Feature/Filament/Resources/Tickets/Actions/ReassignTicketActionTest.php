@@ -1,8 +1,10 @@
 <?php
 
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
@@ -20,8 +22,8 @@ it('reassigns the ticket from the ticket page', function () {
     $ticket = Ticket::factory()->open()->create();
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionVisible(ReassignTicketAction::class)
-        ->callAction(ReassignTicketAction::class, ['assignee_id' => $teammate->id])
+        ->assertActionVisible(inlineReassign())
+        ->callAction(inlineReassign(), ['assignee_id' => $teammate->id])
         ->assertHasNoActionErrors()
         ->assertNotified(__('padmission-tickets::tickets.actions.reassign.success'));
 
@@ -45,7 +47,7 @@ it('offers to assign the ticket to the current user', function () {
     $ticket = Ticket::factory()->open()->create(['assignee_id' => User::factory()->create()->id]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(ReassignTicketAction::class)
+        ->mountAction(inlineReassign())
         ->callAction(TestAction::make('assign-to-me')->schemaComponent('assignee_id'))
         ->assertActionDataSet(['assignee_id' => $user->id]);
 });
@@ -59,7 +61,7 @@ it('refuses an assignee who is not a supporter', function () {
     TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKeyNot($outsider->id));
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->callAction(ReassignTicketAction::class, ['assignee_id' => $outsider->id]);
+        ->callAction(inlineReassign(), ['assignee_id' => $outsider->id]);
 
     expect($ticket->refresh()->assignee_id)->toEqual($originalAssignee);
 });
@@ -69,7 +71,7 @@ it('is hidden on a closed ticket', function () {
     $ticket = Ticket::factory()->closed()->create();
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionHidden(ReassignTicketAction::class);
+        ->assertDontSee(__('padmission-tickets::tickets.actions.reassign.inline_label'));
 });
 
 it('is labelled assign when nobody is assigned yet', function () {
@@ -77,7 +79,7 @@ it('is labelled assign when nobody is assigned yet', function () {
     $ticket = Ticket::factory()->open()->create(['assignee_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionHasLabel(ReassignTicketAction::class, __('padmission-tickets::tickets.actions.reassign.label_unassigned'));
+        ->assertActionHasLabel(inlineReassign(), __('padmission-tickets::tickets.actions.reassign.label_unassigned'));
 });
 
 it('looks up supporters for the ticket being reassigned', function () {
@@ -92,7 +94,7 @@ it('looks up supporters for the ticket being reassigned', function () {
         ->when($ticket === null, fn ($query) => $query->whereRaw('1 = 0')));
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->callAction(ReassignTicketAction::class, ['assignee_id' => $teammate->id])
+        ->callAction(inlineReassign(), ['assignee_id' => $teammate->id])
         ->assertHasNoActionErrors();
 
     expect($ticket->refresh()->assignee_id)->toEqual($teammate->id);
@@ -107,7 +109,7 @@ it('explains who can be assigned instead of offering an empty list', function ()
         ->assignableUsersDescription('Give a teammate the Helpdesk role to assign them tickets.');
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(ReassignTicketAction::class)
+        ->mountAction(inlineReassign())
         ->assertMountedActionModalSee([
             __('padmission-tickets::tickets.actions.reassign.nobody_to_assign'),
             'Give a teammate the Helpdesk role to assign them tickets.',
@@ -122,7 +124,7 @@ it('does not offer the person who already has the ticket', function () {
     TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($assignee->id));
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(ReassignTicketAction::class)
+        ->mountAction(inlineReassign())
         ->assertMountedActionModalSee(__('padmission-tickets::tickets.actions.reassign.nobody_to_assign'));
 });
 
@@ -136,7 +138,7 @@ it('points to the named escalation team only where the ticket can be escalated',
     $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(ReassignTicketAction::class)
+        ->mountAction(inlineReassign())
         ->assertMountedActionModalSee($sentence);
 
     $escalated = Ticket::factory()->open()->create([
@@ -144,12 +146,57 @@ it('points to the named escalation team only where the ticket can be escalated',
     ]);
 
     Livewire::test(ViewTicket::class, ['record' => $escalated->id])
-        ->mountAction(ReassignTicketAction::class)
+        ->mountAction(inlineReassign())
         ->assertMountedActionModalDontSee($sentence);
 
     TicketPlugin::get()->allowLinkedTicketsTo([]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(ReassignTicketAction::class)
+        ->mountAction(inlineReassign())
         ->assertMountedActionModalDontSee($sentence);
 });
+
+it('reassigns from the Assigned to entry, not the page header', function () {
+    $this->login();
+    $ticket = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionHasLabel(inlineReassign(), __('padmission-tickets::tickets.actions.reassign.inline_label'))
+        ->assertActionDoesNotExist(ReassignTicketAction::class);
+});
+
+it('is not offered to someone who cannot edit the ticket', function () {
+    $this->login();
+    Gate::policy(Ticket::class, ReadOnlyReassignPolicy::class);
+    $ticket = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertDontSee(__('padmission-tickets::tickets.actions.reassign.inline_label'));
+});
+
+it('leaves reassigning out of Edit, so there is one way to do it', function () {
+    $this->login();
+    $ticket = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(EditTicketAction::class)
+        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.resources.tickets.assignee'));
+});
+
+function inlineReassign(): TestAction
+{
+    return TestAction::make(ReassignTicketAction::class)->schemaComponent('assignee', schema: 'form');
+}
+
+class ReadOnlyReassignPolicy
+{
+    public function view(): bool
+    {
+        return true;
+    }
+
+    public function update(): bool
+    {
+        return false;
+    }
+}

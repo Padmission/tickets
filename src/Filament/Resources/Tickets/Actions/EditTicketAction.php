@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Blade;
 use Livewire\Component;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;
 
 class EditTicketAction extends EditAction
 {
@@ -80,23 +79,6 @@ class EditTicketAction extends EditAction
                             'priority' => $record,
                         ]);
                     })
-                    ->required(),
-
-                Select::make('assignee_id')
-                    ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
-                    ->relationship('assignee', 'name', function ($query) {
-                        $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
-
-                        if ($allSupportersQuery) {
-                            $supporterIds = app()->call($allSupportersQuery)->pluck('id');
-
-                            return $query->whereIn('id', $supporterIds);
-                        }
-
-                        return $query;
-                    })
-                    ->preload()
-                    ->searchable()
                     ->required(),
             ]);
     }

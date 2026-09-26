@@ -70,7 +70,6 @@ class ViewTicket extends EditRecord
     {
         return [
             ViewOriginalConversationAction::make(),
-            ReassignTicketAction::make()->authorize(static::canEdit(...)),
             CloseTicketAction::make()->authorize(static::canEdit(...)),
             EditTicketAction::make()->authorize(static::canEdit(...)),
         ];
@@ -158,6 +157,17 @@ class ViewTicket extends EditRecord
 
                         AvatarEntry::make('assignee')
                             ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                            ->hintAction(
+                                ReassignTicketAction::make()
+                                    ->label(fn (Ticket $record): string => $record->assignee_id
+                                        ? __('padmission-tickets::tickets.actions.reassign.inline_label')
+                                        : __('padmission-tickets::tickets.actions.reassign.label_unassigned'))
+                                    ->icon(null)
+                                    ->color('primary')
+                                    ->link()
+                                    ->size('sm')
+                                    ->authorize(static::canEdit(...)),
+                            )
                             ->hintColor('gray')
                             ->hintIcon(static::helpIcon(), tooltip: __('padmission-tickets::tickets.resources.tickets.hints.assignee'))
                             ->columnSpanFull(),
