@@ -8,6 +8,7 @@ use Filament\Forms\Components\ModalTableSelect;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\TicketPlugin;
 
 class LinkedTicketModalSelect extends ModalTableSelect
 {
@@ -29,6 +30,15 @@ class LinkedTicketModalSelect extends ModalTableSelect
             ->getOptionLabelFromRecordUsing(function ($record) {
                 $canViewTicket = Filament::auth()->user()->can('view', $record);
                 $url = $canViewTicket ? TicketResource::getUrl('view', ['record' => $record->id]) : null;
+                $plugin = TicketPlugin::get();
+                $details = collect([
+                    $plugin->describeTicketOrigin($record),
+                    $record->submitter ? __('padmission-tickets::tickets.resources.tickets.requested_by_line', [
+                        'name' => collect([Filament::getUserName($record->submitter), $plugin->describeUser($record->submitter, $record)])
+                            ->filter()
+                            ->implode(', '),
+                    ]) : null,
+                ])->filter()->implode(' · ');
 
                 return new HtmlString(Blade::render(<<<'BLADE'
                     <div class="ticket-card">
@@ -53,8 +63,12 @@ class LinkedTicketModalSelect extends ModalTableSelect
                                 </a>
                             @endunless
                         </div>
+
+                        @if (filled($details))
+                            <div class="ticket-card__details">{{ $details }}</div>
+                        @endif
                     </div>
-                BLADE, compact('record', 'url', 'canViewTicket')));
+                BLADE, compact('record', 'url', 'canViewTicket', 'details')));
             });
     }
 }

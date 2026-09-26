@@ -127,8 +127,21 @@ class TicketActivity extends Model
                 'from' => $this->priorityLabel($this->activityData('from')),
                 'to' => $this->priorityLabel($this->activityData('to')),
             ]),
+            ActivityType::AddedToEscalation => __('padmission-tickets::activities.added_to_escalation', ['id' => $this->activityData('escalation'), 'name' => $this->actorName()]),
+            ActivityType::RemovedFromEscalation => __('padmission-tickets::activities.removed_from_escalation', ['id' => $this->activityData('escalation'), 'name' => $this->actorName()]),
+            ActivityType::OriginalAdded => __('padmission-tickets::activities.original_added', ['id' => $this->activityData('original'), 'name' => $this->actorName()]),
+            ActivityType::OriginalRemoved => __('padmission-tickets::activities.original_removed', ['id' => $this->activityData('original'), 'name' => $this->actorName()]),
             default => $value
         });
+    }
+
+    protected function actorName(): string
+    {
+        if ($this->relationLoaded('user') && $this->user !== null) {
+            return resolve(GetUserDisplayName::class)->forUser($this->user);
+        }
+
+        return resolve(GetUserDisplayName::class)($this->user_id);
     }
 
     protected function activityData(string $key): mixed

@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Actions\Testing\TestAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
@@ -116,12 +117,28 @@ describe('Original conversation', function () {
     });
 });
 
-it('explains whose turn it is and who is responsible', function () {
+it('explains each detail inline when the panel asks for inline help', function () {
+    TicketPlugin::get()->fieldHelp(TicketPlugin::FIELD_HELP_INLINE);
+
     $ticket = Ticket::factory()->create();
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.turn'), escape: false)
-        ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.assignee'), escape: false);
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.assignee'), escape: false)
+        ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.field_help.label'));
+});
+
+it('explains every detail in one place by default', function () {
+    $ticket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.hints.turn'), escape: false)
+        ->mountAction(TestAction::make('field-help')->schemaComponent('fieldHelp', schema: 'form'))
+        ->assertMountedActionModalSee([
+            __('padmission-tickets::tickets.resources.tickets.hints.turn'),
+            __('padmission-tickets::tickets.resources.tickets.hints.assignee'),
+            __('padmission-tickets::tickets.resources.tickets.hints.escalated_by'),
+        ]);
 });
 
 it('labels the person who asked as requested by', function () {
@@ -133,6 +150,7 @@ it('labels the person who asked as requested by', function () {
 });
 
 it('labels the person who escalated a ticket here as escalated by', function () {
+    TicketPlugin::get()->fieldHelp(TicketPlugin::FIELD_HELP_INLINE);
     TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
     $escalated = Ticket::factory()->create();

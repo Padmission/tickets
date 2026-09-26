@@ -29,6 +29,10 @@ class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
+    public const FIELD_HELP_INLINE = 'inline';
+
+    public const FIELD_HELP_SUMMARY = 'summary';
+
     protected ?Panel $panel = null;
 
     protected bool $shouldRegisterResources = false;
@@ -46,6 +50,10 @@ class TicketPlugin implements Plugin
     protected ?Closure $userDescriber = null;
 
     protected mixed $assignableUsersDescription = null;
+
+    protected ?Closure $ticketOriginDescriber = null;
+
+    protected string $fieldHelp = self::FIELD_HELP_SUMMARY;
 
     protected mixed $additionalTicketDetails = [];
 
@@ -362,6 +370,36 @@ class TicketPlugin implements Plugin
         $plugin = $panel->getPlugin(static::$id);
 
         return $plugin->getSupportTeamName();
+    }
+
+    /**
+     * @param  self::FIELD_HELP_*  $style
+     */
+    public function fieldHelp(string $style): static
+    {
+        $this->fieldHelp = $style;
+
+        return $this;
+    }
+
+    public function getFieldHelp(): string
+    {
+        return $this->fieldHelp;
+    }
+
+    /**
+     * @param  (Closure(Ticket $ticket): ?string)|null  $callback
+     */
+    public function describeTicketOriginUsing(?Closure $callback): static
+    {
+        $this->ticketOriginDescriber = $callback;
+
+        return $this;
+    }
+
+    public function describeTicketOrigin(Ticket $ticket): ?string
+    {
+        return $this->ticketOriginDescriber === null ? null : ($this->ticketOriginDescriber)($ticket);
     }
 
     public function assignableUsersDescription(string|Closure|null $description): static

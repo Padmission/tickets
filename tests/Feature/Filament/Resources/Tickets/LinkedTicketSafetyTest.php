@@ -1,13 +1,17 @@
 <?php
 
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Tables\LinkedTicketCandidates;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Tests\Fixtures\Models\CustomTicket;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
@@ -64,7 +68,7 @@ describe('with tenants', function () {
         $otherTenant = Ticket::factory()->create(['panel' => 'test2', 'tenant_id' => 2]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->fillForm(['parentTicket' => $otherTenant->id])
+            ->callAction(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'), ['escalation' => $otherTenant->id])
             ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 
         expect($ticket->refresh()->linked_ticket_id)->toBeNull();
@@ -83,17 +87,15 @@ describe('with tenants', function () {
     });
 });
 
-it('does not offer tickets already linked elsewhere', function () {
+it('offers escalations that already have originals, but not originals linked elsewhere', function () {
     TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
     $ticket = Ticket::factory()->create();
-    $takenEscalation = Ticket::factory()->create(['panel' => 'test2']);
-    Ticket::factory()->create(['linked_ticket_id' => $takenEscalation->id]);
-    $freeEscalation = Ticket::factory()->create(['panel' => 'test2']);
+    $sharedEscalation = Ticket::factory()->create(['panel' => 'test2']);
+    Ticket::factory()->create(['linked_ticket_id' => $sharedEscalation->id]);
 
     expect(LinkedTicketCandidates::parents(Ticket::query(), $ticket)->pluck('id'))
-        ->toContain($freeEscalation->id)
-        ->not->toContain($takenEscalation->id);
+        ->toContain($sharedEscalation->id);
 
     $escalated = Ticket::factory()->create();
     $originalLinkedElsewhere = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => Ticket::factory()->create()->id]);
@@ -107,11 +109,12 @@ it('keeps an existing escalation instead of replacing it', function () {
     $another = Ticket::factory()->create(['panel' => 'test2']);
     $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
 
-    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertFormFieldDisabled('parentTicket')
-        ->fillForm(['parentTicket' => $another->id]);
+    expect(CreateLinkedTicketAction::isAvailableFor($ticket))->toBeFalse()
+        ->and(resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $another->id))->toBe(TicketEscalationLinks::ALREADY_ESCALATED)
+        ->and($ticket->refresh()->linked_ticket_id)->toBe($escalation->id);
 
-    expect($ticket->refresh()->linked_ticket_id)->toBe($escalation->id);
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.label'));
 });
 
 describe('in a cross-tenant panel', function () {

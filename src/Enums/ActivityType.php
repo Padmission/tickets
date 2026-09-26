@@ -21,4 +21,12 @@ enum ActivityType: string
     case AssigneeChanged = 'assignee-changed';
 
     case Escalated = 'escalated';
+
+    case AddedToEscalation = 'added-to-escalation';
+
+    case RemovedFromEscalation = 'removed-from-escalation';
+
+    case OriginalAdded = 'original-added';
+
+    case OriginalRemoved = 'original-removed';
 }

@@ -20,6 +20,7 @@ use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
 
@@ -96,35 +97,53 @@ class CreateLinkedTicketAction extends Action
                     return;
                 }
 
-                DB::beginTransaction();
-
-                $newTicket = $ticket::create([
-                    'panel' => $targetPanelId,
-                    'source_panel' => $currentPanelId,
-                    'subject' => $data['subject'],
-                    'submitter_id' => Filament::auth()->id(),
-                    'turn' => Turn::Supporter,
-                    'status_id' => $defaultStatus->id,
-                    'priority_id' => $defaultPriority->id,
-                ]);
-
-                $newTicket->ticketActivities()->create([
-                    'sender' => ActivitySender::User,
-                    'type' => ActivityType::Message,
-                    'content' => $data['message'],
-                ]);
-
                 /**
                  * @var Ticket $record
                  */
                 $record = $livewire->record;
 
-                $record->parentTicket()->associate($newTicket);
-                $record->save();
+                $links = resolve(TicketEscalationLinks::class);
 
-                DB::commit();
+                // The page may have been loaded before someone else escalated this
+                // ticket, and a host scope can hide that escalation, so the link is
+                // re-checked under a lock and nothing is created if it is taken.
+                $newTicket = DB::transaction(function () use ($ticket, $targetPanelId, $currentPanelId, $data, $defaultStatus, $defaultPriority, $record, $links) {
+                    if (! $links->canOpenEscalation($record)) {
+                        return null;
+                    }
 
-                $livewire->data['parentTicket'] = $newTicket->id;
+                    $newTicket = $ticket::create([
+                        'panel' => $targetPanelId,
+                        'source_panel' => $currentPanelId,
+                        'subject' => $data['subject'],
+                        'submitter_id' => Filament::auth()->id(),
+                        'turn' => Turn::Supporter,
+                        'status_id' => $defaultStatus->id,
+                        'priority_id' => $defaultPriority->id,
+                    ]);
+
+                    $newTicket->ticketActivities()->create([
+                        'sender' => ActivitySender::User,
+                        'type' => ActivityType::Message,
+                        'content' => $data['message'],
+                    ]);
+
+                    $links->linkNewEscalation($record, $newTicket);
+
+                    return $newTicket;
+                });
+
+                if ($newTicket === null) {
+                    Notification::make()
+                        ->danger()
+                        ->title(__('padmission-tickets::tickets.resources.tickets.link_refused.title'))
+                        ->body(__('padmission-tickets::tickets.resources.tickets.link_refused.already_escalated', ['id' => $record->linked_ticket_id]))
+                        ->send();
+
+                    $action->halt();
+
+                    return;
+                }
 
                 Notification::make()
                     ->success()

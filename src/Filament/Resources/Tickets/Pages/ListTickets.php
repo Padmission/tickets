@@ -95,6 +95,22 @@ class ListTickets extends ListRecords
         ];
     }
 
+    /*
+     * whereHas never runs the panel's relationship scope hook, so the host's
+     * tenant scope would otherwise stay on the originals and, in a cross-tenant
+     * panel, hide escalations whose originals belong to another tenant.
+     */
+    protected static function originalsFromThisPanel(Builder $query): Builder
+    {
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            app()->call($modifier, ['relation' => $query, 'model' => 'childTickets']);
+        }
+
+        return $query->where($query->qualifyColumn('panel'), Filament::getCurrentOrDefaultPanel()->getId());
+    }
+
     public function getSubheading(): ?string
     {
         $tab = $this->activeTabIsInvalid() ? 'all' : $this->activeTab;
@@ -149,7 +165,7 @@ class ListTickets extends ListRecords
             ->badge(fn (): ?int => $this->openEscalatedCounts()['linked'] ?: null)
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.linked'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                $query->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
+                $query->whereHas('childTickets', static::originalsFromThisPanel(...))
             ));
 
         $tabs['my_linked'] = Tab::make()
@@ -158,7 +174,7 @@ class ListTickets extends ListRecords
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.my_linked'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                 $query
-                    ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
+                    ->whereHas('childTickets', static::originalsFromThisPanel(...))
                     ->where('submitter_id', Filament::auth()->id())
             ));
 

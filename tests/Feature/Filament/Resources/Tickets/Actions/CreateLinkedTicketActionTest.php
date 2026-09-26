@@ -1,6 +1,7 @@
 <?php
 
 use Filament\Actions\Action;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Exceptions;
@@ -30,7 +31,7 @@ it('is visible when linked tickets enabled and ticket has no parent', function (
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionVisible(CreateLinkedTicketAction::class);
+        ->assertActionVisible(escalateAction());
 });
 
 it('is hidden when linked tickets disabled', function () {
@@ -39,7 +40,7 @@ it('is hidden when linked tickets disabled', function () {
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionHidden(CreateLinkedTicketAction::class);
+        ->assertDontSee(__('padmission-tickets::tickets.actions.create_linked_ticket.label'));
 });
 
 it('is hidden when ticket already has parent', function () {
@@ -48,8 +49,10 @@ it('is hidden when ticket already has parent', function () {
     $parentTicket = Ticket::factory()->create();
     $childTicket = Ticket::factory()->create(['linked_ticket_id' => $parentTicket->id]);
 
+    expect(CreateLinkedTicketAction::isAvailableFor($childTicket))->toBeFalse();
+
     Livewire::test(ViewTicket::class, ['record' => $childTicket->id])
-        ->assertActionHidden(CreateLinkedTicketAction::class);
+        ->assertDontSee(__('padmission-tickets::tickets.actions.create_linked_ticket.label'));
 });
 
 it('sets default subject', function () {
@@ -58,7 +61,7 @@ it('sets default subject', function () {
     $originalTicket = Ticket::factory()->create();
 
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->mountAction(CreateLinkedTicketAction::class)
+        ->mountAction(escalateAction())
         ->assertSchemaComponentStateSet('subject', $originalTicket->subject);
 });
 
@@ -74,7 +77,7 @@ it('creates linked ticket successfully', function () {
     $messageContent = 'This is the initial message for the linked ticket';
 
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Linked Test Ticket',
             'message' => $messageContent,
         ])
@@ -115,7 +118,7 @@ it('creates linked ticket for different panel', function () {
     $messageContent = 'Cross-panel message content';
 
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Cross-Panel Ticket',
             'message' => $messageContent,
         ])
@@ -133,20 +136,20 @@ it('creates linked ticket for different panel', function () {
         ->content->toContain($messageContent);
 });
 
-it('updates livewire data after creation', function () {
+it('links the ticket to the escalation it opens', function () {
     TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     $component = Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Data Update Test',
             'message' => tiptapDocument('Test message for data update'),
         ])
         ->assertHasNoFormErrors();
 
     $newTicket = Ticket::where('subject', 'Data Update Test')->first();
-    expect($component->get('data.parentTicket'))->toBe($newTicket->id);
+    expect($originalTicket->refresh()->linked_ticket_id)->toBe($newTicket->id);
 });
 
 it('sends success notification with action link', function () {
@@ -155,7 +158,7 @@ it('sends success notification with action link', function () {
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Notification Test',
             'message' => tiptapDocument('Notification test message'),
         ])
@@ -180,7 +183,7 @@ it('shows a link to the ticket in the users existing panel', function () {
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Notification Test',
             'message' => tiptapDocument('Notification test message'),
         ])
@@ -214,7 +217,7 @@ it('requires subject field', function () {
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => '',
             'message' => tiptapDocument('Message without subject'),
         ])
@@ -227,7 +230,7 @@ it('requires message field', function () {
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Subject without message',
             'message' => tiptapDocument('<p></p>'),
         ])
@@ -242,7 +245,7 @@ it('explains instead of failing when the target panel has no statuses', function
     $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $originalTicket->id])
-        ->callAction(CreateLinkedTicketAction::class, [
+        ->callAction(escalateAction(), [
             'subject' => 'Escalated',
             'message' => tiptapDocument('Please help'),
         ])
@@ -261,8 +264,8 @@ it('names the support team it escalates to', function () {
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionHasLabel(CreateLinkedTicketAction::class, 'Escalate to Platform Support')
-        ->mountAction(CreateLinkedTicketAction::class)
+        ->assertActionHasLabel(escalateAction(), 'Escalate to Platform Support')
+        ->mountAction(escalateAction())
         ->assertMountedActionModalSee('It opens a separate ticket for Platform Support');
 });
 
@@ -272,7 +275,7 @@ it('keeps the generic label when the target panel has no support team name', fun
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionHasLabel(CreateLinkedTicketAction::class, __('padmission-tickets::tickets.actions.create_linked_ticket.label'));
+        ->assertActionHasLabel(escalateAction(), __('padmission-tickets::tickets.actions.create_linked_ticket.label'));
 });
 
 it('keeps the generic label when it can escalate to more than one team', function () {
@@ -283,8 +286,8 @@ it('keeps the generic label when it can escalate to more than one team', functio
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertActionHasLabel(CreateLinkedTicketAction::class, __('padmission-tickets::tickets.actions.create_linked_ticket.label'))
-        ->mountAction(CreateLinkedTicketAction::class)
+        ->assertActionHasLabel(escalateAction(), __('padmission-tickets::tickets.actions.create_linked_ticket.label'))
+        ->mountAction(escalateAction())
         ->assertMountedActionModalSee(['Platform Support', 'Billing']);
 });
 
@@ -294,7 +297,12 @@ it('submits with an escalate button', function () {
     $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(CreateLinkedTicketAction::class)
+        ->mountAction(escalateAction())
         ->assertMountedActionModalSee(__('padmission-tickets::tickets.actions.create_linked_ticket.submit'))
         ->assertMountedActionModalDontSee('Submit');
 });
+
+function escalateAction(): TestAction
+{
+    return TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form');
+}

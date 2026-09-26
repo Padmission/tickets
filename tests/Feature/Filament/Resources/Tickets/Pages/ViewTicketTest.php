@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
@@ -51,7 +52,8 @@ describe('Linked Tickets', function () {
         $ticket = Ticket::factory()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertActionVisible(CreateLinkedTicketAction::class);
+            ->assertActionVisible(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'))
+            ->assertActionVisible(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'));
     });
 
     it('hides CreateLinkedTicketAction when cannot create linked tickets', function () {
@@ -60,7 +62,8 @@ describe('Linked Tickets', function () {
         $ticket = Ticket::factory()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertActionHidden(CreateLinkedTicketAction::class);
+            ->assertDontSee(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
+            ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.label'));
     });
 
     it('hides linked tickets section when feature disabled', function () {
@@ -87,47 +90,6 @@ describe('Linked Tickets', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
-    });
-
-    it('does show parent ticket select if it can link to another panel', function () {
-        // Setup
-        $plugin = TicketPlugin::get()->allowLinkedTicketsTo(['test']);
-        $mockedPlugin = mock($plugin)
-            ->shouldReceive('getPanelsForLinkedTicketCreation')
-            ->andReturn(['panel' => Panel::make()->id('panel2')])
-            ->getMock();
-
-        Filament::setCurrentPanel('test');
-        Filament::getCurrentPanel()->plugin($mockedPlugin);
-
-        $ticket = Ticket::factory()->create();
-
-        // Assert
-        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.parent_ticket'));
-    });
-
-    it('does not show parent ticket select if it cannot link to another panel', function () {
-        // Setup
-        $plugin = TicketPlugin::get()->allowLinkedTicketsTo([]);
-        $mockedPlugin = mock($plugin)
-            ->shouldReceive('getLinkedTicketChildPanels')
-            ->andReturn(['test'])
-            ->getMock()
-            ->shouldReceive('hasLinkedTickets')
-            ->andReturn(true)
-            ->getMock();
-
-        Filament::setCurrentPanel('test');
-        Filament::getCurrentPanel()->plugin($mockedPlugin);
-
-        $ticket = Ticket::factory()->create();
-
-        // Assert
-        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-            ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.parent_ticket'));
     });
 
     it('does show child tickets select if panels link to the current panel', function () {
@@ -168,19 +130,6 @@ describe('Linked Tickets', function () {
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
             ->assertFormFieldHidden('childTickets');
-    });
-
-    it('updates parent ticket relationship via form', function () {
-        TicketPlugin::get()->allowLinkedTicketsTo(['test']);
-
-        $parentTicket = Ticket::factory()->create();
-        $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
-
-        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertFormFieldVisible('parentTicket')
-            ->fillForm(['parentTicket' => $parentTicket->id]);
-
-        expect($ticket->refresh()->linked_ticket_id)->toBe($parentTicket->id);
     });
 
     it('updates child linked tickets relationship via form', function () {
@@ -227,55 +176,6 @@ describe('Linked Tickets', function () {
         expect($childTicket1->refresh()->linked_ticket_id)->toBeNull();
         expect($childTicket2->refresh()->linked_ticket_id)->toBeNull();
     })->skip('Filament Testing Bug: Property [$data.linkedTickets] not found on component');
-
-    it('restricts parent ticket options to only tickets from parent panels', function () {
-        Filament::getCurrentPanel()->plugin(
-            TicketPlugin::make()->allowLinkedTicketsTo(['test2', 'test3'])
-        );
-
-        (new TicketStatusSeeder)->run();
-
-        $ticket = Ticket::factory()->create();
-
-        Ticket::factory()->create(['panel' => 'test1']);
-        Ticket::factory()->create(['panel' => 'test2']);
-        Ticket::factory()->create(['panel' => 'test3']);
-
-        $selectAction = TestAction::make('select')->schemaComponent('parentTicket');
-
-        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
-            ->mountAction($selectAction)
-            ->assertActionMounted($selectAction)
-            ->assertMountedActionModalSee([
-                'fi-ta-header-cell-panel',
-                'Test2',
-                'Test3',
-            ]);
-        // @TODO: Rename test panel so this can be tested properly
-        // ->assertMountedActionModalDontSee(['Test']);
-    });
-
-    it('does not show panel column in ParentTicketTable when linking to a single panel', function () {
-        Filament::getCurrentPanel()->plugin(
-            TicketPlugin::make()->allowLinkedTicketsTo(['test2'])
-        );
-
-        (new TicketStatusSeeder)->run();
-
-        $ticket = Ticket::factory()->create();
-        $selectAction = TestAction::make('select')->schemaComponent('parentTicket');
-
-        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
-            ->mountAction($selectAction)
-            ->assertActionMounted($selectAction)
-            ->assertMountedActionModalDontSee([
-                'fi-ta-header-cell-panel',
-            ]);
-    });
 
     it('restricts child ticket options to only tickets from child panels', function () {
         $plugin = TicketPlugin::make()
@@ -332,35 +232,24 @@ describe('Linked Tickets', function () {
     });
 });
 
-describe('Linked ticket selects', function () {
-    beforeEach(function () {
+describe('Linked ticket permissions', function () {
+    it('does not let a user who cannot edit the ticket change its escalation', function () {
         TicketPlugin::get()->allowLinkedTicketsTo(['test']);
-
-        $this->parent = Ticket::factory()->create();
-        $this->ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
-    });
-
-    it('links a parent ticket for a user who can edit the ticket', function () {
-        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
-            ->callAction(TestAction::make('select')->schemaComponent('parentTicket', schema: 'form'), ['selection' => $this->parent->id]);
-
-        expect($this->ticket->refresh()->linked_ticket_id)->toBe($this->parent->id);
-    });
-
-    it('does not let a user who cannot edit the ticket link one', function () {
         Gate::policy(Ticket::class, ReadOnlyTicketPolicy::class);
+
+        $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
         $abilities = [];
         Event::listen(GateEvaluated::class, function (GateEvaluated $event) use (&$abilities) {
             $abilities[] = $event->ability;
         });
 
-        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
-            ->assertActionHidden(TestAction::make('select')->schemaComponent('parentTicket', schema: 'form'))
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.label'))
             ->assertActionHidden(TestAction::make('select')->schemaComponent('childTickets', schema: 'form'));
 
         expect($abilities)->toContain('update')
-            ->and($this->ticket->refresh()->linked_ticket_id)->toBeNull();
+            ->and($ticket->refresh()->linked_ticket_id)->toBeNull();
     });
 });
 

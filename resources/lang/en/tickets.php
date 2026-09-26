@@ -49,12 +49,32 @@ return [
             'label' => 'Original conversation',
             'modal_heading' => 'Original conversation',
             'modal_description' => 'A read-only copy of the conversation on the ticket this one was escalated from. Reply on this ticket instead; the person who escalated it passes your answer on.',
+            'choose' => 'Original ticket',
             'requested_by' => 'Requested by',
             'assigned_to' => 'Assigned to',
             'internal_note' => 'Internal note',
             'attachments' => ':count attachment|:count attachments',
             'empty' => 'No messages yet.',
             'close' => 'Close',
+        ],
+
+        'add_to_escalation' => [
+            'label' => 'Add to an existing escalation',
+            'help' => 'Use this when your team already escalated the same problem.',
+            'help_to' => 'Use this when your team already escalated the same problem to :team.',
+            'modal_description' => 'Pick the escalation this ticket belongs with. Only your team\'s open escalations are listed.',
+            'modal_description_to' => 'Pick the escalation to :team this ticket belongs with. Only your team\'s open escalations are listed.',
+            'submit' => 'Add to escalation',
+            'success' => 'Added to escalation #:id',
+            'escalated_at' => 'Escalated',
+            'attached' => 'Tickets attached',
+        ],
+
+        'remove_from_escalation' => [
+            'label' => 'Remove from escalation',
+            'modal_description' => 'This ticket will no longer be part of escalation #:id. The escalation stays open for any other tickets in it, and this ticket stays with your team.',
+            'submit' => 'Remove',
+            'success' => 'Removed from escalation #:id',
         ],
 
         'create_linked_ticket' => [
@@ -153,17 +173,19 @@ return [
                 'escalated_to' => 'Escalated to :team. They reply to you on the escalated ticket below. This ticket stays with your team and the person who submitted it.',
                 'escalated_to_you' => 'Your team escalated the ticket below. Talk to the team handling it here, and keep the person who asked updated on the original ticket.',
                 'escalated_to_you_to' => 'Your team escalated the ticket below to :team. Talk to :team here, and keep the person who asked updated on the original ticket.',
-                'escalated_from' => 'Escalated from the ticket below. You are talking with the person who escalated it, and they pass your answers on to whoever asked originally. Use "Original conversation" to read that ticket.',
+                'escalated_from' => 'Escalated from the original tickets below. You are talking with the person who escalated them, and they pass your answers on to whoever asked on each one. Use "Original conversation" to read them.',
             ],
             'parent_ticket' => 'Escalated ticket',
             'parent_ticket_placeholder' => 'Not escalated',
             'child_tickets' => 'Original tickets',
             'child_tickets_placeholder' => 'No original tickets',
             'link_existing_ticket' => 'Link existing',
+            'part_of_escalation' => '{0} Part of escalation :link.|{1} Part of escalation :link, with 1 other ticket.|[2,*] Part of escalation :link, with :count other tickets.',
+            'requested_by_line' => 'Requested by :name',
             'link_refused' => [
                 'title' => 'Ticket not linked',
-                'already_escalated' => 'This ticket is already escalated to #:id and keeps that link.',
-                'not_linkable' => 'That ticket cannot be linked here. It belongs to someone else or is already linked to another ticket.',
+                'already_escalated' => 'This ticket is already part of escalation #:id. Remove it from that escalation before adding it to another.',
+                'not_linkable' => 'That ticket can no longer be linked here. It may have been closed, or linked elsewhere in the meantime.',
             ],
             'assign_to_supporter' => 'Assign to',
             'assigned_successfully' => 'Tickets assigned successfully',
@@ -191,6 +213,11 @@ return [
                 'linked_to' => 'Tickets your team escalated to :team. Each is a separate ticket; the original stays under All Tickets.',
                 'my_linked' => 'Tickets you escalated.',
                 'my_linked_to' => 'Tickets you escalated to :team.',
+            ],
+
+            'field_help' => [
+                'label' => 'What do these mean?',
+                'heading' => 'Ticket details',
             ],
 
             'hints' => [
