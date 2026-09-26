@@ -12,8 +12,13 @@ it('requires login ', function () {
 });
 
 it('requires create permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('create', fn (User $user) => false);
+    Gate::policy(Ticket::class, get_class(new class
+    {
+        public function create(User $user): bool
+        {
+            return false;
+        }
+    }));
 
     $user = User::factory()->create();
 
@@ -43,8 +48,15 @@ it('lists users tickets', function () {
         ->{0}->toEqual([
             'id' => $ticketA->id,
             'subject' => $ticketA->subject,
+            'status' => [
+                'id' => $ticketA->status->id,
+                'display_name' => $ticketA->status->display_name,
+                'color' => $ticketA->status->color_palette[500],
+            ],
             'latest_message' => null,
             'is_closed' => $ticketA->isClosed,
+            'needs_attention' => true,
+            'is_unread' => false,
             'updated_at' => now()->diffForHumans(),
         ]);
 });

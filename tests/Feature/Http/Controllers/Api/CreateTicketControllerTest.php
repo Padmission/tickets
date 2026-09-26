@@ -16,10 +16,18 @@ it('requires login ', function () {
 });
 
 it('requires create permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('create', fn (User $user) => false);
+    Gate::policy(Ticket::class, get_class(new class
+    {
+        public function create(User $user): bool
+        {
+            return false;
+        }
+    }));
 
     $user = User::factory()->create();
+
+    TicketStatus::factory()->create();
+    TicketPriority::factory()->create();
 
     $this->actingAs($user);
 
