@@ -49,6 +49,7 @@ describe('beside the chat', function () {
             ->assertSee(__('padmission-tickets::tickets.linked_view.replying_on', ['id' => $escalation->id]))
             ->assertSee(__('padmission-tickets::tickets.linked_view.read_only'))
             ->assertDontSeeHtml('pad-ti-linked__close')
+            ->assertDontSeeHtml('pad-ti-transcript__title')
             ->assertActionHasLabel('show-linked', __('padmission-tickets::tickets.linked_view.hide', ['id' => $original->id]));
     });
 

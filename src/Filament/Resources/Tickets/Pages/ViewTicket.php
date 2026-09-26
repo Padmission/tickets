@@ -183,6 +183,7 @@ class ViewTicket extends EditRecord
                                         'escalatedTicket' => $this->getRecord(),
                                         'originalTickets' => $this->linkedTickets()->take(1),
                                         'activityService' => resolve(TicketActivityService::class),
+                                        'titleRow' => 'status',
                                     ]),
                             ]),
 

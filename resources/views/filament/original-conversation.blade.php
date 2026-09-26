@@ -6,6 +6,7 @@
     use Padmission\Tickets\TicketPlugin;
 
     $plugin = TicketPlugin::get();
+    $titleRow ??= 'full';
     $viewer = Filament::auth()->user();
 @endphp
 
@@ -25,13 +26,19 @@
 
         <section class="pad-ti-transcript__ticket">
             <header class="pad-ti-transcript__header">
-                <div class="pad-ti-transcript__title">
-                    <x-filament::badge size="sm" color="gray">#{{ $ticket->getKey() }}</x-filament::badge>
-                    <x-filament::badge size="sm" :color="$ticket->status?->colorPalette">
-                        {{ $ticket->status?->display_name }}
-                    </x-filament::badge>
-                    <span>{{ $ticket->subject }}</span>
-                </div>
+                @if ($titleRow !== 'none')
+                    <div class="pad-ti-transcript__title">
+                        @if ($titleRow === 'full')
+                            <x-filament::badge size="sm" color="gray">#{{ $ticket->getKey() }}</x-filament::badge>
+                        @endif
+                        <x-filament::badge size="sm" :color="$ticket->status?->colorPalette">
+                            {{ $ticket->status?->display_name }}
+                        </x-filament::badge>
+                        @if ($titleRow === 'full')
+                            <span>{{ $ticket->subject }}</span>
+                        @endif
+                    </div>
+                @endif
 
                 <dl class="pad-ti-transcript__people">
                     <div>

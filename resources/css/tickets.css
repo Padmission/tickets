@@ -292,6 +292,10 @@
 	}
 
 	.pad-ti-linked__title {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: calc(var(--spacing) * 2);
 		font-weight: var(--font-weight-semibold);
 	}
 
