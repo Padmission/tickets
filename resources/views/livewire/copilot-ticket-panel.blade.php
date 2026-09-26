@@ -183,16 +183,46 @@
             </div>
 
             @if (! $activeTicket->isClosed)
-                <button
-                    type="button"
-                    wire:click="resolveTicket"
-                    wire:loading.attr="disabled"
-                    wire:target="resolveTicket"
-                    class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
-                >
-                    <x-filament::icon icon="heroicon-o-check-circle" class="h-4 w-4" />
-                    {{ __('padmission-tickets::tickets.copilot.resolve') }}
-                </button>
+                <div x-data class="shrink-0">
+                    <button
+                        type="button"
+                        x-on:click="$refs.resolveDialog.showModal()"
+                        wire:loading.attr="disabled"
+                        wire:target="resolveTicket"
+                        aria-haspopup="dialog"
+                        class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
+                    >
+                        <x-filament::icon icon="heroicon-o-check-circle" class="h-4 w-4" />
+                        {{ __('padmission-tickets::tickets.copilot.resolve') }}
+                    </button>
+
+                    {{-- A native modal dialog sits in the top layer, above the assistant's slide-over, and traps focus and closes on Escape by itself. --}}
+                    <dialog
+                        x-ref="resolveDialog"
+                        class="pad-ti-confirm"
+                        aria-labelledby="copilot-resolve-heading-{{ $activeTicket->getKey() }}"
+                        aria-describedby="copilot-resolve-description-{{ $activeTicket->getKey() }}"
+                    >
+                        <h2 id="copilot-resolve-heading-{{ $activeTicket->getKey() }}" class="pad-ti-confirm__heading">
+                            {{ __('padmission-tickets::tickets.copilot.resolve_confirm.heading') }}
+                        </h2>
+                        <p id="copilot-resolve-description-{{ $activeTicket->getKey() }}" class="pad-ti-confirm__description">
+                            {{ __('padmission-tickets::tickets.copilot.resolve_confirm.description') }}
+                        </p>
+                        <div class="pad-ti-confirm__actions">
+                            <x-filament::button color="gray" x-on:click="$refs.resolveDialog.close()">
+                                {{ __('padmission-tickets::tickets.copilot.cancel') }}
+                            </x-filament::button>
+                            <x-filament::button
+                                wire:click="resolveTicket"
+                                x-on:click="$refs.resolveDialog.close()"
+                                data-copilot-resolve-confirm
+                            >
+                                {{ __('padmission-tickets::tickets.copilot.resolve_confirm.submit') }}
+                            </x-filament::button>
+                        </div>
+                    </dialog>
+                </div>
             @endif
         </div>
 

@@ -46,3 +46,21 @@ it('hides action when ticket is closed', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertActionHidden(CloseTicketAction::class);
 });
+
+it('says what closing does before it closes', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $ticket = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionExists(CloseTicketAction::class, fn (CloseTicketAction $action): bool => ! $action->isModalSlideOver())
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalSee([
+            'Close this ticket?',
+            'The requester is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
+            'Close ticket',
+        ]);
+
+    expect($ticket->refresh()->isClosed)->toBeFalse();
+});

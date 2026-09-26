@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
@@ -38,4 +39,25 @@ it('opens the ticket without marking it seen while seen tracking is skipped', fu
         ->assertSet('view', 'detail');
 
     expect($this->ticket->ticketUserStates()->where('user_id', $this->user->id)->exists())->toBeFalse();
+});
+
+it('asks before resolving, and only the dialog\'s button resolves', function () {
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
+        ->assertDontSeeHtml('<button
+                        type="button"
+                        wire:click="resolveTicket"')
+        ->assertSee('Resolve this ticket?')
+        ->assertSee('This closes the ticket and lets support know. Nobody can reply to it after that, and it can\'t be reopened.')
+        ->assertSee('Resolve ticket');
+});
+
+it('resolves the ticket once confirmed', function () {
+    (new TicketStatusSeeder)->run();
+
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->call('resolveTicket')
+        ->assertDontSee('Resolve this ticket?');
+
+    expect($this->ticket->refresh()->isClosed)->toBeTrue();
 });

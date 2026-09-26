@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Tables\Columns\TextColumn;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
@@ -134,3 +135,25 @@ it('finds a ticket by the number quoted from an email', function (string $prefix
         ->assertCanSeeTableRecords([$wanted])
         ->assertCanNotSeeTableRecords([$other]);
 })->with(['plain' => '', 'with hash' => '#']);
+
+it('offers the ticket number as a sortable column that is off until chosen', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $first = Ticket::factory()->open()->create();
+    $second = Ticket::factory()->open()->create();
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnExists('id', fn (TextColumn $column): bool => $column->isToggleable()
+            && $column->isToggledHiddenByDefault()
+            && $column->isSortable()
+            && $column->getLabel() === 'Ticket #')
+        ->assertCanNotRenderTableColumn('id')
+        ->toggleAllTableColumns()
+        ->assertCanRenderTableColumn('id')
+        ->sortTable('id', 'desc')
+        ->assertCanSeeTableRecords([$second, $first], inOrder: true)
+        ->searchTable('#'.$first->id)
+        ->assertCanSeeTableRecords([$first])
+        ->assertCanNotSeeTableRecords([$second]);
+});

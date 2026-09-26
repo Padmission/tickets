@@ -26,6 +26,8 @@ class CloseTicketAction extends Action
         $this
             ->label(__('padmission-tickets::tickets.actions.close.label'))
             ->modalHeading(__('padmission-tickets::tickets.actions.close.modal_heading'))
+            ->modalDescription(__('padmission-tickets::tickets.actions.close.modal_description'))
+            ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.close.submit'))
             ->button()
             ->color('gray')
             ->hidden(function ($record): bool {
@@ -36,6 +38,7 @@ class CloseTicketAction extends Action
                 return $record->isClosed;
             })
             ->requiresConfirmation()
+            ->slideOver(false)
             ->icon('heroicon-o-check-circle');
 
         $hasDispositions = $this->dispositionsExist();

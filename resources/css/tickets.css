@@ -402,3 +402,46 @@
 	text-decoration: underline dotted;
 	text-underline-offset: 0.2em;
 }
+
+.pad-ti-confirm {
+	width: min(26rem, calc(100vw - 2rem));
+	margin: auto;
+	padding: calc(var(--spacing) * 6);
+	border: 0;
+	border-radius: var(--radius-xl);
+	background: white;
+	color: var(--gray-950);
+	box-shadow: var(--shadow-xl);
+
+	&::backdrop {
+		background: rgb(3 7 18 / 0.5);
+	}
+
+	.dark & {
+		background: var(--gray-900);
+		color: white;
+		box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
+	}
+}
+
+.pad-ti-confirm__heading {
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+}
+
+.pad-ti-confirm__description {
+	margin-top: calc(var(--spacing) * 2);
+	font-size: var(--text-sm);
+	color: var(--gray-500);
+
+	.dark & {
+		color: var(--gray-400);
+	}
+}
+
+.pad-ti-confirm__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: calc(var(--spacing) * 3);
+	margin-top: calc(var(--spacing) * 6);
+}

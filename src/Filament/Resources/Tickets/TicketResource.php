@@ -160,6 +160,13 @@ class TicketResource extends Resource
                     );
             })
             ->columns([
+                // Off by default: the number is a reference to quote, and the subject
+                // search already finds a ticket by it.
+                TextColumn::make('id')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.ticket_number'))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
                     ->badge()

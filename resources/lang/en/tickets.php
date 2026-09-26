@@ -23,7 +23,9 @@ return [
     'actions' => [
         'close' => [
             'label' => 'Close',
-            'modal_heading' => 'Close Ticket',
+            'modal_heading' => 'Close this ticket?',
+            'modal_description' => 'The requester is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
+            'submit' => 'Close ticket',
             'disposition' => [
                 'label' => 'Disposition',
             ],
@@ -144,6 +146,11 @@ return [
         'cancel' => 'Cancel',
         'create' => 'Create ticket',
         'resolve' => 'Resolve',
+        'resolve_confirm' => [
+            'heading' => 'Resolve this ticket?',
+            'description' => 'This closes the ticket and lets support know. Nobody can reply to it after that, and it can\'t be reopened.',
+            'submit' => 'Resolve ticket',
+        ],
         'reply' => 'Reply',
         'send_reply' => 'Send reply',
         'unread' => 'Unread',
@@ -173,6 +180,7 @@ return [
             'turn' => 'Waiting on',
             'status' => 'Status',
             'priority' => 'Priority',
+            'ticket_number' => 'Ticket #',
             'subject' => 'Subject',
             'assignee' => 'Assigned to',
             'unassigned' => 'Unassigned',
