@@ -202,3 +202,13 @@ it('shows the first of several roles and keeps the rest in a tooltip', function 
         ->assertSeeHtml('Household Specialist <span class="pad-ti-more"')
         ->assertSeeHtml('aria-label="Household Specialist, Inspector, Request Payments">+2</span>');
 });
+
+it('shows the ticket number once, as a small reference under the heading', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $ticket = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSeeHtml('<span class="pad-ti-ticket-number">Ticket #'.$ticket->id.'</span>');
+});

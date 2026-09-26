@@ -285,8 +285,8 @@ describe('Escalation explanation', function () {
         $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee('Escalated. Replies come to you on', escape: false)
-            ->assertSee("#{$escalated->id}");
+            ->assertSee('Escalated. Replies appear on the escalation ticket.')
+            ->assertSee('View escalation');
     });
 
     it('explains where an escalated ticket came from', function () {

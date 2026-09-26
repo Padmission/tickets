@@ -56,17 +56,18 @@ describe('Adding to an existing escalation', function () {
 
     it('adds the ticket and records it on both tickets', function () {
         $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
-        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        $requester = User::factory()->create(['name' => 'Rita Requester']);
+        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null, 'submitter_id' => $requester->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->callAction(escalationAction(AddToEscalationAction::class), ['escalation' => $escalation->id])
             ->assertHasNoActionErrors();
 
         expect($ticket->refresh()->linked_ticket_id)->toBe($escalation->id)
-            ->and($ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->content)
-            ->toBe("Added to escalation #{$escalation->id} by Tess Support")
-            ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->first()->content)
-            ->toBe("Original #{$ticket->id} added by Tess Support");
+            ->and($ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->plainTextContent())
+            ->toBe('Added to the Platform Support escalation by Tess Support')
+            ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->first()->plainTextContent())
+            ->toBe('Rita Requester\'s ticket added to this escalation by Tess Support');
     });
 
     it('says which escalation the ticket is part of and how many others share it', function () {
@@ -75,8 +76,10 @@ describe('Adding to an existing escalation', function () {
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee("#{$escalation->id}")
-            ->assertSee('with 2 other tickets')
+            ->assertSee('Escalated to Platform Support, with 2 other tickets.')
+            ->assertSee('Platform Support\'s replies appear on the escalation ticket.')
+            ->assertSee('View escalation')
+            ->assertSeeHtml('title="Ticket #'.$escalation->id.'"')
             ->assertActionVisible(escalationAction(RemoveFromEscalationAction::class));
     });
 
@@ -88,9 +91,42 @@ describe('Adding to an existing escalation', function () {
             ->callAction(escalationAction(RemoveFromEscalationAction::class));
 
         expect($ticket->refresh()->linked_ticket_id)->toBeNull()
-            ->and($ticket->ticketActivities()->where('type', ActivityType::RemovedFromEscalation)->first()->content)
-            ->toBe("Removed from escalation #{$escalation->id} by Tess Support")
+            ->and($ticket->ticketActivities()->where('type', ActivityType::RemovedFromEscalation)->first()->plainTextContent())
+            ->toBe('Removed from the Platform Support escalation by Tess Support')
             ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalRemoved)->exists())->toBeTrue();
+    });
+
+    it('links a history note to the other ticket only when the viewer can open it', function () {
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $escalation->id);
+
+        $note = fn (): string => $ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->content;
+
+        expect($note())->toContain('title="Ticket #'.$escalation->id.'"', '>the Platform Support escalation</a>');
+
+        TicketPlugin::get()->customizeTicketQuery(fn ($query) => $query->whereKeyNot($escalation->id));
+
+        expect($note())->toBe('Added to the Platform Support escalation by Tess Support');
+    });
+
+    it('escapes names in history notes', function () {
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $requester = User::factory()->create(['name' => '<b>Rita</b>']);
+        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null, 'submitter_id' => $requester->id]);
+        resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $escalation->id);
+
+        expect($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->first()->content)
+            ->toContain('&lt;b&gt;Rita&lt;/b&gt;')
+            ->not->toContain('<b>');
+    });
+
+    it('names the other ticket plainly in older notes whose ticket is gone', function () {
+        $ticket = Ticket::factory()->open()->create();
+        $ticket->addTicketActivity(ActivityType::AddedToEscalation, ActivitySender::System, $this->user->id, ['escalation' => 999999]);
+
+        expect($ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->content)
+            ->toBe('Added to the escalation by Tess Support');
     });
 
     it('refuses to open a new escalation for a ticket already linked to one it cannot see', function () {

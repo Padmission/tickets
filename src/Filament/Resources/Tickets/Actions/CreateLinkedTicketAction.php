@@ -137,7 +137,7 @@ class CreateLinkedTicketAction extends Action
                     Notification::make()
                         ->danger()
                         ->title(__('padmission-tickets::tickets.resources.tickets.link_refused.title'))
-                        ->body(__('padmission-tickets::tickets.resources.tickets.link_refused.already_escalated', ['id' => $record->linked_ticket_id]))
+                        ->body(__('padmission-tickets::tickets.resources.tickets.link_refused.already_escalated'))
                         ->send();
 
                     $action->halt();

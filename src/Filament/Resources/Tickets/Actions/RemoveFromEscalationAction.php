@@ -7,6 +7,7 @@ use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketEscalationLinks;
+use Padmission\Tickets\TicketPlugin;
 
 class RemoveFromEscalationAction extends Action
 {
@@ -22,7 +23,7 @@ class RemoveFromEscalationAction extends Action
         $this
             ->label(__('padmission-tickets::tickets.actions.remove_from_escalation.label'))
             ->modalHeading(__('padmission-tickets::tickets.actions.remove_from_escalation.label'))
-            ->modalDescription(fn (Ticket $record): string => __('padmission-tickets::tickets.actions.remove_from_escalation.modal_description', ['id' => $record->linked_ticket_id]))
+            ->modalDescription(__('padmission-tickets::tickets.actions.remove_from_escalation.modal_description'))
             ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.remove_from_escalation.submit'))
             ->requiresConfirmation()
             ->icon(Heroicon::OutlinedLinkSlash)
@@ -30,15 +31,13 @@ class RemoveFromEscalationAction extends Action
             ->link()
             ->visible(fn (Ticket $record): bool => $record->isInCurrentPanel() && filled($record->linked_ticket_id))
             ->action(function (Ticket $record): void {
-                $escalationId = $record->linked_ticket_id;
-
                 if (! resolve(TicketEscalationLinks::class)->removeFromEscalation($record)) {
                     return;
                 }
 
                 Notification::make()
                     ->success()
-                    ->title(__('padmission-tickets::tickets.actions.remove_from_escalation.success', ['id' => $escalationId]))
+                    ->title(TicketPlugin::teamText('padmission-tickets::tickets.actions.remove_from_escalation.success', TicketPlugin::get()->getEscalationTargetName()))
                     ->send();
             });
     }

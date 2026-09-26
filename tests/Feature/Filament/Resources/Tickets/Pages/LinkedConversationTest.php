@@ -37,20 +37,24 @@ describe('beside the chat', function () {
     });
 
     it('shows an original beside the reply box and says where the reply goes', function () {
+        TicketPlugin::get()->describeTicketOriginUsing(fn (): string => 'Acme Housing');
+
         $escalation = Ticket::factory()->open()->create();
         $original = originalWithMessage($escalation, 'The rent looks wrong');
+        $requester = 'Rita '.md5('The rent looks wrong');
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
-            ->assertActionHasLabel('show-linked', __('padmission-tickets::tickets.linked_view.show_beside', ['id' => $original->id]))
+            ->assertActionHasLabel('show-linked', 'Show linked ticket')
             ->assertDontSee('The rent looks wrong')
             ->callAction('show-linked')
             ->assertSet('linkedTicketId', $original->id)
             ->assertSee(['The rent looks wrong', 'Rita '.md5('The rent looks wrong')])
-            ->assertSee(__('padmission-tickets::tickets.linked_view.replying_on', ['id' => $escalation->id]))
+            ->assertSee('Reply on the escalation with Acme Housing')
+            ->assertSee("{$requester}'s original ticket")
             ->assertSee(__('padmission-tickets::tickets.linked_view.read_only'))
             ->assertDontSeeHtml('pad-ti-linked__close')
             ->assertDontSeeHtml('pad-ti-transcript__title')
-            ->assertActionHasLabel('show-linked', __('padmission-tickets::tickets.linked_view.hide', ['id' => $original->id]));
+            ->assertActionHasLabel('show-linked', 'Hide linked ticket');
     });
 
     it('switches between several originals and closes again', function () {
@@ -59,8 +63,11 @@ describe('beside the chat', function () {
         $second = originalWithMessage($escalation, 'Second original message');
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
-            ->assertActionHasLabel('show-linked', __('padmission-tickets::tickets.linked_view.show_beside_many', ['count' => 2]))
+            ->assertActionHasLabel('show-linked', 'Show linked ticket')
             ->call('showLinked', $second->id)
+            ->assertSeeHtml('<span class="pad-ti-linked__tab-number">· #'.$first->id.'</span>')
+            ->assertSeeHtml('<span class="pad-ti-linked__tab-number">· #'.$second->id.'</span>')
+            ->assertSeeHtml("content: '{$second->subject}'")
             ->assertSee('Second original message')
             ->assertDontSee('First original message')
             ->call('showLinked', $first->id)
@@ -68,6 +75,14 @@ describe('beside the chat', function () {
             ->call('closeLinked')
             ->assertSet('linkedTicketId', null)
             ->assertDontSee('First original message');
+    });
+
+    it('falls back to naming the escalation alone when it has no organization', function () {
+        $escalation = Ticket::factory()->open()->create();
+        originalWithMessage($escalation, 'No organization');
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSee('Reply on this escalation');
     });
 
     it('ignores a ticket that is not linked to this one', function () {
@@ -92,10 +107,16 @@ describe('beside the chat', function () {
         ]);
         $original = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
 
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+        $original->update(['submitter_id' => User::factory()->create(['name' => 'Rita Requester'])->id]);
+
         Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertActionHasLabel('show-linked', 'Show linked ticket')
             ->callAction('show-linked')
             ->assertSee('Reply from the escalation team')
-            ->assertSee(__('padmission-tickets::tickets.linked_view.replying_on', ['id' => $original->id]));
+            ->assertSee('Escalation to Platform Support')
+            ->assertSee('Reply on Rita Requester\'s original ticket')
+            ->assertActionHasLabel('show-linked', 'Hide linked ticket');
     });
 });
 
@@ -107,7 +128,7 @@ it('offers a drawer instead when the panel asks for one', function () {
     $original = originalWithMessage($escalation, 'Drawer message');
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
-        ->assertActionHasLabel('show-linked', __('padmission-tickets::tickets.linked_view.open', ['id' => $original->id]))
+        ->assertActionHasLabel('show-linked', 'Show linked ticket')
         ->callAction('show-linked')
         ->assertSee('Drawer message')
         ->assertSeeHtml('pad-ti-linked--drawer');

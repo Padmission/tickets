@@ -89,6 +89,13 @@ class TicketResource extends Resource
      * Record-level access is enforced separately by the ticket policy's view() method,
      * so this lives on the collection surface only.
      */
+    public static function ticketNumberFromSearch(string $search): ?int
+    {
+        $number = ltrim(trim($search), '#');
+
+        return ctype_digit($number) && strlen($number) <= 18 ? (int) $number : null;
+    }
+
     public static function scopeListQueryToSupporterOrSubmitter(Builder $query): Builder
     {
         $userId = auth()->id();
@@ -182,7 +189,11 @@ class TicketResource extends Resource
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->html()
-                    ->searchable(),
+                    // Numbers are not shown in the list, but they are in every email subject,
+                    // so "1842" or "#1842" still finds the ticket.
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query
+                        ->whereLike($query->qualifyColumn('subject'), "%{$search}%")
+                        ->when(static::ticketNumberFromSearch($search), fn (Builder $query, int $id): Builder => $query->orWhere($query->getModel()->getQualifiedKeyName(), $id))),
 
                 ...TicketPlugin::get()->getAdditionalTableColumns(),
 

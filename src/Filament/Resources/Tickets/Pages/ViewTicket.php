@@ -117,6 +117,18 @@ class ViewTicket extends EditRecord
         return new HtmlString($ticket->subject);
     }
 
+    /*
+     * The number is a reference to quote (it is in every email subject), not
+     * something to read, so it sits once, small, under the heading.
+     */
+    public function getSubheading(): string|Htmlable|null
+    {
+        return new HtmlString(sprintf(
+            '<span class="pad-ti-ticket-number">%s</span>',
+            e(__('padmission-tickets::tickets.ticket_number', ['id' => $this->getRecord()->getKey()])),
+        ));
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -159,9 +171,7 @@ class ViewTicket extends EditRecord
             ->components([
                 // The heading stays put whether or not a linked ticket is open, for the same reason.
                 Section::make()
-                    ->heading(fn (): ?string => $this->linkedTickets()->isEmpty() ? null : __('padmission-tickets::tickets.linked_view.replying_on', [
-                        'id' => $this->getRecord()->getKey(),
-                    ]))
+                    ->heading(fn (): ?string => $this->replyHeading())
                     ->columnSpan(fn (): array => ['lg' => match ($this->linkedView()) {
                         TicketPlugin::LINKED_VIEW_BESIDE => 7,
                         TicketPlugin::LINKED_VIEW_DRAWER => 12,
@@ -380,32 +390,72 @@ class ViewTicket extends EditRecord
             'linked' => $this->linkedTicket(),
             'linkedTickets' => $this->linkedTickets(),
             'drawer' => $drawer,
+            'headings' => $this->linkedTickets()->mapWithKeys(fn (Ticket $ticket): array => [$ticket->getKey() => $this->linkedTicketHeading($ticket)]),
             'activityService' => resolve(TicketActivityService::class),
         ];
     }
 
+    /*
+     * Whether this page is the escalation (its linked tickets are originals)
+     * or an original (its linked ticket is the escalation).
+     */
+    protected function isShowingOriginals(): bool
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        return $record->isInCurrentPanel() && $record->childTickets()->exists();
+    }
+
     protected function showLinkedLabel(): string
     {
-        $tickets = $this->linkedTickets();
-        $key = 'padmission-tickets::tickets.linked_view.'.(TicketPlugin::get()->getLinkedConversationView() === TicketPlugin::LINKED_VIEW_DRAWER ? 'open' : 'show_beside');
+        return __('padmission-tickets::tickets.linked_view.'.($this->linkedTicketId === null ? 'show' : 'hide'));
+    }
 
-        if ($this->linkedTicketId !== null) {
-            return __('padmission-tickets::tickets.linked_view.hide', ['id' => $this->linkedTicketId]);
+    protected function replyHeading(): ?string
+    {
+        if ($this->linkedTickets()->isEmpty()) {
+            return null;
         }
 
-        return $tickets->count() > 1
-            ? __("{$key}_many", ['count' => $tickets->count()])
-            : __($key, ['id' => $tickets->first()?->getKey()]);
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+        $key = 'padmission-tickets::tickets.linked_view.';
+
+        if (! $this->isShowingOriginals()) {
+            $requester = $record->requesterName();
+
+            return filled($requester)
+                ? __($key.'reply_on_original', ['name' => $requester])
+                : __($key.'reply_on_this_original');
+        }
+
+        $organization = TicketPlugin::get()->describeTicketOrigin($record)
+            ?? $this->linkedTickets()->map(fn (Ticket $original): ?string => TicketPlugin::get()->describeTicketOrigin($original))->filter()->first();
+
+        return filled($organization)
+            ? __($key.'reply_on_escalation_with', ['organization' => $organization])
+            : __($key.'reply_on_escalation');
+    }
+
+    protected function linkedTicketHeading(Ticket $linked): string
+    {
+        $key = 'padmission-tickets::tickets.linked_view.';
+
+        if ($this->isShowingOriginals()) {
+            $requester = $linked->requesterName();
+
+            return filled($requester) ? __($key.'original_heading', ['name' => $requester]) : __($key.'original_heading_unnamed');
+        }
+
+        return TicketPlugin::teamText($key.'escalation_heading', TicketPlugin::find($linked->panel)?->getSupportTeamName());
     }
 
     protected function pinnedLinkedHeading(): string
     {
         $linked = $this->linkedTickets()->first();
 
-        return $linked === null ? '' : __('padmission-tickets::tickets.linked_view.pinned', [
-            'id' => $linked->getKey(),
-            'subject' => strip_tags($linked->subject),
-        ]);
+        return $linked === null ? '' : static::linkedTicketHeading($linked);
     }
 
     protected static function describeMembership(Ticket $record): Htmlable
@@ -415,16 +465,18 @@ class ViewTicket extends EditRecord
             ->whereKeyNot($record->getKey())
             ->count();
 
-        $link = new HtmlString(sprintf(
-            '<a href="%s" class="pad-ti-link">#%s</a>',
-            e(TicketResource::getUrl('view', ['record' => $escalationId])),
-            e($escalationId),
-        ));
-
         $team = TicketPlugin::get($record->panel)->getEscalationTargetName();
         $key = 'padmission-tickets::tickets.resources.tickets.membership'.($team === null ? '' : '_to');
+        $replace = ['count' => $others, 'team' => $team];
 
-        return new HtmlString(trans_choice($key, $others, ['link' => $link, 'count' => $others, 'team' => e($team)]));
+        return new HtmlString(sprintf(
+            '%s %s <a href="%s" class="pad-ti-link" title="%s">%s</a>',
+            e(trans_choice($key, $others, $replace)),
+            e(TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.membership_replies', $team)),
+            e(TicketResource::getUrl('view', ['record' => $escalationId])),
+            e(__('padmission-tickets::tickets.ticket_number', ['id' => $escalationId])),
+            e(__('padmission-tickets::tickets.resources.tickets.view_escalation')),
+        ));
     }
 
     protected static function isEscalatedHere(Ticket $record): bool

@@ -118,3 +118,19 @@ describe('Tab badges', function () {
             ->and($tabs['my_linked']->getBadge())->toBe('1');
     });
 });
+
+it('finds a ticket by the number quoted from an email', function (string $prefix) {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $wanted = Ticket::factory()->open()->create(['subject' => 'Rent question']);
+    $other = Ticket::factory()->open()->create(['subject' => 'Something else']);
+
+    Livewire::test(ListTickets::class)
+        ->searchTable($prefix.$wanted->id)
+        ->assertCanSeeTableRecords([$wanted])
+        ->assertCanNotSeeTableRecords([$other])
+        ->searchTable('rent')
+        ->assertCanSeeTableRecords([$wanted])
+        ->assertCanNotSeeTableRecords([$other]);
+})->with(['plain' => '', 'with hash' => '#']);

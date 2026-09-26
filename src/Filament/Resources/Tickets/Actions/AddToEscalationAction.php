@@ -50,7 +50,7 @@ class AddToEscalationAction extends Action
                     Notification::make()
                         ->danger()
                         ->title(__('padmission-tickets::tickets.resources.tickets.link_refused.title'))
-                        ->body(__("padmission-tickets::tickets.resources.tickets.link_refused.{$refusal}", ['id' => $record->linked_ticket_id]))
+                        ->body(__("padmission-tickets::tickets.resources.tickets.link_refused.{$refusal}"))
                         ->send();
 
                     $this->halt();
@@ -58,7 +58,7 @@ class AddToEscalationAction extends Action
 
                 Notification::make()
                     ->success()
-                    ->title(__('padmission-tickets::tickets.actions.add_to_escalation.success', ['id' => $data['escalation']]))
+                    ->title(TicketPlugin::teamText('padmission-tickets::tickets.actions.add_to_escalation.success', TicketPlugin::get()->getEscalationTargetName()))
                     ->send();
             });
     }

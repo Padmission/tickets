@@ -210,6 +210,16 @@
 	}
 }
 
+.pad-ti-ticket-number {
+	font-size: var(--text-sm);
+	color: var(--color-gray-500);
+	font-variant-numeric: tabular-nums;
+
+	.dark & {
+		color: var(--color-gray-400);
+	}
+}
+
 .pad-ti-field-help {
 	display: flex;
 	flex-direction: column;
@@ -285,9 +295,7 @@
 
 	.pad-ti-linked__eyebrow {
 		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		font-weight: var(--font-weight-medium);
 		color: var(--color-gray-500);
 	}
 
@@ -314,6 +322,11 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: calc(var(--spacing) * 2);
+	}
+
+	.pad-ti-linked__tab-number {
+		opacity: 0.7;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.pad-ti-linked__tab--active {

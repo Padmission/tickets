@@ -82,6 +82,13 @@ class Ticket extends Model
         return $query->whereNotNull('closed_at');
     }
 
+    public function requesterName(): ?string
+    {
+        return $this->submitter !== null
+            ? Filament::getUserName($this->submitter)
+            : $this->submitter_data?->name;
+    }
+
     public function isInCurrentPanel(): bool
     {
         return $this->panel === Filament::getCurrentOrDefaultPanel()->getId();

@@ -1,4 +1,5 @@
 import __ from "./trans.js";
+import config from "./config.js";
 
 class HttpError {
 	constructor(response) {
@@ -27,6 +28,7 @@ export default async function fetchJson(url, data = {}, method = "GET") {
 			"Content-Type": "application/json",
 			Accept: "application/json",
 			"X-Requested-With": "XMLHttpRequest",
+			"X-Padmission-Tickets-Panel": config.panelId || "",
 			"X-CSRF-TOKEN":
 				document
 					.querySelector('meta[name="csrf-token"]')

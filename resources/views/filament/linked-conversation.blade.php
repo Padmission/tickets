@@ -8,9 +8,11 @@
 
     <header class="pad-ti-linked__header">
         <div>
-            <div class="pad-ti-linked__eyebrow">{{ __('padmission-tickets::tickets.linked_view.read_only') }}</div>
+            <div class="pad-ti-linked__eyebrow">
+                {{ $headings[$linked->getKey()] }} · {{ __('padmission-tickets::tickets.linked_view.read_only') }}
+            </div>
             <div class="pad-ti-linked__title">
-                #{{ $linked->getKey() }} · {{ $linked->subject }}
+                {{ $linked->subject }}
                 <x-filament::badge size="sm" :color="$linked->status?->colorPalette">
                     {{ $linked->status?->display_name }}
                 </x-filament::badge>
@@ -26,8 +28,11 @@
                     wire:click="showLinked({{ $ticket->getKey() }})"
                     @class(['pad-ti-linked__tab', 'pad-ti-linked__tab--active' => $ticket->is($linked)])
                     @if ($ticket->is($linked)) aria-current="true" @endif
+                    x-data
+                    x-tooltip="{ content: @js($ticket->subject), theme: $store.theme }"
                 >
-                    #{{ $ticket->getKey() }}
+                    {{ $ticket->requesterName() ?? $headings[$ticket->getKey()] }}
+                    <span class="pad-ti-linked__tab-number">· #{{ $ticket->getKey() }}</span>
                 </button>
             @endforeach
         </nav>

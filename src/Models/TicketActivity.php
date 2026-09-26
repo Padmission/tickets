@@ -2,11 +2,13 @@
 
 namespace Padmission\Tickets\Models;
 
+use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Database\Factories\TicketActivityFactory;
@@ -14,6 +16,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
@@ -127,10 +130,10 @@ class TicketActivity extends Model
                 'from' => $this->priorityLabel($this->activityData('from')),
                 'to' => $this->priorityLabel($this->activityData('to')),
             ]),
-            ActivityType::AddedToEscalation => __('padmission-tickets::activities.added_to_escalation', ['id' => $this->activityData('escalation'), 'name' => $this->actorName()]),
-            ActivityType::RemovedFromEscalation => __('padmission-tickets::activities.removed_from_escalation', ['id' => $this->activityData('escalation'), 'name' => $this->actorName()]),
-            ActivityType::OriginalAdded => __('padmission-tickets::activities.original_added', ['id' => $this->activityData('original'), 'name' => $this->actorName()]),
-            ActivityType::OriginalRemoved => __('padmission-tickets::activities.original_removed', ['id' => $this->activityData('original'), 'name' => $this->actorName()]),
+            ActivityType::AddedToEscalation => $this->escalationNote('added_to_escalation'),
+            ActivityType::RemovedFromEscalation => $this->escalationNote('removed_from_escalation'),
+            ActivityType::OriginalAdded => $this->originalNote('original_added'),
+            ActivityType::OriginalRemoved => $this->originalNote('original_removed'),
             default => $value
         });
     }
@@ -150,6 +153,102 @@ class TicketActivity extends Model
         }
 
         return resolve(GetUserDisplayName::class)($this->user_id);
+    }
+
+    /*
+     * History notes name the other ticket by its relationship rather than its
+     * number, which is a database id and means nothing on its own. The number
+     * stays in the link's tooltip for anyone quoting it.
+     */
+    protected function escalationNote(string $key): string
+    {
+        $escalation = $this->linkedTicket('escalation');
+        $team = $escalation === null ? null : TicketPlugin::find($escalation->panel)?->getSupportTeamName();
+
+        $label = TicketPlugin::teamText('padmission-tickets::activities.escalation', $team);
+
+        return __("padmission-tickets::activities.{$key}", [
+            'escalation' => $this->ticketReference($escalation, $label),
+            'name' => e($this->actorName()),
+        ]);
+    }
+
+    protected function originalNote(string $key): string
+    {
+        $original = $this->linkedTicket('original');
+        $requester = $original?->requesterName();
+
+        $label = filled($requester)
+            ? __('padmission-tickets::activities.original_of', ['name' => $requester])
+            : __('padmission-tickets::activities.original');
+
+        return __("padmission-tickets::activities.{$key}", [
+            'original' => $this->ticketReference($original, $label),
+            'name' => e($this->actorName()),
+        ]);
+    }
+
+    protected function linkedTicket(string $key): ?Ticket
+    {
+        $id = $this->activityData($key);
+
+        if (blank($id)) {
+            return null;
+        }
+
+        // Loaded with the reading panel's scope, as the chat's own senders are, so a
+        // panel that may see other organizations' people can name the requester.
+        $modifier = TicketPlugin::find($this->viewerPanelId())?->getRelationshipScopeModifier();
+
+        return TicketPlugin::resolveModelClass(Ticket::class)::withoutGlobalScopes()
+            ->with(['submitter' => fn (Relation $relation) => $modifier === null ? $relation : app()->call($modifier, ['relation' => $relation, 'model' => 'submitter'])])
+            ->find($id);
+    }
+
+    protected function ticketReference(?Ticket $ticket, string $label): string
+    {
+        $url = $ticket === null ? null : $this->viewUrlFor($ticket);
+
+        if ($url === null) {
+            return e($label);
+        }
+
+        return sprintf(
+            '<a href="%s" title="%s">%s</a>',
+            e($url),
+            e(__('padmission-tickets::activities.ticket_number', ['id' => $ticket->getKey()])),
+            e($label),
+        );
+    }
+
+    /*
+     * Only a ticket the viewer could open from the panel they are reading in
+     * gets a link. The chat widget reads history outside any panel request, so
+     * it names its panel in a header.
+     */
+    protected function viewUrlFor(Ticket $ticket): ?string
+    {
+        $panelId = $this->viewerPanelId();
+        $plugin = TicketPlugin::find($panelId);
+
+        if ($plugin === null || auth()->user()?->can('view', $ticket) !== true) {
+            return null;
+        }
+
+        if ($plugin->getTicketQuery()->whereKey($ticket->getKey())->doesntExist()) {
+            return null;
+        }
+
+        return rescue(
+            fn (): string => TicketResource::getUrl('view', ['record' => $ticket->getKey()], panel: $panelId),
+            report: false,
+        );
+    }
+
+    protected function viewerPanelId(): ?string
+    {
+        return Str::after((string) request()->header('X-Padmission-Tickets-Panel'), 'panel-')
+            ?: Filament::getCurrentPanel()?->getId();
     }
 
     protected function activityData(string $key): mixed
