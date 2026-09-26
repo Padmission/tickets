@@ -11,10 +11,6 @@
             <div class="pad-ti-linked__eyebrow">{{ __('padmission-tickets::tickets.linked_view.read_only') }}</div>
             <div class="pad-ti-linked__title">#{{ $linked->getKey() }} · {{ $linked->subject }}</div>
         </div>
-
-        <button type="button" class="pad-ti-linked__close" wire:click="closeLinked">
-            {{ __('padmission-tickets::tickets.linked_view.close') }}
-        </button>
     </header>
 
     @if ($linkedTickets->count() > 1)

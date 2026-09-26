@@ -190,3 +190,15 @@ it('offers a second send button that keeps the ticket waiting on support by defa
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertSeeHtml('keep-waiting-style="'.TicketPlugin::KEEP_WAITING_CHECKBOX.'"');
 });
+
+it('shows the first of several roles and keeps the rest in a tooltip', function () {
+    $submitter = User::factory()->create();
+
+    TicketPlugin::get()->describeUsersUsing(fn (): array => ['Household Specialist', 'Inspector', 'Request Payments']);
+
+    $ticket = Ticket::factory()->create(['submitter_id' => $submitter->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSeeHtml('Household Specialist <span class="pad-ti-more"')
+        ->assertSeeHtml('aria-label="Household Specialist, Inspector, Request Payments">+2</span>');
+});

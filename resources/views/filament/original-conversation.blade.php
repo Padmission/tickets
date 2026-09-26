@@ -2,6 +2,7 @@
     use Filament\Facades\Filament;
     use Padmission\Tickets\Enums\ActivitySender;
     use Padmission\Tickets\Enums\ActivityType;
+    use Padmission\Tickets\Filament\Infolists\UserDescription;
     use Padmission\Tickets\TicketPlugin;
 
     $plugin = TicketPlugin::get();
@@ -14,7 +15,7 @@
             $submitterName = $ticket->submitter
                 ? Filament::getUserName($ticket->submitter)
                 : $ticket->submitter_data?->name;
-            $submitterDescription = $plugin->describeUser($ticket->submitter, $ticket);
+            $submitterDescription = UserDescription::render($plugin->describeUser($ticket->submitter, $ticket));
             $assigneeName = match (true) {
                 $ticket->assignee !== null => Filament::getUserName($ticket->assignee),
                 filled($ticket->assignee_id) => TicketPlugin::find($ticket->panel)?->getSupportTeamName() ?? __('padmission-tickets::tickets.resources.tickets.assigned_elsewhere'),

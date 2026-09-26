@@ -118,11 +118,9 @@ return [
         'open' => 'Open #:id',
         'open_many' => 'Open the :count originals',
         'hide' => 'Hide #:id',
-        'close' => 'Close',
         'read_only' => 'Read-only',
         'switch' => 'Linked tickets',
         'replying_on' => 'Your reply goes to #:id',
-        'show_details' => 'Show the details again',
         'pinned' => '#:id · :subject',
     ],
 

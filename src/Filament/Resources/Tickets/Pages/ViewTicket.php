@@ -163,7 +163,7 @@ class ViewTicket extends EditRecord
                         'id' => $this->getRecord()->getKey(),
                     ]))
                     ->columnSpan(fn (): array => ['lg' => match ($this->linkedView()) {
-                        TicketPlugin::LINKED_VIEW_BESIDE => 6,
+                        TicketPlugin::LINKED_VIEW_BESIDE => 7,
                         TicketPlugin::LINKED_VIEW_DRAWER => 12,
                         default => 8,
                     }])
@@ -198,18 +198,6 @@ class ViewTicket extends EditRecord
                     ->visible(fn (): bool => $this->linkedView() === TicketPlugin::LINKED_VIEW_BESIDE)
                     ->columnSpan(['lg' => 5])
                     ->extraAttributes(['class' => 'pad-ti-linked-col']),
-
-                Actions::make([
-                    Action::make('restore-details')
-                        ->label(__('padmission-tickets::tickets.linked_view.show_details'))
-                        ->icon(Heroicon::OutlinedChevronDoubleLeft)
-                        ->iconButton()
-                        ->tooltip(__('padmission-tickets::tickets.linked_view.show_details'))
-                        ->action(fn () => $this->closeLinked()),
-                ])
-                    ->visible(fn (): bool => $this->linkedView() === TicketPlugin::LINKED_VIEW_BESIDE)
-                    ->columnSpan(['lg' => 1])
-                    ->extraAttributes(['class' => 'pad-ti-rail-strip']),
 
                 View::make('padmission-tickets::filament.linked-conversation')
                     ->viewData(fn (): array => $this->linkedViewData(drawer: true))

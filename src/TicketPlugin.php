@@ -479,7 +479,9 @@ class TicketPlugin implements Plugin
     }
 
     /**
-     * @param  (Closure(Model $user, Ticket $ticket): ?string)|null  $callback
+     * The callback may return one description or a list, such as role names.
+     *
+     * @param  (Closure(Model $user, Ticket $ticket): (string|list<string>|null))|null  $callback
      */
     public function describeUsersUsing(?Closure $callback): static
     {
@@ -488,13 +490,16 @@ class TicketPlugin implements Plugin
         return $this;
     }
 
-    public function describeUser(?Model $user, Ticket $ticket): ?string
+    /**
+     * @return list<string>
+     */
+    public function describeUser(?Model $user, Ticket $ticket): array
     {
         if ($user === null || $this->userDescriber === null) {
-            return null;
+            return [];
         }
 
-        return ($this->userDescriber)($user, $ticket);
+        return array_values(array_filter((array) ($this->userDescriber)($user, $ticket), 'filled'));
     }
 
     /**

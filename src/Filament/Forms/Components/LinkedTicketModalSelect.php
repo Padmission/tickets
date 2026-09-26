@@ -7,6 +7,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\ModalTableSelect;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
+use Padmission\Tickets\Filament\Infolists\UserDescription;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\TicketPlugin;
 
@@ -31,14 +32,10 @@ class LinkedTicketModalSelect extends ModalTableSelect
                 $canViewTicket = Filament::auth()->user()->can('view', $record);
                 $url = $canViewTicket ? TicketResource::getUrl('view', ['record' => $record->id]) : null;
                 $plugin = TicketPlugin::get();
-                $details = collect([
-                    $plugin->describeTicketOrigin($record),
-                    $record->submitter ? __('padmission-tickets::tickets.resources.tickets.requested_by_line', [
-                        'name' => collect([Filament::getUserName($record->submitter), $plugin->describeUser($record->submitter, $record)])
-                            ->filter()
-                            ->implode(', '),
-                    ]) : null,
-                ])->filter()->implode(' · ');
+                $origin = $plugin->describeTicketOrigin($record);
+                $requester = $record->submitter ? Filament::getUserName($record->submitter) : null;
+                $roles = $record->submitter ? UserDescription::render($plugin->describeUser($record->submitter, $record)) : null;
+                $details = filled($origin) || filled($requester);
 
                 return new HtmlString(Blade::render(<<<'BLADE'
                     <div class="ticket-card">
@@ -64,11 +61,17 @@ class LinkedTicketModalSelect extends ModalTableSelect
                             @endunless
                         </div>
 
-                        @if (filled($details))
-                            <div class="ticket-card__details">{{ $details }}</div>
+                        @if ($details)
+                            <div class="ticket-card__details">
+                                {{ $origin }}
+                                @if (filled($origin) && filled($requester)) · @endif
+                                @if (filled($requester))
+                                    {{ __('padmission-tickets::tickets.resources.tickets.requested_by_line', ['name' => $requester]) }}@if ($roles), {{ $roles }}@endif
+                                @endif
+                            </div>
                         @endif
                     </div>
-                BLADE, compact('record', 'url', 'canViewTicket', 'details')));
+                BLADE, compact('record', 'url', 'canViewTicket', 'details', 'origin', 'requester', 'roles')));
             });
     }
 }

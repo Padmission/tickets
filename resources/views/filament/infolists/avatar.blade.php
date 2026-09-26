@@ -1,5 +1,6 @@
 @php
     use Filament\Facades\Filament;
+    use Padmission\Tickets\Filament\Infolists\UserDescription;
     use Padmission\Tickets\TicketPlugin;
 
     $user = $getState();
@@ -8,7 +9,7 @@
     if ($user) {
         $avatarUrl = Filament::getUserAvatarUrl($user);
         $name = Filament::getUserName($user);
-        $description = TicketPlugin::get()->describeUser($user, $getRecord());
+        $description = UserDescription::render(TicketPlugin::get()->describeUser($user, $getRecord()));
     }
 @endphp
 <x-dynamic-component :component="$getEntryWrapperView()" :entry="$entry">

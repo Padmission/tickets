@@ -1,5 +1,6 @@
 @php
     use Filament\Facades\Filament;
+    use Padmission\Tickets\Filament\Infolists\UserDescription;
     use Padmission\Tickets\TicketPlugin;
 
     $ticket = $getRecord();
@@ -10,7 +11,7 @@
             @php
                 $avatarUrl = Filament::getUserAvatarUrl($ticket->submitter);
                 $name = Filament::getUserName($ticket->submitter);
-                $description = TicketPlugin::get()->describeUser($ticket->submitter, $ticket);
+                $description = UserDescription::render(TicketPlugin::get()->describeUser($ticket->submitter, $ticket));
             @endphp
 
             <x-filament::avatar

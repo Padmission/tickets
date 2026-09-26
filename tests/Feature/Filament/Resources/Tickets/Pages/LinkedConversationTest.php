@@ -47,7 +47,9 @@ describe('beside the chat', function () {
             ->assertSet('linkedTicketId', $original->id)
             ->assertSee(['The rent looks wrong', 'Rita '.md5('The rent looks wrong')])
             ->assertSee(__('padmission-tickets::tickets.linked_view.replying_on', ['id' => $escalation->id]))
-            ->assertSee(__('padmission-tickets::tickets.linked_view.read_only'));
+            ->assertSee(__('padmission-tickets::tickets.linked_view.read_only'))
+            ->assertDontSeeHtml('pad-ti-linked__close')
+            ->assertActionHasLabel('show-linked', __('padmission-tickets::tickets.linked_view.hide', ['id' => $original->id]));
     });
 
     it('switches between several originals and closes again', function () {

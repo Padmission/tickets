@@ -481,6 +481,7 @@
 
 	[data-chat-submit-keep-waiting] {
 		margin-left: auto;
+		white-space: nowrap;
 		font-weight: 600;
 		background-color: var(--color-gray-100);
 		color: var(--color-gray-700);

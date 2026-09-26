@@ -295,7 +295,6 @@
 		font-weight: var(--font-weight-semibold);
 	}
 
-	.pad-ti-linked__close,
 	.pad-ti-linked__tab {
 		font-size: var(--text-sm);
 		padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2.5);
@@ -346,10 +345,6 @@
 	}
 }
 
-.pad-ti-rail-strip {
-	justify-content: center;
-}
-
 .pad-ti-pinned-linked {
 	margin: calc(var(--spacing) * 3);
 
@@ -359,6 +354,34 @@
 	}
 }
 
+/*
+ * The chat column sets the row's height; the linked panel fills the same
+ * height and scrolls inside it, so both columns line up.
+ */
 .fi-grid-col:has(> .fi-sc-component > .pad-ti-linked-col) {
 	order: -1;
+	position: relative;
+
+	& > .fi-sc-component {
+		position: absolute;
+		inset: 0;
+	}
+
+	.pad-ti-linked {
+		position: absolute;
+		inset: 0;
+	}
+
+	.pad-ti-linked__body {
+		flex: 1;
+		min-height: 0;
+		max-height: none;
+	}
+}
+
+.pad-ti-more {
+	cursor: help;
+	font-weight: var(--font-weight-medium);
+	text-decoration: underline dotted;
+	text-underline-offset: 0.2em;
 }
