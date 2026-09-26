@@ -128,7 +128,9 @@ it('explains each detail inline when the panel asks for inline help', function (
         ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.field_help.label'));
 });
 
-it('explains every detail in one place by default', function () {
+it('explains every detail in one place when the panel asks for a summary', function () {
+    TicketPlugin::get()->fieldHelp(TicketPlugin::FIELD_HELP_SUMMARY);
+
     $ticket = Ticket::factory()->create();
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
@@ -159,4 +161,30 @@ it('labels the person who escalated a ticket here as escalated by', function () 
     Livewire::test(ViewTicket::class, ['record' => $escalated->id])
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.escalated_by'))
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.escalated_by'), escape: false);
+});
+
+it('explains each detail in a tooltip on its label by default, reachable by keyboard', function () {
+    $ticket = Ticket::factory()->create();
+
+    $html = Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.field_help.label'))
+        ->html();
+
+    $turnHelp = __('padmission-tickets::tickets.resources.tickets.hints.turn');
+
+    expect($html)
+        ->toMatch('/class="pad-ti-help-label" tabindex="0" aria-describedby="(pad-ti-help-\\w+)"[^>]*>'.preg_quote(__('padmission-tickets::tickets.resources.tickets.turn'), '/').'<\\/span><span id="\\1" class="fi-sr-only">'.preg_quote(e($turnHelp), '/').'/')
+        ->not->toContain('fi-sc-icon fi-icon fi-size-md" xmlns');
+});
+
+it('offers a second send button that keeps the ticket waiting on support by default', function () {
+    $ticket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSeeHtml('keep-waiting-style="'.TicketPlugin::KEEP_WAITING_BUTTON.'"');
+
+    TicketPlugin::get()->keepWaitingStyle(TicketPlugin::KEEP_WAITING_CHECKBOX);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSeeHtml('keep-waiting-style="'.TicketPlugin::KEEP_WAITING_CHECKBOX.'"');
 });

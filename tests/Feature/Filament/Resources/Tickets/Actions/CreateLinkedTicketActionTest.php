@@ -266,7 +266,7 @@ it('names the support team it escalates to', function () {
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertActionHasLabel(escalateAction(), 'Escalate to Platform Support')
         ->mountAction(escalateAction())
-        ->assertMountedActionModalSee('It opens a separate ticket for Platform Support');
+        ->assertMountedActionModalSee('Opens a separate ticket for Platform Support');
 });
 
 it('keeps the generic label when the target panel has no support team name', function () {

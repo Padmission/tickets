@@ -98,7 +98,9 @@ customElements.define(
 			node
 				.querySelector("[data-composer]")
 				.addEventListener("submit", (event) => {
-					this.sendMessage();
+					this.sendMessage(
+						event.submitter?.hasAttribute("data-chat-submit-keep-waiting") ?? false,
+					);
 					event.preventDefault();
 				});
 
@@ -767,8 +769,8 @@ customElements.define(
 			return data.id;
 		}
 
-		async sendMessage() {
-			const lockTurn = this.lockTurnCheckbox?.checked || false;
+		async sendMessage(keepWaiting = false) {
+			const lockTurn = keepWaiting || this.lockTurnCheckbox?.checked || false;
 
 			if (!this.messageContent.trim() && this.attachments.length === 0) {
 				return;
@@ -992,6 +994,20 @@ customElements.define(
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
                             </button>
 
+                            ${
+                                this.hasElevatedRights === "true" && this.keepWaitingStyle === "button"
+                                    ? `
+                                        <button
+                                            type="submit"
+                                            data-chat-submit-keep-waiting
+                                            title="${__('chat.send_keep_waiting_help')}"
+                                        >
+                                            <span>${__('chat.send_keep_waiting')}</span>
+                                        </button>
+                                    `
+                                    : ""
+                            }
+
                             <button type="submit" data-chat-submit>
                                 <svg class="loading-indicator" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path clip-rule="evenodd" d="M12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19ZM12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill-rule="evenodd" fill="currentColor" opacity="0.2"></path>
@@ -1003,13 +1019,14 @@ customElements.define(
                         </div>
 
                         ${
-                            this.hasElevatedRights === "true"
+                            this.hasElevatedRights === "true" && this.keepWaitingStyle !== "button"
                                 ? `
                                     <div class="composer__options">
-                                        <label>
-                                            <input type="checkbox" data-chat-lock-turn />
+                                        <label title="${__('chat.lock_turn_help')}">
+                                            <input type="checkbox" data-chat-lock-turn aria-describedby="chat-lock-turn-help" />
                                             ${__('chat.lock_turn')}
                                         </label>
+                                        <span id="chat-lock-turn-help" class="sr-only">${__('chat.lock_turn_help')}</span>
                                     </div>
                                 `
                                 : ""

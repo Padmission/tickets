@@ -244,3 +244,16 @@
 		color: var(--color-gray-500);
 	}
 }
+
+.pad-ti-help-label {
+	cursor: help;
+	text-decoration: underline dotted;
+	text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+	text-underline-offset: 0.2em;
+	border-radius: var(--radius-sm);
+
+	&:focus-visible {
+		outline: 2px solid var(--color-primary-500);
+		outline-offset: 2px;
+	}
+}

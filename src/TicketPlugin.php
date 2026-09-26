@@ -33,6 +33,12 @@ class TicketPlugin implements Plugin
 
     public const FIELD_HELP_SUMMARY = 'summary';
 
+    public const FIELD_HELP_TOOLTIP = 'tooltip';
+
+    public const KEEP_WAITING_CHECKBOX = 'checkbox';
+
+    public const KEEP_WAITING_BUTTON = 'button';
+
     protected ?Panel $panel = null;
 
     protected bool $shouldRegisterResources = false;
@@ -53,7 +59,9 @@ class TicketPlugin implements Plugin
 
     protected ?Closure $ticketOriginDescriber = null;
 
-    protected string $fieldHelp = self::FIELD_HELP_SUMMARY;
+    protected string $fieldHelp = self::FIELD_HELP_TOOLTIP;
+
+    protected string $keepWaitingStyle = self::KEEP_WAITING_BUTTON;
 
     protected mixed $additionalTicketDetails = [];
 
@@ -370,6 +378,21 @@ class TicketPlugin implements Plugin
         $plugin = $panel->getPlugin(static::$id);
 
         return $plugin->getSupportTeamName();
+    }
+
+    /**
+     * @param  self::KEEP_WAITING_*  $style
+     */
+    public function keepWaitingStyle(string $style): static
+    {
+        $this->keepWaitingStyle = $style;
+
+        return $this;
+    }
+
+    public function getKeepWaitingStyle(): string
+    {
+        return $this->keepWaitingStyle;
     }
 
     /**

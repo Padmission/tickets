@@ -22,7 +22,10 @@ return [
         'ordered_list' => 'Ordered List',
         'command_key' => 'Command-Key',
         'enter_key' => 'Enter-Key',
-        'lock_turn' => 'Keep waiting on support',
+        'lock_turn' => 'We still owe a reply',
+        'lock_turn_help' => 'Tick this if your team still needs to follow up. Otherwise the ticket waits on the requester after you send.',
+        'send_keep_waiting' => 'Send, still working on it',
+        'send_keep_waiting_help' => 'Sends your message and keeps the ticket waiting on support.',
 
         'screenshot' => [
             'capture' => 'Capture screenshot',

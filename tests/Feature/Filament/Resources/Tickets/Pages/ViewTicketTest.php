@@ -267,14 +267,15 @@ class ReadOnlyTicketPolicy
 }
 
 describe('Escalation explanation', function () {
-    it('explains how to escalate a ticket that is not escalated yet', function () {
+    it('lets the two choices speak for a ticket that is not escalated yet', function () {
         TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
         TicketPlugin::get('test2')->supportTeamName('Platform Support');
 
         $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.not_escalated_to', ['team' => 'Platform Support']));
+            ->assertSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']))
+            ->assertDontSee('Not escalated');
     });
 
     it('explains that an escalated ticket stays with the team', function () {
@@ -284,7 +285,8 @@ describe('Escalation explanation', function () {
         $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated'));
+            ->assertSee('Escalated. Replies come to you on', escape: false)
+            ->assertSee("#{$escalated->id}");
     });
 
     it('explains where an escalated ticket came from', function () {

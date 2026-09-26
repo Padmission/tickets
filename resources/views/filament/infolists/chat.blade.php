@@ -41,6 +41,7 @@
         scroll-threshold="100"
         polling-interval="10000"
         has-elevated-rights="true"
+        keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
     ></chat-component>
 
     <script>

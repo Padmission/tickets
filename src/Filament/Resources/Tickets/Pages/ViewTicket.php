@@ -22,6 +22,7 @@ use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
+use Padmission\Tickets\Filament\Infolists\FieldHelp;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
@@ -121,42 +122,49 @@ class ViewTicket extends EditRecord
                             ->columnSpanFull()
                             ->visible(fn (): bool => TicketPlugin::get()->getFieldHelp() === TicketPlugin::FIELD_HELP_SUMMARY),
 
-                        TextEntry::make('status.display_name')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.status'))
-                            ->hintColor('gray')
-                            ->hintIcon(static::helpIcon(), tooltip: __('padmission-tickets::tickets.resources.tickets.hints.status'))
+                        FieldHelp::apply(
+                            TextEntry::make('status.display_name'),
+                            __('padmission-tickets::tickets.resources.tickets.status'),
+                            __('padmission-tickets::tickets.resources.tickets.hints.status'),
+                        )
                             ->badge()
                             ->color(fn (Ticket $record) => $record->status->colorPalette),
 
-                        TextEntry::make('priority.display_name')
+                        FieldHelp::apply(
+                            TextEntry::make('priority.display_name'),
+                            __('padmission-tickets::tickets.resources.tickets.priority'),
+                            __('padmission-tickets::tickets.resources.tickets.hints.priority'),
+                        )
                             ->badge()
-                            ->color(fn (Ticket $record) => $record->priority->colorPalette)
-                            ->label(__('padmission-tickets::tickets.resources.tickets.priority'))
-                            ->hintColor('gray')
-                            ->hintIcon(static::helpIcon(), tooltip: __('padmission-tickets::tickets.resources.tickets.hints.priority')),
+                            ->color(fn (Ticket $record) => $record->priority->colorPalette),
 
-                        TextEntry::make('disposition.display_name')
+                        FieldHelp::apply(
+                            TextEntry::make('disposition.display_name'),
+                            __('padmission-tickets::tickets.resources.tickets.disposition'),
+                            __('padmission-tickets::tickets.resources.tickets.hints.disposition'),
+                        )
                             ->badge()
                             ->color(fn (Ticket $record) => $record->disposition?->colorPalette)
-                            ->label(__('padmission-tickets::tickets.resources.tickets.disposition'))
-                            ->hintColor('gray')
-                            ->hintIcon(static::helpIcon(), tooltip: __('padmission-tickets::tickets.resources.tickets.hints.disposition'))
                             ->hidden(fn (Ticket $record) => ! $record->disposition_id),
 
                         ...TicketPlugin::get()->getAdditionalTicketDetails(),
 
-                        SubmitterEntry::make('submitter')
-                            ->label(fn (Ticket $record): string => static::isEscalatedHere($record)
+                        FieldHelp::apply(
+                            SubmitterEntry::make('submitter'),
+                            fn (Ticket $record): string => static::isEscalatedHere($record)
                                 ? __('padmission-tickets::tickets.resources.tickets.escalated_by')
-                                : __('padmission-tickets::tickets.resources.tickets.submitter'))
-                            ->hintColor('gray')
-                            ->hintIcon(static::helpIcon(), tooltip: fn (Ticket $record): string => static::isEscalatedHere($record)
+                                : __('padmission-tickets::tickets.resources.tickets.submitter'),
+                            fn (Ticket $record): string => static::isEscalatedHere($record)
                                 ? __('padmission-tickets::tickets.resources.tickets.hints.escalated_by')
-                                : __('padmission-tickets::tickets.resources.tickets.hints.submitter'))
+                                : __('padmission-tickets::tickets.resources.tickets.hints.submitter'),
+                        )
                             ->columnSpanFull(),
 
-                        AvatarEntry::make('assignee')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                        FieldHelp::apply(
+                            AvatarEntry::make('assignee'),
+                            __('padmission-tickets::tickets.resources.tickets.assignee'),
+                            __('padmission-tickets::tickets.resources.tickets.hints.assignee'),
+                        )
                             ->hintAction(
                                 ReassignTicketAction::make()
                                     ->label(fn (Ticket $record): string => $record->assignee_id
@@ -168,14 +176,13 @@ class ViewTicket extends EditRecord
                                     ->size('sm')
                                     ->authorize(static::canEdit(...)),
                             )
-                            ->hintColor('gray')
-                            ->hintIcon(static::helpIcon(), tooltip: __('padmission-tickets::tickets.resources.tickets.hints.assignee'))
                             ->columnSpanFull(),
 
-                        TextEntry::make('turn')
-                            ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
-                            ->hintColor('gray')
-                            ->hintIcon(static::helpIcon(), tooltip: __('padmission-tickets::tickets.resources.tickets.hints.turn'))
+                        FieldHelp::apply(
+                            TextEntry::make('turn'),
+                            __('padmission-tickets::tickets.resources.tickets.turn'),
+                            __('padmission-tickets::tickets.resources.tickets.hints.turn'),
+                        )
                             ->badge()
                             ->color(fn (?Turn $state): string => $state === Turn::Supporter ? 'warning' : 'gray')
                             ->columnSpanFull(),
@@ -206,7 +213,12 @@ class ViewTicket extends EditRecord
                     ]),
 
                     Section::make()
-                        ->heading(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+                        ->heading(fn (Ticket $record): string|Htmlable => FieldHelp::style() === TicketPlugin::FIELD_HELP_TOOLTIP
+                            ? FieldHelp::label(
+                                __('padmission-tickets::tickets.resources.tickets.linked_tickets'),
+                                TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.linked_tickets_help', TicketPlugin::get($record->panel)->getEscalationTargetName() ?? TicketPlugin::find($record->panel)?->getSupportTeamName()),
+                            )
+                            : __('padmission-tickets::tickets.resources.tickets.linked_tickets'))
                         ->description(fn (Ticket $record): ?string => static::describeEscalation($record))
                         ->visible(fn (Ticket $record) => TicketPlugin::get($record->panel)->hasLinkedTickets())
                         ->compact()
@@ -267,14 +279,10 @@ class ViewTicket extends EditRecord
             e($escalationId),
         ));
 
-        return new HtmlString(trans_choice('padmission-tickets::tickets.resources.tickets.part_of_escalation', $others, ['link' => $link, 'count' => $others]));
-    }
+        $team = TicketPlugin::get($record->panel)->getEscalationTargetName();
+        $key = 'padmission-tickets::tickets.resources.tickets.membership'.($team === null ? '' : '_to');
 
-    protected static function helpIcon(): ?Heroicon
-    {
-        return TicketPlugin::get()->getFieldHelp() === TicketPlugin::FIELD_HELP_INLINE
-            ? Heroicon::OutlinedQuestionMarkCircle
-            : null;
+        return new HtmlString(trans_choice($key, $others, ['link' => $link, 'count' => $others, 'team' => e($team)]));
     }
 
     protected static function isEscalatedHere(Ticket $record): bool
@@ -295,19 +303,16 @@ class ViewTicket extends EditRecord
 
     protected static function describeEscalation(Ticket $record): ?string
     {
-        $plugin = TicketPlugin::get($record->panel);
-        $team = $plugin->getEscalationTargetName();
         $key = 'padmission-tickets::tickets.resources.tickets.linked_tickets_description';
 
         if ($record->isNotInCurrentPanel()) {
             return TicketPlugin::teamText("{$key}.escalated_to_you", TicketPlugin::find($record->panel)?->getSupportTeamName());
         }
 
-        return match (true) {
-            filled($record->linked_ticket_id) => TicketPlugin::teamText("{$key}.escalated", $team),
-            count($plugin->getLinkedTicketParentPanels()) > 0 => TicketPlugin::teamText("{$key}.not_escalated", $team),
-            $record->childTickets()->exists() => __("{$key}.escalated_from"),
-            default => null,
-        };
+        // The organization side needs no sentence: the membership line or the two
+        // escalate choices already say where the ticket stands.
+        return filled($record->linked_ticket_id) || $record->childTickets()->doesntExist()
+            ? null
+            : __("{$key}.escalated_from");
     }
 }
