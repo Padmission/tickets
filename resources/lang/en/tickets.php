@@ -97,6 +97,11 @@ return [
             'linked_tickets' => 'Linked Tickets',
             'parent_ticket' => 'Parent Ticket',
             'child_tickets' => 'Child Tickets',
+            'link_refused' => [
+                'title' => 'Ticket not linked',
+                'already_linked' => 'This ticket is already linked to ticket #:id. Remove that link before linking a different ticket.',
+                'not_linkable' => 'The selected ticket cannot be linked to this ticket.',
+            ],
             'assign_to_supporter' => 'Assign to Supporter',
             'assigned_successfully' => 'Tickets assigned successfully',
             'invalid_assignee' => 'Invalid assignee selected',

@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Tables;
 
-use Filament\Panel;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,25 +13,13 @@ class ParentTicketTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function ($livewire, Builder $query) {
-                $panels = TicketPlugin::get($livewire->record->panel)->getLinkedTicketParentPanels();
-                $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
-
-                return $query
-                    ->whereKeyNot($livewire->record->getKey())
-                    ->whereIn('panel', $panelIds);
-            })
+            ->modifyQueryUsing(fn ($livewire, Builder $query) => LinkedTicketCandidates::parents($query, $livewire->record))
             ->columns([
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => ucfirst($state))
-                    ->visible(function ($livewire) {
-                        $panels = TicketPlugin::get($livewire->record->panel)->getLinkedTicketParentPanels();
-                        $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
-
-                        return count($panelIds) > 1;
-                    }),
+                    ->visible(fn ($livewire) => count(TicketPlugin::get($livewire->record->panel)->getLinkedTicketParentPanels()) > 1),
 
                 TextColumn::make('status.display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.model_label'))

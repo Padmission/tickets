@@ -13,6 +13,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketActi
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
@@ -67,8 +68,14 @@ it('creates linked ticket successfully', function () {
 
     TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
-    $originalTicket = Ticket::factory()->create(['linked_ticket_id' => null]);
     $currentPanel = Filament::getCurrentOrDefaultPanel()->getId();
+    $lowPriority = TicketPriority::query()->where('panel', $currentPanel)->where('display_name', 'Low')->sole();
+
+    $originalTicket = Ticket::factory()->create([
+        'linked_ticket_id' => null,
+        'status_id' => TicketStatus::getOpenStatuses()->last()->id,
+        'priority_id' => TicketPriority::query()->where('panel', $currentPanel)->where('display_name', 'High')->sole()->id,
+    ]);
 
     $messageContent = 'This is the initial message for the linked ticket';
 
@@ -90,7 +97,7 @@ it('creates linked ticket successfully', function () {
         ->submitter_id->toBe(auth()->id())
         ->turn->toBe(Turn::Supporter)
         ->status_id->toBe(TicketStatus::getOpenStatuses()->first()->id)
-        ->priority_id->toBe(1);
+        ->priority_id->toBe($lowPriority->id);
 
     expect($originalTicket->refresh())
         ->linked_ticket_id->toBe($newTicket->id);

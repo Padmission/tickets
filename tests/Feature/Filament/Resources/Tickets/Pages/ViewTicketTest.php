@@ -181,22 +181,11 @@ describe('Linked Tickets', function () {
     });
 
     it('updates child linked tickets relationship via form', function () {
-        $plugin = TicketPlugin::make()->allowLinkedTicketsTo();
-
-        $mockedPlugin = mock($plugin)
-            ->shouldReceive('hasLinkedTickets')
-            ->andReturn(true)
-            ->getMock()
-            ->shouldReceive('getLinkedTicketChildPanels')
-            ->andReturn(['panel1' => Panel::make()])
-            ->getMock();
-
-        Filament::setCurrentPanel('test');
-        Filament::getCurrentPanel()->plugin($mockedPlugin);
+        TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
         $parentTicket = Ticket::factory()->create();
-        $childTicket1 = Ticket::factory()->create(['linked_ticket_id' => null]);
-        $childTicket2 = Ticket::factory()->create(['linked_ticket_id' => null]);
+        $childTicket1 = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
+        $childTicket2 = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $parentTicket->id])
             ->assertFormFieldVisible('childTickets')
