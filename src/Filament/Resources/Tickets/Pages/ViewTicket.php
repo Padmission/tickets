@@ -197,27 +197,31 @@ class ViewTicket extends EditRecord
                                     // cross-tenant panel, so writes go through the same scoping as the picker.
                                     $candidates = LinkedTicketCandidates::children(static::ticketQuery(), $record);
 
-                                    if ((clone $candidates)->whereKey($selectedIds)->count() < count($selectedIds)) {
-                                        $component->state($record->childTickets()->pluck($record->qualifyColumn('id'))->all());
-                                        static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
-
-                                        return;
-                                    }
-
                                     // Saved one by one through the model so host model events, such as activity logging, fire.
-                                    DB::transaction(function () use ($candidates, $record, $selectedIds) {
+                                    $saved = DB::transaction(function () use ($candidates, $record, $selectedIds): bool {
+                                        // This locking read is the authoritative check: an original linked to another
+                                        // escalation by a concurrent request drops out of the candidates and is refused.
+                                        $selected = (clone $candidates)->whereKey($selectedIds)->lockForUpdate()->get();
+
+                                        if ($selected->count() < count($selectedIds)) {
+                                            return false;
+                                        }
+
                                         (clone $candidates)
                                             ->where('linked_ticket_id', $record->getKey())
                                             ->whereKeyNot($selectedIds)
                                             ->get()
                                             ->each(fn (Ticket $original) => $original->update(['linked_ticket_id' => null]));
 
-                                        (clone $candidates)
-                                            ->whereKey($selectedIds)
-                                            ->whereNull('linked_ticket_id')
-                                            ->get()
-                                            ->each(fn (Ticket $original) => $original->update(['linked_ticket_id' => $record->getKey()]));
+                                        $selected->each(fn (Ticket $original) => $original->update(['linked_ticket_id' => $record->getKey()]));
+
+                                        return true;
                                     });
+
+                                    if (! $saved) {
+                                        $component->state($record->childTickets()->pluck($record->qualifyColumn('id'))->all());
+                                        static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
+                                    }
                                 }),
                         ]),
                 ]),

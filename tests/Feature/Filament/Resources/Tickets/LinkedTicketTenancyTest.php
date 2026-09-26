@@ -3,7 +3,10 @@
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TableSelect\Livewire\TableSelectLivewireComponent;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -255,6 +258,26 @@ it('links original tickets submitted more than once', function () {
         ->assertNotNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 
     expect($original->refresh()->linked_ticket_id)->toBe($escalated->id);
+});
+
+it('refuses an original another request links elsewhere before this one saves', function () {
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+    $escalated = Ticket::factory()->create();
+    $otherEscalation = Ticket::factory()->create();
+    $original = Ticket::factory()->create(['panel' => 'test2']);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $escalated->id]);
+
+    Event::listen(TransactionBeginning::class, function () use ($original, $otherEscalation) {
+        DB::table('tickets')->where('id', $original->id)->update(['linked_ticket_id' => $otherEscalation->id]);
+    });
+
+    $page
+        ->fillForm(['childTickets' => [$original->id]])
+        ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
+
+    expect($original->refresh()->linked_ticket_id)->toBe($otherEscalation->id);
 });
 
 it('saves linked and unlinked originals through the model', function () {
