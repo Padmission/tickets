@@ -5,11 +5,13 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 use Carbon\CarbonImmutable;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\On;
@@ -21,6 +23,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketActi
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
+use Padmission\Tickets\Filament\Tables\LinkedTicketCandidates;
 use Padmission\Tickets\Filament\Tables\ParentTicketTable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -158,7 +161,21 @@ class ViewTicket extends EditRecord
                                 ->label(__('padmission-tickets::tickets.resources.tickets.parent_ticket'))
                                 ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketParentPanels()) > 0)
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
-                                ->afterStateUpdated(function (Ticket $record, $state) {
+                                ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {
+                                    $refusal = match (true) {
+                                        blank($state) || $state == $record->linked_ticket_id => null,
+                                        filled($record->linked_ticket_id) => __('padmission-tickets::tickets.resources.tickets.link_refused.already_linked', ['id' => $record->linked_ticket_id]),
+                                        ! LinkedTicketCandidates::parents(static::ticketQuery(), $record)->whereKey($state)->exists() => __('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'),
+                                        default => null,
+                                    };
+
+                                    if ($refusal !== null) {
+                                        $component->state($record->linked_ticket_id);
+                                        static::refuseLink($refusal);
+
+                                        return;
+                                    }
+
                                     $record->update(['linked_ticket_id' => $state]);
                                 }),
 
@@ -173,21 +190,30 @@ class ViewTicket extends EditRecord
                                 ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0)
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
-                                ->afterStateUpdated(function (Ticket $record, $state) {
+                                ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {
                                     // @TODO: Should this be recorded by Activity Log?
-                                    $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-
                                     $selectedIds = $state === null ? [] : array_values((array) $state);
 
-                                    DB::transaction(function () use ($ticketModel, $record, $selectedIds) {
-                                        $ticketModel::query()
+                                    $linkableCount = LinkedTicketCandidates::children(static::ticketQuery(), $record)->whereKey($selectedIds)->count();
+
+                                    if ($linkableCount < count($selectedIds)) {
+                                        $component->state($record->childTickets()->pluck($record->qualifyColumn('id'))->all());
+                                        static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
+
+                                        return;
+                                    }
+
+                                    // The originals can sit outside the viewer's own tenant, such as in a
+                                    // cross-tenant panel, so writes go through the same scoping as the picker.
+                                    DB::transaction(function () use ($record, $selectedIds) {
+                                        LinkedTicketCandidates::children(static::ticketQuery(), $record)
                                             ->where('linked_ticket_id', $record->getKey())
-                                            ->when($selectedIds !== [], fn ($query) => $query->whereNotIn('id', $selectedIds))
+                                            ->when($selectedIds !== [], fn (Builder $query) => $query->whereKeyNot($selectedIds))
                                             ->update(['linked_ticket_id' => null]);
 
                                         if ($selectedIds !== []) {
-                                            $ticketModel::query()
-                                                ->whereIn('id', $selectedIds)
+                                            LinkedTicketCandidates::children(static::ticketQuery(), $record)
+                                                ->whereKey($selectedIds)
                                                 ->update(['linked_ticket_id' => $record->getKey()]);
                                         }
                                     });
@@ -195,5 +221,19 @@ class ViewTicket extends EditRecord
                         ]),
                 ]),
             ]);
+    }
+
+    protected static function ticketQuery(): Builder
+    {
+        return TicketPlugin::resolveModelClass(Ticket::class)::query();
+    }
+
+    protected static function refuseLink(string $body): void
+    {
+        Notification::make()
+            ->danger()
+            ->title(__('padmission-tickets::tickets.resources.tickets.link_refused.title'))
+            ->body($body)
+            ->send();
     }
 }

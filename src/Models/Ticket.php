@@ -19,6 +19,7 @@ use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
+use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
 /**
@@ -52,7 +53,7 @@ class Ticket extends Model
     public function parentTicket(): Relations\PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
-            Ticket::class,
+            TicketPlugin::resolveModelClass(Ticket::class),
             'parentTicket',
             'linked_ticket_id',
             'id'
@@ -62,7 +63,7 @@ class Ticket extends Model
     public function childTickets(): Relations\PanelAwareHasMany
     {
         return $this->panelAwareHasMany(
-            Ticket::class,
+            TicketPlugin::resolveModelClass(Ticket::class),
             'childTickets',
             'linked_ticket_id',
             'id'

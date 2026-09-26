@@ -29,9 +29,11 @@ class LinkedTicketModalSelect extends ModalTableSelect
                             #{{ $record->id }}
                         </x-filament::badge>
 
-                        <x-filament::badge size="sm" :color="$record->status->colorPalette">
-                            {{ $record->status->display_name }}
-                        </x-filament::badge>
+                        @if ($record->status)
+                            <x-filament::badge size="sm" :color="$record->status->colorPalette">
+                                {{ $record->status->display_name }}
+                            </x-filament::badge>
+                        @endif
 
                         <div class="ticket-card__subject">
                             @unless ($canViewTicket)
