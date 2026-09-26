@@ -38,7 +38,26 @@ it('handles null values in toJs method', function () {
 
     expect($decoded)
         ->placeholder->toBeNull()
-        ->introMessage->toBeNull();
+        ->introMessage->toBe(__('padmission-tickets::chat.defaults.intro_message'));
+});
+
+it('uses the package defaults when no intro or auto-response is set', function (bool $configured, ?string $returned) {
+    $config = ChatWidgetConfig::make();
+
+    if ($configured) {
+        $config->introMessage(fn (): ?string => $returned)->autoResponse(fn (): ?string => $returned);
+    }
+
+    expect($config->getIntroMessage())->toStartWith('Our support team of real people are here to help.')
+        ->and($config->getAutoResponse())->toBe('Thanks for your message! We will respond soon.');
+})->with([
+    'nothing set' => [false, null],
+    'closure returning null' => [true, null],
+    'closure returning an empty string' => [true, ''],
+]);
+
+it('prefers a configured auto-response over the default', function () {
+    expect(ChatWidgetConfig::make()->autoResponse('We are on it.')->getAutoResponse())->toBe('We are on it.');
 });
 
 it('formats panel id correctly', function () {

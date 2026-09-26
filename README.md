@@ -332,6 +332,8 @@ TicketPlugin::make()
     );
 ```
 
+`introMessage()` and `autoResponse()` are optional. Without them, or when a closure returns `null`, the widget uses the `defaults` in the package's `chat` translations.
+
 If you want to render the chat widget outside a Filament panel add the Blade component at the end of your body tag:
 
 ```blade
