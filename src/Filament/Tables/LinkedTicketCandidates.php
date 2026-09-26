@@ -29,8 +29,11 @@ class LinkedTicketCandidates
     {
         // A cross-tenant panel lifts the host's tenant scope (pinned to the
         // viewer) from ticket relationships; the tenant match below then keeps
-        // candidates to the ticket's own tenant.
-        $modifier = TicketPlugin::get($ticket->panel)->getRelationshipScopeModifier();
+        // candidates to the ticket's own tenant. Gated like the panel-aware
+        // relations so the picker and the field's loaded state scope alike.
+        $modifier = TicketPlugin::get()->getRelationshipScopeModifier()
+            ? TicketPlugin::get($ticket->panel)->getRelationshipScopeModifier()
+            : null;
 
         if ($modifier) {
             app()->call($modifier, ['relation' => $query, 'model' => $relation]);
@@ -40,7 +43,8 @@ class LinkedTicketCandidates
             ->whereKeyNot($ticket->getKey())
             ->whereIn($query->qualifyColumn('panel'), array_map(fn (Panel $panel): string => $panel->getId(), $panels));
 
-        if (config('padmission-tickets.tenancy.enabled') && filled($ticket->getAttribute('tenant_id'))) {
+        // A ticket without a tenant matches only tenant-less tickets, never every tenant.
+        if (config('padmission-tickets.tenancy.enabled')) {
             $query->where($query->qualifyColumn('tenant_id'), $ticket->getAttribute('tenant_id'));
         }
 

@@ -169,14 +169,14 @@ class ViewTicket extends EditRecord
                                         default => null,
                                     };
 
+                                    if ($refusal === null && ! static::linkParent($record, $state)) {
+                                        $refusal = __('padmission-tickets::tickets.resources.tickets.link_refused.already_linked', ['id' => $record->linked_ticket_id]);
+                                    }
+
                                     if ($refusal !== null) {
                                         $component->state($record->linked_ticket_id);
                                         static::refuseLink($refusal);
-
-                                        return;
                                     }
-
-                                    $record->update(['linked_ticket_id' => $state]);
                                 }),
 
                             LinkedTicketModalSelect::make('childTickets')
@@ -192,7 +192,7 @@ class ViewTicket extends EditRecord
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {
                                     // @TODO: Should this be recorded by Activity Log?
-                                    $selectedIds = $state === null ? [] : array_values((array) $state);
+                                    $selectedIds = $state === null ? [] : array_values(array_unique((array) $state));
 
                                     $linkableCount = LinkedTicketCandidates::children(static::ticketQuery(), $record)->whereKey($selectedIds)->count();
 
@@ -226,6 +226,28 @@ class ViewTicket extends EditRecord
     protected static function ticketQuery(): Builder
     {
         return TicketPlugin::resolveModelClass(Ticket::class)::query();
+    }
+
+    /**
+     * Re-reads the link under a row lock so a concurrent link made since the
+     * page loaded is never replaced; saves through the model to keep its events.
+     */
+    protected static function linkParent(Ticket $record, mixed $state): bool
+    {
+        return DB::transaction(function () use ($record, $state): bool {
+            $current = $record->newModelQuery()->whereKey($record->getKey())->lockForUpdate()->value('linked_ticket_id');
+
+            if (filled($state) && filled($current) && $current != $state) {
+                $record->linked_ticket_id = $current;
+                $record->syncOriginalAttribute('linked_ticket_id');
+
+                return false;
+            }
+
+            $record->update(['linked_ticket_id' => $state]);
+
+            return true;
+        });
     }
 
     protected static function refuseLink(string $body): void
