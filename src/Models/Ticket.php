@@ -82,6 +82,15 @@ class Ticket extends Model
         return $query->whereNotNull('closed_at');
     }
 
+    /*
+     * Closing leaves the turn as it was, so reopening picks up where the
+     * conversation stopped, but a closed ticket is not waiting on anyone.
+     */
+    public function waitingOn(): ?Turn
+    {
+        return $this->isClosed ? null : $this->turn;
+    }
+
     public function requesterName(): ?string
     {
         return $this->submitter !== null

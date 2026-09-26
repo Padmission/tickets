@@ -293,7 +293,9 @@ class ViewTicket extends EditRecord
                             ->columnSpanFull(),
 
                         FieldHelp::apply(
-                            TextEntry::make('turn'),
+                            TextEntry::make('turn')
+                                ->state(fn (Ticket $record): ?Turn => $record->waitingOn())
+                                ->placeholder('–'),
                             __('padmission-tickets::tickets.resources.tickets.turn'),
                             __('padmission-tickets::tickets.resources.tickets.hints.turn'),
                         )

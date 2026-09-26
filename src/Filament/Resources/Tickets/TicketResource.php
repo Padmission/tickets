@@ -212,6 +212,8 @@ class TicketResource extends Resource
 
                 TextColumn::make('turn')
                     ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
+                    ->state(fn (Ticket $record): ?Turn => $record->waitingOn())
+                    ->placeholder('–')
                     ->badge()
                     ->color(fn (?Turn $state): string => $state === Turn::Supporter ? 'warning' : 'gray')
                     ->tooltip(fn (?Turn $state): ?string => $state?->getDescription())

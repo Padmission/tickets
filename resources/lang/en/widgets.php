@@ -17,6 +17,13 @@ return [
         'description' => 'Open tickets where support owes the next reply',
     ],
 
+    'escalations_waiting' => [
+        'label' => 'Waiting on the Other Team',
+        'label_to' => 'Waiting on :team',
+        'description' => 'Open escalations where the team you escalated to owes the next reply',
+        'description_to' => 'Open escalations where :team owes the next reply',
+    ],
+
     'close_time' => [
         'label' => 'Average Close Time',
         'description' => ':count tickets closed',

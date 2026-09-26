@@ -12,6 +12,7 @@ use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class ListTickets extends ListRecords
@@ -95,12 +96,27 @@ class ListTickets extends ListRecords
         ];
     }
 
-    protected function openTicketCount(string $tab): int
+    /**
+     * @return array<string, mixed>
+     */
+    public function getWidgetData(): array
     {
-        return $this->getCachedTabs()[$tab]
-            ->modifyQuery(TicketResource::getEloquentQuery())
-            ->open()
-            ->count();
+        return ['activeTab' => $this->activeTabIsInvalid() ? 'all' : $this->activeTab];
+    }
+
+    /**
+     * @return Builder<Ticket>
+     */
+    public function ticketsInTab(string $tab): Builder
+    {
+        $tabs = $this->getCachedTabs();
+
+        return ($tabs[$tab] ?? $tabs['all'])->modifyQuery(TicketResource::getEloquentQuery());
+    }
+
+    public function openTicketCount(string $tab): int
+    {
+        return $this->ticketsInTab($tab)->open()->count();
     }
 
     /*
@@ -156,7 +172,7 @@ class ListTickets extends ListRecords
 
             'my' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my'))
-                ->badge(fn (): int => TicketResource::countOpenTicketsAssignedToCurrentUser())
+                ->badge(fn (): int => $this->openTicketCount('my'))
                 ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
                 ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                     $query
