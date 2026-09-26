@@ -27,7 +27,7 @@ class UserDescription
         $all = implode(', ', $parts);
 
         return new HtmlString(sprintf(
-            '%s <span class="pad-ti-more" tabindex="0" x-data x-tooltip="{ content: %s, theme: $store.theme }" aria-label="%s">+%d</span>',
+            '%s <span class="pad-ti-more" tabindex="0" x-data x-tooltip="{ content: %s, theme: $store.theme, placement: \'right\' }" aria-label="%s">+%d</span>',
             e($parts[0]),
             e(json_encode($all, JSON_HEX_APOS | JSON_HEX_QUOT)),
             e($all),

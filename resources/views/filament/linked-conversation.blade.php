@@ -29,7 +29,7 @@
                     @class(['pad-ti-linked__tab', 'pad-ti-linked__tab--active' => $ticket->is($linked)])
                     @if ($ticket->is($linked)) aria-current="true" @endif
                     x-data
-                    x-tooltip="{ content: @js($ticket->subject), theme: $store.theme }"
+                    x-tooltip="{ content: @js($ticket->subject), theme: $store.theme, placement: 'bottom' }"
                 >
                     {{ $ticket->requesterName() ?? $headings[$ticket->getKey()] }}
                     <span class="pad-ti-linked__tab-number">· #{{ $ticket->getKey() }}</span>
