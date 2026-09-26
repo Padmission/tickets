@@ -86,18 +86,22 @@ describe('Tab badges', function () {
         expect($tabs['my']->getBadge())->toBe('2')
             ->and(TicketResource::getNavigationBadge())->toBe('2')
             ->and(TicketResource::getNavigationBadgeTooltip())->toBe(__('padmission-tickets::tickets.resources.tickets.badges.my'))
-            ->and($tabs['all']->getBadge())->toBeNull();
+            ->and($tabs['all']->getBadge())->toBe('3')
+            ->and($tabs['all']->getBadgeTooltip())->toBe('Open tickets in this tab')
+            ->and($tabs['my']->getBadgeTooltip())->toBe('Open tickets in this tab');
     });
 
-    it('hides the badges when there is nothing open', function () {
+    it('shows 0 on every tab when there is nothing open', function () {
         $this->login();
         TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        Ticket::factory()->closed()->create();
 
         $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
 
-        expect($tabs['my']->getBadge())->toBeNull()
-            ->and($tabs['linked']->getBadge())->toBeNull()
-            ->and($tabs['my_linked']->getBadge())->toBeNull()
+        expect($tabs['all']->getBadge())->toBe('0')
+            ->and($tabs['my']->getBadge())->toBe('0')
+            ->and($tabs['linked']->getBadge())->toBe('0')
+            ->and($tabs['my_linked']->getBadge())->toBe('0')
             ->and(TicketResource::getNavigationBadge())->toBeNull();
     });
 
@@ -156,4 +160,55 @@ it('offers the ticket number as a sortable column that is off until chosen', fun
         ->searchTable('#'.$first->id)
         ->assertCanSeeTableRecords([$first])
         ->assertCanNotSeeTableRecords([$second]);
+});
+
+describe('Escalated tickets in the list', function () {
+    beforeEach(function () {
+        (new TicketStatusSeeder)->run();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    });
+
+    it('names the team an escalation is assigned within when its person is out of sight', function () {
+        $this->login();
+
+        $escalation = Ticket::factory()->open()
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2', 'assignee_id' => 999999]);
+        $unassigned = Ticket::factory()->open()
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2', 'assignee_id' => null]);
+
+        expect(TicketResource::assigneeLabel($escalation))->toBe('Platform Support')
+            ->and(TicketResource::assigneeLabel($unassigned))->toBeNull()
+            ->and(TicketResource::assigneeLabel(Ticket::factory()->create(['assignee_id' => 999999])))->toBeNull();
+
+        Livewire::test(ListTickets::class)
+            ->set('activeTab', 'linked')
+            ->assertTableColumnStateSet('assignee.name', 'Platform Support', $escalation);
+    });
+
+    it('leaves out the team column when every escalation goes to the same team', function () {
+        $this->login();
+
+        Livewire::test(ListTickets::class)
+            ->set('activeTab', 'linked')
+            ->assertTableColumnHidden('panel');
+    });
+
+    it('names each team when there is more than one to escalate to', function () {
+        $this->login();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2', 'test3']);
+
+        expect(TicketPlugin::get()->getLinkedTicketParentPanels())->toHaveCount(2);
+
+        $escalation = Ticket::factory()->open()
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2']);
+
+        Livewire::test(ListTickets::class)
+            ->set('activeTab', 'linked')
+            ->assertTableColumnVisible('panel')
+            ->assertTableColumnFormattedStateSet('panel', 'Platform Support', $escalation);
+    });
 });

@@ -89,6 +89,24 @@ class TicketResource extends Resource
      * Record-level access is enforced separately by the ticket policy's view() method,
      * so this lives on the collection surface only.
      */
+    /*
+     * An escalated ticket is assigned inside the team it went to, whose people
+     * this panel's scopes may not reveal, so it names the team instead.
+     */
+    public static function assigneeLabel(Ticket $record): ?string
+    {
+        if ($record->assignee !== null) {
+            return $record->assignee->getAttribute('name');
+        }
+
+        if (blank($record->assignee_id) || $record->isInCurrentPanel()) {
+            return null;
+        }
+
+        return TicketPlugin::find($record->panel)?->getSupportTeamName()
+            ?? __('padmission-tickets::tickets.resources.tickets.assigned_elsewhere');
+    }
+
     public static function ticketNumberFromSearch(string $search): ?int
     {
         $number = ltrim(trim($search), '#');
@@ -167,11 +185,17 @@ class TicketResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                // With a single team to escalate to, every row on the escalated tabs
+                // would repeat the same name, so the column only appears when there
+                // is a choice.
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
                     ->badge()
-                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
-                    ->visible(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
+                    ->formatStateUsing(fn (?string $state): string => $state === null
+                        ? '-'
+                        : (TicketPlugin::find($state)?->getSupportTeamName() ?? ucfirst($state)))
+                    ->visible(fn (ListTickets $livewire): bool => str_contains($livewire->activeTab, 'linked')
+                        && count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 1)
                     ->sortable(),
 
                 TextColumn::make('status.display_name')
@@ -211,6 +235,7 @@ class TicketResource extends Resource
 
                 TextColumn::make('assignee.name')
                     ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
+                    ->state(fn (Ticket $record): ?string => static::assigneeLabel($record))
                     ->searchable()
                     ->sortable(),
 

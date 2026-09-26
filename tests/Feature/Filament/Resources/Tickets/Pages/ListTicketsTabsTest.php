@@ -144,7 +144,7 @@ it('linked tickets only shows tickets that have a child ticket from the current 
     $ticketModel::factory()->create();
 
     Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-        ->assertTableColumnVisible('panel')
+        ->assertTableColumnHidden('panel')
         ->assertTableColumnHidden('source_panel')
         ->assertCountTableRecords(1)
         ->assertCanSeeTableRecords([$linkedTicket->id]);
@@ -169,7 +169,7 @@ it('filters my linked tickets tab by linked ticket id and submitter', function (
         ->create(['panel' => 'test2']);
 
     Livewire::test(ListTickets::class, ['activeTab' => 'my_linked'])
-        ->assertTableColumnVisible('panel')
+        ->assertTableColumnHidden('panel')
         ->assertTableColumnHidden('source_panel')
         ->assertCountTableRecords(1)
         ->assertCanSeeTableRecords([$linkedTickets->first()->id]);

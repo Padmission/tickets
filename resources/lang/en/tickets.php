@@ -232,8 +232,7 @@ return [
 
             'badges' => [
                 'my' => 'Open tickets assigned to you',
-                'linked' => 'Open tickets your team escalated',
-                'my_linked' => 'Open tickets you escalated',
+                'tab' => 'Open tickets in this tab',
             ],
 
             'tab_descriptions' => [

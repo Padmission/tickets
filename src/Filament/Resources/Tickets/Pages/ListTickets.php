@@ -95,6 +95,14 @@ class ListTickets extends ListRecords
         ];
     }
 
+    protected function openTicketCount(string $tab): int
+    {
+        return $this->getCachedTabs()[$tab]
+            ->modifyQuery(TicketResource::getEloquentQuery())
+            ->open()
+            ->count();
+    }
+
     /*
      * whereHas never runs the panel's relationship scope hook, so the host's
      * tenant scope would otherwise stay on the originals and, in a cross-tenant
@@ -140,14 +148,16 @@ class ListTickets extends ListRecords
         $tabs = [
             'all' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.all'))
+                ->badge(fn (): int => $this->openTicketCount('all'))
+                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
                 ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                     $query->tap(new CurrentPanelScope)
                 )),
 
             'my' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my'))
-                ->badge(fn (): ?int => TicketResource::countOpenTicketsAssignedToCurrentUser() ?: null)
-                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.my'))
+                ->badge(fn (): int => TicketResource::countOpenTicketsAssignedToCurrentUser())
+                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
                 ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                     $query
                         ->tap(new CurrentPanelScope)
@@ -162,16 +172,16 @@ class ListTickets extends ListRecords
 
         $tabs['linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.linked'))
-            ->badge(fn (): ?int => $this->openEscalatedCounts()['linked'] ?: null)
-            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.linked'))
+            ->badge(fn (): int => $this->openEscalatedCounts()['linked'])
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                 $query->whereHas('childTickets', static::originalsFromThisPanel(...))
             ));
 
         $tabs['my_linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'))
-            ->badge(fn (): ?int => $this->openEscalatedCounts()['my_linked'] ?: null)
-            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.my_linked'))
+            ->badge(fn (): int => $this->openEscalatedCounts()['my_linked'])
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                 $query
                     ->whereHas('childTickets', static::originalsFromThisPanel(...))
