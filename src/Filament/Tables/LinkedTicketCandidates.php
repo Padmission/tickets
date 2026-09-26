@@ -9,11 +9,19 @@ use Padmission\Tickets\TicketPlugin;
 
 class LinkedTicketCandidates
 {
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
     public static function parents(Builder $query, Ticket $ticket): Builder
     {
         return static::scope($query, $ticket, 'parentTicket', TicketPlugin::get($ticket->panel)->getLinkedTicketParentPanels());
     }
 
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
     public static function children(Builder $query, Ticket $ticket): Builder
     {
         return static::scope($query, $ticket, 'childTickets', TicketPlugin::get($ticket->panel)->getLinkedTicketChildPanels())
@@ -23,7 +31,9 @@ class LinkedTicketCandidates
     }
 
     /**
+     * @param  Builder<Ticket>  $query
      * @param  array<Panel>  $panels
+     * @return Builder<Ticket>
      */
     protected static function scope(Builder $query, Ticket $ticket, string $relation, array $panels): Builder
     {

@@ -191,31 +191,32 @@ class ViewTicket extends EditRecord
                                 ->disabled(fn (Ticket $record) => ! static::canEdit($record))
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {
-                                    // @TODO: Should this be recorded by Activity Log?
                                     $selectedIds = $state === null ? [] : array_values(array_unique((array) $state));
 
-                                    $linkableCount = LinkedTicketCandidates::children(static::ticketQuery(), $record)->whereKey($selectedIds)->count();
+                                    // The originals can sit outside the viewer's own tenant, such as in a
+                                    // cross-tenant panel, so writes go through the same scoping as the picker.
+                                    $candidates = LinkedTicketCandidates::children(static::ticketQuery(), $record);
 
-                                    if ($linkableCount < count($selectedIds)) {
+                                    if ((clone $candidates)->whereKey($selectedIds)->count() < count($selectedIds)) {
                                         $component->state($record->childTickets()->pluck($record->qualifyColumn('id'))->all());
                                         static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
 
                                         return;
                                     }
 
-                                    // The originals can sit outside the viewer's own tenant, such as in a
-                                    // cross-tenant panel, so writes go through the same scoping as the picker.
-                                    DB::transaction(function () use ($record, $selectedIds) {
-                                        LinkedTicketCandidates::children(static::ticketQuery(), $record)
+                                    // Saved one by one through the model so host model events, such as activity logging, fire.
+                                    DB::transaction(function () use ($candidates, $record, $selectedIds) {
+                                        (clone $candidates)
                                             ->where('linked_ticket_id', $record->getKey())
-                                            ->when($selectedIds !== [], fn (Builder $query) => $query->whereKeyNot($selectedIds))
-                                            ->update(['linked_ticket_id' => null]);
+                                            ->whereKeyNot($selectedIds)
+                                            ->get()
+                                            ->each(fn (Ticket $original) => $original->update(['linked_ticket_id' => null]));
 
-                                        if ($selectedIds !== []) {
-                                            LinkedTicketCandidates::children(static::ticketQuery(), $record)
-                                                ->whereKey($selectedIds)
-                                                ->update(['linked_ticket_id' => $record->getKey()]);
-                                        }
+                                        (clone $candidates)
+                                            ->whereKey($selectedIds)
+                                            ->whereNull('linked_ticket_id')
+                                            ->get()
+                                            ->each(fn (Ticket $original) => $original->update(['linked_ticket_id' => $record->getKey()]));
                                     });
                                 }),
                         ]),
@@ -223,6 +224,9 @@ class ViewTicket extends EditRecord
             ]);
     }
 
+    /**
+     * @return Builder<Ticket>
+     */
     protected static function ticketQuery(): Builder
     {
         return TicketPlugin::resolveModelClass(Ticket::class)::query();

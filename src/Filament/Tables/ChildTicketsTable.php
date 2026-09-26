@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Filament\Tables;
 
-use Filament\Panel;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,12 +19,7 @@ class ChildTicketsTable
                     ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => ucfirst($state))
-                    ->visible(function ($livewire) {
-                        $panels = TicketPlugin::get($livewire->record->panel)->getLinkedTicketChildPanels();
-                        $panelIds = array_map(fn (Panel $panel) => $panel->getId(), $panels);
-
-                        return count($panelIds) > 1;
-                    }),
+                    ->visible(fn ($livewire) => count(TicketPlugin::get($livewire->record->panel)->getLinkedTicketChildPanels()) > 1),
 
                 TextColumn::make('status.display_name')
                     ->label(__('padmission-tickets::tickets.resources.statuses.model_label'))

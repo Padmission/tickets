@@ -257,6 +257,24 @@ it('links original tickets submitted more than once', function () {
     expect($original->refresh()->linked_ticket_id)->toBe($escalated->id);
 });
 
+it('saves linked and unlinked originals through the model', function () {
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+    $escalated = Ticket::factory()->create();
+    $toLink = Ticket::factory()->create(['panel' => 'test2']);
+    $toUnlink = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $escalated->id]);
+
+    $updated = [];
+    Ticket::updated(function (Ticket $ticket) use (&$updated) {
+        $updated[$ticket->id] = $ticket->linked_ticket_id;
+    });
+
+    Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+        ->fillForm(['childTickets' => [$toLink->id]]);
+
+    expect($updated)->toBe([$toUnlink->id => null, $toLink->id => $escalated->id]);
+});
+
 it('still unlinks an existing escalation', function () {
     $escalation = Ticket::factory()->create(['panel' => 'test2']);
     $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
