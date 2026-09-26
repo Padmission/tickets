@@ -15,8 +15,18 @@ it('requires login ', function () {
 });
 
 it('needs to be submitter without permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('manage', fn (User $user) => false);
+    Gate::policy(Ticket::class, get_class(new class
+    {
+        public function view(User $user, Ticket $ticket): bool
+        {
+            return false;
+        }
+
+        public function manage(User $user, Ticket $ticket): bool
+        {
+            return false;
+        }
+    }));
 
     [$userA, $userB] = User::factory()->count(2)->create();
 
