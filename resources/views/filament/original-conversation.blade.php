@@ -15,7 +15,11 @@
                 ? Filament::getUserName($ticket->submitter)
                 : $ticket->submitter_data?->name;
             $submitterDescription = $plugin->describeUser($ticket->submitter, $ticket);
-            $assigneeName = $ticket->assignee ? Filament::getUserName($ticket->assignee) : null;
+            $assigneeName = match (true) {
+                $ticket->assignee !== null => Filament::getUserName($ticket->assignee),
+                filled($ticket->assignee_id) => TicketPlugin::find($ticket->panel)?->getSupportTeamName() ?? __('padmission-tickets::tickets.resources.tickets.assigned_elsewhere'),
+                default => null,
+            };
         @endphp
 
         <section class="pad-ti-transcript__ticket">
@@ -59,7 +63,7 @@
                             'pad-ti-transcript__message--internal' => $activity->type === ActivityType::InternalMessage,
                         ])>
                             <div class="pad-ti-transcript__meta">
-                                <strong>{{ $activity->userName }}</strong>
+                                <strong>{{ $activity->senderName }}</strong>
                                 · {{ $activity->created_at?->format($plugin->getDateTimeDisplayFormat()) }}
                                 @if ($activity->type === ActivityType::InternalMessage)
                                     · {{ __('padmission-tickets::tickets.actions.view_original_conversation.internal_note') }}

@@ -452,7 +452,7 @@
 		}
 
 		@container (max-width: 400px) {
-			&:nth-child(n + 3):not([data-chat-submit]) {
+			&:nth-child(n + 3):not([data-chat-submit]):not([data-chat-submit-keep-waiting]) {
 				display: none;
 			}
 		}

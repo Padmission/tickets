@@ -112,6 +112,20 @@ return [
         ],
     ],
 
+    'linked_view' => [
+        'show_beside' => 'Show #:id beside this',
+        'show_beside_many' => 'Show the :count originals beside this',
+        'open' => 'Open #:id',
+        'open_many' => 'Open the :count originals',
+        'hide' => 'Hide #:id',
+        'close' => 'Close',
+        'read_only' => 'Read-only',
+        'switch' => 'Linked tickets',
+        'replying_on' => 'Your reply goes to #:id',
+        'show_details' => 'Show the details again',
+        'pinned' => '#:id · :subject',
+    ],
+
     'copilot' => [
         'title' => 'Support tickets',
         'subtitle' => 'Create and follow up on support requests.',
@@ -173,6 +187,7 @@ return [
                 'escalated_to_you' => 'Your team escalated this. Talk to the team handling it here.',
                 'escalated_to_you_to' => 'Your team escalated this to :team. Talk to them here.',
                 'escalated_from' => 'You\'re talking with the team that escalated this. Use Original conversation to read what was asked.',
+                'escalated_from_beside' => 'You\'re talking with the team that escalated this. Show an original beside the chat to read what was asked.',
             ],
             'membership' => '{0} Escalated. Replies come to you on :link.|{1} Escalated with 1 other ticket. Replies come to you on :link.|[2,*] Escalated with :count other tickets. Replies come to you on :link.',
             'membership_to' => '{0} Escalated to :team. Their replies come to you on :link.|{1} Escalated to :team with 1 other ticket. Their replies come to you on :link.|[2,*] Escalated to :team with :count other tickets. Their replies come to you on :link.',

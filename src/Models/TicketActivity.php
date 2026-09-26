@@ -135,6 +135,14 @@ class TicketActivity extends Model
         });
     }
 
+    /**
+     * @return Attribute<string,never>
+     */
+    protected function senderName(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->actorName());
+    }
+
     protected function actorName(): string
     {
         if ($this->relationLoaded('user') && $this->user !== null) {

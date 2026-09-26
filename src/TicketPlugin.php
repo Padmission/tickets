@@ -37,6 +37,12 @@ class TicketPlugin implements Plugin
 
     public const KEEP_WAITING_CHECKBOX = 'checkbox';
 
+    public const LINKED_VIEW_MODAL = 'modal';
+
+    public const LINKED_VIEW_BESIDE = 'beside';
+
+    public const LINKED_VIEW_DRAWER = 'drawer';
+
     public const KEEP_WAITING_BUTTON = 'button';
 
     protected ?Panel $panel = null;
@@ -62,6 +68,10 @@ class TicketPlugin implements Plugin
     protected string $fieldHelp = self::FIELD_HELP_TOOLTIP;
 
     protected string $keepWaitingStyle = self::KEEP_WAITING_BUTTON;
+
+    protected string $linkedConversationView = self::LINKED_VIEW_BESIDE;
+
+    protected bool $pinLinkedConversation = false;
 
     protected mixed $additionalTicketDetails = [];
 
@@ -378,6 +388,33 @@ class TicketPlugin implements Plugin
         $plugin = $panel->getPlugin(static::$id);
 
         return $plugin->getSupportTeamName();
+    }
+
+    /**
+     * @param  self::LINKED_VIEW_*  $view
+     */
+    public function linkedConversationView(string $view): static
+    {
+        $this->linkedConversationView = $view;
+
+        return $this;
+    }
+
+    public function getLinkedConversationView(): string
+    {
+        return $this->linkedConversationView;
+    }
+
+    public function pinLinkedConversation(bool $condition = true): static
+    {
+        $this->pinLinkedConversation = $condition;
+
+        return $this;
+    }
+
+    public function shouldPinLinkedConversation(): bool
+    {
+        return $this->pinLinkedConversation;
     }
 
     /**

@@ -78,6 +78,8 @@ it('adds the host columns to the ticket list', function () {
 });
 
 describe('Original conversation', function () {
+    beforeEach(fn () => TicketPlugin::get()->linkedConversationView(TicketPlugin::LINKED_VIEW_MODAL));
+
     it('shows the conversation of the ticket it was escalated from', function () {
         $requester = User::factory()->create(['name' => 'Original Requester']);
         $escalated = Ticket::factory()->create();

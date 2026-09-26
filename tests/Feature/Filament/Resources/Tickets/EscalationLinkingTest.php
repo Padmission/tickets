@@ -135,6 +135,8 @@ describe('Originals on an escalated ticket', function () {
             ]);
         }
 
+        TicketPlugin::get()->linkedConversationView(TicketPlugin::LINKED_VIEW_MODAL);
+
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
             ->mountAction(ViewOriginalConversationAction::class)
             ->assertSchemaComponentVisible('original', 'mountedActionSchema0')

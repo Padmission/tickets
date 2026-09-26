@@ -296,6 +296,6 @@ describe('Escalation explanation', function () {
         Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $ticket->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from'));
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from_beside'));
     });
 });
