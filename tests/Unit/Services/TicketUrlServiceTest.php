@@ -99,6 +99,20 @@ describe('work page', function () {
             ->toBe(url('/test/tickets?tab=linked'));
     });
 
+    it('links an escalation with no source panel or originals from the panel that escalates to its panel', function () {
+        $escalation = escalationFrom(attributes: ['submitter_id' => $this->owner->id, 'source_panel' => null]);
+        $this->escalation->update(['submitter_id' => $this->colleague->id]);
+
+        expect($this->service->workPageUrl($escalation, $this->owner))->toBe(url("/test/tickets/{$escalation->id}/view"))
+            ->and($this->service->workPageUrl($this->escalation, $this->owner))->toBe(url("/test/tickets/{$this->openOriginal->id}/view"));
+    });
+
+    it('gives no link for an escalation no panel escalates to, rather than a requester\'s link', function () {
+        $escalation = escalationFrom(attributes: ['submitter_id' => $this->owner->id, 'source_panel' => null, 'panel' => 'test3']);
+
+        expect($this->service->getActionUrlFor($escalation, $this->owner))->toBeNull();
+    });
+
     it('builds the links where the receiving panel has no tickets plugin', function () {
         // As on a queue worker that leaves the receiving panel's plugins out, under a host policy that lets its staff in.
         invade(Filament::getPanel('test2'))->plugins = [];

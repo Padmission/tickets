@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketUrlService
 {
@@ -17,9 +18,13 @@ class TicketUrlService
         return $url.'#'.'ticket-'.$ticket->id;
     }
 
-    public function getActionUrlFor(Ticket $ticket, Model $recipient): string
+    /*
+     * Null when an escalation has no page to link: a requester's link would
+     * name a ticket the recipient never filed.
+     */
+    public function getActionUrlFor(Ticket $ticket, Model $recipient): ?string
     {
-        return $this->workPageUrl($ticket, $recipient) ?? $this->getActionUrl($ticket);
+        return $this->workPageUrl($ticket, $recipient) ?? ($ticket->isEscalation() ? null : $this->getActionUrl($ticket));
     }
 
     /*
@@ -46,7 +51,7 @@ class TicketUrlService
         $original = $originals->whereNull('closed_at')->first() ?? $originals->first();
 
         return $this->viewUrl(
-            $escalation->escalationSourcePanel(),
+            $this->escalatingPanel($escalation),
             $escalation->getKey(),
             $original === null ? [] : ['linked' => $original->getKey()],
         );
@@ -69,7 +74,20 @@ class TicketUrlService
             return $this->originalUrl($original);
         }
 
-        return $this->panelUrl($escalation->escalationSourcePanel(), '/tickets?tab=linked');
+        return $this->panelUrl($this->escalatingPanel($escalation), '/tickets?tab=linked');
+    }
+
+    /*
+     * An escalation whose originals were all removed and that has no source
+     * panel was still sent from a panel that escalates to its panel.
+     */
+    protected function escalatingPanel(Ticket $escalation): ?string
+    {
+        return $escalation->escalationSourcePanel()
+            ?? collect(array_keys(Filament::getPanels()))->first(fn (string $panelId): bool => array_key_exists(
+                (string) $escalation->panel,
+                TicketPlugin::find($panelId)?->getLinkedTicketParentPanels() ?? [],
+            ));
     }
 
     /**

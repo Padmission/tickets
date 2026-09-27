@@ -70,8 +70,13 @@ class TicketNotification extends Notification
             return ! $this->isOwnEscalation($notifiable);
         }
 
-        if (in_array($this->notificationType, ['closed', 'handedover'], true)) {
+        if ($this->notificationType === 'closed') {
             return true;
+        }
+
+        // A later move, which tells them itself or was their own, can overtake a debounced one.
+        if ($this->notificationType === 'handedover') {
+            return $this->isSubmitter($notifiable) === ((string) $notifiable->getKey() === (string) $this->event->toId);
         }
 
         $activities = $this->getUnreadActivities($notifiable);
@@ -197,7 +202,7 @@ class TicketNotification extends Notification
         return FilamentNotification::make()
             ->title($wording['subject'])
             ->body($body)
-            ->actions([
+            ->actions($wording['actionUrl'] === null ? [] : [
                 Action::make('view')
                     ->label($wording['actionLabel'])
                     ->url($wording['actionUrl'])
@@ -209,7 +214,7 @@ class TicketNotification extends Notification
     /**
      * What one recipient reads, the same in the email and the bell.
      *
-     * @return array{subject: string, headline: string, intro: string, actionLabel: string, actionUrl: string, latestReplyLabel?: string, supporterLabel?: string|null}
+     * @return array{subject: string, headline: string, intro: string, actionLabel: string, actionUrl: string|null, latestReplyLabel?: string, supporterLabel?: string|null}
      */
     protected function wording($notifiable): array
     {
@@ -222,6 +227,11 @@ class TicketNotification extends Notification
             'actionLabel' => __('padmission-tickets::notifications.general.action'),
             'actionUrl' => resolve(TicketUrlService::class)->getActionUrlFor($this->ticket, $notifiable),
         ];
+
+        // The other team's people may be out of reach where this is built, so they go by their team's name.
+        if ($this->ticket->isEscalation() && ($this->isSubmitter($notifiable) || $this->notificationType === 'handedover')) {
+            $wording['supporterLabel'] = $this->escalationTeamName();
+        }
 
         if ($this->notificationType === 'handedover') {
             return [...$wording, ...$this->handedOverWording($notifiable)];
@@ -250,8 +260,6 @@ class TicketNotification extends Notification
             'headline' => __("{$key}.headline_escalation"),
             'intro' => TicketPlugin::teamText("{$key}.intro_escalation", $team, ['originals' => EscalationSummary::forEscalation($this->ticket)]),
             'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
-            // The other team's people may be out of the owner's reach here, so they go by their team's name.
-            'supporterLabel' => $team,
         ];
     }
 
@@ -268,17 +276,21 @@ class TicketNotification extends Notification
         $open = $originals->whereNull('closed_at')->values();
         $replace = ['originals' => EscalationSummary::originals($originals)];
 
+        $name = $open->count() === 1 ? $open->first()->requesterName() : null;
+
         $wording = [
             'subject' => TicketPlugin::teamText("{$key}.subject_escalation", $team, $this->subjectReplacements()),
             'headline' => __("{$key}.headline_escalation"),
-            'intro' => $open->isEmpty()
-                ? TicketPlugin::teamText("{$key}.intro_escalation", $team, $replace)
-                : trans_choice($team === null ? "{$key}.intro_escalation_open" : "{$key}.intro_escalation_open_to", $open->count(), [
+            'intro' => match (true) {
+                $open->isEmpty() => TicketPlugin::teamText("{$key}.intro_escalation", $team, $replace),
+                $open->count() === 1 && blank($name) => TicketPlugin::teamText("{$key}.intro_escalation_open_unnamed", $team, $replace),
+                default => trans_choice($team === null ? "{$key}.intro_escalation_open" : "{$key}.intro_escalation_open_to", $open->count(), [
                     ...$replace,
                     ...($team === null ? [] : ['team' => $team]),
-                    'name' => (string) $open->first()->requesterName(),
+                    'name' => (string) $name,
                     'count' => $open->count(),
                 ]),
+            },
             'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
             'latestReplyLabel' => TicketPlugin::teamText("{$key}.latest_reply", $team),
         ];
@@ -291,29 +303,32 @@ class TicketNotification extends Notification
 
         return [
             ...$wording,
-            'actionLabel' => __('padmission-tickets::notifications.general.action_original', ['name' => (string) $open->first()->requesterName()]),
+            'actionLabel' => $this->openOriginalLabel($open->first()),
             'actionUrl' => $originalUrl,
         ];
     }
 
     /*
-     * Whoever the escalation was taken from can no longer open it, so their
+     * Whoever no longer holds the escalation can no longer open it, so their
      * link goes to a ticket they still answer, or to their team's escalations.
      *
-     * @return array<string, string>
+     * @return array<string, string|null>
      */
     protected function handedOverWording($notifiable): array
     {
         $key = 'padmission-tickets::notifications.ticket-handedover';
         $team = $this->escalationTeamName();
+        $handedToThem = $this->isSubmitter($notifiable);
+        $actor = $this->handOverActorName($handedToThem);
         $replace = [
-            'actor' => $this->event->actor !== null ? Filament::getUserName($this->event->actor) : __('padmission-tickets::notifications.general.sender-support'),
+            ...($actor === null ? [] : ['actor' => $actor]),
             'originals' => EscalationSummary::forEscalation($this->ticket),
         ];
+        $intro = ($handedToThem ? "{$key}.intro" : "{$key}.intro_taken").($actor === null ? '_unnamed' : '');
 
-        if ((string) $notifiable->getKey() !== (string) $this->event->fromId) {
+        if ($handedToThem) {
             return [
-                'intro' => TicketPlugin::teamText("{$key}.intro", $team, $replace),
+                'intro' => TicketPlugin::teamText($intro, $team, $replace),
                 'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
             ];
         }
@@ -324,14 +339,36 @@ class TicketNotification extends Notification
         return [
             'subject' => $this->subjectLine("{$key}.subject_taken"),
             'headline' => __("{$key}.headline_taken"),
-            'intro' => TicketPlugin::teamText("{$key}.intro_taken", $team, $replace),
-            ...($url === null ? [] : [
-                'actionLabel' => $original !== null
-                    ? __('padmission-tickets::notifications.general.action_original', ['name' => (string) $original->requesterName()])
-                    : __('padmission-tickets::notifications.general.action_escalations'),
-                'actionUrl' => $url,
-            ]),
+            'intro' => TicketPlugin::teamText($intro, $team, $replace),
+            'actionLabel' => $original !== null
+                ? $this->openOriginalLabel($original)
+                : __('padmission-tickets::notifications.general.action_escalations'),
+            'actionUrl' => $url,
         ];
+    }
+
+    /*
+     * Without an actor, the person who moved it is the one it left for a
+     * take over, and the one it came from for a hand over.
+     */
+    protected function handOverActorName(bool $handedToThem): ?string
+    {
+        $actor = $this->event->actor ?? TicketPlugin::resolveUserModelClass()::query()
+            ->withoutGlobalScopes()
+            ->find($handedToThem ? $this->event->fromId : $this->event->toId);
+
+        $name = $actor === null ? null : Filament::getUserName($actor);
+
+        return filled($name) ? $name : null;
+    }
+
+    protected function openOriginalLabel(Ticket $original): string
+    {
+        $name = $original->requesterName();
+
+        return filled($name)
+            ? __('padmission-tickets::notifications.general.action_original', ['name' => $name])
+            : __('padmission-tickets::notifications.general.action_original_unnamed');
     }
 
     /*

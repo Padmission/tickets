@@ -291,3 +291,70 @@ it('shows the previous owner this hand over and the unread messages, not earlier
         $line->id,
     ]);
 });
+
+it('names the team for its messages in a hand-over email too', function () {
+    padmissionReply($this->escalation, $this->padmission)->forceFill(['user_id' => null])->save();
+    $this->escalation->update(['submitter_id' => $this->colleague->id]);
+
+    $html = (string) (new TicketNotification($this->escalation, new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id)))->toMail($this->colleague)->render();
+
+    expect($html)->not->toMatch('/>\s*Support\s*</')
+        ->and($html)->toMatch('/>\s*Padmission\s*</');
+});
+
+it('names who moved the escalation when the event has no actor, and nobody when they are gone', function () {
+    $this->escalation->update(['submitter_id' => $this->colleague->id]);
+
+    $handed = wordingFor($this->escalation, new TicketHandedOverEvent($this->escalation, null, $this->owner->id, $this->colleague->id), $this->colleague);
+    $taken = wordingFor($this->escalation, new TicketHandedOverEvent($this->escalation, null, $this->owner->id, $this->colleague->id), $this->owner);
+    $unknown = wordingFor($this->escalation, new TicketHandedOverEvent($this->escalation, null, 99999, $this->colleague->id), $this->colleague);
+
+    expect($handed['intro'])->toStartWith('Test Admin handed you the escalation to Padmission')
+        ->and($taken['intro'])->toStartWith('Maria Lopez took over the escalation to Padmission')
+        ->and($unknown['intro'])->toBe("The escalation to Padmission about Aisha Brooks's ticket was handed to you. Padmission's replies now come to you.");
+});
+
+it('words a hand over without a team name', function () {
+    TicketPlugin::get('test2')->supportTeamName(null);
+    $this->escalation->update(['submitter_id' => $this->colleague->id]);
+    $event = new TicketHandedOverEvent($this->escalation, $this->colleague, $this->owner->id, $this->colleague->id);
+
+    expect(wordingFor($this->escalation, $event, $this->colleague)['intro'])->toBe("Maria Lopez handed you the escalation about Aisha Brooks's ticket. Replies from the team you escalated to now come to you.")
+        ->and(wordingFor($this->escalation, $event, $this->owner)['intro'])->toBe("Maria Lopez took over the escalation about Aisha Brooks's ticket. Replies from the team you escalated to now go to them.");
+});
+
+it('skips a hand-over notification a later move overtook before it was sent', function () {
+    $handedToColleague = new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id);
+    $takenFromOwner = new TicketHandedOverEvent($this->escalation, $this->colleague, $this->owner->id, $this->colleague->id);
+
+    // The owner took it back before either was sent.
+    expect((new TicketNotification($this->escalation, $handedToColleague))->shouldSend($this->colleague))->toBeFalse()
+        ->and((new TicketNotification($this->escalation, $takenFromOwner))->shouldSend($this->owner))->toBeFalse();
+
+    $this->escalation->update(['submitter_id' => $this->colleague->id]);
+
+    expect((new TicketNotification($this->escalation, $handedToColleague))->shouldSend($this->colleague))->toBeTrue()
+        ->and((new TicketNotification($this->escalation, $takenFromOwner))->shouldSend($this->owner))->toBeTrue();
+});
+
+it('words a close without a team name when one original is still open', function () {
+    TicketPlugin::get('test2')->supportTeamName(null);
+    $this->escalation->close(closedById: $this->padmission->id);
+
+    expect(wordingFor($this->escalation->refresh(), new TicketClosedEvent($this->escalation), $this->owner)['intro'])
+        ->toBe("The team you escalated to closed your escalation about Aisha Brooks's ticket. Aisha Brooks's ticket is still open. Update them and close it when they're done.");
+});
+
+it('leaves the name out when the open original has no requester name', function () {
+    $this->original->update(['submitter_id' => null, 'submitter_data' => null]);
+    $this->escalation->close(closedById: $this->padmission->id);
+
+    $closed = wordingFor($this->escalation->refresh(), new TicketClosedEvent($this->escalation), $this->owner);
+
+    $this->escalation->update(['submitter_id' => $this->colleague->id]);
+    $taken = wordingFor($this->escalation, new TicketHandedOverEvent($this->escalation, $this->colleague, $this->owner->id, $this->colleague->id), $this->owner);
+
+    expect($closed['intro'])->toBe("Padmission closed your escalation about 1 ticket. Its ticket is still open. Update the requester and close it when they're done.")
+        ->and($closed['actionLabel'])->toBe('Open the original ticket')
+        ->and($taken['actionLabel'])->toBe('Open the original ticket');
+});
