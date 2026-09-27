@@ -22,6 +22,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketEscalationLinks;
@@ -82,8 +83,10 @@ it('creates linked ticket successfully', function () {
 
     TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
 
-    $originalTicket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
     $currentPanel = Filament::getCurrentOrDefaultPanel()->getId();
+    // A factory-made priority has a random order and could sort ahead of the seeded first one.
+    $firstPriority = TicketPriority::query()->where('panel', $currentPanel)->orderBy('order')->firstOrFail();
+    $originalTicket = Ticket::factory()->open()->create(['linked_ticket_id' => null, 'priority_id' => $firstPriority->id]);
 
     $messageContent = 'This is the initial message for the linked ticket';
 
@@ -105,7 +108,7 @@ it('creates linked ticket successfully', function () {
         ->submitter_id->toBe(auth()->id())
         ->turn->toBe(Turn::Supporter)
         ->status_id->toBe(TicketStatus::getOpenStatuses()->first()->id)
-        ->priority_id->toBe(1);
+        ->priority_id->toBe($firstPriority->id);
 
     expect($originalTicket->refresh())
         ->linked_ticket_id->toBe($newTicket->id);

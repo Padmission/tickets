@@ -755,7 +755,8 @@ describe('Page clarity', function () {
     });
 
     it('tells the chat why a closed ticket without messages is empty, and drops the Escalation card', function () {
-        $ticket = Ticket::factory()->create(['closed_at' => now()->subWeek(), 'linked_ticket_id' => null]);
+        // A random status that is not a closed one would reopen it on save.
+        $ticket = Ticket::factory()->closed()->create(['closed_at' => now()->subWeek(), 'linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSeeHtml('closed-empty-message="No messages. This ticket was closed 1 week ago, so replies are off."')

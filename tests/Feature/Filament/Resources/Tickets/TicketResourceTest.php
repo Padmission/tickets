@@ -14,9 +14,9 @@ it('lists tickets', function () {
 
     Livewire::test(ListTickets::class)
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.plural_model_label'))
+        // Priority is hidden by default; its random name would be found only in the filter's options.
         ->assertSeeInOrder([
             $ticket->status->display_name,
-            $ticket->priority->display_name,
             $ticket->subject,
             $ticket->assignee->name,
         ]);
