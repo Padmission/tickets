@@ -5,10 +5,23 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Tests\User;
+
+it('contains link to view page', function () {
+    $requester = User::factory()->create();
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->create(['submitter_id' => $requester->id, 'assignee_id' => $supporter->id]);
+
+    $mail = (new TicketNotification($ticket, new TicketCreatedEvent($ticket, $requester)))->toMail($supporter);
+    $expectedUrl = TicketResource::getUrl('view', ['record' => $ticket]);
+
+    expect($mail->viewData['actionUrl'])->toBe($expectedUrl)
+        ->and((string) $mail->render())->toContain(e($expectedUrl));
+});
 
 it('is not sent to the person who just escalated, but still reaches the team it went to', function () {
     $owner = User::factory()->create();
