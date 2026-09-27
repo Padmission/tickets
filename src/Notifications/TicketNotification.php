@@ -109,6 +109,10 @@ class TicketNotification extends Notification
 
         $this->markActivitiesAsSent($notifiable, $activities);
 
+        if ($this->notificationType === 'handedover') {
+            $activities = $this->handOverActivities($activities);
+        }
+
         $hasMoreActivities = $activities->count() > $maxEvents;
 
         /*
@@ -400,6 +404,23 @@ class TicketNotification extends Notification
         return $activities->takeUntil(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message
             && $activity->sender !== ActivitySender::System
             && (string) $activity->user_id !== (string) $notifiable->getKey());
+    }
+
+    /**
+     * The line for this hand over and the unread messages, without the notes
+     * of earlier hand overs that were never marked as notified.
+     *
+     * @param  Collection<int, TicketActivity>  $activities
+     * @return Collection<int, TicketActivity>
+     */
+    protected function handOverActivities(Collection $activities): Collection
+    {
+        $line = $activities->last(fn (TicketActivity $activity): bool => $activity->type === ActivityType::HandedOver
+            && (string) ($activity->data['to'] ?? '') === (string) $this->event->toId);
+
+        return $activities
+            ->filter(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message || $activity === $line)
+            ->values();
     }
 
     public function getView(): string

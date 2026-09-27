@@ -276,3 +276,18 @@ it('links the escalation page even where the receiving panel has no tickets plug
         ->and($owner['subject'])->toStartWith('The team you escalated to replied on your escalation')
         ->and($padmission['actionUrl'])->toBe(url("/test2/tickets/{$this->escalation->id}/view"));
 });
+
+it('shows the previous owner this hand over and the unread messages, not earlier hand overs', function () {
+    TicketActivity::factory()->create(['ticket_id' => $this->escalation->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::System, 'type' => ActivityType::HandedOver, 'data' => ['from' => $this->owner->id, 'to' => $this->colleague->id]]);
+    TicketActivity::factory()->create(['ticket_id' => $this->escalation->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::System, 'type' => ActivityType::HandedOver, 'data' => ['from' => $this->colleague->id, 'to' => $this->owner->id]]);
+    padmissionReply($this->escalation, $this->padmission, 'Which household?');
+    $line = TicketActivity::factory()->create(['ticket_id' => $this->escalation->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::System, 'type' => ActivityType::HandedOver, 'data' => ['from' => $this->owner->id, 'to' => $this->colleague->id]]);
+    $this->escalation->update(['submitter_id' => $this->colleague->id]);
+
+    $mail = (new TicketNotification($this->escalation, new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id)))->toMail($this->colleague);
+
+    expect($mail->viewData['activities']->pluck('id')->all())->toBe([
+        $this->escalation->ticketActivities()->where('content', 'Which household?')->value('id'),
+        $line->id,
+    ]);
+});
