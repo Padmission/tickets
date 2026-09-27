@@ -47,9 +47,10 @@ it('shows ticket status and priority', function () {
 
 describe('Linked Tickets', function () {
     it('shows CreateLinkedTicketAction when can create linked tickets', function () {
+        (new TicketStatusSeeder)->run();
         TicketPlugin::get()->allowLinkedTicketsTo(['test']);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertActionVisible(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'))
@@ -270,8 +271,9 @@ describe('Escalation explanation', function () {
     it('lets the two choices speak for a ticket that is not escalated yet', function () {
         TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
         TicketPlugin::get('test2')->supportTeamName('Platform Support');
+        (new TicketStatusSeeder)->run();
 
-        $ticket = Ticket::factory()->create(['linked_ticket_id' => null]);
+        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']))

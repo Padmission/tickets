@@ -61,11 +61,25 @@ class TicketFactory extends Factory
         $userModel = TicketPlugin::resolveModelClass(Authenticatable::class);
 
         return $this->state([
-            'status_id' => TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus(),
+            'status_id' => fn (array $attributes): ?TicketStatus => $this->closedStatusFor($attributes),
             'disposition_id' => $this->getRandomRecycledModel($dispositionModel) ?? $dispositionModel::factory(),
             'closed_at' => now(),
             'closed_by' => $this->getRandomRecycledModel($userModel) ?? $userModel::factory(),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function closedStatusFor(array $attributes): ?TicketStatus
+    {
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        $ticket = (new ($this->modelName()))->forceFill([
+            'panel' => $attributes['panel'] ?? null,
+            'tenant_id' => $attributes['tenant_id'] ?? null,
+        ]);
+
+        return $statusModel::getClosedStatusFor($ticket) ?? $statusModel::getClosedStatus();
     }
 
     public function open(): static

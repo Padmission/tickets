@@ -11,6 +11,7 @@ use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Concerns\HasColor;
 use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketStatusObserver::class)]
 class TicketStatus extends Model
@@ -46,5 +47,29 @@ class TicketStatus extends Model
             ->tap(new CurrentPanelScope)
             ->orderBy('order', 'desc')
             ->firstOrFail();
+    }
+
+    /*
+     * The closed status of the ticket's own panel and tenant, which differs
+     * from the current panel's when staff close a ticket from elsewhere.
+     */
+    public static function getClosedStatusFor(Ticket $ticket): ?static
+    {
+        $query = static::query()
+            ->withoutGlobalScope(CurrentPanelScope::class)
+            ->where('panel', $ticket->panel);
+
+        if (config('padmission-tickets.tenancy.enabled')) {
+            $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
+        }
+
+        $modifier = TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            $query = app()->call($modifier, ['relation' => $query, 'model' => 'status']);
+        }
+
+        /** @var ?static */
+        return $query->orderBy('order', 'desc')->first();
     }
 }

@@ -16,8 +16,7 @@ it('requires login ', function () {
 });
 
 it('requires create permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('create', fn (User $user) => false);
+    Gate::before(fn (User $user, string $ability) => $ability === 'create' ? false : null);
 
     $user = User::factory()->create();
 

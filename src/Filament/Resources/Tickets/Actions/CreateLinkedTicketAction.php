@@ -38,10 +38,10 @@ class CreateLinkedTicketAction extends Action
         parent::setUp();
 
         $this
-            ->label(fn (): string => static::translate('label'))
+            ->label(fn (Ticket $record): string => static::translate(static::isRelinking($record) ? 'label_again' : 'label'))
             ->tooltip(fn (): string => static::translate('tooltip'))
-            ->modalHeading(fn (): string => static::translate('modal_heading'))
-            ->modalDescription(fn (): string => static::translate('modal_description'))
+            ->modalHeading(fn (Ticket $record): string => static::translate(static::isRelinking($record) ? 'modal_heading_again' : 'modal_heading'))
+            ->modalDescription(fn (Ticket $record): string => static::translate(static::isRelinking($record) ? 'modal_description_again' : 'modal_description'))
             ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.create_linked_ticket.submit'))
             ->icon(Heroicon::ArrowUpTray)
             ->color('gray')
@@ -164,11 +164,21 @@ class CreateLinkedTicketAction extends Action
             });
     }
 
+    /*
+     * A link to an escalation that was closed or deleted does not block a new
+     * one; escalating or adding replaces it.
+     */
     public static function isAvailableFor(Ticket $record): bool
     {
         return $record->isInCurrentPanel()
-            && blank($record->linked_ticket_id)
-            && count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0;
+            && $record->isOpen
+            && count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 0
+            && (blank($record->linked_ticket_id) || ! resolve(TicketEscalationLinks::class)->hasOpenEscalation($record));
+    }
+
+    protected static function isRelinking(Ticket $record): bool
+    {
+        return filled($record->linked_ticket_id);
     }
 
     protected static function translate(string $key): string

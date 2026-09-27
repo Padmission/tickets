@@ -1,7 +1,9 @@
 <?php
 
 use Filament\Facades\Filament;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivityType;
@@ -170,4 +172,78 @@ it('logs priority change', function () {
             'to' => 2,
         ]),
     ]);
+});
+
+describe('Closed status of the ticket\'s own panel and tenant', function () {
+    it('writes the closed status of the ticket\'s panel when closed from another panel', function () {
+        (new TicketStatusSeeder)->run();
+
+        $ticket = Ticket::factory()->open()->create(['panel' => 'test2']);
+
+        $ticket->close(closedById: User::factory()->create()->id);
+
+        $closed = TicketStatus::withoutGlobalScopes()->where('panel', 'test2')->orderByDesc('order')->first();
+
+        expect($ticket->refresh())
+            ->isClosed->toBeTrue()
+            ->status_id->toBe($closed->id)
+            ->and($closed->id)->not->toBe(TicketStatus::getClosedStatus()->id);
+    });
+
+    it('writes the closed status of the ticket\'s tenant when closed by someone in another tenant', function () {
+        Schema::table('tickets', fn (Blueprint $table) => $table->unsignedBigInteger('tenant_id')->nullable());
+        Schema::table('ticket_statuses', fn (Blueprint $table) => $table->unsignedBigInteger('tenant_id')->nullable());
+        config()->set('padmission-tickets.tenancy.enabled', true);
+
+        $statuses = collect([1, 2])->mapWithKeys(fn (int $tenant): array => [$tenant => [
+            'open' => TicketStatus::factory()->create(['panel' => 'test', 'tenant_id' => $tenant, 'order' => 1]),
+            'closed' => TicketStatus::factory()->create(['panel' => 'test', 'tenant_id' => $tenant, 'order' => 2]),
+        ]]);
+
+        // The viewer's tenant scope, which the ticket panel's relationship modifier lifts.
+        TicketStatus::addGlobalScope('viewer-tenant', fn ($query) => $query->where('ticket_statuses.tenant_id', 1));
+        TicketPlugin::get()->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('viewer-tenant'));
+
+        try {
+            $ticket = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $statuses[2]['open']->id]);
+
+            $ticket->close(closedById: User::factory()->create()->id);
+
+            expect($ticket->refresh())
+                ->isClosed->toBeTrue()
+                ->status_id->toBe($statuses[2]['closed']->id);
+        } finally {
+            TicketStatus::clearBootedModels();
+        }
+    });
+
+    it('closes a ticket set to its own panel\'s closed status and reopens it when set back', function () {
+        (new TicketStatusSeeder)->run();
+
+        $statuses = TicketStatus::withoutGlobalScopes()->where('panel', 'test2')->orderBy('order')->get();
+        $ticket = Ticket::factory()->create(['panel' => 'test2', 'status_id' => $statuses->first()->id]);
+
+        $this->actingAs(User::factory()->create());
+
+        $ticket->update(['status_id' => $statuses->last()->id]);
+
+        expect($ticket->refresh()->isClosed)->toBeTrue();
+
+        $ticket->update(['status_id' => $statuses->first()->id]);
+
+        expect($ticket->refresh())
+            ->isClosed->toBeFalse()
+            ->closed_at->toBeNull()
+            ->closed_by->toBeNull();
+    });
+
+    it('does not treat the current panel\'s closed status as closing a ticket in another panel', function () {
+        (new TicketStatusSeeder)->run();
+
+        $ticket = Ticket::factory()->open()->create(['panel' => 'test2']);
+
+        $ticket->update(['status_id' => TicketStatus::getClosedStatus()->id]);
+
+        expect($ticket->refresh()->isClosed)->toBeFalse();
+    });
 });

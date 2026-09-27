@@ -64,3 +64,30 @@ it('says what closing does before it closes', function () {
 
     expect($ticket->refresh()->isClosed)->toBeFalse();
 });
+
+it('asks for a disposition only when the ticket\'s own panel has one', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    TicketDisposition::factory()->create(['panel' => 'test2']);
+    $ticket = Ticket::factory()->open()->create(['disposition_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    expect($ticket->refresh())
+        ->isClosed->toBeTrue()
+        ->disposition_id->toBeNull();
+
+    TicketDisposition::factory()->create(['panel' => 'test']);
+    $second = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $second->id])
+        ->callAction(CloseTicketAction::class)
+        ->assertHasActionErrors(['disposition' => 'required']);
+
+    expect($second->refresh()->isClosed)->toBeFalse();
+});

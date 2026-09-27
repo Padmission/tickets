@@ -71,10 +71,7 @@ class TicketObserver
                 ]
             );
 
-            $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
-            $isClosedStatus = $newStatusId === $closedStatus->getKey();
-
-            if ($isClosedStatus && $ticket->isOpen) {
+            if ($this->isClosedStatus($ticket, $newStatusId) && $ticket->isOpen) {
                 $ticket->close(closedById: auth()->id());
             }
 
@@ -84,9 +81,13 @@ class TicketObserver
 
     protected function handleStatusClosureAttributesOnly(Ticket $ticket): void
     {
-        $newStatusId = $ticket->status_id;
-        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
-        $isClosedStatus = $newStatusId === $closedStatus->getKey();
+        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatusFor($ticket);
+
+        if ($closedStatus === null) {
+            return;
+        }
+
+        $isClosedStatus = $ticket->status_id === $closedStatus->getKey();
 
         // If changing to closed status and ticket isn't already closed
         if ($isClosedStatus && $ticket->closed_at === null) {
@@ -107,9 +108,8 @@ class TicketObserver
     {
         $oldStatusId = $ticket->getOriginal('status_id');
         $newStatusId = $ticket->status_id;
-        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
-        $isClosedStatus = $newStatusId === $closedStatus->getKey();
-        $wasClosedStatus = $oldStatusId === $closedStatus->getKey();
+        $isClosedStatus = $this->isClosedStatus($ticket, $newStatusId);
+        $wasClosedStatus = $this->isClosedStatus($ticket, $oldStatusId);
 
         // If changed to closed status (and wasn't already closed)
         if ($isClosedStatus && ! $wasClosedStatus) {
@@ -124,6 +124,17 @@ class TicketObserver
 
             event(new TicketClosedEvent($ticket, auth()->user()));
         }
+    }
+
+    /*
+     * Measured against the ticket's own panel and tenant; a panel without
+     * statuses has no closed status to match.
+     */
+    protected function isClosedStatus(Ticket $ticket, mixed $statusId): bool
+    {
+        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatusFor($ticket);
+
+        return $closedStatus !== null && $statusId === $closedStatus->getKey();
     }
 
     protected function handlePriorityTransition(Ticket $ticket): void

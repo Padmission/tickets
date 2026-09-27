@@ -92,6 +92,12 @@ return [
             'modal_description' => 'Opens a separate ticket for outside help. This ticket stays with your team.',
             'submit' => 'Escalate',
             'modal_description_to' => 'Opens a separate ticket for :team. This ticket stays with your team.',
+            'label_again' => 'Escalate again',
+            'label_again_to' => 'Escalate to :team again',
+            'modal_heading_again' => 'Escalate again',
+            'modal_heading_again_to' => 'Escalate to :team again',
+            'modal_description_again' => 'Opens a new escalation to the team you escalated to. The closed escalation stays in this ticket\'s history.',
+            'modal_description_again_to' => 'Opens a new escalation to :team. The closed escalation stays in this ticket\'s history.',
 
             'form' => [
                 'panel' => 'Escalate to',

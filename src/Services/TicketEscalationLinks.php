@@ -28,7 +28,10 @@ class TicketEscalationLinks
     public function addToEscalation(Ticket $original, int|string $escalationId): ?string
     {
         return DB::transaction(function () use ($original, $escalationId): ?string {
-            if (filled($this->lockedLink($original))) {
+            $currentId = $this->lockedLink($original);
+            $current = $this->linkedRow($currentId);
+
+            if (static::isOpen($current)) {
                 return self::ALREADY_ESCALATED;
             }
 
@@ -41,6 +44,10 @@ class TicketEscalationLinks
                 return self::NOT_LINKABLE;
             }
 
+            if (filled($currentId)) {
+                $this->unlink($original, $currentId, $current);
+            }
+
             $this->link($original, $escalation);
 
             return null;
@@ -50,16 +57,40 @@ class TicketEscalationLinks
     /*
      * Call inside the transaction that opens the new escalation: the row lock
      * taken here is held until it commits, so nobody can link the ticket
-     * elsewhere in between.
+     * elsewhere in between. A link to an escalation that is gone or closed is
+     * cleared here, so the new one replaces it.
      */
     public function canOpenEscalation(Ticket $original): bool
     {
-        return blank($this->lockedLink($original));
+        $currentId = $this->lockedLink($original);
+
+        if (blank($currentId)) {
+            return true;
+        }
+
+        $current = $this->linkedRow($currentId);
+
+        if (static::isOpen($current)) {
+            return false;
+        }
+
+        $this->unlink($original, $currentId, $current);
+
+        return true;
     }
 
     public function linkNewEscalation(Ticket $original, Ticket $escalation): void
     {
         $this->link($original, $escalation);
+    }
+
+    /*
+     * Read past host scopes, so an escalation the viewer cannot see still
+     * blocks a new one.
+     */
+    public function hasOpenEscalation(Ticket $original): bool
+    {
+        return static::isOpen($this->linkedRow($original->linked_ticket_id));
     }
 
     public function removeFromEscalation(Ticket $original): bool
@@ -71,15 +102,7 @@ class TicketEscalationLinks
                 return false;
             }
 
-            $escalation = static::query()->withoutGlobalScopes()->find($escalationId);
-
-            $this->writeLink($original, null);
-
-            $this->addActivity($original, ActivityType::RemovedFromEscalation, ['escalation' => $escalationId]);
-
-            if ($escalation !== null) {
-                $this->addActivity($escalation, ActivityType::OriginalRemoved, ['original' => $original->getKey()]);
-            }
+            $this->unlink($original, $escalationId, $this->linkedRow($escalationId));
 
             return true;
         });
@@ -119,9 +142,7 @@ class TicketEscalationLinks
             }
 
             foreach ($toRemove as $id) {
-                $this->writeLink($locked[$id], null);
-                $this->addActivity($locked[$id], ActivityType::RemovedFromEscalation, ['escalation' => $escalation->getKey()]);
-                $this->addActivity($escalation, ActivityType::OriginalRemoved, ['original' => $id]);
+                $this->unlink($locked[$id], $escalation->getKey(), $escalation);
             }
 
             foreach ($toAdd as $id) {
@@ -146,6 +167,30 @@ class TicketEscalationLinks
 
         $this->addActivity($original, ActivityType::AddedToEscalation, ['escalation' => $escalation->getKey()]);
         $this->addActivity($escalation, ActivityType::OriginalAdded, ['original' => $original->getKey()]);
+    }
+
+    protected function unlink(Ticket $original, int|string $escalationId, ?Ticket $escalation): void
+    {
+        $this->writeLink($original, null);
+
+        $this->addActivity($original, ActivityType::RemovedFromEscalation, ['escalation' => $escalationId]);
+
+        if ($escalation !== null) {
+            $this->addActivity($escalation, ActivityType::OriginalRemoved, ['original' => $original->getKey()]);
+        }
+    }
+
+    /*
+     * The row a link points at, deleted or not, read past host scopes.
+     */
+    protected function linkedRow(mixed $escalationId): ?Ticket
+    {
+        return blank($escalationId) ? null : static::query()->withoutGlobalScopes()->find($escalationId);
+    }
+
+    protected static function isOpen(?Ticket $escalation): bool
+    {
+        return $escalation !== null && ! $escalation->trashed() && $escalation->isOpen;
     }
 
     /*

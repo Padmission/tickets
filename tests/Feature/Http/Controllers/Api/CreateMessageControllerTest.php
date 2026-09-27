@@ -2,10 +2,16 @@
 
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Tests\User;
+
+beforeEach(function () {
+    (new TicketStatusSeeder)->run();
+});
 
 it('requires login ', function () {
     $ticket = Ticket::factory()->create();
@@ -45,7 +51,7 @@ it('forbids posting a message to a ticket the user cannot access', function () {
 
 it('rejects attachment ids belonging to another ticket without deleting them', function () {
     $user = User::factory()->create();
-    $ticket = Ticket::factory()->create(['submitter_id' => $user->id]);
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
     TicketActivity::factory()->create(['ticket_id' => $ticket->id]);
 
     $otherTicket = Ticket::factory()->create();
@@ -72,7 +78,7 @@ it('rejects attachment ids belonging to another ticket without deleting them', f
 it('rejects attachment ids created by another user without re-parenting them', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $ticket = Ticket::factory()->create(['submitter_id' => $user->id]);
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
     TicketActivity::factory()->create(['ticket_id' => $ticket->id]);
 
     $othersAttachment = TicketAttachment::factory()->create([
@@ -99,7 +105,7 @@ it('attaches the user\'s own pending attachments for the ticket', function () {
     Storage::disk('s3')->put('tickets/attachment.jpg', 'content');
 
     $user = User::factory()->create();
-    $ticket = Ticket::factory()->create(['submitter_id' => $user->id]);
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
     TicketActivity::factory()->create(['ticket_id' => $ticket->id]);
 
     $attachment = TicketAttachment::factory()->create([
@@ -136,4 +142,20 @@ it('forbids posting a message to a ticket the user cannot view even when manage 
             'content' => 'Hello',
         ])
         ->assertForbidden();
+});
+
+it('refuses a reply to a closed ticket', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->closed()->create(['submitter_id' => $user->id]);
+
+    $this->actingAs($user);
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Is anyone there?',
+        ])
+        ->assertUnprocessable()
+        ->assertExactJson(['message' => 'This ticket is already resolved.']);
+
+    expect($ticket->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse();
 });

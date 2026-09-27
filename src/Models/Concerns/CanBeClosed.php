@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Models\Concerns;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
@@ -29,7 +30,8 @@ trait CanBeClosed
 
         $closedById ??= auth()->id();
 
-        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        $closedStatus = $statusModel::getClosedStatusFor($this) ?? throw (new ModelNotFoundException)->setModel($statusModel);
 
         $originalStatusId = $this->status_id;
         $newStatusId = $closedStatus->getKey();

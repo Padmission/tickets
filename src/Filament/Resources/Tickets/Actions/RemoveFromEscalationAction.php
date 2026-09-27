@@ -29,7 +29,9 @@ class RemoveFromEscalationAction extends Action
             ->icon(Heroicon::OutlinedLinkSlash)
             ->color('gray')
             ->link()
-            ->visible(fn (Ticket $record): bool => $record->isInCurrentPanel() && filled($record->linked_ticket_id))
+            ->visible(fn (Ticket $record): bool => $record->isInCurrentPanel()
+                && $record->isOpen
+                && resolve(TicketEscalationLinks::class)->hasOpenEscalation($record))
             ->action(function (Ticket $record): void {
                 if (! resolve(TicketEscalationLinks::class)->removeFromEscalation($record)) {
                     return;

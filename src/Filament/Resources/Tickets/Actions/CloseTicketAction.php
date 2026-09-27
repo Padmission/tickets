@@ -6,11 +6,10 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketDisposition;
-use Padmission\Tickets\TicketPlugin;
 
 class CloseTicketAction extends Action
 {
@@ -41,21 +40,17 @@ class CloseTicketAction extends Action
             ->slideOver(false)
             ->icon('heroicon-o-check-circle');
 
-        $hasDispositions = $this->dispositionsExist();
-
-        if ($hasDispositions) {
-            $this->schema([
-                Select::make('disposition')
-                    ->label(__('padmission-tickets::tickets.actions.close.disposition.label'))
-                    ->relationship(
-                        'disposition',
-                        'display_name',
-                        fn ($query) => $this->scopeDispositionsToTicket($query, $this->getRecord()),
-                    )
-                    ->lazy()
-                    ->required(),
-            ]);
-        }
+        $this->schema(fn (Ticket $record): array => $this->dispositionsExist($record) ? [
+            Select::make('disposition')
+                ->label(__('padmission-tickets::tickets.actions.close.disposition.label'))
+                ->relationship(
+                    'disposition',
+                    'display_name',
+                    fn ($query) => $this->scopeDispositionsToTicket($query, $this->getRecord()),
+                )
+                ->lazy()
+                ->required(),
+        ] : []);
 
         $this->action(function (Ticket $record, Component $livewire, $data) {
             $record->close(
@@ -67,11 +62,15 @@ class CloseTicketAction extends Action
         });
     }
 
-    protected function dispositionsExist(): bool
+    /*
+     * Asked the way the disposition options are loaded, so a disposition is
+     * required only when the ticket's own panel and tenant offers one.
+     */
+    protected function dispositionsExist(Ticket $record): bool
     {
-        $dispositionModel = TicketPlugin::resolveModelClass(TicketDisposition::class);
+        $query = Relation::noConstraints(fn (): Relation => $record->disposition())->getQuery();
 
-        return $dispositionModel::query()->exists();
+        return $this->scopeDispositionsToTicket($query, $record)->exists();
     }
 
     protected function scopeDispositionsToTicket(Builder $query, mixed $ticket): Builder

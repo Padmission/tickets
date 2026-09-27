@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Gate;
-use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Http\DataMappers\TicketStatusMapper;
 use Padmission\Tickets\Tests\Fixtures\Models\CustomTicket;
 use Padmission\Tickets\Tests\User;
 
@@ -12,8 +13,7 @@ it('requires login ', function () {
 });
 
 it('requires create permission', function () {
-    Gate::policy(Ticket::class, null);
-    Gate::define('create', fn (User $user) => false);
+    Gate::before(fn (User $user, string $ability) => $ability === 'create' ? false : null);
 
     $user = User::factory()->create();
 
@@ -29,8 +29,10 @@ it('lists users tickets', function () {
 
     [$userA, $userB] = User::factory()->count(2)->create();
 
-    $ticketA = CustomTicket::factory()->create(['submitter_id' => $userA->id]);
-    CustomTicket::factory()->create(['submitter_id' => $userB->id]);
+    (new TicketStatusSeeder)->run();
+
+    $ticketA = CustomTicket::factory()->open()->create(['submitter_id' => $userA->id]);
+    CustomTicket::factory()->open()->create(['submitter_id' => $userB->id]);
 
     $this->actingAs($userA);
 
@@ -43,8 +45,11 @@ it('lists users tickets', function () {
         ->{0}->toEqual([
             'id' => $ticketA->id,
             'subject' => $ticketA->subject,
+            'status' => TicketStatusMapper::map($ticketA->status),
             'latest_message' => null,
-            'is_closed' => $ticketA->isClosed,
+            'is_closed' => false,
+            'needs_attention' => true,
+            'is_unread' => false,
             'updated_at' => now()->diffForHumans(),
         ]);
 });

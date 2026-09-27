@@ -183,6 +183,11 @@ customElements.define(
 				const ticket = data.ticket;
 				const messages = data.messages;
 
+				if (ticket.is_closed) {
+					this.rootNode().querySelector("[data-composer]").style.display =
+						"none";
+				}
+
 				if (messages.length === 0) {
 					return;
 				}
@@ -198,11 +203,6 @@ customElements.define(
 
 				if (this.lastSeenMessageId === 0) {
 					this.lastSeenMessageId = newestMessageId;
-				}
-
-				if (ticket.is_closed) {
-					this.rootNode().querySelector("[data-composer]").style.display =
-						"none";
 				}
 
 				this.ticket = ticket;
@@ -817,16 +817,24 @@ customElements.define(
 				this.dispatchEvent(new CustomEvent("message-sent"));
 			} catch (error) {
 				console.log("Sending failed", error);
-				this.setError(__("chat.error"));
+				this.setError((await this.responseMessage(error)) || __("chat.error"));
 			}
 
 			this.setIsSending(false);
 		}
 
+		async responseMessage(error) {
+			try {
+				return (await error.response?.json())?.message || null;
+			} catch (e) {
+				return null;
+			}
+		}
+
 		setError(message) {
 			const el = this.rootNode().querySelector("[data-chat-error]");
 
-			el.innerHTML = message;
+			el.textContent = message;
 			el.removeAttribute("hidden");
 		}
 
