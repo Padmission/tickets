@@ -184,9 +184,11 @@ class TicketNotification extends Notification
 
         $this->markActivitiesAsSent($notifiable, $activities);
 
-        $body = $this->notificationType === 'handedover'
-            ? $wording['intro']
-            : $activities->last()?->plainTextContent(30) ?? $wording['intro'];
+        $body = match ($this->notificationType) {
+            'handedover' => $wording['intro'],
+            'created' => $this->openingActivities($notifiable, $activities)->last()?->plainTextContent(30) ?? $wording['intro'],
+            default => $activities->last()?->plainTextContent(30) ?? $wording['intro'],
+        };
 
         return FilamentNotification::make()
             ->title($wording['subject'])
@@ -364,9 +366,11 @@ class TicketNotification extends Notification
     }
 
     /*
-     * A hand over shows the conversation so far as background, but the
-     * messages in it are still owed their own notification: a reply that
-     * lands while the hand over is pending would otherwise never be sent.
+     * A hand over shows the unread messages as background, but they are still
+     * owed their own notification: a reply that lands while the hand over is
+     * pending would otherwise never be sent. A created notification tells of
+     * the ticket's opening only, so a reply already written to the recipient,
+     * such as the one sent while escalating, keeps its own notification.
      */
     protected function markActivitiesAsSent($notifiable, Collection $activities): void
     {
@@ -374,11 +378,28 @@ class TicketNotification extends Notification
             return;
         }
 
+        if ($this->notificationType === 'created') {
+            $activities = $this->openingActivities($notifiable, $activities);
+        }
+
         $latestActivity = $activities->last();
 
         if ($latestActivity) {
             resolve(TicketActivityService::class)->markAsSent($this->ticket, $notifiable, $latestActivity->id);
         }
+    }
+
+    /**
+     * The unread activities up to the first message someone else wrote to the recipient.
+     *
+     * @param  Collection<int, TicketActivity>  $activities
+     * @return Collection<int, TicketActivity>
+     */
+    protected function openingActivities($notifiable, Collection $activities): Collection
+    {
+        return $activities->takeUntil(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message
+            && $activity->sender !== ActivitySender::System
+            && (string) $activity->user_id !== (string) $notifiable->getKey());
     }
 
     public function getView(): string
