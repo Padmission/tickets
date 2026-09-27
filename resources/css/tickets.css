@@ -483,3 +483,11 @@
 	gap: calc(var(--spacing) * 3);
 	margin-top: calc(var(--spacing) * 6);
 }
+
+/* A list marker wraps rather than cut its words off in a narrow Subject cell. */
+.pad-ti-marker.fi-badge,
+.pad-ti-marker .fi-badge-label {
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
+}

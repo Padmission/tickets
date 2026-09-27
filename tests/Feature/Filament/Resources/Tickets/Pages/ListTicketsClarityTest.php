@@ -378,7 +378,8 @@ describe('Conversations in the list', function () {
             ->and(listCell($component, 'subject', $waitingOnColleague))->toContain('Escalated')->toContain('Platform Support is waiting on Maria Lopez on the escalation.')
             ->and(listCell($component, 'subject', $replied))->toContain('Platform Support replied')->toContain('fi-color-warning')
             ->toContain('Platform Support replied on the escalation after your team last wrote. Read it, then answer Platform Support there or pass the answer on to Aisha Brooks here.')
-            ->and(listCell($component, 'subject', $repliedToOther))->toContain('Platform Support replied to Maria Lopez')->not->toContain('fi-color-warning')
+            ->and(listCell($component, 'subject', $repliedToOther))->toMatch('/>\s*Platform Support replied\s*</')->toContain('pad-ti-marker')->not->toContain('fi-color-warning')
+            ->toContain('Platform Support replied to Maria Lopez on the escalation after your team last wrote. Maria Lopez passes the answer on to Aisha Brooks.')
             ->and(listCell($component, 'subject', $closed))->toContain('Escalation closed')->toContain('The escalation was closed 1 day ago.')
             ->and(listCell($component, 'subject', $plain))->toBe('<b>Rent</b> question');
 

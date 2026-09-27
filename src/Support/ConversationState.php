@@ -130,9 +130,8 @@ final readonly class ConversationState
 
         return match ($this->marker) {
             'escalated' => __(self::MARKER.'.escalated'),
-            'replied' => $this->ownerIsViewer() || $this->handlerName() === null
-                ? TicketPlugin::teamText(self::MARKER.'.replied', $team)
-                : TicketPlugin::teamText(self::MARKER.'.replied_to_other', $team, ['name' => $this->handlerName()]),
+            // Short enough to fit a list cell; the tooltip says who the reply went to.
+            'replied' => TicketPlugin::teamText(self::MARKER.'.replied', $team),
             'closed' => __(self::MARKER.'.closed'),
             default => null,
         };
@@ -160,9 +159,14 @@ final readonly class ConversationState
                 $team,
                 ['handler' => $this->handlerName()],
             ),
-            'replied' => TicketPlugin::teamText(self::MARKER_HELP.'.replied', $team, [
-                'name' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester'),
-            ]),
+            'replied' => TicketPlugin::teamText(
+                self::MARKER_HELP.($this->ownerIsViewer() || $this->handlerName() === null ? '.replied' : '.replied_other'),
+                $team,
+                [
+                    'name' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester'),
+                    'handler' => $this->handlerName(),
+                ],
+            ),
             'closed' => __(self::MARKER_HELP.'.closed', ['time' => $escalation?->closed_at?->diffForHumans()]),
             default => null,
         };

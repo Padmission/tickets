@@ -385,8 +385,6 @@ return [
                 'escalated' => 'Escalated',
                 'replied' => 'Reply on the escalation',
                 'replied_to' => ':team replied',
-                'replied_to_other' => 'Reply on the escalation for :name',
-                'replied_to_other_to' => ':team replied to :name',
                 'closed' => 'Escalation closed',
             ],
 
@@ -405,6 +403,8 @@ return [
                 'escalated_waiting_owner_unnamed_to' => ':team is waiting on your team on the escalation.',
                 'replied' => 'The team you escalated to replied on the escalation after your team last wrote. Read it, then answer them there or pass the answer on to :name here.',
                 'replied_to' => ':team replied on the escalation after your team last wrote. Read it, then answer :team there or pass the answer on to :name here.',
+                'replied_other' => 'The team you escalated to replied to :handler on the escalation after your team last wrote. :handler passes the answer on to :name.',
+                'replied_other_to' => ':team replied to :handler on the escalation after your team last wrote. :handler passes the answer on to :name.',
                 'closed' => 'The escalation was closed :time. This ticket stays open until your team closes it.',
             ],
 

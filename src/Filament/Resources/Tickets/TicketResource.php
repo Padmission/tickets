@@ -449,7 +449,7 @@ class TicketResource extends Resource
     protected static function badge(string $label, string $color, ?string $tooltip): HtmlString
     {
         return new HtmlString(' '.Blade::render(
-            '<x-filament::badge size="sm" :color="$color" :tooltip="$tooltip">{{ $label }}</x-filament::badge>',
+            '<x-filament::badge size="sm" :color="$color" :tooltip="$tooltip" class="pad-ti-marker">{{ $label }}</x-filament::badge>',
             ['label' => $label, 'color' => $color, 'tooltip' => $tooltip],
         ));
     }
