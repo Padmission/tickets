@@ -2,6 +2,7 @@ import BaseElement from "../helpers/base-element";
 import render from "../helpers/render";
 import escapeHtml from "../helpers/escape-html.js";
 import __ from "../helpers/trans.js";
+import ticketHeading from "../helpers/ticket-heading.js";
 
 customElements.define(
 	"chat-view-ticket",
@@ -14,6 +15,14 @@ customElements.define(
 				this.querySelector("[data-chat-subject]").textContent =
 					event.detail.subject;
 			});
+
+			this.querySelector("chat-component").addEventListener(
+				"ticket-loaded",
+				(event) => {
+					this.querySelector("[data-chat-subject]").textContent =
+						event.detail.subject;
+				},
+			);
 		}
 		back() {
 			this.changeView("chat-list-tickets");
@@ -35,7 +44,7 @@ customElements.define(
                         </button>
 
                         <h2 data-chat-subject>
-                            ${this.subject ? escapeHtml(this.subject) : __('view.new_chat')}
+                            ${escapeHtml(ticketHeading(this.subject, this.ticketId, __('view.new_chat')))}
                         </h2>
 
                         <form data-close-dialog>

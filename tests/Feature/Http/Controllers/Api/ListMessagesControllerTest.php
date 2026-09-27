@@ -59,6 +59,16 @@ it('lists messages', function () {
         ->{0}->toHaveKeys(['side', 'user_name', 'content', 'attachments', 'created_at']);
 });
 
+it('gives the ticket\'s subject, so a chat opened by the ticket\'s id alone can head it', function () {
+    $user = $this->login();
+    $ticket = Ticket::factory()->create(['submitter_id' => $user->id, 'subject' => 'Recert rent is wrong for household 14']);
+
+    $this
+        ->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $ticket]))
+        ->assertOk()
+        ->assertJsonPath('ticket.subject', 'Recert rent is wrong for household 14');
+});
+
 it('filters some messages without elevated rights', function () {
     $this->freezeTime();
 

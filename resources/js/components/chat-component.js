@@ -9,6 +9,7 @@ import render from "./helpers/render";
 import humanFileSize from "./helpers/human-file-size.js";
 import isCutOffAtTop from "./helpers/cut-off-at-top.js";
 import formatMessageTime from "./helpers/format-message-time.js";
+import ticketSubject from "./helpers/ticket-subject.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -28,6 +29,7 @@ customElements.define(
 			this.ticketId = null;
 			this.ticket = null;
 			this.seenOpen = false;
+			this.loadedSubject = null;
 
 			this.messages = [];
 			this.attachments = [];
@@ -212,6 +214,15 @@ customElements.define(
 
 				const ticket = data.ticket;
 				const messages = data.messages;
+
+				if (ticket.subject && ticket.subject !== this.loadedSubject) {
+					this.loadedSubject = ticket.subject;
+					this.dispatchEvent(
+						new CustomEvent("ticket-loaded", {
+							detail: { subject: ticket.subject },
+						}),
+					);
+				}
 
 				if (ticket.is_closed) {
 					this.rootNode().querySelector("[data-composer]").style.display =
@@ -795,10 +806,7 @@ customElements.define(
 		}
 
 		async createTicket() {
-			const subject = this.messageContent
-				.trim()
-				.replace(/(<([^>]+)>)/gi, "") // Strip HTML tags
-				.substring(0, 40);
+			const subject = ticketSubject(this.messageContent);
 
 			const url = window.location.origin + window.location.pathname;
 
