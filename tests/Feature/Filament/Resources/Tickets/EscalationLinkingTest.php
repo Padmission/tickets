@@ -46,16 +46,41 @@ describe('Adding to an existing escalation', function () {
 
     it('offers only open escalations', function () {
         $ticket = Ticket::factory()->open()->create();
-        $open = Ticket::factory()->open()->create(['panel' => 'test2']);
-        $closed = Ticket::factory()->closed()->create(['panel' => 'test2']);
+        $open = escalationFrom();
+        $closed = escalationFrom(state: 'closed');
 
         expect(LinkedTicketCandidates::openEscalations(Ticket::query(), $ticket)->pluck('id'))
             ->toContain($open->id)
             ->not->toContain($closed->id);
     });
 
+    it('offers only escalations this panel opened, never the other panel\'s own tickets', function () {
+        $ticket = Ticket::factory()->open()->create();
+        $bySource = escalationFrom();
+        $byOriginal = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => null]);
+        Ticket::factory()->open()->create(['linked_ticket_id' => $byOriginal->id]);
+        $neverEscalated = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test']);
+        $fromAnotherPanel = escalationFrom('test3');
+
+        expect(LinkedTicketCandidates::openEscalations(Ticket::query(), $ticket)->pluck('id')->all())
+            ->toContain($bySource->id, $byOriginal->id)
+            ->not->toContain($neverEscalated->id)
+            ->not->toContain($fromAnotherPanel->id);
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->mountAction(escalationAction(AddToEscalationAction::class))
+            ->assertMountedActionModalSee("#{$bySource->id}")
+            ->assertMountedActionModalDontSee("#{$neverEscalated->id}");
+
+        expect(resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $neverEscalated->id))->toBe(TicketEscalationLinks::NOT_LINKABLE)
+            ->and($ticket->refresh()->linked_ticket_id)->toBeNull()
+            ->and(resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $fromAnotherPanel->id))->toBe(TicketEscalationLinks::NOT_LINKABLE)
+            ->and(resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $bySource->id))->toBeNull()
+            ->and($ticket->refresh()->linked_ticket_id)->toBe($bySource->id);
+    });
+
     it('adds the ticket and records it on both tickets', function () {
-        $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $escalation = escalationFrom();
         $requester = User::factory()->create(['name' => 'Rita Requester']);
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null, 'submitter_id' => $requester->id]);
 
@@ -66,7 +91,7 @@ describe('Adding to an existing escalation', function () {
         expect($ticket->refresh()->linked_ticket_id)->toBe($escalation->id)
             ->and($ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->plainTextContent())
             ->toBe('Added to the Platform Support escalation by Tess Support')
-            ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->first()->plainTextContent())
+            ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->latest('id')->first()->plainTextContent())
             ->toBe('Rita Requester\'s ticket added to this escalation by Tess Support');
     });
 
@@ -97,7 +122,7 @@ describe('Adding to an existing escalation', function () {
     });
 
     it('links a history note to the other ticket only when the viewer can open it', function () {
-        $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $escalation = escalationFrom();
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
         resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $escalation->id);
 
@@ -111,12 +136,12 @@ describe('Adding to an existing escalation', function () {
     });
 
     it('escapes names in history notes', function () {
-        $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $escalation = escalationFrom();
         $requester = User::factory()->create(['name' => '<b>Rita</b>']);
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null, 'submitter_id' => $requester->id]);
         resolve(TicketEscalationLinks::class)->addToEscalation($ticket, $escalation->id);
 
-        expect($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->first()->content)
+        expect($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->latest('id')->first()->content)
             ->toContain('&lt;b&gt;Rita&lt;/b&gt;')
             ->not->toContain('<b>');
     });
@@ -207,7 +232,7 @@ describe('Originals on an escalated ticket', function () {
 
 describe('Link changes leave the original untouched', function () {
     beforeEach(function () {
-        $this->escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $this->escalation = escalationFrom();
         $this->original = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
         $this->updatedAt = $this->original->refresh()->updated_at->toDateTimeString();
 

@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Filament\Tables;
 
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -19,13 +20,27 @@ class LinkedTicketCandidates
     }
 
     /**
+     * Escalations this ticket's panel opened (by source, or through an
+     * original it sent), so a target panel's own tickets that were never
+     * escalations are not offered as ones to join.
+     *
      * @param  Builder<Ticket>  $query
      * @return Builder<Ticket>
      */
     public static function openEscalations(Builder $query, Ticket $ticket): Builder
     {
+        $model = $query->getModel();
+
         return static::parents($query, $ticket)
-            ->whereNull($query->qualifyColumn('closed_at'));
+            ->whereNull($query->qualifyColumn('closed_at'))
+            ->escalations()
+            ->where(fn (Builder $query): Builder => $query
+                ->where($query->qualifyColumn('source_panel'), $ticket->panel)
+                ->orWhereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                    ->selectRaw('1')
+                    ->from($model->getTable(), 'panel_originals')
+                    ->whereColumn('panel_originals.linked_ticket_id', $model->getQualifiedKeyName())
+                    ->where('panel_originals.panel', $ticket->panel)));
     }
 
     /**

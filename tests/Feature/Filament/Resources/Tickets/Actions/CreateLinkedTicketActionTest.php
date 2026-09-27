@@ -397,7 +397,7 @@ describe('Escalating again', function () {
     it('adds a ticket whose escalation was deleted to another escalation', function () {
         $deleted = Ticket::factory()->open()->create(['panel' => 'test2']);
         $deleted->delete();
-        $target = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $target = escalationFrom();
         $original = Ticket::factory()->open()->create(['linked_ticket_id' => $deleted->id]);
 
         expect(CreateLinkedTicketAction::isAvailableFor($original))->toBeTrue()
