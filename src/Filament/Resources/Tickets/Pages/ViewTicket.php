@@ -430,7 +430,7 @@ class ViewTicket extends EditRecord
          */
         $ticket = $this->record;
 
-        return new HtmlString($ticket->subject);
+        return (string) $ticket->subject;
     }
 
     /*

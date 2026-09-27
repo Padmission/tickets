@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -56,6 +57,18 @@ class Ticket extends Model
     protected static string $factory = TicketFactory::class;
 
     protected ?bool $isEscalation = null;
+
+    /*
+     * Tickets opened from the chat widget were stored with their subject
+     * HTML-escaped, so it is read back as the plain text that was typed.
+     * Every place that shows it escapes it again for its own output.
+     *
+     * @return Attribute<?string, never>
+     */
+    protected function subject(): Attribute
+    {
+        return Attribute::get(fn (?string $value): ?string => $value === null ? null : html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
 
     public function parentTicket(): Relations\PanelAwareBelongsTo
     {

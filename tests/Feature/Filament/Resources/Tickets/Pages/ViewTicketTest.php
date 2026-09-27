@@ -6,7 +6,6 @@ use Filament\Panel;
 use Illuminate\Auth\Access\Events\GateEvaluated;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
@@ -27,8 +26,8 @@ it('displays ticket subject as page heading', function () {
 
     $heading = $component->instance()->getHeading();
 
-    expect($heading)->toBeInstanceOf(HtmlString::class);
-    expect((string) $heading)->toBe('Test Ticket Subject');
+    // Text, which Filament escapes, never HTML: a subject is whatever someone typed.
+    expect($heading)->toBe('Test Ticket Subject');
 });
 
 it('has chat section in main content area', function () {

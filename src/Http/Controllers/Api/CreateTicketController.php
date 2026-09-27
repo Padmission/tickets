@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
 use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\Turn;
@@ -15,7 +16,6 @@ use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
-use Tiptap\Editor;
 
 use function sprintf;
 
@@ -59,9 +59,12 @@ class CreateTicketController
             'subject' => 'required|string|max:255',
         ]);
 
-        return (new Editor)
-            ->setContent($request->input('subject'))
-            ->getText();
+        /*
+         * The subject is plain text, never parsed as HTML: Tiptap's getText()
+         * returned it HTML-escaped and dropped whatever followed a "<". Older
+         * widget builds send it still escaped, so entities are read once.
+         */
+        return Str::squish(html_entity_decode((string) $request->input('subject'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     private function resolveTargetPanelId(): string

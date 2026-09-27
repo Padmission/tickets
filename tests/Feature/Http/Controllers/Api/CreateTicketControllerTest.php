@@ -55,6 +55,28 @@ it('creates a new ticket', function () {
         ->priority_id->toBe($priority->id);
 });
 
+it('stores the subject as the plain text that was typed, so it reads and searches as typed', function (string $sent, string $stored) {
+    $this->actingAs(User::factory()->create());
+    TicketStatus::factory()->create();
+    TicketPriority::factory()->create();
+
+    $id = $this
+        ->postJson(route('padmission-tickets::api.store'), ['subject' => $sent])
+        ->assertOk()
+        ->assertJsonPath('subject', $stored)
+        ->json('id');
+
+    expect(Ticket::findOrFail($id)->getRawOriginal('subject'))->toBe($stored)
+        ->and(Ticket::query()->where('subject', $stored)->pluck('id')->all())->toBe([$id]);
+})->with([
+    'an apostrophe' => ["Household 14's recert rent is too high…", "Household 14's recert rent is too high…"],
+    'an ampersand' => ['Rent & utilities', 'Rent & utilities'],
+    'angle brackets' => ['Rent < last year > this year', 'Rent < last year > this year'],
+    'double quotes' => ['The "utility" allowance', 'The "utility" allowance'],
+    'markup, kept as text' => ['<b>Rent</b> <img src=x onerror=alert(1)>', '<b>Rent</b> <img src=x onerror=alert(1)>'],
+    'escaped, as older widget builds send it' => ['Household 14&#039;s rent &amp; &quot;utility&quot; &lt; last year', 'Household 14\'s rent & "utility" < last year'],
+]);
+
 it('requires a subject', function () {
     $user = User::factory()->create(['email' => 'test@example.com']);
 

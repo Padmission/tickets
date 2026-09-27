@@ -12,7 +12,7 @@ class TicketMapper
     {
         return [
             'id' => $ticket->id,
-            'subject' => html_entity_decode($ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            'subject' => $ticket->subject,
             'status' => TicketStatusMapper::map($ticket->status),
             'latest_message' => $ticket->latestMessage?->plainTextContent(20),
             'is_closed' => $ticket->isClosed,
