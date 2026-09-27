@@ -23,17 +23,40 @@ it('requires login ', function () {
         ->assertUnauthorized();
 });
 
-it('requires create permission', function () {
+/*
+ * `create` is the chat widget's audience: it decides who may talk to support
+ * through the widget, so it holds the requester's replies, never support's.
+ */
+it('requires create permission from the requester', function () {
     Gate::before(fn (User $authUser, string $ability) => $ability === 'create' ? false : null);
 
     $user = User::factory()->create();
-    $ticket = Ticket::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
 
     $this->actingAs($user);
 
     $this
-        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]))
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Hello',
+        ])
         ->assertForbidden();
+});
+
+it('lets a supporter left out of the chat widget still reply', function () {
+    Gate::before(fn (User $authUser, string $ability) => $ability === 'create' ? false : null);
+
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create();
+
+    $this->actingAs($supporter);
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Happy to help',
+        ])
+        ->assertOk();
+
+    expect($ticket->ticketActivities()->where('type', ActivityType::Message)->where('user_id', $supporter->id)->exists())->toBeTrue();
 });
 
 it('forbids posting a message to a ticket the user cannot access', function () {

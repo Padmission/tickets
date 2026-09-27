@@ -39,11 +39,11 @@ it('requires login ', function () {
         ->assertUnauthorized();
 });
 
-it('requires create permission', function () {
+it('requires create permission from the requester', function () {
     createStorageMock();
 
     $user = User::factory()->create();
-    $ticket = Ticket::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
 
     Gate::before(fn (User $authUser, string $ability) => $ability === 'create' ? false : null);
 
@@ -199,6 +199,23 @@ it('records the creator on new attachments', function () {
 
     expect($attachment->created_by)->toBe($user->id)
         ->and($attachment->ticket_id)->toBe($ticket->id);
+});
+
+it('gives a supporter left out of the chat widget an upload url for their reply', function () {
+    createStorageMock();
+
+    Gate::before(fn (User $authUser, string $ability) => $ability === 'create' ? false : null);
+
+    $this->actingAs(User::factory()->create());
+    $ticket = Ticket::factory()->open()->create();
+
+    $this
+        ->postJson(route('padmission-tickets::api.attachment-url', ['ticket' => $ticket]), [
+            'filename' => 'test.jpg',
+            'content_type' => 'image/jpeg',
+            'content_length' => '1024',
+        ])
+        ->assertOk();
 });
 
 it('refuses upload urls to someone who may read a ticket but not reply on it', function () {

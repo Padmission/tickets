@@ -21,8 +21,6 @@ class TemporaryAttachmentUploadUrlController
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        $this->authorize('create', $ticketModel);
-
         // Remove global scopes to find the ticket and get its panel
         $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
 
@@ -30,6 +28,11 @@ class TemporaryAttachmentUploadUrlController
         $panelPlugin = TicketPlugin::get($ticketRecord->panel);
         /** @var Ticket $ticketRecord */
         $ticketRecord = $panelPlugin->getTicketQuery()->findOrFail($ticket);
+
+        // `create` is the chat widget's audience, so it holds the requester, never support replying.
+        if ($ticketRecord->isSubmittedBy($request->user())) {
+            $this->authorize('create', $ticketModel);
+        }
 
         resolve(TicketAuth::class)->authorizeReply($ticketRecord, $request->user());
         resolve(TicketAuth::class)->refuseClosedTicket($ticketRecord);

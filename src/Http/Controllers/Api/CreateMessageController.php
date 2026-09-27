@@ -32,8 +32,6 @@ class CreateMessageController
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        $this->authorize('create', $ticketModel);
-
         $validated = $request->validate([
             'content' => ['string', 'nullable', Rule::requiredIf(fn () => blank($request->array('attachment_ids')))],
             'attachment_ids' => ['array', Rule::requiredIf(fn () => blank($request->get('content')))],
@@ -47,6 +45,11 @@ class CreateMessageController
         $panelPlugin = TicketPlugin::get($ticketRecord->panel);
         /** @var Ticket $ticket */
         $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
+
+        // `create` is the chat widget's audience, so it holds the requester, never support replying.
+        if ($ticket->isSubmittedBy($request->user())) {
+            $this->authorize('create', $ticketModel);
+        }
 
         resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
         resolve(TicketAuth::class)->refuseClosedTicket($ticket);
