@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\Turn;
@@ -31,8 +32,8 @@ describe('Waiting on for a closed ticket', function () {
 
         Livewire::test(ListTickets::class)
             ->removeTableFilter('open')
-            ->assertTableColumnStateNotSet('turn', Turn::Supporter, $closed)
-            ->assertTableColumnStateSet('turn', Turn::Supporter, $open);
+            ->assertTableColumnStateSet('turn', null, $closed)
+            ->assertTableColumnStateNotSet('turn', null, $open);
 
         $page = Livewire::test(ViewTicket::class, ['record' => $closed->id])->instance();
 
@@ -54,7 +55,7 @@ describe('Stat cards', function () {
         Ticket::factory()->open()->count(2)->create(['assignee_id' => $user->id, 'turn' => Turn::Supporter]);
         Ticket::factory()->open()->create(['assignee_id' => User::factory()->create()->id, 'turn' => Turn::User]);
         Ticket::factory()->open()
-            ->has(Ticket::factory()->open()->state(['panel' => 'test', 'assignee_id' => null]), 'childTickets')
+            ->has(Ticket::factory()->open()->state(['panel' => 'test', 'assignee_id' => null, 'turn' => Turn::User]), 'childTickets')
             ->create(['panel' => 'test2', 'submitter_id' => $user->id, 'turn' => Turn::Supporter]);
 
         $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
@@ -68,12 +69,43 @@ describe('Stat cards', function () {
         }
 
         expect($stat(OpenSupporterTickets::class, 'all'))
-            ->getLabel()->toBe('Tickets Waiting on Support')
+            ->getLabel()->toBe('Needs You')
+            ->getColor()->toBe('warning')
+            ->getDescription()->toBe('Open tickets waiting on your reply, with nobody assigned, or with a reply from Platform Support to pass on')
             ->getValue()->toBe(2)
             ->and($stat(OpenSupporterTickets::class, 'linked'))
             ->getLabel()->toBe('Waiting on Platform Support')
+            ->getColor()->toBe('gray')
             ->getDescription()->toBe('Open escalations where Platform Support owes the next reply')
             ->getValue()->toBe(1);
+    });
+
+    it('counts the rows that need the viewer as Needs You, the same rows the list ranks first', function () {
+        $me = $this->login();
+        $colleague = User::factory()->create();
+
+        $mine = Ticket::factory()->open()->create(['assignee_id' => $me->id, 'turn' => Turn::Supporter]);
+        $unassigned = Ticket::factory()->open()->create(['assignee_id' => null, 'turn' => Turn::Supporter]);
+        Ticket::factory()->open()->create(['assignee_id' => $colleague->id, 'turn' => Turn::Supporter]);
+        Ticket::factory()->open()->create(['assignee_id' => $me->id, 'turn' => Turn::User]);
+        Ticket::factory()->closed()->create(['assignee_id' => $me->id, 'turn' => Turn::Supporter]);
+
+        $component = Livewire::test(ListTickets::class);
+        $orange = collect([$mine, $unassigned])
+            ->filter(fn (Ticket $ticket): bool => $component->instance()->getTableRecord((string) $ticket->id)->conversation_rank == 0);
+
+        expect($orange)->toHaveCount(2)
+            ->and(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all'])->instance()->getStats()[0]->getValue())->toBe(2)
+            ->and(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'my'])->instance()->getStats()[0]->getValue())->toBe(1);
+    });
+
+    it('explains Needs You without a team to pass replies on from in a panel that receives escalations', function () {
+        $this->login();
+        Filament::setCurrentPanel('test2');
+
+        expect(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all'])->instance()->getStats()[0])
+            ->getLabel()->toBe('Needs You')
+            ->getDescription()->toBe('Open tickets waiting on your reply or with nobody assigned');
     });
 
     it('averages close time over the tab\'s own closed tickets', function () {

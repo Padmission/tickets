@@ -6,14 +6,19 @@ use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Lang;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Services\TicketAssignee;
+use Padmission\Tickets\Support\ConversationStateQuery;
+use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 
 class ListTickets extends ListRecords
@@ -39,7 +44,35 @@ class ListTickets extends ListRecords
             $query->tap(new CurrentPanelScope);
         }
 
-        return TicketResource::scopeListQueryToSupporterOrSubmitter($query);
+        $viewer = ConversationViewer::current();
+
+        return $this->withRowRelations(ConversationStateQuery::apply(TicketResource::scopeListQueryToSupporterOrSubmitter($query), $viewer), $viewer);
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected function withRowRelations(Builder $query, ConversationViewer $viewer): Builder
+    {
+        $tenant = config('padmission-tickets.tenancy.enabled') ? ',tenant_id' : '';
+
+        if (str_contains((string) $this->activeTab, 'linked') || $viewer->receivesEscalations) {
+            return $query->with([
+                "childTickets:id,linked_ticket_id,submitter_id,submitter_data,closed_at,panel{$tenant}",
+                'childTickets.submitter',
+                'submitter',
+            ]);
+        }
+
+        if (! $viewer->isSupporter) {
+            return $query;
+        }
+
+        return $query->with([
+            "parentTicket:id,panel,turn,closed_at,closed_by,submitter_id,assignee_id,deleted_at{$tenant}",
+            'parentTicket.submitter',
+        ]);
     }
 
     protected function activeTabIsInvalid(): bool
@@ -52,7 +85,7 @@ class ListTickets extends ListRecords
     {
         // The counts cover every ticket in the panel, while someone who only
         // submits tickets is listed just their own.
-        if (! TicketResource::currentUserIsSupporter(Filament::auth()->id())) {
+        if (! ConversationViewer::current()->isSupporter) {
             return [];
         }
 
@@ -121,6 +154,28 @@ class ListTickets extends ListRecords
     }
 
     /*
+     * An escalation stays listed after all its originals were removed, through
+     * the history note written when the first was added, so its owner does not
+     * lose it.
+     */
+    protected static function escalationsFromThisPanel(Builder $query): Builder
+    {
+        $panelId = Filament::getCurrentOrDefaultPanel()->getId();
+        $activities = (new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable();
+
+        return $query->where(fn (Builder $query): Builder => $query
+            ->whereHas('childTickets', static::originalsFromThisPanel(...))
+            ->orWhere(fn (Builder $query): Builder => $query
+                ->where($query->qualifyColumn('source_panel'), $panelId)
+                ->whereIn($query->qualifyColumn('panel'), array_keys(TicketPlugin::get()->getLinkedTicketParentPanels()))
+                ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                    ->selectRaw('1')
+                    ->from($activities, 'escalation_activities')
+                    ->whereColumn('escalation_activities.ticket_id', $query->qualifyColumn('id'))
+                    ->where('escalation_activities.type', ActivityType::OriginalAdded->value))));
+    }
+
+    /*
      * whereHas never runs the panel's relationship scope hook, so the host's
      * tenant scope would otherwise stay on the originals and, in a cross-tenant
      * panel, hide escalations whose originals belong to another tenant.
@@ -149,8 +204,12 @@ class ListTickets extends ListRecords
     {
         $tab = $this->activeTabIsInvalid() ? 'all' : $this->activeTab;
 
-        if ($tab === 'all' && ! TicketResource::currentUserIsSupporter(Filament::auth()->id())) {
+        $viewer = ConversationViewer::current();
+
+        if ($tab === 'all' && ! $viewer->isSupporter) {
             $tab = 'all_submitter';
+        } elseif (in_array($tab, ['all', 'my'], true) && $viewer->receivesEscalations) {
+            $tab = "{$tab}_received";
         }
 
         $key = "padmission-tickets::tickets.resources.tickets.tab_descriptions.{$tab}";
@@ -201,7 +260,7 @@ class ListTickets extends ListRecords
             ->badge(fn (): int => $this->openEscalatedCounts()['linked'])
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                static::withEscalationAssignees($query->whereHas('childTickets', static::originalsFromThisPanel(...)))
+                static::withEscalationAssignees(static::escalationsFromThisPanel($query))
             ));
 
         $tabs['my_linked'] = Tab::make()
@@ -209,9 +268,8 @@ class ListTickets extends ListRecords
             ->badge(fn (): int => $this->openEscalatedCounts()['my_linked'])
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                static::withEscalationAssignees($query
-                    ->whereHas('childTickets', static::originalsFromThisPanel(...))
-                    ->where('submitter_id', Filament::auth()->id()))
+                static::withEscalationAssignees(static::escalationsFromThisPanel($query)
+                    ->where($query->qualifyColumn('submitter_id'), Filament::auth()->id()))
             ));
 
         return $tabs;

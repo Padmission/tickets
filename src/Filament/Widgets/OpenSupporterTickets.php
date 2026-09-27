@@ -7,6 +7,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Widgets\Concerns\DescribesTicketListTab;
 use Padmission\Tickets\Services\TicketMetricsService;
+use Padmission\Tickets\Support\ConversationStateQuery;
+use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 
 class OpenSupporterTickets extends BaseWidget
@@ -26,22 +28,41 @@ class OpenSupporterTickets extends BaseWidget
     {
         $query = $this->ticketsInActiveTab();
 
-        $count = $query === null
-            ? resolve(TicketMetricsService::class)
-                ->setCacheTime($this->getPollingInterval())
-                ->getOpenTicketsWaitingOnSupportCount()
-            : $query->open()->where($query->qualifyColumn('turn'), Turn::Supporter)->count();
+        if ($query === null) {
+            return [
+                Stat::make(__('padmission-tickets::widgets.open_support_tickets.label'), resolve(TicketMetricsService::class)
+                    ->setCacheTime($this->getPollingInterval())
+                    ->getOpenTicketsWaitingOnSupportCount())
+                    ->description(__('padmission-tickets::widgets.open_support_tickets.description'))
+                    ->descriptionIcon('heroicon-m-inbox')
+                    ->color('warning'),
+            ];
+        }
 
         // On an escalated ticket the support side is the team it went to, not
         // the team reading the list.
         $team = TicketPlugin::get()->getEscalationTargetName();
-        $text = fn (string $line): string => $this->isOnEscalatedTab()
-            ? TicketPlugin::teamText("padmission-tickets::widgets.escalations_waiting.{$line}", $team)
-            : __("padmission-tickets::widgets.open_support_tickets.{$line}");
+
+        if ($this->isOnEscalatedTab()) {
+            return [
+                Stat::make(
+                    TicketPlugin::teamText('padmission-tickets::widgets.escalations_waiting.label', $team),
+                    $query->open()->where($query->qualifyColumn('turn'), Turn::Supporter)->count(),
+                )
+                    ->description(TicketPlugin::teamText('padmission-tickets::widgets.escalations_waiting.description', $team))
+                    ->descriptionIcon('heroicon-m-inbox')
+                    ->color('gray'),
+            ];
+        }
+
+        $viewer = ConversationViewer::current();
+        [$rank, $bindings] = ConversationStateQuery::rankExpression($viewer);
 
         return [
-            Stat::make($text('label'), $count)
-                ->description($text('description'))
+            Stat::make(__('padmission-tickets::widgets.needs_you.label'), $query->open()->whereRaw("{$rank} = 0", $bindings)->count())
+                ->description($viewer->receivesEscalations || $viewer->parentPanelIds === []
+                    ? __('padmission-tickets::widgets.needs_you.description_received')
+                    : TicketPlugin::teamText('padmission-tickets::widgets.needs_you.description', $team))
                 ->descriptionIcon('heroicon-m-inbox')
                 ->color('warning'),
         ];

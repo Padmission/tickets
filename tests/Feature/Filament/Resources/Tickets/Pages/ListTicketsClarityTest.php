@@ -1,13 +1,21 @@
 <?php
 
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -277,3 +285,247 @@ it('counts every account the panel says is the viewer\'s as theirs', function ()
     Livewire::test(ListTickets::class)
         ->assertTableColumnStateSet('assignee.name', 'You', $ticket);
 });
+
+function listCell(Testable $component, string $name, Ticket $record, string $part = 'state'): string
+{
+    $column = $component->instance()->getTable()->getColumn($name);
+    $column->record($component->instance()->getTableRecord((string) $record->getKey()));
+    $column->clearCachedState();
+
+    return (string) match ($part) {
+        'description' => $column->getDescriptionBelow(),
+        'label' => $column->getLabel(),
+        default => $column->formatState($column->getState()),
+    };
+}
+
+describe('Conversations in the list', function () {
+    beforeEach(function () {
+        (new TicketStatusSeeder)->run();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+        $this->me = $this->login(User::factory()->create(['name' => 'Test Admin']));
+        $this->colleague = User::factory()->create(['name' => 'Maria Lopez']);
+        $this->requester = User::factory()->create(['name' => 'Aisha Brooks']);
+
+        $this->message = fn (Ticket $ticket, ActivitySender $sender, ?int $userId): TicketActivity => TicketActivity::factory()->create([
+            'ticket_id' => $ticket->id,
+            'type' => ActivityType::Message,
+            'sender' => $sender,
+            'user_id' => $userId,
+        ]);
+
+        $this->escalate = fn (array $original, array $escalation = []): Ticket => Ticket::factory()->open()->create([
+            'panel' => 'test',
+            'turn' => Turn::Supporter,
+            'submitter_id' => $this->requester->id,
+            'assignee_id' => $this->me->id,
+            'linked_ticket_id' => Ticket::factory()->open()->create([
+                'panel' => 'test2',
+                'source_panel' => 'test',
+                'turn' => Turn::Supporter,
+                'submitter_id' => $this->me->id,
+                ...$escalation,
+            ])->id,
+            ...$original,
+        ]);
+    });
+
+    it('marks an escalated original after its subject, for supporters only', function () {
+        $waitingOnTeam = ($this->escalate)([]);
+        $waitingOnColleague = ($this->escalate)(['assignee_id' => $this->colleague->id], ['submitter_id' => $this->colleague->id, 'turn' => Turn::User]);
+        $replied = ($this->escalate)([]);
+        ($this->message)($replied->parentTicket, ActivitySender::Supporter, $this->colleague->id);
+        $repliedToOther = ($this->escalate)(['assignee_id' => $this->colleague->id], ['submitter_id' => $this->colleague->id]);
+        ($this->message)($repliedToOther->parentTicket, ActivitySender::Supporter, $this->me->id);
+        $closed = ($this->escalate)([]);
+        $closed->parentTicket->close(closedById: $this->colleague->id);
+        $closed->parentTicket->forceFill(['closed_at' => now()->subDay()])->saveQuietly();
+        $plain = Ticket::factory()->open()->create(['subject' => '<b>Rent</b> question']);
+
+        $component = Livewire::test(ListTickets::class);
+
+        expect(listCell($component, 'subject', $waitingOnTeam))->toContain('Escalated')->toContain('You asked Platform Support about this. Platform Support owes the next reply there.')
+            ->and(listCell($component, 'subject', $waitingOnColleague))->toContain('Escalated')->toContain('Platform Support is waiting on Maria Lopez on the escalation.')
+            ->and(listCell($component, 'subject', $replied))->toContain('Platform Support replied')->toContain('fi-color-warning')
+            ->toContain('Platform Support replied on the escalation after your team last wrote. Read it, then answer Platform Support there or pass the answer on to Aisha Brooks here.')
+            ->and(listCell($component, 'subject', $repliedToOther))->toContain('Platform Support replied to Maria Lopez')->not->toContain('fi-color-warning')
+            ->and(listCell($component, 'subject', $closed))->toContain('Escalation closed')->toContain('The escalation was closed 1 day ago.')
+            ->and(listCell($component, 'subject', $plain))->toBe('<b>Rent</b> question');
+
+        $component->assertSee('&lt;b&gt;Rent&lt;/b&gt; question', escape: false);
+    });
+
+    it('never marks an escalation for the person who asked', function () {
+        TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKeyNot($this->me->id));
+        $mine = ($this->escalate)(['submitter_id' => $this->me->id]);
+
+        expect(listCell(Livewire::test(ListTickets::class), 'subject', $mine))->toBe($mine->subject);
+    });
+
+    it('names the tickets an escalation is about', function () {
+        $named = fn (string $name): array => ['submitter_id' => User::factory()->create(['name' => $name])->id];
+        $escalation = fn (array ...$originals): Ticket => tap(
+            Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->me->id]),
+            fn (Ticket $escalation) => collect($originals)->each(fn (array $original) => Ticket::factory()
+                ->{($original['closed'] ?? false) ? 'closed' : 'open'}()
+                ->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id, ...collect($original)->except('closed')->all()])),
+        );
+
+        $one = $escalation($named('Aisha Brooks'));
+        $two = $escalation($named('Aisha Brooks'), $named('Felix Moreno'));
+        $many = $escalation($named('Aisha Brooks'), $named('Felix Moreno'), $named('Henry Silva'));
+        $someClosed = $escalation($named('Aisha Brooks'), [...$named('Felix Moreno'), 'closed' => true]);
+        $allClosed = $escalation([...$named('Aisha Brooks'), 'closed' => true]);
+        $emptied = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->me->id]);
+        $emptied->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System, $this->me->id);
+
+        $component = Livewire::test(ListTickets::class, ['activeTab' => 'linked'])->removeTableFilter('open');
+
+        expect(listCell($component, 'subject', $one, 'description'))->toBe('About Aisha Brooks\'s ticket')
+            ->and(listCell($component, 'subject', $two, 'description'))->toBe('About Aisha Brooks\'s and Felix Moreno\'s tickets')
+            ->and(listCell($component, 'subject', $many, 'description'))->toBe('About tickets from Aisha Brooks and 2 others')
+            ->and(listCell($component, 'subject', $someClosed, 'description'))->toBe('About Aisha Brooks\'s and Felix Moreno\'s tickets, 1 of 2 closed')
+            ->and(listCell($component, 'subject', $allClosed, 'description'))->toBe('About Aisha Brooks\'s ticket, all closed')
+            ->and(listCell($component, 'subject', $emptied, 'description'))->toBe('Not linked to any ticket');
+
+        expect(listCell(Livewire::test(ListTickets::class), 'subject', Ticket::factory()->open()->create(), 'description'))->toBe('');
+    });
+
+    it('names a guest requester by the name they gave, and counts unnamed ones', function () {
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->me->id]);
+        $guest = Ticket::factory()->open()->withSubmitterData()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id]);
+
+        expect(EscalationSummary::about($escalation->load('childTickets')))->toBe("About {$guest->submitter_data->name}'s ticket");
+
+        $guest->update(['submitter_data' => null]);
+        Ticket::factory()->open()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id]);
+
+        expect(EscalationSummary::about($escalation->fresh()->load('childTickets')))->toBe('About 2 tickets');
+    });
+
+    it('names who handles an escalation, and who the contact is in the panel that receives it', function () {
+        $escalation = Ticket::factory()->open()
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2', 'submitter_id' => $this->me->id]);
+        $original = Ticket::factory()->open()->create(['submitter_id' => $this->me->id]);
+
+        $all = Livewire::test(ListTickets::class);
+        $all->assertTableColumnStateSet('submitter.name', 'You', $original)
+            ->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Requested by');
+        expect(listCell($all, 'submitter.name', $original, 'label'))->toBe('Requested by');
+
+        $linked = Livewire::test(ListTickets::class, ['activeTab' => 'linked']);
+        $linked->assertTableColumnStateSet('submitter.name', 'You', $escalation)
+            ->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Handled by');
+        expect(listCell($linked, 'submitter.name', $escalation, 'label'))->toBe('Handled by')
+            ->and(listCell($linked, 'assignee.name', $escalation, 'label'))->toBe('Assigned to');
+
+        Filament::setCurrentPanel('test2');
+        $escalation->update(['submitter_id' => $this->colleague->id]);
+        $received = Livewire::test(ListTickets::class)->assertTableColumnStateSet('submitter.name', 'Maria Lopez', $escalation);
+        $received->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Contact');
+        expect(listCell($received, 'submitter.name', $escalation, 'label'))->toBe('Contact')
+            ->and(listCell($received, 'subject', $escalation, 'description'))->toStartWith('About ');
+    });
+
+    it('explains who picks the assignee of an escalation', function () {
+        $escalation = Ticket::factory()->open()
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2', 'submitter_id' => $this->me->id]);
+
+        $linked = Livewire::test(ListTickets::class, ['activeTab' => 'linked']);
+        $column = $linked->instance()->getTable()->getColumn('assignee.name');
+        $column->record($linked->instance()->getTableRecord((string) $escalation->id));
+
+        expect($column->getTooltip())->toBe('The Platform Support person working on this escalation. Platform Support chooses who works on it.');
+    });
+
+    it('shows New only on conversations the viewer owns', function () {
+        $mine = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->me->id]);
+        $theirs = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->colleague->id]);
+        ($this->message)($mine, ActivitySender::User, $this->requester->id);
+        ($this->message)($theirs, ActivitySender::User, $this->requester->id);
+
+        $myEscalation = Ticket::factory()->open()->has(Ticket::factory(['panel' => 'test']), 'childTickets')->create(['panel' => 'test2', 'submitter_id' => $this->me->id]);
+        $theirEscalation = Ticket::factory()->open()->has(Ticket::factory(['panel' => 'test']), 'childTickets')->create(['panel' => 'test2', 'submitter_id' => $this->colleague->id]);
+        ($this->message)($myEscalation, ActivitySender::Supporter, $this->colleague->id);
+        ($this->message)($theirEscalation, ActivitySender::Supporter, $this->me->id);
+
+        $all = Livewire::test(ListTickets::class);
+        $linked = Livewire::test(ListTickets::class, ['activeTab' => 'linked']);
+
+        expect(listCell($all, 'latestMessage.created_at', $mine))->toContain('New')->toContain('New message you haven')
+            ->and(listCell($all, 'latestMessage.created_at', $theirs))->not->toContain('New')
+            ->and(listCell($linked, 'latestMessage.created_at', $myEscalation))->toContain('New')
+            ->and(listCell($linked, 'latestMessage.created_at', $theirEscalation))->not->toContain('New');
+    });
+
+    it('offers no bulk actions on the escalated tabs', function () {
+        Ticket::factory()->open()->has(Ticket::factory(['panel' => 'test']), 'childTickets')->create(['panel' => 'test2', 'submitter_id' => $this->me->id]);
+        Ticket::factory()->open()->create();
+
+        Livewire::test(ListTickets::class)->assertTableBulkActionVisible('assign');
+
+        foreach (['linked', 'my_linked'] as $tab) {
+            $component = Livewire::test(ListTickets::class, ['activeTab' => $tab]);
+
+            expect($component->instance()->getTable()->isSelectionEnabled())->toBeFalse();
+        }
+    });
+
+    it('puts the tickets that need the viewer first, then colleagues\' and on-hold ones, then the rest', function () {
+        $requesterTurn = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->me->id, 'turn' => Turn::User]);
+        $colleagues = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->colleague->id, 'turn' => Turn::Supporter]);
+        $mine = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->me->id, 'turn' => Turn::Supporter]);
+        $replied = ($this->escalate)(['assignee_id' => $this->colleague->id]);
+        ($this->message)($replied->parentTicket, ActivitySender::Supporter, $this->colleague->id);
+
+        $component = Livewire::test(ListTickets::class);
+
+        $ranks = collect([$requesterTurn, $colleagues, $mine, $replied])
+            ->mapWithKeys(fn (Ticket $ticket): array => [$ticket->id => (int) $component->instance()->getTableRecord((string) $ticket->id)->conversation_rank]);
+
+        expect($ranks->all())->toBe([$requesterTurn->id => 2, $colleagues->id => 1, $mine->id => 0, $replied->id => 0]);
+
+        $order = $component->instance()->getTableRecords()->pluck('id')->all();
+
+        expect(array_search($requesterTurn->id, $order))->toBeGreaterThan(array_search($colleagues->id, $order))
+            ->and(array_search($colleagues->id, $order))->toBeGreaterThan(array_search($mine->id, $order))
+            ->and(array_search($colleagues->id, $order))->toBeGreaterThan(array_search($replied->id, $order));
+
+        $component->sortTable('turn', 'desc');
+
+        expect($component->instance()->getTableRecords()->pluck('id')->first())->toBe($requesterTurn->id);
+    });
+});
+
+it('runs the same number of queries for a page of 5 rows as for 25', function (string $tab) {
+    (new TicketStatusSeeder)->run();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    $me = $this->login();
+    $requesters = User::factory()->count(3)->create();
+
+    $queries = function (int $rows) use ($me, $requesters, $tab): int {
+        for ($i = Ticket::query()->count() / 2; $i < $rows; $i++) {
+            $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $me->id, 'turn' => Turn::Supporter]);
+            $original = Ticket::factory()->open()->create(['panel' => 'test', 'submitter_id' => $requesters[$i % 3]->id, 'assignee_id' => $me->id, 'turn' => Turn::Supporter, 'linked_ticket_id' => $escalation->id]);
+            TicketActivity::factory()->create(['ticket_id' => $original->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::User, 'user_id' => $original->submitter_id]);
+            TicketActivity::factory()->create(['ticket_id' => $escalation->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::Supporter, 'user_id' => $requesters[0]->id]);
+        }
+
+        $component = Livewire::test(ListTickets::class, ['activeTab' => $tab])->set('tableRecordsPerPage', 25);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $component->call('$refresh')->assertCountTableRecords($rows);
+        DB::disableQueryLog();
+
+        return count(DB::getQueryLog());
+    };
+
+    $five = $queries(5);
+
+    expect($queries(25))->toBe($five);
+})->with(['all', 'linked']);

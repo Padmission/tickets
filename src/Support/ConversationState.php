@@ -14,6 +14,10 @@ final readonly class ConversationState
 {
     protected const HELP = 'padmission-tickets::tickets.resources.tickets.waiting_on_help';
 
+    protected const MARKER = 'padmission-tickets::tickets.resources.tickets.escalation_marker';
+
+    protected const MARKER_HELP = 'padmission-tickets::tickets.resources.tickets.escalation_marker_help';
+
     public function __construct(
         public Ticket $ticket,
         public ?string $waitingOn,
@@ -109,6 +113,65 @@ final readonly class ConversationState
                 : TicketPlugin::teamText(self::HELP.'.team', $this->teamName(), ['assignee' => $this->assigneeName()]),
             default => null,
         };
+    }
+
+    public function markerLabel(): ?string
+    {
+        $team = $this->escalationTeamName();
+
+        return match ($this->marker) {
+            'escalated' => __(self::MARKER.'.escalated'),
+            'replied' => $this->ownerIsViewer()
+                ? TicketPlugin::teamText(self::MARKER.'.replied', $team)
+                : TicketPlugin::teamText(self::MARKER.'.replied_to_other', $team, ['name' => $this->handlerName()]),
+            'closed' => __(self::MARKER.'.closed'),
+            default => null,
+        };
+    }
+
+    public function markerColor(): string
+    {
+        return $this->marker === 'replied' && $this->ownerIsViewer() ? 'warning' : 'gray';
+    }
+
+    public function markerTooltip(): ?string
+    {
+        $team = $this->escalationTeamName();
+        $escalation = $this->ticket->parentTicket;
+
+        return match ($this->marker) {
+            'escalated' => TicketPlugin::teamText(
+                self::MARKER_HELP.'.escalated_waiting_'
+                    .($escalation?->turn === Turn::User ? 'owner' : 'team')
+                    .($this->ownerIsViewer() ? '_you' : ''),
+                $team,
+                ['handler' => $this->handlerName()],
+            ),
+            'replied' => TicketPlugin::teamText(self::MARKER_HELP.'.replied', $team, [
+                'name' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.requester'),
+            ]),
+            'closed' => __(self::MARKER_HELP.'.closed', ['time' => $escalation?->closed_at?->diffForHumans()]),
+            default => null,
+        };
+    }
+
+    public function ownerIsViewer(): bool
+    {
+        return $this->ownerId !== null && $this->ownerId == Filament::auth()->id();
+    }
+
+    protected function handlerName(): ?string
+    {
+        return $this->name($this->ticket->parentTicket?->submitter);
+    }
+
+    protected function escalationTeamName(): ?string
+    {
+        $panel = $this->ticket->parentTicket?->panel;
+
+        return $panel === null
+            ? TicketPlugin::get()->getEscalationTargetName()
+            : TicketPlugin::find($panel)?->getSupportTeamName();
     }
 
     protected function contactHelp(string $name): string

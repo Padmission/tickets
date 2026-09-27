@@ -19,9 +19,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
-use Padmission\Tickets\Enums\Turn;
+use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
@@ -32,10 +33,13 @@ use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Services\EscalationSummary;
+use Padmission\Tickets\Support\ConversationState;
+use Padmission\Tickets\Support\ConversationStateQuery;
+use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 
 use function app;
-use function auth;
 
 class TicketResource extends Resource
 {
@@ -135,17 +139,17 @@ class TicketResource extends Resource
 
     public static function scopeListQueryToSupporterOrSubmitter(Builder $query): Builder
     {
-        $userId = auth()->id();
+        $viewer = ConversationViewer::current();
 
-        if ($userId === null) {
+        if ($viewer->userId === null) {
             return $query->whereRaw('1 = 0');
         }
 
-        if (static::currentUserIsSupporter($userId)) {
+        if ($viewer->isSupporter) {
             return $query;
         }
 
-        return $query->where($query->getModel()->qualifyColumn('submitter_id'), $userId);
+        return $query->where($query->getModel()->qualifyColumn('submitter_id'), $viewer->userId);
     }
 
     public static function currentUserIsSupporter(int|string|null $userId): bool
@@ -178,14 +182,7 @@ class TicketResource extends Resource
     {
         return $table
             ->defaultSort(function (Builder $query): Builder {
-                return $query
-                    ->orderByRaw(
-                        'CASE
-                            WHEN turn = ? THEN 0
-                            WHEN turn = ? THEN 1
-                        END',
-                        [Turn::Supporter->value, Turn::User->value]
-                    )
+                return static::orderByRank($query, 'asc')
                     ->orderBy(
                         fn ($query) => $query
                             ->select('created_at')
@@ -231,16 +228,20 @@ class TicketResource extends Resource
 
                 TextColumn::make('turn')
                     ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
-                    ->state(fn (Ticket $record): ?Turn => $record->waitingOn())
+                    ->state(fn (Ticket $record): ?string => ConversationState::fromRow($record)->label())
                     ->placeholder('–')
                     ->badge()
-                    ->color(fn (?Turn $state): string => $state === Turn::Supporter ? 'warning' : 'gray')
-                    ->tooltip(fn (?Turn $state): ?string => $state?->getDescription())
-                    ->sortable(),
+                    ->color(fn (Ticket $record): string => ConversationState::fromRow($record)->color())
+                    ->icon(fn (Ticket $record): ?string => ConversationState::fromRow($record)->icon())
+                    ->tooltip(fn (Ticket $record): ?string => ConversationState::fromRow($record)->tooltip())
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => static::orderByRank($query, $direction)),
 
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
-                    ->html()
+                    ->suffix(fn (Ticket $record): ?HtmlString => static::escalationMarker($record))
+                    ->description(fn (Ticket $record, ListTickets $livewire): ?string => static::listsEscalations($livewire)
+                        ? EscalationSummary::about($record)
+                        : null)
                     // Numbers are not shown in the list, but they are in every email subject,
                     // so "1842" or "#1842" still finds the ticket.
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query
@@ -250,13 +251,19 @@ class TicketResource extends Resource
                 ...TicketPlugin::get()->getAdditionalTableColumns(),
 
                 TextColumn::make('submitter.name')
-                    ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
+                    ->label(fn (ListTickets $livewire): string => static::submitterLabel($livewire))
+                    ->state(fn (Ticket $record): ?string => filled($record->submitter_id) && $record->submitter_id == Filament::auth()->id()
+                        ? __('padmission-tickets::tickets.side_you')
+                        : $record->submitter?->getAttribute('name'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('assignee.name')
                     ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
                     ->state(fn (Ticket $record): ?string => static::assigneeLabel($record))
+                    ->tooltip(fn (ListTickets $livewire): ?string => static::isEscalatedTab($livewire)
+                        ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere', TicketPlugin::get()->getEscalationTargetName())
+                        : null)
                     ->searchable()
                     ->sortable(),
 
@@ -269,6 +276,11 @@ class TicketResource extends Resource
                 TextColumn::make('latestMessage.created_at')
                     ->label(__('padmission-tickets::tickets.resources.tickets.last_message'))
                     ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
+                    ->suffix(fn (Ticket $record): ?HtmlString => ConversationState::fromRow($record)->isNew ? static::badge(
+                        __('padmission-tickets::tickets.resources.tickets.new_message'),
+                        'primary',
+                        __('padmission-tickets::tickets.resources.tickets.new_message_help'),
+                    ) : null)
                     ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
                     ->sortable(),
             ])
@@ -279,8 +291,7 @@ class TicketResource extends Resource
                     ->label(__('padmission-tickets::tickets.resources.tickets.filters.open_only'))
                     ->toggle()
                     ->default()
-                    ->query(fn (Builder $query): Builder => $query->whereNull($query->getModel()->qualifyColumn('closed_at')))
-                    ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked')),
+                    ->query(fn (Builder $query): Builder => $query->whereNull($query->getModel()->qualifyColumn('closed_at'))),
 
                 SelectFilter::make('status')
                     ->relationship('status', 'display_name')
@@ -312,7 +323,7 @@ class TicketResource extends Resource
                     ->preload(),
 
                 SelectFilter::make('submitter')
-                    ->label(__('padmission-tickets::tickets.resources.tickets.submitter'))
+                    ->label(fn (ListTickets $livewire): string => static::submitterLabel($livewire))
                     ->relationship('submitter', 'name')
                     ->searchable()
                     ->multiple()
@@ -384,8 +395,59 @@ class TicketResource extends Resource
                         ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make()
                         ->authorizeIndividualRecords('delete'),
-                ]),
+                ])
+                    ->hidden(fn (ListTickets $livewire): bool => static::isEscalatedTab($livewire)),
             ]);
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    public static function orderByRank(Builder $query, string $direction): Builder
+    {
+        [$rank, $bindings] = ConversationStateQuery::rankExpression(ConversationViewer::current());
+
+        return $query->orderByRaw($rank.' '.($direction === 'desc' ? 'desc' : 'asc'), $bindings);
+    }
+
+    public static function isEscalatedTab(ListTickets $livewire): bool
+    {
+        return str_contains((string) $livewire->activeTab, 'linked');
+    }
+
+    /*
+     * Every row in a panel that receives escalations is one, so each is named
+     * by the tickets it is about, as on the escalated tabs.
+     */
+    public static function listsEscalations(ListTickets $livewire): bool
+    {
+        return static::isEscalatedTab($livewire) || ConversationViewer::current()->receivesEscalations;
+    }
+
+    public static function submitterLabel(ListTickets $livewire): string
+    {
+        return match (true) {
+            static::isEscalatedTab($livewire) => __('padmission-tickets::tickets.resources.tickets.handled_by'),
+            ConversationViewer::current()->receivesEscalations => __('padmission-tickets::tickets.resources.tickets.contact'),
+            default => __('padmission-tickets::tickets.resources.tickets.submitter'),
+        };
+    }
+
+    protected static function escalationMarker(Ticket $record): ?HtmlString
+    {
+        $state = ConversationState::fromRow($record);
+        $label = $state->markerLabel();
+
+        return $label === null ? null : static::badge($label, $state->markerColor(), $state->markerTooltip());
+    }
+
+    protected static function badge(string $label, string $color, ?string $tooltip): HtmlString
+    {
+        return new HtmlString(' '.Blade::render(
+            '<x-filament::badge size="sm" :color="$color" :tooltip="$tooltip">{{ $label }}</x-filament::badge>',
+            ['label' => $label, 'color' => $color, 'tooltip' => $tooltip],
+        ));
     }
 
     protected static function tabText(ListTickets $livewire, string $part): ?string

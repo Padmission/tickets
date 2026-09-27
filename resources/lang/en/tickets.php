@@ -192,6 +192,10 @@ return [
             'unassigned' => 'Unassigned',
             'assigned_elsewhere' => 'Assigned outside your team',
             'submitter' => 'Requested by',
+            'handled_by' => 'Handled by',
+            'contact' => 'Contact',
+            'new_message' => 'New',
+            'new_message_help' => 'New message you haven\'t read',
             'escalated_by' => 'Escalated by',
             'source_panel' => 'Source Panel',
             'panel' => 'Panel',
@@ -232,8 +236,8 @@ return [
             'tabs' => [
                 'all' => 'All Tickets',
                 'my' => 'My Tickets',
-                'linked' => 'Escalated Tickets',
-                'my_linked' => 'My Escalated Tickets',
+                'linked' => 'Escalations',
+                'my_linked' => 'My Escalations',
             ],
 
             'badges' => [
@@ -242,13 +246,15 @@ return [
             ],
 
             'tab_descriptions' => [
-                'all' => 'Every ticket your team handles. Tickets waiting on support come first.',
+                'all' => 'Conversations with the people who asked for help. Tickets that need you come first.',
                 'all_submitter' => 'Tickets you submitted.',
-                'my' => 'Tickets assigned to you. Use Reassign to hand one to a teammate.',
-                'linked' => 'Tickets your team escalated. Each is a separate ticket; the original stays under All Tickets.',
-                'linked_to' => 'Tickets your team escalated to :team. Each is a separate ticket; the original stays under All Tickets.',
-                'my_linked' => 'Tickets you escalated.',
-                'my_linked_to' => 'Tickets you escalated to :team.',
+                'my' => 'Tickets assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.',
+                'linked' => 'Your team\'s conversations with the team you escalated to. Answer the requesters on their own tickets, under All Tickets.',
+                'linked_to' => 'Your team\'s conversations with :team. Answer the requesters on their own tickets, under All Tickets.',
+                'my_linked' => 'Your conversations with the team you escalated to. Use Hand over when a colleague should take one.',
+                'my_linked_to' => 'Your conversations with :team. Use Hand over when a colleague should take one.',
+                'all_received' => 'Escalations sent to your team, one conversation per escalation. Tickets that need you come first.',
+                'my_received' => 'Escalations assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.',
             ],
 
             'field_help' => [
@@ -267,6 +273,40 @@ return [
                 'assignee_elsewhere_to' => 'The :team person working on this escalation. :team chooses who works on it.',
                 'turn' => 'Who owes the next message in this conversation. It switches each time someone replies.',
             ],
+
+            'escalation_marker' => [
+                'escalated' => 'Escalated',
+                'replied' => 'Reply on the escalation',
+                'replied_to' => ':team replied',
+                'replied_to_other' => 'Reply on the escalation for :name',
+                'replied_to_other_to' => ':team replied to :name',
+                'closed' => 'Escalation closed',
+            ],
+
+            'escalation_marker_help' => [
+                'escalated_waiting_team_you' => 'You asked the team you escalated to about this. They owe the next reply there.',
+                'escalated_waiting_team_you_to' => 'You asked :team about this. :team owes the next reply there.',
+                'escalated_waiting_team' => ':handler asked the team you escalated to about this. They owe the next reply there.',
+                'escalated_waiting_team_to' => ':handler asked :team about this. :team owes the next reply there.',
+                'escalated_waiting_owner_you' => 'The team you escalated to is waiting on you on the escalation.',
+                'escalated_waiting_owner_you_to' => ':team is waiting on you on the escalation.',
+                'escalated_waiting_owner' => 'The team you escalated to is waiting on :handler on the escalation.',
+                'escalated_waiting_owner_to' => ':team is waiting on :handler on the escalation.',
+                'replied' => 'The team you escalated to replied on the escalation after your team last wrote. Read it, then answer them there or pass the answer on to :name here.',
+                'replied_to' => ':team replied on the escalation after your team last wrote. Read it, then answer :team there or pass the answer on to :name here.',
+                'closed' => 'The escalation was closed :time. This ticket stays open until your team closes it.',
+            ],
+
+            'escalation_originals' => [
+                'one' => ':name\'s ticket',
+                'two' => ':first\'s and :second\'s tickets',
+                'many' => 'tickets from :first and :count others',
+                'unnamed' => '{1} 1 ticket|[2,*] :count tickets',
+            ],
+            'escalation_about' => 'About :originals',
+            'escalation_about_some_closed' => ':about, :closed of :total closed',
+            'escalation_about_all_closed' => ':about, all closed',
+            'escalation_about_none' => 'Not linked to any ticket',
 
             'waiting_on' => [
                 'you' => 'You',
@@ -309,12 +349,12 @@ return [
                     'description' => 'Tickets appear here when they are assigned to you.',
                 ],
                 'linked' => [
-                    'heading' => 'No escalated tickets',
-                    'description' => 'When your team escalates a ticket, the separate ticket it opens appears here.',
+                    'heading' => 'No escalations',
+                    'description' => 'When your team escalates a ticket, the conversation about it appears here.',
                 ],
                 'my_linked' => [
-                    'heading' => 'You have not escalated any tickets',
-                    'description' => 'Tickets you escalate appear here.',
+                    'heading' => 'You have no escalations',
+                    'description' => 'Escalations you start or take over appear here.',
                 ],
             ],
         ],

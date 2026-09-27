@@ -17,6 +17,13 @@ return [
         'description' => 'Open tickets where support owes the next reply',
     ],
 
+    'needs_you' => [
+        'label' => 'Needs You',
+        'description' => 'Open tickets waiting on your reply, with nobody assigned, or with a reply to pass on from the team you escalated to',
+        'description_to' => 'Open tickets waiting on your reply, with nobody assigned, or with a reply from :team to pass on',
+        'description_received' => 'Open tickets waiting on your reply or with nobody assigned',
+    ],
+
     'escalations_waiting' => [
         'label' => 'Waiting on the Other Team',
         'label_to' => 'Waiting on :team',
