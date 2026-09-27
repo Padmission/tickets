@@ -4,6 +4,7 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -13,6 +14,8 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Policies\TicketPolicy;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -43,7 +46,7 @@ it('says a ticket nobody is assigned to is unassigned', function () {
 it('names the support team when the assignee is outside the viewer\'s scope', function () {
     TicketPlugin::get('test2')->supportTeamName('Platform Support');
 
-    $ticket = Ticket::factory()->create(['panel' => 'test2', 'assignee_id' => User::factory()->create()->id]);
+    $ticket = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => auth()->id(), 'assignee_id' => User::factory()->create()->id]);
 
     User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($ticket->assignee_id));
 
@@ -111,7 +114,7 @@ describe('Original conversation', function () {
     });
 
     it('is hidden from the team that escalated, who already have the original', function () {
-        $escalated = Ticket::factory()->create(['panel' => 'test2']);
+        $escalated = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => auth()->id()]);
         Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $escalated->id])
@@ -212,3 +215,62 @@ it('shows the ticket number once, as a small reference under the heading', funct
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertSeeHtml('<span class="pad-ti-ticket-number">Ticket #'.$ticket->id.'</span>');
 });
+
+describe('Escalation on the original\'s page', function () {
+    beforeEach(function () {
+        (new TicketStatusSeeder)->run();
+        Gate::policy(Ticket::class, TicketPolicy::class);
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    });
+
+    it('is shown only to people who may manage the original', function (bool $asRequester) {
+        [$requester, $supporter] = User::factory()->count(2)->create();
+
+        $this->modifyPlugin(function ($plugin) use ($supporter) {
+            $plugin->allSupportersQuery(fn () => User::query()->whereKey($supporter->id));
+        });
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => $supporter->id]);
+        $original = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'linked_ticket_id' => $escalation->id]);
+
+        $this->actingAs($asRequester ? $requester : $supporter);
+
+        $page = Livewire::test(ViewTicket::class, ['record' => $original->id]);
+
+        if ($asRequester) {
+            $page->assertDontSee('Escalated to Platform Support')
+                ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+                ->assertActionHidden('show-linked');
+
+            return;
+        }
+
+        $page->assertSee('Escalated to Platform Support')
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+            ->assertActionVisible('show-linked');
+    })->with([
+        'the requester' => [true],
+        'a supporter' => [false],
+    ]);
+});
+
+it('tells the chat whether the viewer may reply', function (bool $mayReply) {
+    Gate::policy(Ticket::class, $mayReply ? TestTicketPolicy::class : ManagesButMayNotReplyPolicy::class);
+
+    $ticket = Ticket::factory()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSeeHtml('can-reply="'.($mayReply ? 'true' : 'false').'"');
+})->with([
+    'may reply' => [true],
+    'may not reply' => [false],
+]);
+
+class ManagesButMayNotReplyPolicy extends TestTicketPolicy
+{
+    public function reply(User $user, Ticket $ticket): bool
+    {
+        return false;
+    }
+}

@@ -168,7 +168,7 @@ class TicketActivity extends Model
         $label = TicketPlugin::teamText('padmission-tickets::activities.escalation', $team);
 
         return __("padmission-tickets::activities.{$key}", [
-            'escalation' => $this->ticketReference($escalation, $label),
+            'escalation' => $this->ticketReference($escalation, $label, $escalation === null ? null : $this->viewUrlFor($escalation)),
             'name' => e($this->actorName()),
         ]);
     }
@@ -183,7 +183,7 @@ class TicketActivity extends Model
             : __('padmission-tickets::activities.original');
 
         return __("padmission-tickets::activities.{$key}", [
-            'original' => $this->ticketReference($original, $label),
+            'original' => $this->ticketReference($original, $label, $original === null ? null : $this->originalUrl($original)),
             'name' => e($this->actorName()),
         ]);
     }
@@ -205,11 +205,24 @@ class TicketActivity extends Model
             ->find($id);
     }
 
-    protected function ticketReference(?Ticket $ticket, string $label): string
+    /*
+     * The team an original was escalated to reads it beside the escalation,
+     * never on its own page, where it could write to the requester.
+     */
+    protected function originalUrl(Ticket $original): ?string
     {
-        $url = $ticket === null ? null : $this->viewUrlFor($ticket);
+        $escalation = TicketPlugin::resolveModelClass(Ticket::class)::withoutGlobalScopes()->find($this->ticket_id);
 
-        if ($url === null) {
+        if ($escalation === null || $escalation->panel !== $this->viewerPanelId()) {
+            return $this->viewUrlFor($original);
+        }
+
+        return $this->viewUrlFor($escalation, ['linked' => $original->getKey()]);
+    }
+
+    protected function ticketReference(?Ticket $ticket, string $label, ?string $url): string
+    {
+        if ($ticket === null || $url === null) {
             return e($label);
         }
 
@@ -221,12 +234,14 @@ class TicketActivity extends Model
         );
     }
 
-    /*
+    /**
      * Only a ticket the viewer could open from the panel they are reading in
      * gets a link. The chat widget reads history outside any panel request, so
      * it names its panel in a header.
+     *
+     * @param  array<string, mixed>  $parameters
      */
-    protected function viewUrlFor(Ticket $ticket): ?string
+    protected function viewUrlFor(Ticket $ticket, array $parameters = []): ?string
     {
         $panelId = $this->viewerPanelId();
         $plugin = TicketPlugin::find($panelId);
@@ -240,7 +255,7 @@ class TicketActivity extends Model
         }
 
         return rescue(
-            fn (): string => TicketResource::getUrl('view', ['record' => $ticket->getKey()], panel: $panelId),
+            fn (): string => TicketResource::getUrl('view', ['record' => $ticket->getKey(), ...$parameters], panel: $panelId),
             report: false,
         );
     }

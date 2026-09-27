@@ -188,7 +188,7 @@ describe('Linked Tickets', function () {
 
         (new TicketStatusSeeder)->run();
 
-        $ticket = Ticket::factory()->create(['panel' => 'test2']);
+        $ticket = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => auth()->id()]);
 
         Ticket::factory()->create(['panel' => 'test1']);
         Ticket::factory()->create(['panel' => 'test2']);
@@ -219,7 +219,7 @@ describe('Linked Tickets', function () {
 
         (new TicketStatusSeeder)->run();
 
-        $ticket = Ticket::factory()->create(['panel' => 'test3']);
+        $ticket = Ticket::factory()->create(['panel' => 'test3', 'submitter_id' => auth()->id()]);
         $selectAction = TestAction::make('select')->schemaComponent('childTickets');
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
@@ -247,7 +247,7 @@ describe('Linked ticket permissions', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.label'))
-            ->assertActionHidden(TestAction::make('select')->schemaComponent('childTickets', schema: 'form'));
+            ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
 
         expect($abilities)->toContain('update')
             ->and($ticket->refresh()->linked_ticket_id)->toBeNull();

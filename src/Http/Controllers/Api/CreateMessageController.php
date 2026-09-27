@@ -49,7 +49,7 @@ class CreateMessageController
         /** @var Ticket $ticket */
         $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
-        resolve(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
+        resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
 
         if ($ticket->isClosed) {
             throw new HttpResponseException(response()->json([
@@ -89,7 +89,10 @@ class CreateMessageController
 
         $messages->push($activity);
 
-        $this->handleTurnChange($ticket, $activity, $validated['lock_turn'] ?? false);
+        // Only the answering side may keep a conversation waiting on itself.
+        $lockTurn = $activity->sender === ActivitySender::Supporter && ($validated['lock_turn'] ?? false);
+
+        $this->handleTurnChange($ticket, $activity, $lockTurn);
 
         if ($isFirstActivity) {
             $messages->push($this->createAutoResponse($ticket));

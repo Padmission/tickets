@@ -4,9 +4,11 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
 
 beforeEach(function () {
@@ -159,3 +161,68 @@ it('refuses a reply to a closed ticket', function () {
 
     expect($ticket->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse();
 });
+
+it('forbids a team that may read and manage a ticket but not reply from posting on it', function () {
+    Gate::policy(Ticket::class, ReadsButRepliesOnlyInOwnPanelPolicy::class);
+
+    $responder = User::factory()->create();
+    $original = Ticket::factory()->open()->create(['panel' => 'test2']);
+
+    $this->actingAs($responder);
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $original]), [
+            'content' => 'Straight to the requester',
+        ])
+        ->assertForbidden();
+
+    $this
+        ->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $original]))
+        ->assertOk();
+
+    expect($original->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse();
+});
+
+it('lets a supporter reply when the policy has no reply ability', function () {
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create();
+
+    $this->actingAs($supporter);
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Happy to help',
+        ])
+        ->assertOk();
+});
+
+it('keeps the turn only when the answering side asks to', function (bool $fromSubmitter, Turn $expected) {
+    $submitter = User::factory()->create();
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create([
+        'submitter_id' => $submitter->id,
+        'turn' => $fromSubmitter ? Turn::User : Turn::Supporter,
+    ]);
+
+    $this->actingAs($fromSubmitter ? $submitter : $supporter);
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Still on it',
+            'lock_turn' => true,
+        ])
+        ->assertOk();
+
+    expect($ticket->refresh()->turn)->toBe($expected);
+})->with([
+    'the submitter, which is ignored' => [true, Turn::Supporter],
+    'a supporter' => [false, Turn::Supporter],
+]);
+
+class ReadsButRepliesOnlyInOwnPanelPolicy extends TestTicketPolicy
+{
+    public function reply(User $user, Ticket $ticket): bool
+    {
+        return $ticket->panel === 'test';
+    }
+}

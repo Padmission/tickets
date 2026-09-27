@@ -19,6 +19,8 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
@@ -59,6 +61,10 @@ class ViewTicket extends EditRecord
         $record = $this->getRecord();
         $user = Filament::auth()->user();
 
+        if (! $this->canSeeEscalation($record)) {
+            return collect();
+        }
+
         $tickets = $record->isInCurrentPanel() && $record->childTickets()->exists()
             ? $record->childTickets
             : collect([$record->parentTicket])->filter();
@@ -92,9 +98,36 @@ class ViewTicket extends EditRecord
         return $this->linkedTicket() === null ? null : TicketPlugin::get()->getLinkedConversationView();
     }
 
+    /*
+     * Another panel's ticket is opened here only by its submitter. The team
+     * an original was escalated to reads it beside its own escalation, where
+     * it cannot write to the requester.
+     */
     protected function authorizeAccess(): void
     {
-        abort_unless(static::getResource()::canView($this->getRecord()), 403);
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        if ($record->isNotInCurrentPanel() && Filament::auth()->id() !== $record->submitter_id) {
+            $escalation = resolve(TicketEscalationLinks::class)->escalationOf($record);
+
+            abort_unless($escalation?->isInCurrentPanel() === true, 403);
+
+            throw new HttpResponseException(new RedirectResponse(
+                static::getResource()::getUrl('view', ['record' => $escalation, 'linked' => $record->getKey()]),
+            ));
+        }
+
+        abort_unless(static::getResource()::canView($record), 403);
+    }
+
+    /*
+     * A requester who may browse tickets can open their own original, but
+     * whether and where it was escalated is the organization's business.
+     */
+    public function canSeeEscalation(Ticket $record): bool
+    {
+        return $record->isNotInCurrentPanel() || $this->canEdit($record);
     }
 
     protected function canEdit(?Ticket $record): bool
@@ -134,6 +167,7 @@ class ViewTicket extends EditRecord
         return [
             ViewOriginalConversationAction::make()
                 ->visible(fn (Ticket $record): bool => TicketPlugin::get()->getLinkedConversationView() === TicketPlugin::LINKED_VIEW_MODAL
+                    && $this->canSeeEscalation($record)
                     && $record->isInCurrentPanel()
                     && $this->linkedTickets()->isNotEmpty()
                     && $record->childTickets()->exists()),
@@ -336,7 +370,7 @@ class ViewTicket extends EditRecord
                             )
                             : __('padmission-tickets::tickets.resources.tickets.linked_tickets'))
                         ->description(fn (Ticket $record): ?string => static::describeEscalation($record))
-                        ->visible(fn (Ticket $record) => TicketPlugin::get($record->panel)->hasLinkedTickets())
+                        ->visible(fn (Ticket $record): bool => TicketPlugin::get($record->panel)->hasLinkedTickets() && $this->canSeeEscalation($record))
                         ->compact()
                         ->schema([
                             Text::make(fn (Ticket $record): Htmlable => static::describeMembership($record))

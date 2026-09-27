@@ -1,6 +1,7 @@
 @php
     use Filament\Facades\Filament;
     use Filament\Support\Facades\FilamentAsset;
+    use Padmission\Tickets\Services\TicketAuth;
     use Padmission\Tickets\TicketPlugin;
 
     $config = TicketPlugin::get()->getChatWidgetConfig();
@@ -9,6 +10,8 @@
     $config->allowScreenshots(false);
 
     $primaryColor = $config->getPrimaryColor();
+
+    $canReply = resolve(TicketAuth::class)->canReply($this->record, Filament::auth()->user());
 @endphp
 <div
     class="pad-ti-chat-wrapper"
@@ -41,6 +44,7 @@
         scroll-threshold="100"
         polling-interval="10000"
         has-elevated-rights="true"
+        can-reply="{{ $canReply ? 'true' : 'false' }}"
         keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
     ></chat-component>
 

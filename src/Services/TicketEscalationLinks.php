@@ -100,6 +100,17 @@ class TicketEscalationLinks
         return $escalation !== null && ! $escalation->trashed() && $escalation->isClosed;
     }
 
+    /*
+     * The original's escalation, read past host scopes. A deleted one is no
+     * escalation at all.
+     */
+    public function escalationOf(Ticket $original): ?Ticket
+    {
+        $escalation = $this->linkedRow($original->linked_ticket_id);
+
+        return $escalation?->trashed() === false ? $escalation : null;
+    }
+
     public function removeFromEscalation(Ticket $original): bool
     {
         return DB::transaction(function () use ($original): bool {

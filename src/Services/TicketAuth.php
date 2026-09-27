@@ -26,4 +26,35 @@ class TicketAuth
 
         abort_unless($isAuthorized, 403);
     }
+
+    public function authorizeReply(Ticket $ticket, ?Authenticatable $user): void
+    {
+        abort_unless($this->canReply($ticket, $user), 403);
+    }
+
+    /*
+     * Reading and managing a ticket is not the same as writing to its
+     * requester: a team that answers escalations may see an original but must
+     * not post on it. A host policy without a reply ability keeps the old rule.
+     */
+    public function canReply(Ticket $ticket, ?Authenticatable $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        if ($user->getAuthIdentifier() === $ticket->submitter_id) {
+            return true;
+        }
+
+        $gate = Gate::forUser($user);
+
+        if (! $gate->allows('view', $ticket) || ! $gate->allows('manage', $ticket)) {
+            return false;
+        }
+
+        $policy = Gate::getPolicyFor($ticket);
+
+        return $policy === null || ! method_exists($policy, 'reply') || $gate->allows('reply', $ticket);
+    }
 }

@@ -95,6 +95,10 @@ customElements.define(
 				this.scrollToBottom(),
 			);
 
+			if (this.canReply === "false") {
+				node.querySelector("[data-composer]").style.display = "none";
+			}
+
 			node
 				.querySelector("[data-composer]")
 				.addEventListener("submit", (event) => {

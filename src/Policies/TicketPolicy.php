@@ -47,6 +47,11 @@ class TicketPolicy
         return $this->isSupporter($user, $ticket);
     }
 
+    public function reply($user, Ticket $ticket): bool
+    {
+        return $this->manage($user, $ticket);
+    }
+
     public function escalate($user, Ticket $ticket): bool
     {
         return true;
