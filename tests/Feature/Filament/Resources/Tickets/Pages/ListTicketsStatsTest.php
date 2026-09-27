@@ -120,10 +120,19 @@ describe('Stat cards', function () {
 
         expect($stat('all'))
             ->getValue()->toBe('3 days')
-            ->getDescription()->toBe('1 tickets closed')
+            ->getDescription()->toBe('1 ticket closed')
             ->and($stat('my'))
             ->getValue()->toBe('–')
             ->getDescription()->toBe('0 tickets closed');
+    });
+
+    it('counts several closed tickets in the plural', function () {
+        $this->login();
+
+        Ticket::factory()->count(2)->closed()->create(['assignee_id' => User::factory()->create()->id, 'created_at' => now()->subDay(), 'closed_at' => now()]);
+
+        expect(Livewire::test(TicketCloseTimeWidget::class, ['activeTab' => 'all'])->instance()->getStats()[0]->getDescription())
+            ->toBe('2 tickets closed');
     });
 
     it('stays panel-wide when used away from the list', function () {

@@ -33,7 +33,7 @@ class TicketCloseTimeWidget extends BaseWidget
 
         return [
             Stat::make(__('padmission-tickets::widgets.close_time.label'), $averageFormatted)
-                ->description(__('padmission-tickets::widgets.close_time.description', ['count' => $metrics['totalClosed']]))
+                ->description(trans_choice('padmission-tickets::widgets.close_time.description', $metrics['totalClosed'], ['count' => $metrics['totalClosed']]))
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('primary'),
         ];

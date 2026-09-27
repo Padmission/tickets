@@ -34,6 +34,6 @@ return [
 
     'close_time' => [
         'label' => 'Average Close Time',
-        'description' => ':count tickets closed',
+        'description' => '{0} :count tickets closed|{1} :count ticket closed|[2,*] :count tickets closed',
     ],
 ];
