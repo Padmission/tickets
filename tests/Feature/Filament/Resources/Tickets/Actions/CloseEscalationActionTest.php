@@ -99,7 +99,7 @@ it('writes the closed status of the escalation\'s own panel and tenant', functio
 
     // Tenant 1's would win if the tenant were ignored.
     $closed = collect([1 => 100, 2 => 99])->map(fn (int $order, int $tenant): TicketStatus => TicketStatus::factory()->create(['panel' => 'test2', 'tenant_id' => $tenant, 'order' => $order]));
-    $this->escalation->update(['tenant_id' => 2]);
+    Ticket::query()->whereKey($this->escalation->id)->update(['tenant_id' => 2]);
     $this->login($this->owner);
 
     Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
