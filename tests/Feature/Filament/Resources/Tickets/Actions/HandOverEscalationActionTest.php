@@ -5,6 +5,7 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Once;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -253,4 +254,67 @@ it('asks Take over as a centred confirm, whatever the host\'s dialog style', fun
 
     Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
         ->assertActionExists(handOverHint(), fn (HandOverEscalationAction $action): bool => $action->isModalSlideOver() && ! $action->isConfirmationRequired());
+});
+
+it('asks the escalating team\'s pool once per request, however many rows it offers Take over on', function () {
+    $calls = 0;
+    TicketPlugin::get()->allSupportersQuery(function () use (&$calls) {
+        $calls++;
+
+        return User::query()->whereKey([$this->owner->id, $this->colleague->id]);
+    });
+    $this->login($this->colleague);
+
+    $count = function () use (&$calls): int {
+        $calls = 0;
+        Once::flush();
+        Livewire::test(ListTickets::class, ['activeTab' => 'linked'])->assertSee('Take over');
+
+        return $calls;
+    };
+
+    $one = $count();
+
+    foreach (range(1, 3) as $ignored) {
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->owner->id]);
+        Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+    }
+
+    expect($count())->toBe($one);
+});
+
+it('closes a stale Take over dialog when the escalation changed hands meanwhile', function () {
+    $this->login($this->colleague);
+
+    $component = Livewire::test(ViewTicket::class, ['record' => $this->original->id])
+        ->mountAction(takeOverInBox());
+
+    $this->escalation->forceFill(['submitter_id' => $this->padmission->id])->save();
+
+    $component->callMountedAction()
+        ->assertNotified(__('padmission-tickets::tickets.actions.hand_over.refused'))
+        ->assertHasNoActionErrors();
+
+    expect($component->instance()->mountedActions)->toBe([])
+        ->and($this->escalation->refresh()->submitter_id)->toBe($this->padmission->id);
+});
+
+it('stores the new owner with the key\'s own type', function () {
+    $this->login($this->owner);
+
+    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->callAction(handOverHint(), ['new_owner' => (string) $this->colleague->id]);
+
+    $activity = $this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->sole();
+
+    expect($activity->data['to'])->toBe($this->colleague->id)
+        ->and($this->escalation->refresh()->getRawOriginal('submitter_id'))->toBe($this->colleague->id);
+});
+
+it('does not offer Take over on a closed original', function () {
+    $this->login($this->colleague);
+    $this->original->close(closedById: $this->owner->id);
+
+    Livewire::test(ViewTicket::class, ['record' => $this->original->id])
+        ->assertDontSee('Take over');
 });

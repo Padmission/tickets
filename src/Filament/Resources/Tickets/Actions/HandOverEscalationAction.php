@@ -135,9 +135,9 @@ class HandOverEscalationAction extends Action
     {
         $escalation = $this->getEscalation();
         $isOwner = $this->viewerIsOwner();
-        $to = $isOwner ? ($data['new_owner'] ?? null) : Filament::auth()->id();
+        $to = $isOwner ? $this->choiceKey($data['new_owner'] ?? null) : Filament::auth()->id();
 
-        if ($escalation === null || blank($to) || ($isOwner && ! array_key_exists($to, $this->choices()))) {
+        if ($escalation === null || blank($to)) {
             $this->failureNotificationTitle(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'));
             $this->failure();
 
@@ -154,7 +154,8 @@ class HandOverEscalationAction extends Action
                 ->title(__('padmission-tickets::tickets.actions.hand_over.refused'))
                 ->send();
 
-            $this->halt();
+            // The dialog showed an owner that is no longer true.
+            $this->cancel();
         }
 
         Notification::make()
@@ -168,6 +169,22 @@ class HandOverEscalationAction extends Action
         if ($isOwner && ! $livewire instanceof ListTickets) {
             $this->redirect(TicketResource::getUrl('index', ['tab' => 'linked']));
         }
+    }
+
+    /*
+     * The chosen person as the option list keys them, so the new submitter
+     * and the history note keep the key's own type rather than the form's
+     * string. Null when the choice is not on the list.
+     */
+    protected function choiceKey(mixed $value): int|string|null
+    {
+        foreach (array_keys($this->choices()) as $key) {
+            if ((string) $key === (string) $value) {
+                return $key;
+            }
+        }
+
+        return null;
     }
 
     protected function viewerIsOwner(): bool

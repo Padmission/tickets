@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Policies;
 
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketPolicy
@@ -67,6 +68,13 @@ class TicketPolicy
         }
 
         $sourcePanel = $ticket->escalationSourcePanel();
+        $viewer = ConversationViewer::current();
+
+        // The page's own pool, resolved once per request, rather than a query per list row.
+        if ($sourcePanel === $viewer->panelId && (string) $viewer->userId === (string) $user->getAuthIdentifier()) {
+            return $viewer->isSupporter;
+        }
+
         $supportersQuery = $sourcePanel === null ? null : TicketPlugin::find($sourcePanel)?->getAllSupportersQuery();
 
         if ($supportersQuery === null) {

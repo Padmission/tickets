@@ -666,7 +666,7 @@ class ViewTicket extends EditRecord
                                 HandOverEscalationAction::make('take-over-escalation')
                                     ->escalationUsing(fn (Ticket $record): ?Ticket => $this->escalationOf($record))
                                     ->button()
-                                    ->hidden(fn (Ticket $record): bool => $this->openEscalationUrl($record) !== null),
+                                    ->hidden(fn (Ticket $record): bool => $record->isClosed || $this->openEscalationUrl($record) !== null),
                                 RemoveFromEscalationAction::make()->button()->authorize(static::canEdit(...)),
                             ])
                                 ->key('escalationActions')
