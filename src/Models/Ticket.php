@@ -21,6 +21,8 @@ use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
+use Padmission\Tickets\Support\ConversationStateQuery;
+use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
@@ -84,6 +86,11 @@ class Ticket extends Model
     public function scopeClosed(Builder $query): Builder
     {
         return $query->whereNotNull('closed_at');
+    }
+
+    public function scopeWithConversationState(Builder $query, ?ConversationViewer $viewer = null): Builder
+    {
+        return ConversationStateQuery::apply($query, $viewer ?? ConversationViewer::current());
     }
 
     public function scopeEscalations(Builder $query): Builder

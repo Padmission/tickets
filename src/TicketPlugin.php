@@ -89,6 +89,8 @@ class TicketPlugin implements Plugin
 
     protected mixed $allSupportersQuery = null;
 
+    protected ?string $supporterMatchColumn = null;
+
     protected mixed $currentUserAssigneeIds = null;
 
     protected mixed $initialAssignmentSupportersQuery = null;
@@ -618,6 +620,22 @@ class TicketPlugin implements Plugin
         }
 
         return $this->allSupportersQuery;
+    }
+
+    /*
+     * A pool that keeps one account per person (by email, say) leaves out
+     * that person's other accounts, so an assignee is matched on this column.
+     */
+    public function matchSupportersBy(?string $column): static
+    {
+        $this->supporterMatchColumn = $column;
+
+        return $this;
+    }
+
+    public function getSupporterMatchColumn(): string
+    {
+        return $this->supporterMatchColumn ?? 'id';
     }
 
     /**

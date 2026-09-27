@@ -265,7 +265,34 @@ return [
                 'assignee' => 'The person responsible for this ticket.',
                 'assignee_elsewhere' => 'The person on the team you escalated to who is working on this escalation. That team chooses who works on it.',
                 'assignee_elsewhere_to' => 'The :team person working on this escalation. :team chooses who works on it.',
-                'turn' => 'Who owes the next reply. It switches each time someone replies.',
+                'turn' => 'Who owes the next message in this conversation. It switches each time someone replies.',
+            ],
+
+            'waiting_on' => [
+                'you' => 'You',
+                'needs_assignment' => 'Needs assignment',
+                'requester' => 'Requester',
+                'contact' => 'Contact',
+                'team' => 'Escalation team',
+            ],
+
+            'waiting_on_help' => [
+                'you' => 'You owe :name the next reply.',
+                'you_to_team' => 'You owe :team the next reply on this escalation.',
+                'you_to_team_unnamed' => 'You owe the team you escalated to the next reply on this escalation.',
+                'you_on_hold' => ':name has your latest reply. You still owe the answer, which depends on the escalation.',
+                'colleague' => ':colleague owes :name the next reply.',
+                'colleague_on_hold' => ':name has the latest reply from :colleague. The answer depends on the escalation.',
+                'owner_colleague' => ':colleague owes the team you escalated to the next reply on this escalation.',
+                'owner_colleague_to' => ':colleague owes :team the next reply on this escalation.',
+                'needs_assignment' => 'Nobody who answers tickets here is assigned. Assign someone to answer :name.',
+                'requester' => ':name owes the next reply.',
+                'contact' => ':name at :organization owes the next reply.',
+                'contact_unnamed_org' => ':name owes the next reply.',
+                'team' => 'The team you escalated to owes the next reply. :assignee is working on it.',
+                'team_to' => ':team owes the next reply. :assignee is working on it.',
+                'team_unassigned' => 'The team you escalated to owes the next reply.',
+                'team_unassigned_to' => ':team owes the next reply.',
             ],
 
             'filters' => [
