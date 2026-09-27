@@ -123,7 +123,7 @@ class TicketResource extends Resource
      */
     protected static function currentUserAssigneeIds(string $panelId, int|string|null $userId): array
     {
-        return once(fn (): array => TicketPlugin::get($panelId)->getCurrentUserAssigneeIds());
+        return once(fn (): array => $userId === null ? [] : TicketPlugin::get($panelId)->getCurrentUserAssigneeIds());
     }
 
     public static function ticketNumberFromSearch(string $search): ?int

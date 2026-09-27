@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Services;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Padmission\Tickets\Models\Ticket;
@@ -28,11 +29,13 @@ class TicketAssignee
             ? TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier()
             : null;
 
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
+        if ($modifier === null) {
+            return $relation->first();
         }
 
-        return $relation->first();
+        $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
+
+        return static::onlyName($relation->first());
     }
 
     /**
@@ -54,6 +57,18 @@ class TicketAssignee
             foreach ($modifiers as $modifier) {
                 app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
             }
+
+            $relation->afterQuery(fn (Collection $assignees): Collection => $assignees->each(static::onlyName(...)));
         }]);
+    }
+
+    /*
+     * Found past the viewer's own scopes, and a Livewire page sends its loaded
+     * relations to the browser, so only the person's name may be serialized.
+     * The attributes stay loaded for display.
+     */
+    protected static function onlyName(?Model $assignee): ?Model
+    {
+        return $assignee?->setVisible([$assignee->getKeyName(), 'name']);
     }
 }

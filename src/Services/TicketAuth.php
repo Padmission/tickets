@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Services;
 
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Models\Ticket;
 
@@ -30,6 +31,15 @@ class TicketAuth
     public function authorizeReply(Ticket $ticket, ?Authenticatable $user): void
     {
         abort_unless($this->canReply($ticket, $user), 403);
+    }
+
+    public function refuseClosedTicket(Ticket $ticket): void
+    {
+        if ($ticket->isClosed) {
+            throw new HttpResponseException(response()->json([
+                'message' => __('padmission-tickets::tickets.copilot.closed_ticket_reply_error'),
+            ], 422));
+        }
     }
 
     /*

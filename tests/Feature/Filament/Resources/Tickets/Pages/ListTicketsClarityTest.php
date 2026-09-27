@@ -201,7 +201,10 @@ describe('Escalated tickets in the list', function () {
 
         Livewire::test(ListTickets::class)
             ->set('activeTab', 'linked')
-            ->assertTableColumnStateSet('assignee.name', 'Kevin McKee', $escalation);
+            ->assertTableColumnStateSet('assignee.name', 'Kevin McKee', $escalation)
+            ->call('getTableRecords')
+            ->assertReturned(fn (mixed $records): bool => str_contains((string) json_encode($records), 'Kevin McKee')
+                && ! str_contains((string) json_encode($records), $person->email));
     })->after(fn () => User::clearBootedModels());
 
     it('leaves out the team column when every escalation goes to the same team', function () {
@@ -240,6 +243,26 @@ it('says You for a ticket assigned to the viewer and names anyone else', functio
     Livewire::test(ListTickets::class)
         ->assertTableColumnStateSet('assignee.name', 'You', $mine)
         ->assertTableColumnStateSet('assignee.name', 'Maria Lopez', $theirs);
+});
+
+it('says You to whoever is signed in now, not to the first viewer', function () {
+    (new TicketStatusSeeder)->run();
+    [$first, $second] = User::factory()->count(2)->create();
+
+    $firstTicket = Ticket::factory()->open()->create(['assignee_id' => $first->id]);
+    $secondTicket = Ticket::factory()->open()->create(['assignee_id' => $second->id]);
+
+    $this->actingAs($first);
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnStateSet('assignee.name', 'You', $firstTicket)
+        ->assertTableColumnStateSet('assignee.name', $second->name, $secondTicket);
+
+    $this->actingAs($second);
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnStateSet('assignee.name', $first->name, $firstTicket)
+        ->assertTableColumnStateSet('assignee.name', 'You', $secondTicket);
 });
 
 it('counts every account the panel says is the viewer\'s as theirs', function () {

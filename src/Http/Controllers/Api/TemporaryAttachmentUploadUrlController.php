@@ -31,7 +31,8 @@ class TemporaryAttachmentUploadUrlController
         /** @var Ticket $ticketRecord */
         $ticketRecord = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
-        resolve(TicketAuth::class)->authorizeTicketAccess($ticketRecord, $request->user());
+        resolve(TicketAuth::class)->authorizeReply($ticketRecord, $request->user());
+        resolve(TicketAuth::class)->refuseClosedTicket($ticketRecord);
 
         $request->validate([
             'filename' => ['required', 'string', 'max:255'],

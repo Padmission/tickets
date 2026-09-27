@@ -77,6 +77,29 @@ it('names the person the team works an escalation through, on the page and besid
         ->assertSee('Kevin McKee');
 })->after(fn () => User::clearBootedModels());
 
+it('sends the browser only the name of a person found past the viewer\'s scopes, and keeps them after a reload', function () {
+    $person = User::factory()->create(['name' => 'Kevin McKee', 'email' => 'kevin@padmission.test']);
+
+    TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($person->id));
+
+    $escalation = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => auth()->id(), 'assignee_id' => $person->id]);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->call('getRecord')
+        ->assertReturned(fn (mixed $record): bool => str_contains((string) json_encode($record), 'Kevin McKee')
+            && ! str_contains((string) json_encode($record), 'kevin@padmission.test'));
+
+    $record = $page->instance()->getRecord();
+    expect($record->assignee->email)->toBe('kevin@padmission.test');
+
+    $record->refresh();
+    expect($page->instance()->getRecord()->assignee?->getKey())->toBe($person->id);
+
+    $record->load('assignee');
+    expect($page->instance()->getRecord()->assignee?->getKey())->toBe($person->id);
+})->after(fn () => User::clearBootedModels());
+
 it('adds the host ticket details to the ticket page', function () {
     TicketPlugin::get()->additionalTicketDetails(fn (): array => [
         TextEntry::make('organization')->label('Organization')->state('Acme Housing'),

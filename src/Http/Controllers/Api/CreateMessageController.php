@@ -6,7 +6,6 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -50,12 +49,7 @@ class CreateMessageController
         $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
 
         resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
-
-        if ($ticket->isClosed) {
-            throw new HttpResponseException(response()->json([
-                'message' => __('padmission-tickets::tickets.copilot.closed_ticket_reply_error'),
-            ], 422));
-        }
+        resolve(TicketAuth::class)->refuseClosedTicket($ticket);
 
         $attachmentIds = $validated['attachment_ids'] ?? [];
 

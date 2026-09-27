@@ -113,7 +113,7 @@ class ViewTicket extends EditRecord
         if ($record->isNotInCurrentPanel() && Filament::auth()->id() !== $record->submitter_id) {
             $escalation = resolve(TicketEscalationLinks::class)->escalationOf($record);
 
-            abort_unless($escalation?->isInCurrentPanel() === true, 403);
+            abort_unless($escalation?->isInCurrentPanel() === true && static::getResource()::canView($escalation), 403);
 
             throw new HttpResponseException(new RedirectResponse(
                 static::getResource()::getUrl('view', ['record' => $escalation, 'linked' => $record->getKey()]),
@@ -137,17 +137,38 @@ class ViewTicket extends EditRecord
         return static::getResource()::canEdit($record);
     }
 
+    /**
+     * Found once per request and assignee, so a lookup that finds nobody is
+     * not repeated on every call.
+     *
+     * @var array<string, ?Model>
+     */
+    protected array $foreignAssignees = [];
+
     /*
      * Another panel's ticket is assigned to someone only that panel's scopes
-     * may reveal. Relations are not kept between requests, so this is set
-     * again on each one.
+     * may reveal. Relations are not kept between requests, and refresh() or
+     * load() reloads it through this panel's scopes, so it is set again then.
      */
     public function getRecord(): Model
     {
         $record = parent::getRecord();
 
-        if ($record instanceof Ticket && $record->isNotInCurrentPanel() && ! $record->relationLoaded('assignee')) {
-            $record->setRelation('assignee', TicketAssignee::for($record));
+        if (! $record instanceof Ticket || $record->isInCurrentPanel()) {
+            return $record;
+        }
+
+        $needsAssignee = ! $record->relationLoaded('assignee')
+            || ($record->getRelation('assignee') === null && filled($record->assignee_id));
+
+        if ($needsAssignee) {
+            $key = (string) $record->assignee_id;
+
+            if (! array_key_exists($key, $this->foreignAssignees)) {
+                $this->foreignAssignees[$key] = TicketAssignee::for($record);
+            }
+
+            $record->setRelation('assignee', $this->foreignAssignees[$key]);
         }
 
         return $record;

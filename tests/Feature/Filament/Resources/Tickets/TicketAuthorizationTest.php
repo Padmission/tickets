@@ -11,6 +11,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Policies\TicketPolicy;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
 
 beforeEach(function () {
@@ -294,6 +295,17 @@ describe('another panel\'s ticket', function () {
         'escalated elsewhere' => ['test3'],
     ]);
 
+    it('refuses rather than reveals an escalation here that the viewer cannot open', function () {
+        (new TicketStatusSeeder)->run();
+        $this->login();
+        Gate::policy(Ticket::class, OpensOnlyOtherPanelsPolicy::class);
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test']);
+        $original = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+
+        $this->get(TicketResource::getUrl('view', ['record' => $original]))->assertForbidden();
+    });
+
     it('refuses a ticket whose escalation here was deleted', function () {
         (new TicketStatusSeeder)->run();
         $this->login();
@@ -354,3 +366,11 @@ it('lets a supporter reply under the package policy', function () {
         ])
         ->assertOk();
 });
+
+class OpensOnlyOtherPanelsPolicy extends TestTicketPolicy
+{
+    public function view(User $user, Ticket $ticket): bool
+    {
+        return $ticket->panel !== 'test';
+    }
+}
