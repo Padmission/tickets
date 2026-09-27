@@ -163,6 +163,7 @@ describe('in a cross-tenant panel', function () {
         expect(CustomTicket::withoutGlobalScopes()->find($ownTenant->id)->linked_ticket_id)->toBe($escalated->id);
 
         Livewire::test(ViewTicket::class, ['record' => $escalated->id])
+            ->call('closeLinked')
             ->fillForm(['childTickets' => [$ownTenant->id, $viewerTenant->id]])
             ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 

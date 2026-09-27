@@ -10,7 +10,7 @@ use Padmission\Tickets\TicketPlugin;
 
 class GetUserDisplayName
 {
-    public function __invoke(?int $userId): string
+    public function __invoke(?int $userId, ?string $panelId = null): string
     {
         if (! $userId) {
             return __('padmission-tickets::activities.user_display.unassigned');
@@ -19,8 +19,9 @@ class GetUserDisplayName
         $query = TicketPlugin::resolveUserModelClass()::query();
 
         // The user may sit outside the viewer's scope, such as a tenant user
-        // named on a ticket read from a cross-tenant panel.
-        $modifier = TicketPlugin::find(Filament::getCurrentOrDefaultPanel()?->getId())?->getRelationshipScopeModifier();
+        // named on a ticket read from a cross-tenant panel, or another panel's
+        // staff named on its ticket, which that panel's scopes reveal.
+        $modifier = TicketPlugin::find($panelId ?? Filament::getCurrentOrDefaultPanel()?->getId())?->getRelationshipScopeModifier();
 
         if ($modifier) {
             app()->call($modifier, ['relation' => $query, 'model' => 'user']);

@@ -70,16 +70,16 @@ describe('Adding to an existing escalation', function () {
             ->toBe('Rita Requester\'s ticket added to this escalation by Tess Support');
     });
 
-    it('says which escalation the ticket is part of and how many others share it', function () {
-        $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+    it('says which escalation the ticket is part of, how many others share it and who handles it', function () {
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => auth()->id()]);
         Ticket::factory()->count(2)->create(['linked_ticket_id' => $escalation->id]);
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee('Escalated to Platform Support, with 2 other tickets.')
-            ->assertSee('Platform Support\'s replies appear on the escalation ticket.')
-            ->assertSee('View escalation')
-            ->assertSeeHtml('title="Ticket #'.$escalation->id.'"')
+            ->assertSee('Escalated to Platform Support, with 2 other tickets. You handle the conversation with Platform Support.')
+            ->assertDontSee('View escalation')
+            ->assertActionVisible(escalationAction('open-escalation'))
+            ->assertActionHasUrl(escalationAction('open-escalation'), ViewTicket::getUrl(['record' => $escalation, 'linked' => $ticket->id]))
             ->assertActionVisible(escalationAction(RemoveFromEscalationAction::class));
     });
 
@@ -153,6 +153,7 @@ describe('Originals on an escalated ticket', function () {
         $original = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id, 'submitter_id' => $requester->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->call('closeLinked')
             ->assertSee("Org of {$original->id}")
             ->assertSee('Requested by Rita Requester');
     });

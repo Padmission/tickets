@@ -18,6 +18,12 @@
                 </x-filament::badge>
             </div>
         </div>
+
+        @if ($headerLink)
+            <x-filament::link :href="$headerLink['url']" size="sm" class="pad-ti-linked__header-link">
+                {{ $headerLink['label'] }}
+            </x-filament::link>
+        @endif
     </header>
 
     @if ($linkedTickets->count() > 1)

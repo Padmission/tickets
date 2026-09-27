@@ -210,6 +210,10 @@
 	}
 }
 
+.pad-ti-escalation-status {
+	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 4) 0;
+}
+
 .pad-ti-ticket-number {
 	font-size: var(--text-sm);
 	color: var(--color-gray-500);
@@ -291,6 +295,11 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: calc(var(--spacing) * 3);
+	}
+
+	.pad-ti-linked__header-link {
+		flex-shrink: 0;
+		white-space: nowrap;
 	}
 
 	.pad-ti-linked__eyebrow {

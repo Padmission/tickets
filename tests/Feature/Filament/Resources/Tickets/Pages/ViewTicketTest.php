@@ -288,8 +288,8 @@ describe('Escalation explanation', function () {
         $ticket = Ticket::factory()->create(['linked_ticket_id' => $escalated->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-            ->assertSee('Escalated. Replies appear on the escalation ticket.')
-            ->assertSee('View escalation');
+            ->assertSee('Escalated.')
+            ->assertDontSee('View escalation');
     });
 
     it('explains where an escalated ticket came from', function () {
@@ -299,6 +299,7 @@ describe('Escalation explanation', function () {
         Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $ticket->id]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->call('closeLinked')
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from_beside'));
     });
 });
@@ -324,8 +325,8 @@ describe('Composer', function () {
             ->assertSeeHtml('has-elevated-rights="true"');
     })->after(fn () => Filament::setCurrentPanel('test'));
 
-    it('gives the reply box the default placeholder', function () {
-        $ticket = Ticket::factory()->create();
+    it('gives the reply box the default placeholder on the viewer\'s own ticket', function () {
+        $ticket = Ticket::factory()->create(['submitter_id' => auth()->id()]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSeeHtml('placeholder="'.e(__('padmission-tickets::chat.chat.placeholder')).'"');

@@ -26,6 +26,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
+use Padmission\Tickets\Actions\GetUserDisplayName;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
@@ -41,9 +45,11 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversati
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketEscalationLinks;
+use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\TicketPlugin;
 
 class ViewTicket extends EditRecord
@@ -52,7 +58,40 @@ class ViewTicket extends EditRecord
 
     protected $listeners = ['refresh' => '$refresh'];
 
+    #[Url(as: 'linked')]
     public ?int $linkedTicketId = null;
+
+    /*
+     * Read once per request, because it is one costly query that the badges,
+     * the status line and the pane all share.
+     */
+    protected ?ConversationState $conversationState = null;
+
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        if (TicketPlugin::get()->getLinkedConversationView() === TicketPlugin::LINKED_VIEW_MODAL) {
+            $this->linkedTicketId = null;
+
+            return;
+        }
+
+        $requested = $this->linkedTicketId ?? $this->linkedTicketToOpen()?->getKey();
+
+        if ($requested === null) {
+            $this->closeLinked();
+
+            return;
+        }
+
+        $this->showLinked($requested);
+    }
+
+    public function rendering(): void
+    {
+        $this->markLinkedEscalationSeen();
+    }
 
     /**
      * @return Collection<int, Ticket>
@@ -67,7 +106,7 @@ class ViewTicket extends EditRecord
             return collect();
         }
 
-        $tickets = $record->isInCurrentPanel() && $record->childTickets()->exists()
+        $tickets = $record->childTickets()->exists()
             ? $record->childTickets
             : collect([$record->parentTicket])->filter();
 
@@ -98,6 +137,63 @@ class ViewTicket extends EditRecord
     protected function linkedView(): ?string
     {
         return $this->linkedTicket() === null ? null : TicketPlugin::get()->getLinkedConversationView();
+    }
+
+    /*
+     * Opened without being asked for when the page exists to act on it: the
+     * owner of an escalation with a reply to pass on, and the team an
+     * escalation was sent to, which reads the original beside it.
+     */
+    protected function linkedTicketToOpen(): ?Ticket
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        if (static::isEscalatedHere($record)) {
+            return $this->linkedTickets()->first();
+        }
+
+        if ($record->isNotInCurrentPanel() || $this->isShowingOriginals()) {
+            return null;
+        }
+
+        $state = $this->conversationState();
+
+        return $state->marker === 'replied' && $state->ownerIsViewer()
+            ? $this->linkedTickets()->first()
+            : null;
+    }
+
+    /*
+     * The owner reads the other team's messages in the pane, so they no
+     * longer count as new on the escalation.
+     */
+    protected function markLinkedEscalationSeen(): void
+    {
+        $escalation = $this->linkedTicket();
+        $viewer = Filament::auth()->user();
+
+        if ($escalation === null || $viewer === null || $this->isShowingOriginals() || $escalation->submitter_id !== $viewer->getAuthIdentifier()) {
+            return;
+        }
+
+        $service = resolve(TicketActivityService::class);
+
+        $newest = $escalation->ticketActivities()
+            ->whereIn('type', $service->getActivityTypesForSender($escalation, ActivitySender::User, $viewer))
+            ->max('id');
+
+        if ($newest !== null) {
+            $service->markAsSeen($escalation, $viewer, (int) $newest);
+        }
+    }
+
+    protected function conversationState(): ConversationState
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        return $this->conversationState ??= ConversationState::for($record);
     }
 
     /*
@@ -232,6 +328,11 @@ class ViewTicket extends EditRecord
     #[On('message-sent')]
     public function rerenderAfterMessage()
     {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        $this->conversationState = ConversationState::for($record);
+
         $this->skipRender();
         $this->partiallyRenderSchemaComponent('form.turn');
         $this->partiallyRenderSchemaComponent('form.latestMessage.created_at');
@@ -244,7 +345,17 @@ class ViewTicket extends EditRecord
             ->components([
                 // The heading stays put whether or not a linked ticket is open, for the same reason.
                 Section::make()
-                    ->heading(fn (): ?string => $this->replyHeading())
+                    ->heading(fn (): ?string => $this->chatHeading())
+                    ->description(fn (): ?string => $this->chatDescription())
+                    // The details column, and the Waiting on in it, is hidden while the pane is open.
+                    ->afterHeader([
+                        Text::make(fn (): ?string => $this->conversationState()->label())
+                            ->badge()
+                            ->color(fn (): string => $this->conversationState()->color())
+                            ->icon(fn (): ?string => $this->conversationState()->icon())
+                            ->tooltip(fn (): ?string => $this->conversationState()->tooltip())
+                            ->visible(fn (): bool => $this->linkedView() !== null && $this->conversationState()->label() !== null),
+                    ])
                     ->columnSpan(fn (): array => ['lg' => match ($this->linkedView()) {
                         TicketPlugin::LINKED_VIEW_BESIDE => 7,
                         TicketPlugin::LINKED_VIEW_DRAWER => 12,
@@ -252,6 +363,10 @@ class ViewTicket extends EditRecord
                     }])
                     ->extraAttributes(['class' => 'pad-ti-chat-section'])
                     ->schema([
+                        View::make('padmission-tickets::filament.escalation-status')
+                            ->viewData(fn (): array => ['status' => $this->escalationStatus()])
+                            ->visible(fn (): bool => $this->escalationStatus() !== null),
+
                         Section::make(fn (): string => $this->pinnedLinkedHeading())
                             ->collapsible()
                             ->collapsed()
@@ -270,7 +385,9 @@ class ViewTicket extends EditRecord
                                     ]),
                             ]),
 
-                        ViewEntry::make('chat')->view('padmission-tickets::filament.infolists.chat'),
+                        ViewEntry::make('chat')
+                            ->view('padmission-tickets::filament.infolists.chat')
+                            ->viewData(fn (): array => ['placeholder' => $this->chatPlaceholder()]),
                     ]),
 
                 // Rendered after the chat and moved into place with CSS order, so opening
@@ -312,7 +429,9 @@ class ViewTicket extends EditRecord
                         FieldHelp::apply(
                             TextEntry::make('status.display_name'),
                             __('padmission-tickets::tickets.resources.tickets.status'),
-                            __('padmission-tickets::tickets.resources.tickets.hints.status'),
+                            fn (Ticket $record): string => static::isEscalatedElsewhere($record)
+                                ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.status_elsewhere', static::teamOf($record))
+                                : __('padmission-tickets::tickets.resources.tickets.hints.status'),
                         )
                             ->badge()
                             ->color(fn (Ticket $record) => $record->status->colorPalette),
@@ -338,12 +457,16 @@ class ViewTicket extends EditRecord
 
                         FieldHelp::apply(
                             SubmitterEntry::make('submitter'),
-                            fn (Ticket $record): string => static::isEscalatedHere($record)
-                                ? __('padmission-tickets::tickets.resources.tickets.escalated_by')
-                                : __('padmission-tickets::tickets.resources.tickets.submitter'),
-                            fn (Ticket $record): string => static::isEscalatedHere($record)
-                                ? __('padmission-tickets::tickets.resources.tickets.hints.escalated_by')
-                                : __('padmission-tickets::tickets.resources.tickets.hints.submitter'),
+                            fn (Ticket $record): string => match (true) {
+                                static::isEscalatedHere($record) => __('padmission-tickets::tickets.resources.tickets.contact'),
+                                static::isEscalatedElsewhere($record) => __('padmission-tickets::tickets.resources.tickets.handled_by'),
+                                default => __('padmission-tickets::tickets.resources.tickets.submitter'),
+                            },
+                            fn (Ticket $record): string => match (true) {
+                                static::isEscalatedHere($record) => static::contactHint($record),
+                                static::isEscalatedElsewhere($record) => TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.handled_by', static::teamOf($record)),
+                                default => __('padmission-tickets::tickets.resources.tickets.hints.submitter'),
+                            },
                         )
                             ->columnSpanFull(),
 
@@ -369,13 +492,15 @@ class ViewTicket extends EditRecord
 
                         FieldHelp::apply(
                             TextEntry::make('turn')
-                                ->state(fn (Ticket $record): ?Turn => $record->waitingOn())
+                                ->state(fn (): ?string => $this->conversationState()->label())
                                 ->placeholder('–'),
                             __('padmission-tickets::tickets.resources.tickets.turn'),
                             __('padmission-tickets::tickets.resources.tickets.hints.turn'),
                         )
                             ->badge()
-                            ->color(fn (?Turn $state): string => $state === Turn::Supporter ? 'warning' : 'gray')
+                            ->color(fn (): string => $this->conversationState()->color())
+                            ->icon(fn (): ?string => $this->conversationState()->icon())
+                            ->tooltip(fn (): ?string => $this->conversationState()->tooltip())
                             ->columnSpanFull(),
 
                         TextEntry::make('source_panel')
@@ -410,16 +535,22 @@ class ViewTicket extends EditRecord
                                 TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.linked_tickets_help', TicketPlugin::get($record->panel)->getEscalationTargetName() ?? TicketPlugin::find($record->panel)?->getSupportTeamName()),
                             )
                             : __('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-                        ->description(fn (Ticket $record): ?string => static::describeEscalation($record))
+                        ->description(fn (Ticket $record): ?string => $this->describeEscalation($record))
                         ->visible(fn (Ticket $record): bool => TicketPlugin::get($record->panel)->hasLinkedTickets() && $this->canSeeEscalation($record))
                         ->compact()
                         ->schema([
-                            Text::make(fn (Ticket $record): Htmlable => static::describeMembership($record))
-                                ->visible(fn (Ticket $record): bool => $record->isInCurrentPanel() && filled($record->linked_ticket_id)),
+                            Text::make(fn (Ticket $record): string => $this->describeMembership($record))
+                                ->visible(fn (Ticket $record): bool => $record->isInCurrentPanel() && $this->escalationOf($record) !== null),
 
                             Actions::make([
                                 CreateLinkedTicketAction::make()->authorize(static::canEdit(...)),
                                 AddToEscalationAction::make()->authorize(static::canEdit(...)),
+                                Action::make('open-escalation')
+                                    ->label(__('padmission-tickets::tickets.linked_view.open_escalation'))
+                                    ->color('gray')
+                                    ->url(fn (Ticket $record): ?string => $this->openEscalationUrl($record))
+                                    ->visible(fn (Ticket $record): bool => $this->escalationOf($record)?->isClosed === false
+                                        && $this->openEscalationUrl($record) !== null),
                                 RemoveFromEscalationAction::make()->authorize(static::canEdit(...)),
                             ])
                                 ->key('escalationActions')
@@ -462,12 +593,15 @@ class ViewTicket extends EditRecord
      */
     protected function linkedViewData(bool $drawer): array
     {
+        $linked = $this->linkedTicket();
+
         return [
             'record' => $this->getRecord(),
-            'linked' => $this->linkedTicket(),
+            'linked' => $linked,
             'linkedTickets' => $this->linkedTickets(),
             'drawer' => $drawer,
             'headings' => $this->linkedTickets()->mapWithKeys(fn (Ticket $ticket): array => [$ticket->getKey() => $this->linkedTicketHeading($ticket)]),
+            'headerLink' => $linked === null ? null : $this->linkedHeaderLink($linked),
             'activityService' => resolve(TicketActivityService::class),
         ];
     }
@@ -481,7 +615,7 @@ class ViewTicket extends EditRecord
         /** @var Ticket $record */
         $record = $this->getRecord();
 
-        return $record->isInCurrentPanel() && $record->childTickets()->exists();
+        return $record->childTickets()->exists();
     }
 
     protected function showLinkedLabel(): string
@@ -489,30 +623,227 @@ class ViewTicket extends EditRecord
         return __('padmission-tickets::tickets.linked_view.'.($this->linkedTicketId === null ? 'show' : 'hide'));
     }
 
-    protected function replyHeading(): ?string
+    /*
+     * The escalation's owner answers each side in its own conversation, so
+     * the pane links to the other one. The team the escalation was sent to
+     * has nowhere else to go.
+     *
+     * @return array{label: string, url: string}|null
+     */
+    protected function linkedHeaderLink(Ticket $linked): ?array
     {
-        if ($this->linkedTickets()->isEmpty()) {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        if (static::isEscalatedHere($record) || ! static::getResource()::canView($linked)) {
             return null;
         }
 
+        if (! $this->isShowingOriginals()) {
+            return [
+                'label' => __('padmission-tickets::tickets.linked_view.open_escalation'),
+                'url' => static::getResource()::getUrl('view', ['record' => $linked, 'linked' => $record->getKey()]),
+            ];
+        }
+
+        if ($linked->isNotInCurrentPanel()) {
+            return null;
+        }
+
+        $requester = $linked->requesterName();
+
+        return [
+            'label' => filled($requester)
+                ? __('padmission-tickets::tickets.linked_view.answer_requester', ['name' => $requester])
+                : __('padmission-tickets::tickets.linked_view.answer_requester_unnamed'),
+            'url' => static::getResource()::getUrl('view', ['record' => $linked, 'linked' => $record->getKey()]),
+        ];
+    }
+
+    protected function chatHeading(): ?string
+    {
         /** @var Ticket $record */
         $record = $this->getRecord();
         $key = 'padmission-tickets::tickets.linked_view.';
 
-        if (! $this->isShowingOriginals()) {
-            $requester = $record->requesterName();
-
-            return filled($requester)
-                ? __($key.'reply_on_original', ['name' => $requester])
-                : __($key.'reply_on_this_original');
+        if (static::isEscalatedElsewhere($record)) {
+            return TicketPlugin::teamText($key.'conversation_with_team', static::teamOf($record));
         }
 
-        $organization = TicketPlugin::get()->describeTicketOrigin($record)
-            ?? $this->linkedTickets()->map(fn (Ticket $original): ?string => TicketPlugin::get()->describeTicketOrigin($original))->filter()->first();
+        if ($record->isInCurrentPanel() && $record->isEscalation()) {
+            $contact = $record->requesterName();
+            $organization = $this->organizationOf($record);
 
-        return filled($organization)
-            ? __($key.'reply_on_escalation_with', ['organization' => $organization])
-            : __($key.'reply_on_escalation');
+            return match (true) {
+                blank($contact) => null,
+                blank($organization) => __($key.'conversation_with_contact_unnamed_org', ['name' => $contact]),
+                default => __($key.'conversation_with_contact', ['name' => $contact, 'organization' => $organization]),
+            };
+        }
+
+        if (Filament::auth()->id() === $record->submitter_id) {
+            return __($key.'conversation_own');
+        }
+
+        $requester = $record->requesterName();
+
+        return filled($requester) ? __($key.'conversation_with', ['name' => $requester]) : null;
+    }
+
+    /*
+     * An escalation is a conversation about other people's tickets, and they
+     * never see it, which is easy to forget while writing in it.
+     */
+    protected function chatDescription(): ?string
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+        $key = 'padmission-tickets::tickets.linked_view.';
+
+        if (! $record->isEscalation()) {
+            return null;
+        }
+
+        /** @var Collection<int, Ticket> $originals */
+        $originals = $record->childTickets;
+
+        if ($originals->isEmpty()) {
+            return __($key.'conversation_about_none');
+        }
+
+        $requester = $originals->count() === 1 ? $originals->first()->requesterName() : null;
+        $replace = [
+            'originals' => EscalationSummary::originals($originals),
+            'name' => $requester,
+            'contact' => $record->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.contact'),
+        ];
+        $received = $record->isInCurrentPanel() ? 'received_' : '';
+
+        return __($key.'conversation_about_'.$received.(filled($requester) ? 'one' : 'many'), $replace);
+    }
+
+    protected function chatPlaceholder(): ?string
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        $name = match (true) {
+            static::isEscalatedElsewhere($record) => static::teamOf($record),
+            Filament::auth()->id() === $record->submitter_id => null,
+            default => $record->requesterName(),
+        };
+
+        return filled($name) ? __('padmission-tickets::chat.chat.placeholder_reply_to', ['name' => $name]) : null;
+    }
+
+    /*
+     * On an escalated original, where the other conversation stands and what
+     * the viewer can do about it, since the list marker is only a word.
+     *
+     * @return array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string}|null
+     */
+    protected function escalationStatus(): ?array
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        if ($record->isNotInCurrentPanel() || $record->isClosed || ! $this->canSeeEscalation($record)) {
+            return null;
+        }
+
+        $escalation = $this->escalationOf($record);
+
+        if ($escalation === null) {
+            return null;
+        }
+
+        $key = 'padmission-tickets::tickets.escalation_status.';
+        $team = static::teamOf($escalation);
+        $isOwner = $escalation->submitter_id === Filament::auth()->id();
+        $handler = $escalation->submitter === null ? null : resolve(GetUserDisplayName::class)->forUser($escalation->submitter);
+        $requester = $record->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.requester');
+        $openUrl = $this->openEscalationUrl($record);
+        $canRead = $this->linkedTickets()->contains(fn (Ticket $ticket): bool => $ticket->is($escalation));
+        $handlerSuffix = $isOwner ? '_you' : ($handler === null ? '_unnamed' : '');
+
+        [$text, $warning, $readReply, $offerOpen] = match (true) {
+            $this->conversationState()->marker === 'replied' && $isOwner => [
+                TicketPlugin::teamText($key.'replied_you', $team, ['name' => $requester]), true, $canRead, true,
+            ],
+            $this->conversationState()->marker === 'replied' => [
+                TicketPlugin::teamText($key.'replied_other'.($handler === null ? '_unnamed' : ''), $team, ['handler' => $handler]), false, false, false,
+            ],
+            $escalation->isClosed => [
+                blank($escalation->closed_by)
+                    ? __($key.'closed_unknown', ['time' => $escalation->closed_at?->diffForHumans()])
+                    : __($key.'closed', [
+                        'closer' => resolve(GetUserDisplayName::class)($escalation->closed_by, $escalation->panel),
+                        'time' => $escalation->closed_at?->diffForHumans(),
+                    ]),
+                false, false, false,
+            ],
+            $escalation->turn === Turn::User => [
+                TicketPlugin::teamText($key.'waiting_owner'.$handlerSuffix, $team, ['handler' => $handler]), false, false, true,
+            ],
+            default => [
+                TicketPlugin::teamText($key.'waiting_team'.$handlerSuffix, $team, ['handler' => $handler]), false, false, false,
+            ],
+        };
+
+        if (! $escalation->isClosed && $this->requesterIsWaiting($record)) {
+            $text .= ' '.__($key.'requester_waiting', ['name' => $requester]);
+        }
+
+        return [
+            'text' => $text,
+            'warning' => $warning,
+            'readReplyLabel' => $readReply ? TicketPlugin::teamText($key.'read_reply', $team) : null,
+            'escalationId' => $readReply ? (int) $escalation->getKey() : null,
+            'openUrl' => $offerOpen ? $openUrl : null,
+        ];
+    }
+
+    protected function requesterIsWaiting(Ticket $record): bool
+    {
+        $latest = fn (ActivitySender $sender): int => (int) $record->ticketActivities()
+            ->where('type', ActivityType::Message)
+            ->where('sender', $sender)
+            ->max('id');
+
+        return $latest(ActivitySender::User) > $latest(ActivitySender::Supporter);
+    }
+
+    /**
+     * Keyed by link, so removing or moving the link during the request is seen.
+     *
+     * @var array<int|string, ?Ticket>
+     */
+    protected array $escalations = [];
+
+    protected function escalationOf(Ticket $record): ?Ticket
+    {
+        $link = $record->linked_ticket_id;
+
+        if (blank($link)) {
+            return null;
+        }
+
+        if (! array_key_exists($link, $this->escalations)) {
+            $this->escalations[$link] = resolve(TicketEscalationLinks::class)->escalationOf($record);
+        }
+
+        return $this->escalations[$link];
+    }
+
+    protected function openEscalationUrl(Ticket $record): ?string
+    {
+        $escalation = $this->escalationOf($record);
+
+        if ($escalation === null || ! static::getResource()::canView($escalation)) {
+            return null;
+        }
+
+        return static::getResource()::getUrl('view', ['record' => $escalation, 'linked' => $record->getKey()]);
     }
 
     protected function linkedTicketHeading(Ticket $linked): string
@@ -525,7 +856,7 @@ class ViewTicket extends EditRecord
             return filled($requester) ? __($key.'original_heading', ['name' => $requester]) : __($key.'original_heading_unnamed');
         }
 
-        return TicketPlugin::teamText($key.'escalation_heading', TicketPlugin::find($linked->panel)?->getSupportTeamName());
+        return TicketPlugin::teamText($key.'escalation_heading', static::teamOf($linked));
     }
 
     protected function pinnedLinkedHeading(): string
@@ -535,32 +866,75 @@ class ViewTicket extends EditRecord
         return $linked === null ? '' : static::linkedTicketHeading($linked);
     }
 
-    protected static function describeMembership(Ticket $record): Htmlable
+    protected function describeMembership(Ticket $record): string
     {
-        $escalationId = $record->linked_ticket_id;
-        $others = resolve(TicketEscalationLinks::class)->linkedOriginalsQuery($escalationId)
+        $escalation = $this->escalationOf($record);
+        $team = static::teamOf($escalation ?? $record);
+
+        if ($escalation === null || $escalation->isClosed) {
+            return TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.membership_closed', $team);
+        }
+
+        $others = resolve(TicketEscalationLinks::class)->linkedOriginalsQuery($escalation->getKey())
             ->whereKeyNot($record->getKey())
             ->count();
 
-        $team = TicketPlugin::get($record->panel)->getEscalationTargetName();
-        $key = 'padmission-tickets::tickets.resources.tickets.membership'.($team === null ? '' : '_to');
-        $replace = ['count' => $others, 'team' => $team];
+        $membership = trans_choice(
+            'padmission-tickets::tickets.resources.tickets.membership'.($team === null ? '' : '_to'),
+            $others,
+            ['count' => $others, 'team' => $team],
+        );
 
-        return new HtmlString(sprintf(
-            '%s %s <a href="%s" class="pad-ti-link" title="%s">%s</a>',
-            e(trans_choice($key, $others, $replace)),
-            e(TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.membership_replies', $team)),
-            e(TicketResource::getUrl('view', ['record' => $escalationId])),
-            e(__('padmission-tickets::tickets.ticket_number', ['id' => $escalationId])),
-            e(__('padmission-tickets::tickets.resources.tickets.view_escalation')),
-        ));
+        if ($escalation->submitter === null) {
+            return $membership;
+        }
+
+        $handledBy = $escalation->submitter_id === Filament::auth()->id()
+            ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.handled_by_you', $team)
+            : TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.handled_by_other', $team, [
+                'name' => resolve(GetUserDisplayName::class)->forUser($escalation->submitter),
+            ]);
+
+        return "{$membership} {$handledBy}";
+    }
+
+    /*
+     * The team a ticket in another panel belongs to, as its own panel names it.
+     */
+    protected static function teamOf(Ticket $ticket): ?string
+    {
+        return $ticket->isInCurrentPanel()
+            ? TicketPlugin::get()->getEscalationTargetName()
+            : TicketPlugin::find($ticket->panel)?->getSupportTeamName();
+    }
+
+    protected function organizationOf(Ticket $escalation): ?string
+    {
+        return TicketPlugin::get()->describeTicketOrigin($escalation)
+            ?? $this->linkedTickets()->map(fn (Ticket $original): ?string => TicketPlugin::get()->describeTicketOrigin($original))->filter()->first();
+    }
+
+    protected function contactHint(Ticket $escalation): string
+    {
+        $organization = $this->organizationOf($escalation);
+
+        return filled($organization)
+            ? __('padmission-tickets::tickets.resources.tickets.hints.contact_at', ['organization' => $organization])
+            : __('padmission-tickets::tickets.resources.tickets.hints.contact');
+    }
+
+    /*
+     * The escalation seen by the team that escalated it, which talks with the
+     * other team here.
+     */
+    protected static function isEscalatedElsewhere(Ticket $record): bool
+    {
+        return $record->isNotInCurrentPanel() && $record->isEscalation();
     }
 
     protected static function isEscalatedHere(Ticket $record): bool
     {
-        return $record->isInCurrentPanel()
-            && count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0
-            && $record->childTickets()->exists();
+        return $record->isInCurrentPanel() && $record->childTickets()->exists();
     }
 
     protected static function refuseLink(string $body): void
@@ -572,12 +946,22 @@ class ViewTicket extends EditRecord
             ->send();
     }
 
-    protected static function describeEscalation(Ticket $record): ?string
+    protected function describeEscalation(Ticket $record): ?string
     {
         $key = 'padmission-tickets::tickets.resources.tickets.linked_tickets_description';
 
         if ($record->isNotInCurrentPanel()) {
-            return TicketPlugin::teamText("{$key}.escalated_to_you", TicketPlugin::find($record->panel)?->getSupportTeamName());
+            $team = static::teamOf($record);
+
+            if (! $record->isClosed) {
+                return TicketPlugin::teamText("{$key}.escalated_to_you", $team);
+            }
+
+            return blank($record->closed_by)
+                ? TicketPlugin::teamText("{$key}.escalation_closed_unknown", $team)
+                : TicketPlugin::teamText("{$key}.escalation_closed", $team, [
+                    'closer' => resolve(GetUserDisplayName::class)($record->closed_by, $record->panel),
+                ]);
         }
 
         // The organization side needs no sentence: the membership line or the two

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Infolists\UserDescription;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class LinkedTicketModalSelect extends ModalTableSelect
@@ -30,7 +31,7 @@ class LinkedTicketModalSelect extends ModalTableSelect
                 ->authorize(fn (): bool => ! $this->isDisabled()))
             ->getOptionLabelFromRecordUsing(function ($record) {
                 $canViewTicket = Filament::auth()->user()->can('view', $record);
-                $url = $canViewTicket ? TicketResource::getUrl('view', ['record' => $record->id]) : null;
+                $url = $canViewTicket ? $this->originalUrl($record) : null;
                 $plugin = TicketPlugin::get();
                 $origin = $plugin->describeTicketOrigin($record);
                 $requester = $record->submitter ? Filament::getUserName($record->submitter) : null;
@@ -73,5 +74,21 @@ class LinkedTicketModalSelect extends ModalTableSelect
                     </div>
                 BLADE, compact('record', 'url', 'canViewTicket', 'details', 'origin', 'requester', 'roles')));
             });
+    }
+
+    /*
+     * Each original is read beside its escalation. The team the escalation
+     * was sent to reads it on this page, and the team that escalated it
+     * answers its requester on the original, with the escalation beside it.
+     */
+    protected function originalUrl(Ticket $original): string
+    {
+        $escalation = isset($this->container) ? $this->getRecord() : null;
+
+        if ($escalation instanceof Ticket && $escalation->isInCurrentPanel()) {
+            return TicketResource::getUrl('view', ['record' => $escalation, 'linked' => $original->getKey()]);
+        }
+
+        return TicketResource::getUrl('view', ['record' => $original, 'linked' => $escalation?->getKey()]);
     }
 }
