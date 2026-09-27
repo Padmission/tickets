@@ -8,8 +8,10 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
     Event::fake();
@@ -78,7 +80,35 @@ it('says a ticket support already closed has nothing to resolve, and leaves its 
     expect($this->ticket->refresh()->closed_by)->toBe($supporter->id);
 });
 
-it('redraws the header when the chat sees the ticket close', function () {
+it('redraws the header as closed, without Resolve, when the chat sees the ticket close', function () {
+    $open = TicketStatus::factory()->create(['panel' => $this->ticket->panel, 'display_name' => 'Waiting on support', 'order' => 1]);
+    TicketStatus::factory()->create([
+        'panel' => $this->ticket->panel,
+        'display_name' => 'All done',
+        'order' => TicketStatus::query()->withoutGlobalScopes()->where('panel', $this->ticket->panel)->max('order') + 1,
+    ]);
+    $this->ticket->update(['status_id' => $open->id]);
+
+    $panel = Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml('const handleTicketClosed = () => $wire.$refresh()')
+        ->assertSeeHtml("addEventListener('ticket-closed', handleTicketClosed)")
+        ->assertSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
+        ->assertSeeInOrder([$this->ticket->subject, 'Waiting on support']);
+
+    $this->ticket->close(closedById: User::factory()->create()->id);
+
+    $panel->call('$refresh')
+        ->assertDontSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
+        ->assertDontSee('Resolve this ticket?')
+        ->assertDontSee('Waiting on support')
+        ->assertSeeInOrder([$this->ticket->subject, 'All done']);
+});
+
+it('gives its chat the display timezone, so its times match the ticket page', function () {
+    TicketPlugin::get()->displayTimezone(fn (): string => 'America/Phoenix');
+
     Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
-        ->assertSeeHtml("addEventListener('ticket-closed', handleTicketClosed)");
+        ->assertSeeHtml('timezone="America/Phoenix"')
+        ->call('showCreateForm')
+        ->assertSeeHtml('timezone="America/Phoenix"');
 });

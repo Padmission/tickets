@@ -8,6 +8,7 @@ import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
 import humanFileSize from "./helpers/human-file-size.js";
 import isCutOffAtTop from "./helpers/cut-off-at-top.js";
+import formatMessageTime from "./helpers/format-message-time.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -306,16 +307,7 @@ customElements.define(
 				const hasDateChanged =
 					Boolean(message.created_at) &&
 					(lastDate === true || formatter(lastDate) !== formatter(messageDate));
-				// Same as the ticket page's MESSAGE_TIME_FORMAT, e.g. "Sep 25, 7:15 AM", and in
-				// the page's timezone when it gives one, so the chat agrees with the rest of the page.
-				const absoluteDate = messageDate.toLocaleString("en-US", {
-					month: "short",
-					day: "numeric",
-					hour: "numeric",
-					minute: "2-digit",
-					hour12: true,
-					...(this.timezone ? { timeZone: this.timezone } : {}),
-				});
+				const absoluteDate = formatMessageTime(messageDate, this.timezone);
 
 				// biome-ignore format: preserve template formatting
 				const renderedHtml = render(`
