@@ -263,6 +263,8 @@ return [
                 'submitter' => 'The person who asked for help. Your replies go to them.',
                 'escalated_by' => 'The person who escalated this. Your replies go to them.',
                 'assignee' => 'The person responsible for this ticket.',
+                'assignee_elsewhere' => 'The person on the team you escalated to who is working on this escalation. That team chooses who works on it.',
+                'assignee_elsewhere_to' => 'The :team person working on this escalation. :team chooses who works on it.',
                 'turn' => 'Who owes the next reply. It switches each time someone replies.',
             ],
 

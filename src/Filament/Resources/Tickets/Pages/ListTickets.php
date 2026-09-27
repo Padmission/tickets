@@ -13,6 +13,7 @@ use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\TicketPlugin;
 
 class ListTickets extends ListRecords
@@ -135,6 +136,15 @@ class ListTickets extends ListRecords
         return $query->where($query->qualifyColumn('panel'), Filament::getCurrentOrDefaultPanel()->getId());
     }
 
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected static function withEscalationAssignees(Builder $query): Builder
+    {
+        return TicketAssignee::eagerLoadForForeignPanels($query, array_keys(TicketPlugin::get()->getLinkedTicketParentPanels()));
+    }
+
     public function getSubheading(): ?string
     {
         $tab = $this->activeTabIsInvalid() ? 'all' : $this->activeTab;
@@ -191,7 +201,7 @@ class ListTickets extends ListRecords
             ->badge(fn (): int => $this->openEscalatedCounts()['linked'])
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                $query->whereHas('childTickets', static::originalsFromThisPanel(...))
+                static::withEscalationAssignees($query->whereHas('childTickets', static::originalsFromThisPanel(...)))
             ));
 
         $tabs['my_linked'] = Tab::make()
@@ -199,9 +209,9 @@ class ListTickets extends ListRecords
             ->badge(fn (): int => $this->openEscalatedCounts()['my_linked'])
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                $query
+                static::withEscalationAssignees($query
                     ->whereHas('childTickets', static::originalsFromThisPanel(...))
-                    ->where('submitter_id', Filament::auth()->id())
+                    ->where('submitter_id', Filament::auth()->id()))
             ));
 
         return $tabs;

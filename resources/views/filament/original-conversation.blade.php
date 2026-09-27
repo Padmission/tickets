@@ -3,6 +3,7 @@
     use Padmission\Tickets\Enums\ActivitySender;
     use Padmission\Tickets\Enums\ActivityType;
     use Padmission\Tickets\Filament\Infolists\UserDescription;
+    use Padmission\Tickets\Services\TicketAssignee;
     use Padmission\Tickets\TicketPlugin;
 
     $plugin = TicketPlugin::get();
@@ -17,8 +18,9 @@
                 ? Filament::getUserName($ticket->submitter)
                 : $ticket->submitter_data?->name;
             $submitterDescription = UserDescription::render($plugin->describeUser($ticket->submitter, $ticket));
+            $assignee = $ticket->isNotInCurrentPanel() ? TicketAssignee::for($ticket) : $ticket->assignee;
             $assigneeName = match (true) {
-                $ticket->assignee !== null => Filament::getUserName($ticket->assignee),
+                $assignee !== null => Filament::getUserName($assignee),
                 filled($ticket->assignee_id) => TicketPlugin::find($ticket->panel)?->getSupportTeamName() ?? __('padmission-tickets::tickets.resources.tickets.assigned_elsewhere'),
                 default => null,
             };

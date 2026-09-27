@@ -90,13 +90,16 @@ class TicketResource extends Resource
      * so this lives on the collection surface only.
      */
     /*
-     * An escalated ticket is assigned inside the team it went to, whose people
-     * this panel's scopes may not reveal, so it names the team instead.
+     * An escalated ticket is assigned inside the team it went to. Its person is
+     * loaded through that team's panel (TicketAssignee); the team is named only
+     * when even that lookup finds nobody.
      */
     public static function assigneeLabel(Ticket $record): ?string
     {
         if ($record->assignee !== null) {
-            return $record->assignee->getAttribute('name');
+            return static::isAssignedToCurrentUser($record)
+                ? __('padmission-tickets::tickets.side_you')
+                : $record->assignee->getAttribute('name');
         }
 
         if (blank($record->assignee_id) || $record->isInCurrentPanel()) {
@@ -105,6 +108,22 @@ class TicketResource extends Resource
 
         return TicketPlugin::find($record->panel)?->getSupportTeamName()
             ?? __('padmission-tickets::tickets.resources.tickets.assigned_elsewhere');
+    }
+
+    public static function isAssignedToCurrentUser(Ticket $record): bool
+    {
+        return filled($record->assignee_id)
+            && in_array((int) $record->assignee_id, static::currentUserAssigneeIds(Filament::getCurrentOrDefaultPanel()->getId(), Filament::auth()->id()), true);
+    }
+
+    /**
+     * Keyed by panel and user so a table asks the host once, not once per row.
+     *
+     * @return array<int, int>
+     */
+    protected static function currentUserAssigneeIds(string $panelId, int|string|null $userId): array
+    {
+        return once(fn (): array => TicketPlugin::get($panelId)->getCurrentUserAssigneeIds());
     }
 
     public static function ticketNumberFromSearch(string $search): ?int

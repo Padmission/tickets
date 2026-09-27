@@ -55,6 +55,28 @@ it('names the support team when the assignee is outside the viewer\'s scope', fu
         ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.unassigned'));
 })->after(fn () => User::clearBootedModels());
 
+it('names the person the team works an escalation through, on the page and beside the original', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get()->linkedConversationView(TicketPlugin::LINKED_VIEW_BESIDE);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    $person = User::factory()->create(['name' => 'Kevin McKee']);
+
+    TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($person->id));
+
+    $escalation = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => auth()->id(), 'assignee_id' => $person->id]);
+    $original = Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->assertSee('Kevin McKee')
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere_to', ['team' => 'Platform Support']));
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->assertDontSee('Kevin McKee')
+        ->call('showLinked', $escalation->id)
+        ->assertSee('Kevin McKee');
+})->after(fn () => User::clearBootedModels());
+
 it('adds the host ticket details to the ticket page', function () {
     TicketPlugin::get()->additionalTicketDetails(fn (): array => [
         TextEntry::make('organization')->label('Organization')->state('Acme Housing'),

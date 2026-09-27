@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Services;
 
-use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -52,44 +51,11 @@ class NotificationRecipientService
         return $recipients->filter()->unique(fn ($user) => $user->getKey());
     }
 
-    /*
-     * The assignee relation carries the acting panel's scopes. A ticket linked
-     * into another panel can be assigned to someone only that panel's scopes
-     * reveal (a cross-tenant support panel, say); seen from the acting panel
-     * the assignee vanishes and every fallback supporter is notified instead.
-     */
     private function getAssignee(Ticket $ticket): ?Authenticatable
     {
-        if (! $ticket->assignee_id) {
-            return null;
-        }
+        $assignee = TicketAssignee::for($ticket);
 
-        $relation = $ticket->assignee();
-        $modifier = $ticket->isNotInCurrentPanel()
-            ? $this->getPluginForPanel($ticket->panel)?->getRelationshipScopeModifier()
-            : null;
-
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
-        }
-
-        return $relation->first();
-    }
-
-    /*
-     * A host may leave a panel's plugin unregistered in some processes, such as
-     * queue workers, and ticket events can fire there too.
-     */
-    private function getPluginForPanel(?string $panelId): ?TicketPlugin
-    {
-        $panel = Filament::getPanels()[$panelId] ?? null;
-
-        if (! $panel?->hasPlugin(TicketPlugin::$id)) {
-            return null;
-        }
-
-        /** @var TicketPlugin */
-        return $panel->getPlugin(TicketPlugin::$id);
+        return $assignee instanceof Authenticatable ? $assignee : null;
     }
 
     private function getFallbackSupporters(Ticket $ticket, ?Authenticatable $actor): Collection

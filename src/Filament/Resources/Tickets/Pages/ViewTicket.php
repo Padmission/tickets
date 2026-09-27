@@ -19,6 +19,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -41,6 +42,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 
@@ -133,6 +135,22 @@ class ViewTicket extends EditRecord
     protected function canEdit(?Ticket $record): bool
     {
         return static::getResource()::canEdit($record);
+    }
+
+    /*
+     * Another panel's ticket is assigned to someone only that panel's scopes
+     * may reveal. Relations are not kept between requests, so this is set
+     * again on each one.
+     */
+    public function getRecord(): Model
+    {
+        $record = parent::getRecord();
+
+        if ($record instanceof Ticket && $record->isNotInCurrentPanel() && ! $record->relationLoaded('assignee')) {
+            $record->setRelation('assignee', TicketAssignee::for($record));
+        }
+
+        return $record;
     }
 
     public function getBreadcrumb(): string
@@ -311,7 +329,9 @@ class ViewTicket extends EditRecord
                         FieldHelp::apply(
                             AvatarEntry::make('assignee'),
                             __('padmission-tickets::tickets.resources.tickets.assignee'),
-                            __('padmission-tickets::tickets.resources.tickets.hints.assignee'),
+                            fn (Ticket $record): string => $record->isNotInCurrentPanel() && $record->isEscalation()
+                                ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere', TicketPlugin::find($record->panel)?->getSupportTeamName())
+                                : __('padmission-tickets::tickets.resources.tickets.hints.assignee'),
                         )
                             ->hintAction(
                                 ReassignTicketAction::make()

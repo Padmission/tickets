@@ -188,6 +188,22 @@ describe('Escalated tickets in the list', function () {
             ->assertTableColumnStateSet('assignee.name', 'Platform Support', $escalation);
     });
 
+    it('names the person an escalation is assigned to, found through its team\'s panel', function () {
+        $this->login();
+        $person = User::factory()->create(['name' => 'Kevin McKee']);
+
+        TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+        User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($person->id));
+
+        $escalation = Ticket::factory()->open()
+            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
+            ->create(['panel' => 'test2', 'assignee_id' => $person->id]);
+
+        Livewire::test(ListTickets::class)
+            ->set('activeTab', 'linked')
+            ->assertTableColumnStateSet('assignee.name', 'Kevin McKee', $escalation);
+    })->after(fn () => User::clearBootedModels());
+
     it('leaves out the team column when every escalation goes to the same team', function () {
         $this->login();
 
@@ -211,4 +227,30 @@ describe('Escalated tickets in the list', function () {
             ->assertTableColumnVisible('panel')
             ->assertTableColumnFormattedStateSet('panel', 'Platform Support', $escalation);
     });
+});
+
+it('says You for a ticket assigned to the viewer and names anyone else', function () {
+    (new TicketStatusSeeder)->run();
+    $me = $this->login();
+    $colleague = User::factory()->create(['name' => 'Maria Lopez']);
+
+    $mine = Ticket::factory()->open()->create(['assignee_id' => $me->id]);
+    $theirs = Ticket::factory()->open()->create(['assignee_id' => $colleague->id]);
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnStateSet('assignee.name', 'You', $mine)
+        ->assertTableColumnStateSet('assignee.name', 'Maria Lopez', $theirs);
+});
+
+it('counts every account the panel says is the viewer\'s as theirs', function () {
+    (new TicketStatusSeeder)->run();
+    $me = $this->login();
+    $otherAccount = User::factory()->create(['name' => 'Same person, other account']);
+
+    TicketPlugin::get()->currentUserAssigneeIds(fn (): array => [$me->id, $otherAccount->id]);
+
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => $otherAccount->id]);
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnStateSet('assignee.name', 'You', $ticket);
 });
