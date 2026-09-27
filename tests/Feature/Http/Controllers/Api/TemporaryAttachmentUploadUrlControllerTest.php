@@ -115,6 +115,9 @@ it('accepts thumbnails', function () {
 });
 
 it('prunes expired attachments without an activity', function () {
+    // The prune runs after the response with its own now(), so a second ticking over mid-request would expire the hour-old attachment.
+    $this->freezeSecond();
+
     createStorageMock();
 
     $user = User::factory()->create();
