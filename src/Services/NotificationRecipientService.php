@@ -12,6 +12,7 @@ use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Events\TicketPriorityChangedEvent;
 use Padmission\Tickets\Events\TicketStatusChangedEvent;
 use Padmission\Tickets\Models\Ticket;
@@ -20,8 +21,12 @@ use Padmission\Tickets\TicketPlugin;
 class NotificationRecipientService
 {
     public function getNotificationRecipients(
-        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
+        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
     ): Collection {
+        if ($event instanceof TicketHandedOverEvent) {
+            return $this->getHandOverRecipients($event);
+        }
+
         $eventName = $event::class;
         $triggerType = $this->determineTriggerType($event);
 
@@ -49,6 +54,29 @@ class NotificationRecipientService
         }
 
         return $recipients->filter()->unique(fn ($user) => $user->getKey());
+    }
+
+    /*
+     * Only the two people the escalation moved between hear about it; the
+     * other team learns of it from the history note like any other activity.
+     */
+    private function getHandOverRecipients(TicketHandedOverEvent $event): Collection
+    {
+        $ids = collect([$event->toId, $event->fromId])
+            ->filter()
+            ->reject(fn (int|string $id): bool => $event->actor !== null && (string) $id === (string) $event->actor->getAuthIdentifier())
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return TicketPlugin::resolveUserModelClass()::query()
+            ->withoutGlobalScopes()
+            ->whereKey($ids->all())
+            ->get()
+            ->values();
     }
 
     private function getAssignee(Ticket $ticket): ?Authenticatable

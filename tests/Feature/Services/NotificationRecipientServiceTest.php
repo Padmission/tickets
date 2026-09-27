@@ -5,6 +5,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
@@ -215,3 +216,22 @@ test('an assignee is still notified when the ticket panel has no ticket plugin r
 
     expect($recipients->pluck('id')->toArray())->toBe([$assignee->id]);
 });
+
+test('a hand over tells the two people it moved between, except whoever did it', function (string $actor, array $expected) {
+    $users = [
+        'from' => User::factory()->create(),
+        'to' => User::factory()->create(),
+        'third' => User::factory()->create(),
+    ];
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $users['to']->id, 'assignee_id' => $users['third']->id]);
+
+    $event = new TicketHandedOverEvent($ticket, $users[$actor], $users['from']->id, $users['to']->id);
+    $recipients = app(NotificationRecipientService::class)->getNotificationRecipients($event);
+
+    expect($recipients->pluck('id')->sort()->values()->all())
+        ->toBe(collect($expected)->map(fn (string $key): int => $users[$key]->id)->sort()->values()->all());
+})->with([
+    'handed over by the owner' => ['from', ['to']],
+    'taken over by a colleague' => ['to', ['from']],
+    'moved by someone else' => ['third', ['from', 'to']],
+]);

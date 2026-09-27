@@ -143,6 +143,11 @@ class Ticket extends Model
             return false;
         }
 
+        // A list row that already loaded its originals needs no query per row.
+        if ($this->isEscalation === null && $this->relationLoaded('childTickets') && $this->childTickets->isNotEmpty()) {
+            return $this->isEscalation = true;
+        }
+
         return $this->isEscalation ??= $this->newQueryWithoutScopes()->where('linked_ticket_id', $this->getKey())->exists()
             || TicketPlugin::resolveModelClass(TicketActivity::class)::query()
                 ->withoutGlobalScopes()
@@ -178,6 +183,23 @@ class Ticket extends Model
                 ->where('linked_ticket_id', $this->getKey())
                 ->where('panel', $panelId)
                 ->exists();
+    }
+
+    /*
+     * The panel whose team talks with the other team on this escalation. An
+     * escalation made before source_panel was recorded falls back to where
+     * its first original lives.
+     */
+    public function escalationSourcePanel(): ?string
+    {
+        if (filled($this->source_panel)) {
+            return $this->source_panel;
+        }
+
+        return $this->newQueryWithoutScopes()
+            ->where('linked_ticket_id', $this->getKey())
+            ->orderBy('id')
+            ->value('panel');
     }
 
     public function requesterName(): ?string

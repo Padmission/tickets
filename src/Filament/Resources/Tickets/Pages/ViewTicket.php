@@ -40,6 +40,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\RemoveFromEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversationAction;
@@ -73,7 +74,7 @@ class ViewTicket extends EditRecord
 
     protected ?bool $hasOriginals = null;
 
-    /** @var array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string, paneOpen: bool}|false|null */
+    /** @var array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string, paneOpen: bool, takeOver: bool}|false|null */
     protected array|false|null $escalationStatus = null;
 
     public function mount(int|string $record): void
@@ -177,9 +178,31 @@ class ViewTicket extends EditRecord
         $this->conversationState = null;
     }
 
+    /*
+     * Hand over and Take over change the escalation, whose owner every memo
+     * above was read from. A refresh drops the record's relations, so
+     * getRecord() finds another panel's assignee again.
+     */
     protected function afterActionCalled(Action $action): void
     {
         $this->forgetLinks();
+
+        if ($action instanceof HandOverEscalationAction) {
+            /** @var Ticket $record */
+            $record = $this->getRecord();
+            $record->refresh();
+        }
+    }
+
+    /*
+     * Rendered in the status line when the other team replied to a colleague.
+     */
+    public function takeOverAction(): Action
+    {
+        return HandOverEscalationAction::make('takeOver')
+            ->record(fn (): Model => $this->getRecord())
+            ->escalationUsing(fn (Ticket $record): ?Ticket => $this->escalationOf($record))
+            ->size('sm');
     }
 
     protected function linkedTicket(): ?Ticket
@@ -532,7 +555,14 @@ class ViewTicket extends EditRecord
                         ...TicketPlugin::get()->getAdditionalTicketDetails(),
 
                         FieldHelp::apply(
-                            SubmitterEntry::make('submitter'),
+                            SubmitterEntry::make('submitter')
+                                ->hintAction(
+                                    HandOverEscalationAction::make()
+                                        ->icon(null)
+                                        ->color('primary')
+                                        ->link()
+                                        ->size('sm'),
+                                ),
                             fn (Ticket $record): string => match (true) {
                                 $this->isEscalatedHere($record) => __('padmission-tickets::tickets.resources.tickets.contact'),
                                 $this->isEscalatedElsewhere($record) => __('padmission-tickets::tickets.resources.tickets.handled_by'),
@@ -631,6 +661,10 @@ class ViewTicket extends EditRecord
                                     ->url(fn (Ticket $record): ?string => $this->openEscalationUrl($record))
                                     ->visible(fn (Ticket $record): bool => $this->escalationOf($record)?->isClosed === false
                                         && $this->openEscalationUrl($record) !== null),
+                                HandOverEscalationAction::make('take-over-escalation')
+                                    ->escalationUsing(fn (Ticket $record): ?Ticket => $this->escalationOf($record))
+                                    ->button()
+                                    ->hidden(fn (Ticket $record): bool => $this->openEscalationUrl($record) !== null),
                                 RemoveFromEscalationAction::make()->button()->authorize(static::canEdit(...)),
                             ])
                                 ->key('escalationActions')
@@ -845,7 +879,7 @@ class ViewTicket extends EditRecord
      * On an escalated original, where the other conversation stands and what
      * the viewer can do about it, since the list marker is only a word.
      *
-     * @return array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string, paneOpen: bool}|null
+     * @return array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string, paneOpen: bool, takeOver: bool}|null
      */
     protected function escalationStatus(): ?array
     {
@@ -855,7 +889,7 @@ class ViewTicket extends EditRecord
     }
 
     /**
-     * @return array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string, paneOpen: bool}|null
+     * @return array{text: string, warning: bool, readReplyLabel: ?string, escalationId: ?int, openUrl: ?string, paneOpen: bool, takeOver: bool}|null
      */
     protected function readEscalationStatus(): ?array
     {
@@ -904,6 +938,7 @@ class ViewTicket extends EditRecord
         }
 
         $readReply = $case === 'replied_you' && $canRead;
+        $takeOver = $case === 'replied_other' && HandOverEscalationAction::isAvailableFor($escalation);
         $paneOpen = $this->linkedTicket()?->is($escalation) === true;
 
         return [
@@ -914,6 +949,7 @@ class ViewTicket extends EditRecord
             // The pane has its own link to the escalation.
             'openUrl' => in_array($case, ['replied_you', 'waiting_owner'], true) && ! $paneOpen ? $this->openEscalationUrl($record) : null,
             'paneOpen' => $paneOpen,
+            'takeOver' => $takeOver,
         ];
     }
 

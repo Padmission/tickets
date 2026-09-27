@@ -61,6 +61,27 @@ return [
             'success' => 'Ticket reassigned',
         ],
 
+        'hand_over' => [
+            'label' => 'Hand over',
+            'take_over_label' => 'Take over',
+            'modal_heading' => 'Hand over this escalation',
+            'modal_description' => 'Choose who on your team talks with the team you escalated to here. Their replies will go to them, and they answer the requesters on their tickets. The other team\'s assignee doesn\'t change.',
+            'modal_description_to' => 'Choose who on your team talks with :team here. :team\'s replies will go to them, and they answer the requesters on their tickets. :team\'s assignee doesn\'t change.',
+            'new_owner' => 'Hand over to',
+            'nobody' => 'Nobody else can take this escalation.',
+            'submit' => 'Hand over',
+            'success' => 'Escalation handed to :name',
+            'refused' => 'Nothing changed. The escalation was closed or changed hands in the meantime.',
+        ],
+
+        'take_over' => [
+            'modal_heading' => 'Take over this escalation?',
+            'modal_description' => 'The replies from the team you escalated to will come to you. :name is told.',
+            'modal_description_to' => ':team\'s replies will come to you. :name is told.',
+            'submit' => 'Take over',
+            'success' => 'You now handle this escalation',
+        ],
+
         'view_original_conversation' => [
             'label' => 'Original conversation',
             'modal_heading' => 'Original conversation',

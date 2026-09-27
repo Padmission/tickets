@@ -138,6 +138,7 @@ class TicketActivity extends Model
             ActivityType::RemovedFromEscalation => $this->escalationNote('removed_from_escalation'),
             ActivityType::OriginalAdded => $this->originalNote('original_added'),
             ActivityType::OriginalRemoved => $this->originalNote('original_removed'),
+            ActivityType::HandedOver => $this->handOverNote(),
             default => $value
         });
     }
@@ -190,6 +191,18 @@ class TicketActivity extends Model
             'original' => $this->ticketReference($original, $label, $original === null ? null : $this->originalUrl($original)),
             'name' => e($this->actorName()),
         ]);
+    }
+
+    protected function handOverNote(): string
+    {
+        $from = $this->activityData('from');
+        $to = $this->activityData('to');
+        $name = fn (mixed $id): string => resolve(GetUserDisplayName::class)(is_numeric($id) ? (int) $id : null, $this->viewerPanelId());
+
+        return __(
+            (string) $to === (string) $this->user_id ? 'padmission-tickets::activities.taken_over' : 'padmission-tickets::activities.handed_over',
+            ['from' => $name($from), 'to' => $name($to)],
+        );
     }
 
     protected function linkedTicket(string $key): ?Ticket

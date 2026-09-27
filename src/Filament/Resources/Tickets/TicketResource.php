@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
@@ -346,6 +347,8 @@ class TicketResource extends Resource
                 ReassignTicketAction::make()
                     ->link()
                     ->authorize(fn (Ticket $record): bool => static::canEdit($record)),
+                HandOverEscalationAction::make()
+                    ->link(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -10,6 +10,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
@@ -432,4 +433,16 @@ test('mail and database channels of one send both deliver the same unread batch'
 
     expect($mailsToSubmitter)->toHaveCount(1)
         ->and($submitter->notifications()->sole()->data['body'])->toBe('Support reply');
+});
+
+test('a hand over is always sent, even with nothing unread', function () {
+    Queue::fake();
+    $from = User::factory()->create();
+    $to = User::factory()->create();
+    $ticket = Ticket::factory()->create(['submitter_id' => $to->id]);
+
+    $notification = new TicketNotification($ticket, new TicketHandedOverEvent($ticket, $from, $from->id, $to->id));
+
+    expect($notification->shouldSend($to))->toBeTrue()
+        ->and($notification->toMail($to)->subject)->toBe("Escalation handed over #{$ticket->id} – {$ticket->subject}");
 });

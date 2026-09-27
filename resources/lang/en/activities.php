@@ -14,6 +14,8 @@ return [
     'removed_from_escalation' => 'Removed from :escalation by :name',
     'original_added' => ':original added to this escalation by :name',
     'original_removed' => ':original removed from this escalation by :name',
+    'handed_over' => ':from handed this escalation to :to',
+    'taken_over' => ':to took over this escalation from :from',
     'escalation' => 'the escalation',
     'escalation_to' => 'the :team escalation',
     'original' => 'An original ticket',

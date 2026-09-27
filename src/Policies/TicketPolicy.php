@@ -52,6 +52,32 @@ class TicketPolicy
         return $this->manage($user, $ticket);
     }
 
+    /*
+     * Hand over and Take over move an open escalation between people on the
+     * team that escalated it, so they are asked of that team's panel.
+     */
+    public function handOver($user, Ticket $ticket): bool
+    {
+        if ($ticket->isClosed || ! $ticket->isEscalation()) {
+            return false;
+        }
+
+        if ($user->id === $ticket->submitter_id) {
+            return true;
+        }
+
+        $sourcePanel = $ticket->escalationSourcePanel();
+        $supportersQuery = $sourcePanel === null ? null : TicketPlugin::find($sourcePanel)?->getAllSupportersQuery();
+
+        if ($supportersQuery === null) {
+            return false;
+        }
+
+        return app()->call($supportersQuery, ['ticket' => $ticket])
+            ->whereKey($user->getAuthIdentifier())
+            ->exists();
+    }
+
     public function escalate($user, Ticket $ticket): bool
     {
         return true;

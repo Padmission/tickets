@@ -84,6 +84,7 @@ return [
         Events\TicketActivityEvent::class => Notifications\TicketNotification::class,
         Events\TicketAssignedEvent::class => Notifications\TicketNotification::class,
         Events\TicketClosedEvent::class => Notifications\TicketNotification::class,
+        Events\TicketHandedOverEvent::class => Notifications\TicketNotification::class,
     ],
 
     /**

@@ -53,9 +53,11 @@ class TicketNotification extends Notification
          * activities yet at creation time (or the notification may run before
          * they are written when dispatched synchronously). A closed event
          * likewise always deserves a distinct email, even when a debounced
-         * activity notification already consumed the closing activity.
+         * activity notification already consumed the closing activity. A
+         * hand over changes who the other team's replies go to, which both
+         * people must hear about whatever they have read.
          */
-        if (in_array($this->notificationType, ['created', 'closed'], true)) {
+        if (in_array($this->notificationType, ['created', 'closed', 'handedover'], true)) {
             return true;
         }
 

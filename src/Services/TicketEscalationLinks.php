@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Filament\Tables\LinkedTicketCandidates;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -124,6 +125,41 @@ class TicketEscalationLinks
 
             return true;
         });
+    }
+
+    /*
+     * Moves the escalation to another person on the escalating team. Refused
+     * when it closed or changed hands after the dialog was opened, so two
+     * people taking it over at once cannot silently overwrite each other.
+     */
+    public function handOver(Ticket $escalation, int|string $toUserId, int|string|null $expectedFromId): bool
+    {
+        $fromId = DB::transaction(function () use ($escalation, $toUserId, $expectedFromId): int|string|false {
+            $locked = static::query()->withoutGlobalScopes()->whereKey($escalation->getKey())->lockForUpdate()->first();
+
+            if ($locked === null || $locked->trashed() || $locked->isClosed || (string) $locked->submitter_id !== (string) $expectedFromId) {
+                return false;
+            }
+
+            if ((string) $locked->submitter_id === (string) $toUserId) {
+                return false;
+            }
+
+            $escalation->update(['submitter_id' => $toUserId]);
+            $escalation->unsetRelation('submitter');
+
+            $this->addActivity($escalation, ActivityType::HandedOver, ['from' => $locked->submitter_id, 'to' => $toUserId]);
+
+            return $locked->submitter_id;
+        });
+
+        if ($fromId === false) {
+            return false;
+        }
+
+        event(new TicketHandedOverEvent($escalation, auth()->user(), $fromId, $toUserId));
+
+        return true;
     }
 
     /**

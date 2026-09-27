@@ -154,6 +154,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             Events\TicketAssignedEvent::class,
             Events\TicketClosedEvent::class,
             Events\TicketCreatedEvent::class,
+            Events\TicketHandedOverEvent::class,
         ];
 
         foreach ($events as $event) {
