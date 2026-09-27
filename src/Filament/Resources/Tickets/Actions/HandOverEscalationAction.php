@@ -76,7 +76,7 @@ class HandOverEscalationAction extends Action
             ->label(fn (self $action): string => __($action->viewerIsOwner() ? $key.'hand_over.label' : $key.'hand_over.take_over_label'))
             ->icon(Heroicon::OutlinedArrowsRightLeft)
             ->color('gray')
-            ->visible(fn (self $action): bool => static::isAvailableFor($action->getEscalation()))
+            ->authorize(fn (self $action): bool => static::isAvailableFor($action->getEscalation()))
             ->requiresConfirmation(fn (self $action): bool => ! $action->viewerIsOwner())
             ->slideOver(fn (self $action): bool => $action->viewerIsOwner() && (bool) $action->evaluate($hostSlideOver))
             ->modalIcon(fn (self $action): ?Heroicon => $action->viewerIsOwner() ? null : Heroicon::OutlinedArrowsRightLeft)

@@ -314,7 +314,7 @@ class ViewTicket extends EditRecord
     }
 
     /**
-     * Asked by several actions and sections on each render.
+     * Asked by several sections and action visibilities on each render.
      *
      * @var array<string, bool>
      */
@@ -327,6 +327,16 @@ class ViewTicket extends EditRecord
         }
 
         return $this->editable[(string) $record->getKey()] ??= static::getResource()::canEdit($record);
+    }
+
+    /*
+     * Actions ask the Gate on every call, never the memo: read-only
+     * impersonation tells a write from the abilities an action's
+     * authorization asks, which a remembered answer would hide.
+     */
+    protected function authorizesEdit(?Ticket $record): bool
+    {
+        return static::getResource()::canEdit($record);
     }
 
     /**
@@ -461,9 +471,9 @@ class ViewTicket extends EditRecord
                 ->action(fn () => $this->linkedTicketId === null
                     ? $this->showLinked($this->linkedTickets()->first()->getKey())
                     : $this->closeLinked()),
-            CloseTicketAction::make()->authorize(static::canEdit(...)),
+            CloseTicketAction::make()->authorize($this->authorizesEdit(...)),
             CloseEscalationAction::make(),
-            EditTicketAction::make()->authorize(static::canEdit(...)),
+            EditTicketAction::make()->authorize($this->authorizesEdit(...)),
         ];
     }
 
@@ -653,7 +663,7 @@ class ViewTicket extends EditRecord
                                     ->color('primary')
                                     ->link()
                                     ->size('sm')
-                                    ->authorize(static::canEdit(...)),
+                                    ->authorize($this->authorizesEdit(...)),
                             )
                             ->columnSpanFull(),
 
@@ -714,8 +724,8 @@ class ViewTicket extends EditRecord
                                 ->visible(fn (Ticket $record): bool => $record->isInCurrentPanel() && $this->escalationOf($record) !== null),
 
                             Actions::make([
-                                CreateLinkedTicketAction::make()->authorize(static::canEdit(...)),
-                                AddToEscalationAction::make()->authorize(static::canEdit(...)),
+                                CreateLinkedTicketAction::make()->authorize($this->authorizesEdit(...)),
+                                AddToEscalationAction::make()->authorize($this->authorizesEdit(...)),
                                 Action::make('open-escalation')
                                     ->label(__('padmission-tickets::tickets.linked_view.open_escalation'))
                                     ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
@@ -729,7 +739,7 @@ class ViewTicket extends EditRecord
                                     ->escalationUsing(fn (Ticket $record): ?Ticket => $this->escalationOf($record))
                                     ->button()
                                     ->hidden(fn (Ticket $record): bool => $record->isClosed || $this->openEscalationUrl($record) !== null),
-                                RemoveFromEscalationAction::make()->button()->authorize(static::canEdit(...)),
+                                RemoveFromEscalationAction::make()->button()->authorize($this->authorizesEdit(...)),
                             ])
                                 ->key('escalationActions')
                                 ->extraAttributes(['class' => 'pad-ti-escalation-actions'])

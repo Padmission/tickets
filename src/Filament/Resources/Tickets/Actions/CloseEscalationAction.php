@@ -42,7 +42,7 @@ class CloseEscalationAction extends Action
             ->icon(Heroicon::OutlinedCheckCircle)
             ->requiresConfirmation()
             ->slideOver(false)
-            ->visible(fn (Ticket $record): bool => static::isAvailableFor($record))
+            ->authorize(fn (Ticket $record): bool => static::isAvailableFor($record))
             ->action(function (Ticket $record, Component $livewire): void {
                 if (! static::isAvailableFor($record)) {
                     $this->failure();
