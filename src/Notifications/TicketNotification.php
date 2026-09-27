@@ -132,8 +132,17 @@ class TicketNotification extends Notification
         );
     }
 
+    /*
+     * A hand over shows the conversation so far as background, but the
+     * messages in it are still owed their own notification: a reply that
+     * lands while the hand over is pending would otherwise never be sent.
+     */
     protected function markActivitiesAsSent($notifiable, Collection $activities): void
     {
+        if ($this->notificationType === 'handedover') {
+            return;
+        }
+
         $latestActivity = $activities->last();
 
         if ($latestActivity) {

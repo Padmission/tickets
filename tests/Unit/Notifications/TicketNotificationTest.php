@@ -446,3 +446,29 @@ test('a hand over is always sent, even with nothing unread', function () {
     expect($notification->shouldSend($to))->toBeTrue()
         ->and($notification->toMail($to)->subject)->toBe("Escalation handed over #{$ticket->id} – {$ticket->subject}");
 });
+
+test('a hand over shows unread messages without using up their own notification', function () {
+    Queue::fake();
+    $from = User::factory()->create();
+    $to = User::factory()->create();
+    $team = User::factory()->create();
+    $ticket = Ticket::factory()->create(['submitter_id' => $to->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $team->id,
+        'sender' => ActivitySender::Supporter,
+        'type' => ActivityType::Message,
+        'content' => 'Which unit?',
+    ]);
+
+    $handOver = new TicketNotification($ticket, new TicketHandedOverEvent($ticket, $from, $from->id, $to->id));
+    $handOver->toMail($to);
+    $handOver->toDatabase($to);
+
+    $reply = new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message, null, $team));
+
+    expect($reply->shouldSend($to))->toBeTrue()
+        ->and($reply->toMail($to)->viewData['activities']->pluck('content')->all())->toContain('Which unit?')
+        ->and((new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message, null, $team)))->shouldSend($to))->toBeFalse();
+});
