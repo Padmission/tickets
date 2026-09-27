@@ -70,7 +70,9 @@ class TicketActivityService
             ->get()
             ->reverse()
             ->values()
-            ->map(function (TicketActivity $message) use ($currentSender, $user) {
+            ->map(function (TicketActivity $message) use ($ticket, $currentSender, $user) {
+                $message->setRelation('ticket', $ticket);
+
                 $message->side = match (true) {
                     $message->sender === ActivitySender::System => ActivitySide::System,
                     $message->sender === $currentSender => ActivitySide::Me,

@@ -10,30 +10,43 @@ use Padmission\Tickets\TicketPlugin;
 
 class GetUserDisplayName
 {
-    public function __invoke(?int $userId, ?string $panelId = null): string
+    /*
+     * The user may sit outside the viewer's scope, such as a tenant user
+     * named on a ticket read from a cross-tenant panel, or another panel's
+     * staff named on its ticket, which that panel's scopes reveal. Each panel
+     * is tried in turn, a null one being the current panel.
+     */
+    public function __invoke(?int $userId, ?string ...$panelIds): string
     {
         if (! $userId) {
             return __('padmission-tickets::activities.user_display.unassigned');
         }
 
-        $query = TicketPlugin::resolveUserModelClass()::query();
+        $panelIds = collect($panelIds === [] ? [null] : $panelIds)
+            ->map(fn (?string $panelId): ?string => $panelId ?? Filament::getCurrentOrDefaultPanel()?->getId())
+            ->unique();
 
-        // The user may sit outside the viewer's scope, such as a tenant user
-        // named on a ticket read from a cross-tenant panel, or another panel's
-        // staff named on its ticket, which that panel's scopes reveal.
-        $modifier = TicketPlugin::find($panelId ?? Filament::getCurrentOrDefaultPanel()?->getId())?->getRelationshipScopeModifier();
+        foreach ($panelIds as $panelId) {
+            $user = $this->find($userId, $panelId);
+
+            if ($user !== null) {
+                return $this->forUser($user);
+            }
+        }
+
+        return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);
+    }
+
+    protected function find(int $userId, ?string $panelId): ?Model
+    {
+        $query = TicketPlugin::resolveUserModelClass()::query();
+        $modifier = TicketPlugin::find($panelId)?->getRelationshipScopeModifier();
 
         if ($modifier) {
             app()->call($modifier, ['relation' => $query, 'model' => 'user']);
         }
 
-        $user = $query->find($userId);
-
-        if (! $user) {
-            return __('padmission-tickets::activities.user_display.user_not_found', ['id' => $userId]);
-        }
-
-        return $this->forUser($user);
+        return $query->find($userId);
     }
 
     public function forUser(Model $user): string

@@ -98,11 +98,7 @@ class TicketActivity extends Model
                 return __('padmission-tickets::tickets.side_you');
             }
 
-            if ($this->relationLoaded('user') && $this->user !== null) {
-                return resolve(GetUserDisplayName::class)->forUser($this->user);
-            }
-
-            return resolve(GetUserDisplayName::class)($this->user_id);
+            return $this->actorName();
         });
     }
 
@@ -120,7 +116,7 @@ class TicketActivity extends Model
                 ? __('padmission-tickets::activities.reopened_unknown')
                 : __('padmission-tickets::activities.reopened', ['name' => $this->actorName()]),
             ActivityType::AssigneeChanged => filled($this->activityData('to'))
-                ? __('padmission-tickets::activities.assigned_to', ['name' => resolve(GetUserDisplayName::class)($this->activityData('to'))])
+                ? __('padmission-tickets::activities.assigned_to', ['name' => $this->nameOf($this->activityData('to'))])
                 : __('padmission-tickets::activities.unassigned'),
             ActivityType::TurnChanged => __('padmission-tickets::activities.turn_changed', [
                 'from' => $this->turnLabel($this->activityData('from')),
@@ -157,7 +153,27 @@ class TicketActivity extends Model
             return resolve(GetUserDisplayName::class)->forUser($this->user);
         }
 
-        return resolve(GetUserDisplayName::class)($this->user_id);
+        return $this->nameOf($this->user_id);
+    }
+
+    /*
+     * Someone this activity names, looked up by the reader's panel and then
+     * the ticket's own, whose scopes may reveal another tenant's people, as
+     * Padmission staff assigned to an escalation are when the chat reads it
+     * through the API route rather than the admin panel. Only the name leaves.
+     */
+    protected function nameOf(mixed $id): string
+    {
+        return resolve(GetUserDisplayName::class)(is_numeric($id) ? (int) $id : null, $this->viewerPanelId(), $this->ticketPanelId());
+    }
+
+    protected function ticketPanelId(): ?string
+    {
+        if (! $this->relationLoaded('ticket')) {
+            $this->setRelation('ticket', TicketPlugin::resolveModelClass(Ticket::class)::withoutGlobalScopes()->find($this->ticket_id));
+        }
+
+        return $this->ticket?->panel;
     }
 
     /*
@@ -197,11 +213,10 @@ class TicketActivity extends Model
     {
         $from = $this->activityData('from');
         $to = $this->activityData('to');
-        $name = fn (mixed $id): string => resolve(GetUserDisplayName::class)(is_numeric($id) ? (int) $id : null, $this->viewerPanelId());
 
         return __(
             (string) $to === (string) $this->user_id ? 'padmission-tickets::activities.taken_over' : 'padmission-tickets::activities.handed_over',
-            ['from' => $name($from), 'to' => $name($to)],
+            ['from' => $this->nameOf($from), 'to' => $this->nameOf($to)],
         );
     }
 
