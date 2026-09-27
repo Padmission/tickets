@@ -37,6 +37,7 @@ use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
 use Padmission\Tickets\Filament\Infolists\FieldHelp;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
@@ -179,15 +180,15 @@ class ViewTicket extends EditRecord
     }
 
     /*
-     * Hand over and Take over change the escalation, whose owner every memo
-     * above was read from. A refresh drops the record's relations, so
-     * getRecord() finds another panel's assignee again.
+     * Hand over, Take over and Close escalation change the escalation, whose
+     * owner and state every memo above was read from. A refresh drops the
+     * record's relations, so getRecord() finds another panel's assignee again.
      */
     protected function afterActionCalled(Action $action): void
     {
         $this->forgetLinks();
 
-        if ($action instanceof HandOverEscalationAction) {
+        if ($action instanceof HandOverEscalationAction || $action instanceof CloseEscalationAction) {
             /** @var Ticket $record */
             $record = $this->getRecord();
             $record->refresh();
@@ -402,6 +403,7 @@ class ViewTicket extends EditRecord
                     ? $this->showLinked($this->linkedTickets()->first()->getKey())
                     : $this->closeLinked()),
             CloseTicketAction::make()->authorize(static::canEdit(...)),
+            CloseEscalationAction::make(),
             EditTicketAction::make()->authorize(static::canEdit(...)),
         ];
     }

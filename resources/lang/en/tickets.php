@@ -40,6 +40,15 @@ return [
             ],
         ],
 
+        'close_escalation' => [
+            'label' => 'Close escalation',
+            'modal_heading' => 'Close this escalation?',
+            'modal_description' => 'The team you escalated to is told it was closed. Nobody can reply to it after that, and it can\'t be reopened. Its original tickets stay open.',
+            'modal_description_to' => ':team is told it was closed. Nobody can reply to it after that, and it can\'t be reopened. Its original tickets stay open.',
+            'submit' => 'Close escalation',
+            'success' => 'Escalation closed',
+        ],
+
         'reassign' => [
             'label' => 'Reassign',
             'label_unassigned' => 'Assign',
