@@ -8,11 +8,13 @@ use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Blade;
 use Livewire\Component;
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Models\Ticket;
 
 class EditTicketAction extends EditAction
 {
+    use ScopesLookupsToTicket;
+
     public static function getDefaultName(): ?string
     {
         return 'edit-ticket';
@@ -46,7 +48,7 @@ class EditTicketAction extends EditAction
                     ->label(__('padmission-tickets::tickets.resources.tickets.status'))
                     ->allowHtml()
                     ->native(false)
-                    ->relationship('status', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
+                    ->relationship('status', 'display_name', fn ($query) => $this->scopeLookupToTicket($query, $this->getRecord()))
                     ->getOptionLabelFromRecordUsing(function ($record) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
@@ -67,7 +69,7 @@ class EditTicketAction extends EditAction
                     ->label(__('padmission-tickets::tickets.resources.tickets.priority'))
                     ->allowHtml()
                     ->native(false)
-                    ->relationship('priority', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
+                    ->relationship('priority', 'display_name', fn ($query) => $this->scopeLookupToTicket($query, $this->getRecord()))
                     ->getOptionLabelFromRecordUsing(function ($record) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">

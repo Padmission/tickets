@@ -361,6 +361,33 @@ describe('Escalating again', function () {
             ->and($types($newEscalation))->toBe([[ActivityType::OriginalAdded, ['original' => $original->id]]]);
     });
 
+    it('escalates a ticket whose escalation was deleted or is missing as if for the first time', function (bool $missing) {
+        $deleted = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $deleted->delete();
+        $original = Ticket::factory()->open()->create(['linked_ticket_id' => $missing ? 999999 : $deleted->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertActionHasLabel(escalateAction(), 'Escalate to Platform Support')
+            ->mountAction(escalateAction())
+            ->assertMountedActionModalSee('Opens a separate ticket for Platform Support. This ticket stays with your team.')
+            ->assertMountedActionModalDontSee(['again', 'The closed escalation stays in this ticket']);
+    })->with(['deleted' => false, 'missing' => true]);
+
+    it('uses the generic wording to escalate again when the team has no name', function () {
+        TicketPlugin::get('test2')->supportTeamName(null);
+
+        $oldEscalation = Ticket::factory()->closed()->create(['panel' => 'test2']);
+        $original = Ticket::factory()->open()->create(['linked_ticket_id' => $oldEscalation->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertActionHasLabel(escalateAction(), 'Escalate again')
+            ->mountAction(escalateAction())
+            ->assertMountedActionModalSee([
+                'Escalate again',
+                'Opens a new escalation to the team you escalated to. The closed escalation stays in this ticket\'s history.',
+            ]);
+    });
+
     it('adds a ticket whose escalation was deleted to another escalation', function () {
         $deleted = Ticket::factory()->open()->create(['panel' => 'test2']);
         $deleted->delete();

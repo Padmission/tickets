@@ -93,6 +93,13 @@ class TicketEscalationLinks
         return static::isOpen($this->linkedRow($original->linked_ticket_id));
     }
 
+    public function hasClosedEscalation(Ticket $original): bool
+    {
+        $escalation = $this->linkedRow($original->linked_ticket_id);
+
+        return $escalation !== null && ! $escalation->trashed() && $escalation->isClosed;
+    }
+
     public function removeFromEscalation(Ticket $original): bool
     {
         return DB::transaction(function () use ($original): bool {
@@ -167,6 +174,7 @@ class TicketEscalationLinks
 
         $this->addActivity($original, ActivityType::AddedToEscalation, ['escalation' => $escalation->getKey()]);
         $this->addActivity($escalation, ActivityType::OriginalAdded, ['original' => $original->getKey()]);
+        $escalation->forgetIsEscalation();
     }
 
     protected function unlink(Ticket $original, int|string $escalationId, ?Ticket $escalation): void
@@ -177,6 +185,7 @@ class TicketEscalationLinks
 
         if ($escalation !== null) {
             $this->addActivity($escalation, ActivityType::OriginalRemoved, ['original' => $original->getKey()]);
+            $escalation->forgetIsEscalation();
         }
     }
 

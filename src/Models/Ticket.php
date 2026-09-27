@@ -144,6 +144,18 @@ class Ticket extends Model
                 ->exists();
     }
 
+    public function forgetIsEscalation(): void
+    {
+        $this->isEscalation = null;
+    }
+
+    public function refresh()
+    {
+        $this->forgetIsEscalation();
+
+        return parent::refresh();
+    }
+
     public function isEscalationFrom(string $panelId): bool
     {
         if (! $this->isEscalation()) {

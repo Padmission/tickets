@@ -176,9 +176,13 @@ class CreateLinkedTicketAction extends Action
             && (blank($record->linked_ticket_id) || ! resolve(TicketEscalationLinks::class)->hasOpenEscalation($record));
     }
 
+    /*
+     * Only a closed escalation stays in the ticket's history to mention; a
+     * deleted or missing one is escalated as if for the first time.
+     */
     protected static function isRelinking(Ticket $record): bool
     {
-        return filled($record->linked_ticket_id);
+        return resolve(TicketEscalationLinks::class)->hasClosedEscalation($record);
     }
 
     protected static function translate(string $key): string

@@ -237,6 +237,20 @@ describe('Closed status of the ticket\'s own panel and tenant', function () {
             ->closed_by->toBeNull();
     });
 
+    it('leaves open and closed alone for a ticket whose panel has no statuses', function () {
+        [$first, $second] = TicketStatus::factory()->count(2)->create(['panel' => 'test']);
+
+        $closed = Ticket::factory()->create(['panel' => 'test3', 'status_id' => $first->id, 'closed_at' => now()]);
+        $open = Ticket::factory()->create(['panel' => 'test3', 'status_id' => $first->id, 'closed_at' => null]);
+
+        $closed->update(['status_id' => $second->id]);
+        $open->update(['status_id' => $second->id]);
+
+        expect(TicketStatus::getClosedStatusFor($closed))->toBeNull()
+            ->and($closed->refresh()->isClosed)->toBeTrue()
+            ->and($open->refresh()->isClosed)->toBeFalse();
+    });
+
     it('does not treat the current panel\'s closed status as closing a ticket in another panel', function () {
         (new TicketStatusSeeder)->run();
 

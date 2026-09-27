@@ -5,14 +5,15 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Models\Ticket;
 
 class CloseTicketAction extends Action
 {
+    use ScopesLookupsToTicket;
+
     public static function getDefaultName(): ?string
     {
         return 'close-ticket';
@@ -46,7 +47,7 @@ class CloseTicketAction extends Action
                 ->relationship(
                     'disposition',
                     'display_name',
-                    fn ($query) => $this->scopeDispositionsToTicket($query, $this->getRecord()),
+                    fn ($query) => $this->scopeLookupToTicket($query, $this->getRecord()),
                 )
                 ->lazy()
                 ->required(),
@@ -70,25 +71,6 @@ class CloseTicketAction extends Action
     {
         $query = Relation::noConstraints(fn (): Relation => $record->disposition())->getQuery();
 
-        return $this->scopeDispositionsToTicket($query, $record)->exists();
-    }
-
-    protected function scopeDispositionsToTicket(Builder $query, mixed $ticket): Builder
-    {
-        $query->withoutGlobalScope(CurrentPanelScope::class);
-
-        if ($ticket instanceof Ticket && filled($ticket->panel)) {
-            $query->where($query->getModel()->qualifyColumn('panel'), $ticket->panel);
-        }
-
-        if (
-            $ticket instanceof Ticket
-            && config('padmission-tickets.tenancy.enabled')
-            && filled($ticket->getAttribute('tenant_id'))
-        ) {
-            $query->where($query->getModel()->qualifyColumn('tenant_id'), $ticket->tenant_id);
-        }
-
-        return $query;
+        return $this->scopeLookupToTicket($query, $record)->exists();
     }
 }

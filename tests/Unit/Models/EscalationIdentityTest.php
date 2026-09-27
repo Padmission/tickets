@@ -3,6 +3,7 @@
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 
 function expectEscalation(Ticket $ticket, bool $expected): void
@@ -77,4 +78,26 @@ it('is not an escalation from a panel that cannot escalate to its panel', functi
 
 it('is not an escalation before it is saved', function () {
     expect(Ticket::factory()->make()->isEscalation())->toBeFalse();
+});
+
+it('answers again after a link is written through the escalation it was asked about', function () {
+    $escalation = Ticket::factory()->create(['panel' => 'test2']);
+    $original = Ticket::factory()->create(['linked_ticket_id' => null]);
+
+    expect($escalation->isEscalation())->toBeFalse();
+
+    resolve(TicketEscalationLinks::class)->linkNewEscalation($original, $escalation);
+
+    expect($escalation->isEscalation())->toBeTrue();
+});
+
+it('answers again after a refresh', function () {
+    $escalation = Ticket::factory()->create(['panel' => 'test2']);
+
+    expect($escalation->isEscalation())->toBeFalse();
+
+    Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
+
+    expect($escalation->isEscalation())->toBeFalse()
+        ->and($escalation->refresh()->isEscalation())->toBeTrue();
 });

@@ -824,8 +824,14 @@ customElements.define(
 		}
 
 		async responseMessage(error) {
+			const status = error.response?.status ?? 0;
+
+			if (status < 400 || status >= 500) {
+				return null;
+			}
+
 			try {
-				return (await error.response?.json())?.message || null;
+				return (await error.response.json())?.message || null;
 			} catch (e) {
 				return null;
 			}
