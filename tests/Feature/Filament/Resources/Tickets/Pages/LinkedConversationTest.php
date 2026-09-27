@@ -1,6 +1,7 @@
 <?php
 
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -10,6 +11,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
+use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -127,6 +129,21 @@ describe('on an escalation sent to this panel', function () {
             ->assertSet('linkedTicketId', null);
     });
 
+    it('leaves every read pointer alone when the team it was sent to reads it', function () {
+        $owner = User::factory()->create();
+        $escalation = Ticket::factory()->open()->create(['submitter_id' => $owner->id]);
+        $original = originalWithMessage($escalation, 'Read by the other team');
+        linkedMessage($escalation, ActivitySender::User, $owner->id);
+        $pointers = fn (): array => TicketUserState::query()->orderBy('id')->get()->toArray();
+        $before = $pointers();
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSet('linkedTicketId', $original->id)
+            ->call('showLinked', $original->id);
+
+        expect($pointers())->toBe($before);
+    });
+
     it('offers a drawer instead when the panel asks for one', function () {
         TicketPlugin::get()->linkedConversationView(TicketPlugin::LINKED_VIEW_DRAWER);
 
@@ -231,6 +248,24 @@ describe('on the side that escalated', function () {
         'no reply, owner' => [false, true],
         'reply, colleague' => [true, false],
     ]);
+
+    it('shows the requester of an escalated original nothing of the escalation, even when asked for it', function () {
+        Gate::policy(Ticket::class, TicketPolicy::class);
+
+        $requester = User::factory()->create();
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => User::factory()->create()->id]);
+        linkedMessage($escalation, ActivitySender::Supporter, null, 'Only for the organization');
+        $original = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => $requester->id]);
+
+        $this->actingAs($requester);
+
+        Livewire::withQueryParams(['linked' => $escalation->id])
+            ->test(ViewTicket::class, ['record' => $original->id])
+            ->assertSet('linkedTicketId', null)
+            ->assertDontSee('Only for the organization')
+            ->assertDontSee('Platform Support')
+            ->assertDontSeeHtml('pad-ti-escalation-status');
+    });
 
     it('marks the escalation seen only for its owner', function () {
         $colleague = User::factory()->create();

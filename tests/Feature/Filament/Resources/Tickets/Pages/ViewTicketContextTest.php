@@ -4,7 +4,9 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Once;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -16,6 +18,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketUserState;
 use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
@@ -484,6 +487,48 @@ describe('Escalation status line', function () {
         'by nobody recorded' => [false],
     ]);
 
+    it('still says the requester is waiting when the other team answered and then closed the escalation', function () {
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
+        contextMessage($escalation, ActivitySender::User, auth()->id());
+        contextMessage($original, ActivitySender::User, $original->submitter_id);
+        contextMessage($escalation, ActivitySender::Supporter, null);
+        $escalation->update(['closed_at' => now()]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->call('closeLinked')
+            ->assertSee('Platform Support replied on the escalation.')
+            ->assertSee('Aisha Brooks hasn&#039;t had a reply since their last message.', escape: false);
+    });
+
+    it('calls a requester without a name the requester, in lower case inside a sentence', function () {
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
+        $original->update(['submitter_id' => null, 'submitter_data' => null]);
+        contextMessage($escalation, ActivitySender::User, auth()->id());
+        contextMessage($original, ActivitySender::User, null);
+        contextMessage($escalation, ActivitySender::Supporter, null);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->call('closeLinked')
+            ->assertSee('pass the answer on to the requester here.')
+            ->assertSee('The requester hasn&#039;t had a reply since their last message.', escape: false);
+    });
+
+    it('offers no reply to read, and opens nothing, when the panel reads linked tickets in a modal', function () {
+        TicketPlugin::get()->linkedConversationView(TicketPlugin::LINKED_VIEW_MODAL);
+
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
+        contextMessage($escalation, ActivitySender::User, auth()->id());
+        contextMessage($escalation, ActivitySender::Supporter, null);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertSee('Platform Support replied on the escalation.')
+            ->assertDontSee("Read Platform Support's reply")
+            ->call('showLinked', $escalation->id)
+            ->assertSet('linkedTicketId', null);
+
+        expect(TicketUserState::query()->where('ticket_id', $escalation->id)->where('user_id', auth()->id())->value('last_seen_activity_id'))->toBeNull();
+    });
+
     it('is not shown on a closed original, an original without an escalation, or to the requester', function (string $case) {
         [$escalation, $original] = contextEscalatedOriginal();
 
@@ -624,6 +669,61 @@ it('reads who owes the next message again after an action changes the ticket', f
         ->assertHasNoActionErrors()
         ->assertSee('You owe Aisha Brooks the next reply.');
 });
+
+it('re-renders the badge and the status line above the chat after a message while the pane is open', function () {
+    (new TicketStatusSeeder)->run();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    [$escalation, $original] = contextEscalatedOriginal();
+    $original->update(['assignee_id' => auth()->id()]);
+    contextMessage($escalation, ActivitySender::User, auth()->id());
+    contextMessage($original, ActivitySender::User, $original->submitter_id);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->call('showLinked', $escalation->id)
+        ->assertSee('Aisha Brooks hasn&#039;t had a reply since their last message.', escape: false);
+
+    contextMessage($original, ActivitySender::Supporter, auth()->id());
+    $original->update(['turn' => Turn::User]);
+
+    $page->dispatch('message-sent');
+
+    $partials = json_encode($page->effects['partials'] ?? []);
+
+    expect($partials)
+        ->toContain('pad-ti-escalation-status')
+        ->toContain('You asked Platform Support about this.')
+        ->not->toContain('hasn&#039;t had a reply')
+        ->toContain(__('padmission-tickets::tickets.resources.tickets.waiting_on.requester'));
+});
+
+it('reads the page in a fixed number of queries whatever the number of originals', function (string $page) {
+    (new TicketStatusSeeder)->run();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    $count = function (int $originals) use ($page): int {
+        [$escalation, $original] = contextEscalatedOriginal();
+
+        foreach (range(2, $originals) as $ignored) {
+            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        }
+
+        Once::flush();
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        Livewire::test(ViewTicket::class, ['record' => $page === 'original' ? $original->id : $escalation->id]);
+
+        return count(DB::getQueryLog());
+    };
+
+    $one = $count(1);
+
+    expect($count(5))->toBe($one)
+        ->and($one)->toBeLessThanOrEqual($page === 'original' ? 27 : 14);
+})->with(['original', 'escalation']);
 
 class OnlyOwnEscalationsPolicy extends TestTicketPolicy
 {

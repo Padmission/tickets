@@ -94,7 +94,7 @@ final readonly class ConversationState
 
     public function tooltip(): ?string
     {
-        $requester = $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.requester');
+        $requester = $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester');
         $colleague = $this->colleagueName();
 
         return match ($this->waitingOn) {
@@ -152,7 +152,7 @@ final readonly class ConversationState
                 ['handler' => $this->handlerName()],
             ),
             'replied' => TicketPlugin::teamText(self::MARKER_HELP.'.replied', $team, [
-                'name' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.requester'),
+                'name' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester'),
             ]),
             'closed' => __(self::MARKER_HELP.'.closed', ['time' => $escalation?->closed_at?->diffForHumans()]),
             default => null,
