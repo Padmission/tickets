@@ -28,6 +28,7 @@ class CopilotTicketService
                 'ticketActivities as has_unread_support_response' => fn (Builder $query) => $this->withUnreadSupportResponseActivityConstraint($query, $user),
             ])
             ->where('submitter_id', $user->getAuthIdentifier())
+            ->withoutEscalations()
             ->latest('updated_at')
             ->limit(50);
 
@@ -50,6 +51,7 @@ class CopilotTicketService
         $query = TicketPlugin::get()
             ->getTicketQuery()
             ->where('submitter_id', $user->getAuthIdentifier())
+            ->withoutEscalations()
             ->open();
 
         $this->withUnreadSupportResponseConstraint($query, $user);
@@ -69,6 +71,7 @@ class CopilotTicketService
             ->getTicketQuery()
             ->with(['assignee', 'disposition', 'priority', 'status'])
             ->where('submitter_id', $user->getAuthIdentifier())
+            ->withoutEscalations()
             ->findOrFail($ticketId);
 
         Gate::forUser($user)->authorize('view', $ticket);

@@ -23,6 +23,7 @@ class ListTicketsController
         $tickets = $ticketModel::query()
             ->with(['latestMessage', 'ticketUserStates', 'ticketActivities'])
             ->where('submitter_id', $request->user()->id)
+            ->withoutEscalations()
             ->orderBy('updated_at', 'desc')
             ->get();
 
