@@ -156,6 +156,28 @@ it('points to the named escalation team only where the ticket can be escalated',
         ->assertMountedActionModalDontSee($sentence);
 });
 
+it('says the escalation stays with whoever handles it', function (bool $viewerIsOwner, string $sentence) {
+    $viewer = $this->login();
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    $owner = $viewerIsOwner ? $viewer : User::factory()->create(['name' => 'Maria Lopez']);
+    $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => $owner->id]);
+    $original = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->mountAction(inlineReassign())
+        ->assertMountedActionModalSee($sentence);
+
+    $escalation->close(closedById: $viewer->id);
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->mountAction(inlineReassign())
+        ->assertMountedActionModalDontSee('Its escalation to Platform Support');
+})->with([
+    'a colleague handles it' => [false, 'Its escalation to Platform Support stays with Maria Lopez, who gets Platform Support\'s replies. Use Hand over on the escalation to change that.'],
+    'the viewer handles it' => [true, 'Its escalation to Platform Support stays with you.'],
+]);
+
 it('reassigns from the Assigned to entry, not the page header', function () {
     $this->login();
     $ticket = Ticket::factory()->open()->create();

@@ -42,7 +42,7 @@ class OpenEscalationsTable
                     ->color(fn (Ticket $record) => $record->status?->colorPalette),
 
                 TextColumn::make('submitter.name')
-                    ->label(__('padmission-tickets::tickets.resources.tickets.escalated_by'))
+                    ->label(__('padmission-tickets::tickets.resources.tickets.handled_by'))
                     ->searchable(),
 
                 TextColumn::make('created_at')

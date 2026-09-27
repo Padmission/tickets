@@ -17,6 +17,7 @@ use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\TellsRequester;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
@@ -28,6 +29,8 @@ use function count;
 
 class CreateLinkedTicketAction extends Action
 {
+    use TellsRequester;
+
     public static function getDefaultName(): ?string
     {
         return 'create-linked-ticket';
@@ -49,7 +52,7 @@ class CreateLinkedTicketAction extends Action
             ->slideOver()
             ->modalWidth(Width::Large)
             ->closeModalByClickingAway(false)
-            ->fillForm(fn (Ticket $record) => ['subject' => $record->subject])
+            ->fillForm(fn (Ticket $record) => ['subject' => $record->subject, ...static::requesterMessageDefaults($record)])
             ->schema([
                 Select::make('panel')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.panel'))
@@ -69,6 +72,8 @@ class CreateLinkedTicketAction extends Action
                     ->helperText(__('padmission-tickets::tickets.actions.create_linked_ticket.form.message_helper'))
                     ->required()
                     ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
+
+                ...static::requesterMessageFields(),
             ])
             ->action(function (array $data, ViewTicket $livewire, Action $action) {
                 $ticket = TicketPlugin::resolveModelClass(Ticket::class);
@@ -107,7 +112,9 @@ class CreateLinkedTicketAction extends Action
                 // The page may have been loaded before someone else escalated this
                 // ticket, and a host scope can hide that escalation, so the link is
                 // re-checked under a lock and nothing is created if it is taken.
-                $newTicket = DB::transaction(function () use ($ticket, $targetPanelId, $currentPanelId, $data, $defaultStatus, $defaultPriority, $record, $links) {
+                $told = false;
+
+                $newTicket = DB::transaction(function () use ($ticket, $targetPanelId, $currentPanelId, $data, $defaultStatus, $defaultPriority, $record, $links, &$told) {
                     if (! $links->canOpenEscalation($record)) {
                         return null;
                     }
@@ -130,6 +137,8 @@ class CreateLinkedTicketAction extends Action
 
                     $links->linkNewEscalation($record, $newTicket);
 
+                    $told = static::tellRequester($record, $data);
+
                     return $newTicket;
                 });
 
@@ -148,14 +157,20 @@ class CreateLinkedTicketAction extends Action
                 Notification::make()
                     ->success()
                     ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.title'))
-                    ->body(static::translate('notifications.success.body'))
+                    ->body($told
+                        ? TicketPlugin::teamText(
+                            'padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.body_told',
+                            TicketPlugin::get()->getEscalationTargetName(),
+                            ['name' => $record->requesterName()],
+                        )
+                        : static::translate('notifications.success.body'))
                     ->actions([
                         Action::make('link')
                             ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.action_label'))
                             ->url(
                                 TicketResource::getUrl(
                                     'view',
-                                    ['record' => $newTicket],
+                                    ['record' => $newTicket, 'linked' => $record->getKey()],
                                     panel: $currentPanelId
                                 )
                             ),

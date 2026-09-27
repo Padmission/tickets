@@ -5,13 +5,17 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\RemoveFromEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
@@ -19,9 +23,11 @@ use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\ValueObjects\SubmitterData;
 
 use function Pest\Laravel\partialMock;
 
@@ -211,7 +217,7 @@ it('shows a link to the ticket in the users existing panel', function () {
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.action_label'))
                     // The user cannot access the panel the linked ticket was created in,
                     // so the link has to point at the ticket in their existing panel.
-                    ->url(TicketResource::getUrl('view', ['record' => $newTicket], panel: 'test')),
+                    ->url(TicketResource::getUrl('view', ['record' => $newTicket, 'linked' => $originalTicket->id], panel: 'test')),
             ])
     );
 });
@@ -447,5 +453,172 @@ describe('Escalating again', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $closedAndEscalated->id])
             ->assertDontSee('Remove from escalation');
+    });
+});
+
+describe('Telling the requester', function () {
+    beforeEach(function () {
+        (new TicketPrioritySeeder)->run();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    });
+
+    it('offers to tell the requester, on when they are waiting', function (Turn $turn, bool $on) {
+        $requester = User::factory()->create(['name' => 'Aisha Brooks']);
+        $original = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'turn' => $turn]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->mountAction(escalateAction())
+            ->assertMountedActionModalSee(['Tell Aisha Brooks you\'re looking into it'])
+            ->assertSchemaComponentStateSet('notify_requester', $on);
+    })->with([
+        'waiting on the organization' => [Turn::Supporter, true],
+        'waiting on the requester' => [Turn::User, false],
+    ]);
+
+    it('writes the message on the original without changing its turn', function () {
+        $requester = User::factory()->create(['name' => 'Aisha Brooks']);
+        $original = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'turn' => Turn::Supporter]);
+        $viewer = auth()->user();
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->mountAction(escalateAction())
+            ->assertMountedActionModalSee([
+                'Message to Aisha Brooks',
+                'Aisha Brooks gets this as a normal reply on this ticket. It keeps the ticket waiting on your side. Aisha Brooks never sees the escalation.',
+            ])
+            ->fillForm([
+                'subject' => 'Rent is wrong',
+                'message' => tiptapDocument('Please check the recert'),
+                'requester_message' => '<p>We are on it <script>alert(1)</script></p>',
+            ])
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        $escalation = Ticket::query()->where('subject', 'Rent is wrong')->sole();
+        $activities = $original->ticketActivities()->orderBy('id')->get();
+        $message = $activities->firstWhere('type', ActivityType::Message);
+
+        expect($original->refresh()->turn)->toBe(Turn::Supporter)
+            ->and($original->linked_ticket_id)->toBe($escalation->id)
+            ->and($activities->pluck('type')->all())->toBe([ActivityType::AddedToEscalation, ActivityType::Message])
+            ->and($message->sender)->toBe(ActivitySender::Supporter)
+            ->and($message->user_id)->toBe($viewer->id)
+            ->and($message->getRawOriginal('content'))->toContain('We are on it')->not->toContain('<script>');
+
+        Notification::assertNotified(
+            Notification::make()
+                ->success()
+                ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.title'))
+                ->body('A separate ticket was opened for Platform Support. This ticket is unchanged. Aisha Brooks was told you\'re looking into it.')
+                ->actions([
+                    Action::make('link')
+                        ->label('Open the escalation')
+                        ->url(TicketResource::getUrl('view', ['record' => $escalation, 'linked' => $original->id], panel: 'test')),
+                ])
+        );
+    });
+
+    it('sends the message as a normal reply the requester is notified of', function () {
+        Event::fake([TicketActivityEvent::class]);
+
+        $requester = User::factory()->create();
+        $original = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'turn' => Turn::Supporter]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->callAction(escalateAction(), [
+                'subject' => 'Rent is wrong',
+                'message' => tiptapDocument('Please check the recert'),
+            ])
+            ->assertHasNoFormErrors();
+
+        Event::assertDispatched(TicketActivityEvent::class, function (TicketActivityEvent $event) use ($original, $requester): bool {
+            return $event->ticket->is($original)
+                && $event->activityType === ActivityType::Message->value
+                && resolve(NotificationRecipientService::class)->getNotificationRecipients($event)->contains(fn ($user): bool => $user->is($requester));
+        });
+    });
+
+    it('writes nothing when the toggle is off', function () {
+        $original = Ticket::factory()->open()->create(['turn' => Turn::Supporter]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->callAction(escalateAction(), [
+                'subject' => 'Rent is wrong',
+                'message' => tiptapDocument('Please check the recert'),
+                'notify_requester' => false,
+            ])
+            ->assertHasNoFormErrors();
+
+        $escalation = Ticket::query()->where('subject', 'Rent is wrong')->sole();
+
+        expect($original->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse()
+            ->and($original->refresh()->linked_ticket_id)->toBe($escalation->id);
+
+        Notification::assertNotified(
+            Notification::make()
+                ->success()
+                ->title(__('padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.title'))
+                ->body('A separate ticket was opened for Platform Support. This ticket is unchanged.')
+                ->actions([
+                    Action::make('link')
+                        ->label('Open the escalation')
+                        ->url(TicketResource::getUrl('view', ['record' => $escalation, 'linked' => $original->id], panel: 'test')),
+                ])
+        );
+    });
+
+    it('does not offer it when the requester is the viewer or has no account', function (Closure $submitter) {
+        $original = Ticket::factory()->open()->create(['turn' => Turn::Supporter, ...$submitter()]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->mountAction(escalateAction())
+            ->assertMountedActionModalDontSee('you\'re looking into it')
+            ->fillForm([
+                'subject' => 'Rent is wrong',
+                'message' => tiptapDocument('Please check the recert'),
+                'notify_requester' => true,
+                'requester_message' => 'Hello',
+            ])
+            ->callMountedAction();
+
+        expect($original->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse();
+    })->with([
+        'the viewer' => fn (): array => ['submitter_id' => auth()->id()],
+        'a guest' => fn (): array => ['submitter_id' => null, 'submitter_data' => new SubmitterData('Guest', 'guest@example.com')],
+    ]);
+
+    it('tells the requester when the ticket is added to an escalation', function () {
+        $requester = User::factory()->create(['name' => 'Aisha Brooks']);
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => auth()->id()]);
+        Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        $original = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'turn' => Turn::Supporter]);
+        $addAction = TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form');
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->mountAction($addAction)
+            ->assertMountedActionModalSee(['Tell Aisha Brooks you\'re looking into it', 'Handled by'])
+            ->assertSchemaComponentStateSet('notify_requester', true)
+            ->fillForm(['escalation' => $escalation->id])
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        $message = $original->ticketActivities()->where('type', ActivityType::Message)->sole();
+
+        expect($original->refresh())
+            ->linked_ticket_id->toBe($escalation->id)
+            ->turn->toBe(Turn::Supporter)
+            ->and($message->getRawOriginal('content'))->toContain('Thanks for your patience. We&#039;re looking into this further and will update you here.');
+    });
+
+    it('writes no message when the ticket cannot join the escalation', function () {
+        $closed = Ticket::factory()->closed()->create(['panel' => 'test2']);
+        $original = Ticket::factory()->open()->create(['turn' => Turn::Supporter]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->callAction(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'), ['escalation' => $closed->id]);
+
+        expect($original->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse()
+            ->and($original->refresh()->linked_ticket_id)->toBeNull();
     });
 });

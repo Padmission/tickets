@@ -7,6 +7,8 @@ use Filament\Forms\Components\TableSelect;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\DB;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\TellsRequester;
 use Padmission\Tickets\Filament\Tables\OpenEscalationsTable;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketEscalationLinks;
@@ -14,6 +16,8 @@ use Padmission\Tickets\TicketPlugin;
 
 class AddToEscalationAction extends Action
 {
+    use TellsRequester;
+
     public static function getDefaultName(): ?string
     {
         return 'add-to-escalation';
@@ -36,15 +40,26 @@ class AddToEscalationAction extends Action
             ->slideOver()
             ->modalWidth(Width::FourExtraLarge)
             ->visible(fn (Ticket $record): bool => CreateLinkedTicketAction::isAvailableFor($record))
+            ->fillForm(fn (Ticket $record): array => static::requesterMessageDefaults($record))
             ->schema([
                 TableSelect::make('escalation')
                     ->hiddenLabel()
                     ->relationshipName('parentTicket')
                     ->tableConfiguration(OpenEscalationsTable::class)
                     ->required(),
+
+                ...static::requesterMessageFields(),
             ])
             ->action(function (Ticket $record, array $data): void {
-                $refusal = resolve(TicketEscalationLinks::class)->addToEscalation($record, $data['escalation']);
+                $refusal = DB::transaction(function () use ($record, $data): ?string {
+                    $refusal = resolve(TicketEscalationLinks::class)->addToEscalation($record, $data['escalation']);
+
+                    if ($refusal === null) {
+                        static::tellRequester($record, $data);
+                    }
+
+                    return $refusal;
+                });
 
                 if ($refusal !== null) {
                     Notification::make()

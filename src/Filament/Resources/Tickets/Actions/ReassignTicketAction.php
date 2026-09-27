@@ -10,7 +10,9 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Component;
+use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 
 use function app;
@@ -94,7 +96,33 @@ class ReassignTicketAction extends Action
             );
         }
 
-        return implode(' ', $sentences);
+        $sentences[] = static::describeEscalationOwner($record);
+
+        return implode(' ', array_filter($sentences));
+    }
+
+    /*
+     * Reassigning moves the conversation with the requester, not the one with
+     * the other team: that follows whoever handles the escalation.
+     */
+    protected static function describeEscalationOwner(Ticket $record): ?string
+    {
+        $escalation = resolve(TicketEscalationLinks::class)->escalationOf($record);
+
+        if ($escalation === null || $escalation->isClosed) {
+            return null;
+        }
+
+        $key = 'padmission-tickets::tickets.actions.reassign.escalation_stays';
+        $team = TicketPlugin::find($escalation->panel)?->getSupportTeamName();
+
+        if ($escalation->submitter_id === Filament::auth()->id()) {
+            return TicketPlugin::teamText("{$key}_you", $team);
+        }
+
+        return $escalation->submitter === null
+            ? null
+            : TicketPlugin::teamText($key, $team, ['name' => resolve(GetUserDisplayName::class)->forUser($escalation->submitter)]);
     }
 
     /**
