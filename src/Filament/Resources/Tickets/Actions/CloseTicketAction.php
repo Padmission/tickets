@@ -5,11 +5,13 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
 use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 
@@ -50,7 +52,7 @@ class CloseTicketAction extends Action
                 ->relationship(
                     'disposition',
                     'display_name',
-                    fn ($query) => $this->scopeLookupToTicket($query, $this->getRecord()),
+                    fn ($query) => $this->scopeDispositionsToTicket($query, $this->getRecord()),
                 )
                 ->lazy()
                 ->required(),
@@ -71,7 +73,14 @@ class CloseTicketAction extends Action
         $key = 'padmission-tickets::tickets.actions.close.';
 
         if (count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0 && $record->isEscalation()) {
-            return __($key.'modal_description_received', ['contact' => $this->contactOf($record)]);
+            $originals = resolve(TicketEscalationLinks::class)->linkedOriginalsQuery($record->getKey())->count();
+
+            // Named in full once, then by name alone.
+            return trans_choice($key.'modal_description_received', $originals, [
+                'contact' => $this->contactOf($record),
+                'name' => $record->requesterName() ?? __($key.'the_contact'),
+                'count' => $originals,
+            ]);
         }
 
         return implode(' ', array_filter([
@@ -127,8 +136,21 @@ class CloseTicketAction extends Action
      */
     protected function dispositionsExist(Ticket $record): bool
     {
+        /** @var Builder<TicketDisposition> $query */
         $query = Relation::noConstraints(fn (): Relation => $record->disposition())->getQuery();
 
-        return $this->scopeLookupToTicket($query, $record)->exists();
+        return $this->scopeDispositionsToTicket($query, $record)->exists();
+    }
+
+    /**
+     * The relation keeps deleted dispositions, so a closed ticket still shows
+     * its own, but a deleted one is never offered.
+     *
+     * @param  Builder<TicketDisposition>  $query
+     * @return Builder<TicketDisposition>
+     */
+    protected function scopeDispositionsToTicket(Builder $query, mixed $record): Builder
+    {
+        return $this->scopeLookupToTicket($query, $record)->withoutTrashed();
     }
 }

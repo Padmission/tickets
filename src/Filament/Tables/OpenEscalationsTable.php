@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Tables;
 
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,13 +44,15 @@ class OpenEscalationsTable
 
                 TextColumn::make('submitter.name')
                     ->label(__('padmission-tickets::tickets.resources.tickets.handled_by'))
+                    ->formatStateUsing(fn (?string $state, Ticket $record): ?string => $record->isSubmittedBy(Filament::auth()->id())
+                        ? __('padmission-tickets::tickets.side_you')
+                        : $state)
                     ->searchable(),
 
                 TextColumn::make('created_at')
                     ->label(__('padmission-tickets::tickets.actions.add_to_escalation.escalated_at'))
                     ->since()
-                    ->dateTimeTooltip(TicketPlugin::get()->getDateTimeDisplayFormat())
-                    ->timezone(TicketPlugin::get()->getDisplayTimezone())
+                    ->tooltip(fn (Ticket $record): ?string => TicketPlugin::formatMessageTime($record->created_at))
                     ->sortable(),
 
                 TextColumn::make('originals_count')

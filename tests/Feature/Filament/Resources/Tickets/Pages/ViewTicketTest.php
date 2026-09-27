@@ -191,6 +191,8 @@ describe('Linked Tickets', function () {
 
         (new TicketStatusSeeder)->run();
 
+        // Read by the panel the ticket belongs to: another panel's ticket that was never escalated has no Escalation box.
+        Filament::setCurrentPanel('test2');
         $ticket = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => auth()->id()]);
 
         Ticket::factory()->create(['panel' => 'test1']);
@@ -222,6 +224,7 @@ describe('Linked Tickets', function () {
 
         (new TicketStatusSeeder)->run();
 
+        Filament::setCurrentPanel('test3');
         $ticket = Ticket::factory()->create(['panel' => 'test3', 'submitter_id' => auth()->id()]);
         $selectAction = TestAction::make('select')->schemaComponent('childTickets');
 

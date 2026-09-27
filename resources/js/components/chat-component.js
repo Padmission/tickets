@@ -25,6 +25,7 @@ customElements.define(
 
 			this.ticketId = null;
 			this.ticket = null;
+			this.seenOpen = false;
 
 			this.messages = [];
 			this.attachments = [];
@@ -190,6 +191,14 @@ customElements.define(
 				if (ticket.is_closed) {
 					this.rootNode().querySelector("[data-composer]").style.display =
 						"none";
+
+					// Closed by someone else while this chat was open, so the page around it can catch up.
+					if (this.seenOpen) {
+						this.seenOpen = false;
+						this.dispatchEvent(new CustomEvent("ticket-closed"));
+					}
+				} else {
+					this.seenOpen = true;
 				}
 
 				if (messages.length === 0) {
@@ -275,11 +284,12 @@ customElements.define(
 					(lastDate === true || formatter(lastDate) !== formatter(messageDate));
 				// Same as the ticket page's MESSAGE_TIME_FORMAT, e.g. "Sep 25, 7:15 AM", and in
 				// the page's timezone when it gives one, so the chat agrees with the rest of the page.
-				const absoluteDate = messageDate.toLocaleString([], {
+				const absoluteDate = messageDate.toLocaleString("en-US", {
 					month: "short",
 					day: "numeric",
 					hour: "numeric",
 					minute: "2-digit",
+					hour12: true,
 					...(this.timezone ? { timeZone: this.timezone } : {}),
 				});
 

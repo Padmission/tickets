@@ -34,7 +34,7 @@ it('checks relay and hold once per row, not once per branch', function () {
     $selects = strtolower(ConversationStateQuery::apply(Ticket::query(), $viewer)->toSql());
 
     expect(substr_count(strtolower($rank), '(select'))->toBeLessThanOrEqual(9)
-        ->and(substr_count($selects, '(select'))->toBeLessThanOrEqual(33);
+        ->and(substr_count($selects, '(select'))->toBeLessThanOrEqual(35);
 });
 
 it('lists an escalation from this panel whose original moved to another panel', function () {

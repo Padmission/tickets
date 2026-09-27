@@ -15,7 +15,7 @@
 <div class="pad-ti-transcript">
     @foreach ($originalTickets as $ticket)
         @php
-            $submitterIsViewer = filled($ticket->submitter_id) && $ticket->submitter_id === $viewer?->getAuthIdentifier();
+            $submitterIsViewer = $ticket->isSubmittedBy($viewer);
             $submitterName = match (true) {
                 $submitterIsViewer => __('padmission-tickets::tickets.side_you'),
                 $ticket->submitter !== null => Filament::getUserName($ticket->submitter),
@@ -32,6 +32,7 @@
             };
             $assignee = $ticket->isNotInCurrentPanel() ? TicketAssignee::for($ticket) : $ticket->assignee;
             $assigneeName = match (true) {
+                $assignee !== null && filled($ticket->assignee_id) && (string) $ticket->assignee_id === (string) $viewer?->getAuthIdentifier() => __('padmission-tickets::tickets.side_you'),
                 $assignee !== null => Filament::getUserName($assignee),
                 filled($ticket->assignee_id) => TicketPlugin::find($ticket->panel)?->getSupportTeamName() ?? __('padmission-tickets::tickets.resources.tickets.assigned_elsewhere'),
                 default => null,
@@ -90,7 +91,8 @@
                             'pad-ti-transcript__message--internal' => $activity->type === ActivityType::InternalMessage,
                         ]) @if ($activity->getKey() === $firstUnreadId) data-pad-ti-first-unread @endif>
                             <div class="pad-ti-transcript__meta">
-                                <strong>{{ $activity->senderName }}</strong>
+                                {{-- A message reads "You" only when you wrote it. --}}
+                                <strong>{{ filled($activity->user_id) && (string) $activity->user_id === (string) $viewer?->getAuthIdentifier() ? __('padmission-tickets::tickets.side_you') : $activity->senderName }}</strong>
                                 · {{ TicketPlugin::formatMessageTime($activity->created_at) }}
                                 @if ($activity->type === ActivityType::InternalMessage)
                                     · {{ __('padmission-tickets::tickets.actions.view_original_conversation.internal_note') }}

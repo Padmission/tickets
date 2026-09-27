@@ -236,10 +236,15 @@
                 x-data
                 x-init="
                     const handleMessageSent = () => Livewire.dispatch('padmission-ticket-message-sent-from-copilot')
+                    const handleTicketClosed = () => $wire.$refresh()
 
                     $refs.chat.addEventListener('message-sent', handleMessageSent)
+                    $refs.chat.addEventListener('ticket-closed', handleTicketClosed)
 
-                    $cleanup(() => $refs.chat.removeEventListener('message-sent', handleMessageSent))
+                    $cleanup(() => {
+                        $refs.chat.removeEventListener('message-sent', handleMessageSent)
+                        $refs.chat.removeEventListener('ticket-closed', handleTicketClosed)
+                    })
                 "
                 class="min-h-0 flex-1"
             >

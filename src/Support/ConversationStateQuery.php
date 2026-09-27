@@ -148,9 +148,12 @@ final class ConversationStateQuery
         }
 
         return $this->sql(
-            'case when %s then case when %s is not null then %s else %s end end',
+            'case when %s then case when %s in (%s, %s, %s) then %s else %s end end',
             $this->openInCurrentPanel(),
-            $this->relay(),
+            $this->escalationState(),
+            $this->literal('relay_mine'),
+            $this->literal('relay_hold'),
+            $this->literal('relay'),
             $this->literal('replied'),
             $this->subquery($this->escalationQuery()->selectRaw(sprintf(
                 'case when %s is null then %s else %s end',
@@ -247,11 +250,13 @@ final class ConversationStateQuery
         $parts = [
             [$this->sql('%s is not null', $this->column('closed_at')), $closed],
             [$this->inCurrentPanel(), $this->sql(
-                'case %s '.($relayOwnedByViewer === null ? '' : 'when %s then %s ').'when %s then %s else %s end',
-                $this->relayOrHold(),
+                'case %s '.($relayOwnedByViewer === null ? '' : 'when %s then %s ').'when %s then %s when %s then %s else %s end',
+                $this->escalationState(),
                 ...[
                     ...($relayOwnedByViewer === null ? [] : [$this->literal('relay_mine'), $relayOwnedByViewer]),
                     $this->literal('hold'),
+                    $original(true),
+                    $this->literal('relay_hold'),
                     $original(true),
                     $original(false),
                 ],
@@ -289,19 +294,30 @@ final class ConversationStateQuery
     }
 
     /**
-     * On an original: "relay_mine" or "relay" while a reply from the team
-     * waits to be passed on, "hold" while it is on hold, otherwise null.
+     * On an original, read once from its escalation: "relay_mine" while a
+     * reply from the team waits for the viewer to pass it on; "relay_hold"
+     * while it waits for someone else and the requester already has the
+     * organization's latest message, so the row is on hold for the viewer;
+     * "relay" while it waits for someone else otherwise; "hold" while the row
+     * is on hold; null otherwise.
+     *
+     * A reply is waiting while the team's latest message on the escalation is
+     * newer than the organization's latest on this original and the owner's
+     * latest on the escalation. An owner who asked the original themselves
+     * reads the reply there, so nothing waits for them to pass on.
      *
      * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function relayOrHold(): array
+    protected function escalationState(): array
     {
-        return $this->sql(
-            'coalesce(%s, case when %s = %s and %s and %s = %s then %s end)',
-            $this->relay(),
+        $owner = $this->grammar->wrap('cs_e.submitter_id');
+        $submitter = $this->grammar->wrap($this->ticket->qualifyColumn('submitter_id'));
+
+        $hold = $this->sql(
+            '%s = %s and %s is null and %s = %s',
             $this->column('turn'),
             $this->literal(Turn::Supporter->value),
-            $this->escalationExists(fn (QueryBuilder $query) => $query->whereNull('cs_e.closed_at')),
+            $this->raw($this->grammar->wrap('cs_e.closed_at')),
             $this->subquery($this->newQuery()
                 ->from((new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable(), 'cs_l')
                 ->select('cs_l.sender')
@@ -311,40 +327,33 @@ final class ConversationStateQuery
                 ->orderByDesc('cs_l.id')
                 ->limit(1)),
             $this->literal(ActivitySender::Supporter->value),
-            $this->literal('hold'),
         );
-    }
 
-    /**
-     * "relay_mine" or "relay" while the team's latest message on the
-     * escalation is newer than the organization's latest on this original and
-     * the owner's latest on the escalation, otherwise null. An owner who asked
-     * the original themselves reads the reply there, so nothing is pending for
-     * them to pass on.
-     *
-     * @return array{0: string, 1: array<int, mixed>}
-     */
-    protected function relay(): array
-    {
-        return $this->sql(
-            '(case when %s > %s(%s, %s) then %s end)',
+        $state = $this->sql(
+            'case when (%s is null or %s is null or %s <> %s) and (%s is not null or %s is not null) and %s > %s(%s, %s) '
+                .'then case when %s = %s then %s when %s then %s else %s end '
+                .'when %s then %s end',
+            $this->raw($owner),
+            $this->raw($submitter),
+            $this->raw($owner),
+            $this->raw($submitter),
+            $this->raw($owner),
+            $this->raw($submitter),
             $this->latestMessage('linked_ticket_id', ActivitySender::Supporter),
             $this->raw($this->ticket->getConnection()->getDriverName() === 'sqlite' ? 'max' : 'greatest'),
             $this->latestMessage($this->ticket->getKeyName(), ActivitySender::Supporter),
             $this->latestMessage('linked_ticket_id', ActivitySender::User),
-            $this->subquery($this->escalationQuery()
-                ->where(fn (QueryBuilder $query) => $query
-                    ->whereNull('cs_e.submitter_id')
-                    ->orWhereNull($this->ticket->qualifyColumn('submitter_id'))
-                    ->orWhereColumn('cs_e.submitter_id', '<>', $this->ticket->qualifyColumn('submitter_id')))
-                ->where(fn (QueryBuilder $query) => $query
-                    ->whereNotNull('cs_e.submitter_id')
-                    ->orWhereNotNull($this->ticket->qualifyColumn('submitter_id')))
-                ->selectRaw(
-                    sprintf('case when %s = ? then %s else %s end', $this->grammar->wrap('cs_e.submitter_id'), $this->grammar->quoteString('relay_mine'), $this->grammar->quoteString('relay')),
-                    [$this->viewer->userId],
-                )),
+            $this->raw($owner),
+            $this->binding($this->viewer->userId),
+            $this->literal('relay_mine'),
+            $hold,
+            $this->literal('relay_hold'),
+            $this->literal('relay'),
+            $hold,
+            $this->literal('hold'),
         );
+
+        return $this->subquery($this->escalationQuery()->selectRaw($state[0], $state[1]));
     }
 
     /**

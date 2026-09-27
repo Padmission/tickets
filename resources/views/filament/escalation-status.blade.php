@@ -6,12 +6,7 @@
     >
         @if ($status['readReplyLabel'] || $status['openUrl'] || $status['takeOver'])
             <x-slot name="footer">
-                @if ($status['readReplyLabel'] && $status['paneOpen'])
-                    {{-- The escalation is already beside the chat, so the button finds the reply in it. --}}
-                    <x-filament::button size="sm" color="warning" x-on:click="$dispatch('pad-ti-linked-scroll')">
-                        {{ $status['readReplyLabel'] }}
-                    </x-filament::button>
-                @elseif ($status['readReplyLabel'])
+                @if ($status['readReplyLabel'])
                     <x-filament::button size="sm" color="warning" wire:click="showLinked({{ $status['escalationId'] }})">
                         {{ $status['readReplyLabel'] }}
                     </x-filament::button>

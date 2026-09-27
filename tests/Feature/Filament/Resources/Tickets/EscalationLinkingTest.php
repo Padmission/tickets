@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\RemoveFromEscalationAction;
@@ -96,7 +97,8 @@ describe('Adding to an existing escalation', function () {
     });
 
     it('says which escalation the ticket is part of, how many others share it and who handles it', function () {
-        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => auth()->id()]);
+        // Waiting on the other team, so the status line offers no link of its own.
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => auth()->id(), 'turn' => Turn::Supporter]);
         Ticket::factory()->count(2)->create(['linked_ticket_id' => $escalation->id]);
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
 

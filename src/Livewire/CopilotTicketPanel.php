@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Livewire;
 
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -83,9 +84,23 @@ class CopilotTicketPanel extends Component
         $this->resetValidation();
     }
 
+    /*
+     * Support may have closed it since the pane last drew its header.
+     */
     public function resolveTicket(): void
     {
         $ticket = $this->requireActiveTicket();
+
+        if ($ticket->isClosed) {
+            Notification::make()
+                ->warning()
+                ->title(__('padmission-tickets::tickets.copilot.already_closed'))
+                ->send();
+
+            $this->selectTicket($ticket->getKey());
+
+            return;
+        }
 
         $this->tickets()->resolveTicket($this->user(), $ticket);
 

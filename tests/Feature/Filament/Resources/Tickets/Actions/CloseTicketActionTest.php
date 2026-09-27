@@ -133,9 +133,39 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. Its original tickets stay open; {$contact} updates the requesters. Nobody can reply to it after that, and it can't be reopened.")
+        ->assertMountedActionModalSee("{$contact} is told it was closed. Its original ticket stays open; Test Admin updates the requester. Nobody can reply to it after that, and it can't be reopened.")
         ->assertMountedActionModalDontSee('The requester is told it was closed.');
+
+    Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalSee("{$contact} is told it was closed. Its 2 original tickets stay open; Test Admin updates the requesters.");
 })->with([
     'with an organization' => ['Test Organization', 'Test Admin at Test Organization'],
     'without one' => [null, 'Test Admin'],
 ]);
+
+it('never offers or requires a deleted disposition', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $retired = tap(TicketDisposition::factory()->create(['panel' => 'test', 'display_name' => 'Retired outcome']))->delete();
+    $ticket = Ticket::factory()->open()->create(['disposition_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    expect($ticket->refresh()->isClosed)->toBeTrue();
+
+    $offered = TicketDisposition::factory()->create(['panel' => 'test', 'display_name' => 'Resolved outcome']);
+    $second = Ticket::factory()->open()->create(['disposition_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $second->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertFormFieldExists('disposition', fn ($field): bool => array_key_exists($offered->id, $field->getOptions())
+            && ! array_key_exists($retired->id, $field->getOptions()));
+});

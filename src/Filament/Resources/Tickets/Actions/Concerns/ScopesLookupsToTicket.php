@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 
@@ -13,6 +14,12 @@ use Padmission\Tickets\Models\Ticket;
  */
 trait ScopesLookupsToTicket
 {
+    /**
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
     protected function scopeLookupToTicket(Builder $query, mixed $ticket): Builder
     {
         $query->withoutGlobalScope(CurrentPanelScope::class);

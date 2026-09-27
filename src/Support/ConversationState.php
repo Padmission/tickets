@@ -101,9 +101,7 @@ final readonly class ConversationState
             null, 'closed' => null,
             'support' => Turn::Supporter->getDescription(),
             'you_requester' => Turn::User->getDescription(),
-            'you_owner' => $this->teamName() === null
-                ? __(self::HELP.'.you_to_team_unnamed')
-                : __(self::HELP.'.you_to_team', ['team' => $this->teamName()]),
+            'you_owner' => TicketPlugin::teamText(self::HELP.'.you_owner', $this->teamName()),
             // Nobody is told they owe themselves a reply.
             'you' => $this->requesterIsViewer()
                 ? __(self::HELP.'.you_self')
@@ -130,8 +128,10 @@ final readonly class ConversationState
 
         return match ($this->marker) {
             'escalated' => __(self::MARKER.'.escalated'),
-            // Short enough to fit a list cell; the tooltip says who the reply went to.
-            'replied' => TicketPlugin::teamText(self::MARKER.'.replied', $team),
+            // Short enough to fit a list cell; the tooltip says what to do with it.
+            'replied' => $this->ownerIsViewer() || $this->handlerName() === null
+                ? TicketPlugin::teamText(self::MARKER.'.replied', $team)
+                : TicketPlugin::teamText(self::MARKER.'.replied_other', $team, ['name' => $this->handlerName()]),
             'closed' => __(self::MARKER.'.closed'),
             default => null,
         };
@@ -160,7 +160,7 @@ final readonly class ConversationState
                 ['handler' => $this->handlerName()],
             ),
             'replied' => TicketPlugin::teamText(
-                self::MARKER_HELP.($this->ownerIsViewer() || $this->handlerName() === null ? '.replied' : '.replied_other'),
+                self::MARKER_HELP.($this->ownerIsViewer() || $this->handlerName() === null ? '.replied' : '.replied_other').($this->escalationOpen ? '' : '_closed'),
                 $team,
                 [
                     'name' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester'),

@@ -9,6 +9,7 @@ use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Tests\User;
 
 beforeEach(function () {
     Event::fake();
@@ -60,4 +61,24 @@ it('resolves the ticket once confirmed', function () {
         ->assertDontSee('Resolve this ticket?');
 
     expect($this->ticket->refresh()->isClosed)->toBeTrue();
+});
+
+it('says a ticket support already closed has nothing to resolve, and leaves its close alone', function () {
+    (new TicketStatusSeeder)->run();
+
+    $panel = Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id]);
+
+    $supporter = User::factory()->create();
+    $this->ticket->close(closedById: $supporter->id);
+
+    $panel->call('resolveTicket')
+        ->assertNotified(__('padmission-tickets::tickets.copilot.already_closed'))
+        ->assertDontSee('Resolve this ticket?');
+
+    expect($this->ticket->refresh()->closed_by)->toBe($supporter->id);
+});
+
+it('redraws the header when the chat sees the ticket close', function () {
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml("addEventListener('ticket-closed', handleTicketClosed)");
 });

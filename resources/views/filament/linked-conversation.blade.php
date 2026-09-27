@@ -21,7 +21,6 @@
         },
     }"
     x-init="$nextTick(() => reveal())"
-    x-on:pad-ti-linked-scroll.window="reveal()"
 >
     @if ($drawer)
         {{-- Pushes the page over so the drawer never covers the chat or its reply box. --}}

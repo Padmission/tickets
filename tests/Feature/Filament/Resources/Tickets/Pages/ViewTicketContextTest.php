@@ -18,6 +18,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketUserState;
 use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Services\TicketActivityService;
@@ -469,9 +470,9 @@ describe('Escalation status line', function () {
             ->assertSee($text)
             ->html();
 
-        // The Escalation box always links to it; the status line only when the escalation waits on its owner.
+        // Once: from the status line when the escalation waits on its owner, otherwise from the Escalation box.
         $link = 'href="'.e(ViewTicket::getUrl(['record' => $escalation, 'linked' => $original->id])).'"';
-        expect(substr_count($html, $link))->toBe($offersOpen ? 2 : 1);
+        expect(substr_count($html, $link))->toBe(1);
     })->with([
         'the team, asked by the viewer' => [Turn::Supporter, true, 'You asked Platform Support about this. Platform Support owes the next reply there.', false],
         'the team, asked by a colleague' => [Turn::Supporter, false, 'Maria Lopez asked Platform Support about this. Platform Support owes the next reply there.', false],
@@ -517,7 +518,7 @@ describe('Escalation status line', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $original->id])
             ->call('closeLinked')
-            ->assertSee('Platform Support replied on the escalation.')
+            ->assertSee('Platform Support replied before the escalation was closed. Pass it on to Aisha Brooks here.')
             ->assertSee('Aisha Brooks hasn&#039;t had a reply since their last message.', escape: false);
     });
 
@@ -795,10 +796,10 @@ describe('Page clarity', function () {
             ->html();
 
         expect(preg_match_all('/<li[^>]*data-pad-ti-first-unread/', $html))->toBe(1)
-            ->and($html)->toContain('x-on:pad-ti-linked-scroll.window="reveal()"');
+            ->and($html)->toContain('x-init="$nextTick(() => reveal())"');
     });
 
-    it('scrolls to the reply instead of repeating the escalation link while the pane shows it', function () {
+    it('offers the reply only while the pane is closed, and links the escalation once either way', function () {
         [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
         contextMessage($escalation, ActivitySender::User, auth()->id());
         contextMessage($escalation, ActivitySender::Supporter, null);
@@ -807,10 +808,10 @@ describe('Page clarity', function () {
         $open = Livewire::test(ViewTicket::class, ['record' => $original->id])->html();
         $closed = Livewire::test(ViewTicket::class, ['record' => $original->id])->call('closeLinked')->html();
 
-        expect($open)->toContain('x-on:click="$dispatch(\'pad-ti-linked-scroll\')"')
+        expect($open)->not->toContain('Read Platform Support&#039;s reply')
             ->and(substr_count($open, $link))->toBe(1)
             ->and($closed)->toContain('wire:click="showLinked('.$escalation->id.')"')
-            ->and(substr_count($closed, $link))->toBe(2);
+            ->and(substr_count($closed, $link))->toBe(1);
     });
 
     it('explains Handled by and Contact only on the escalation pages they appear on', function () {
@@ -878,3 +879,18 @@ class ManagesButMayNotReplyPolicy extends TestTicketPolicy
         return false;
     }
 }
+
+it('shows the disposition the other team closed an escalation with', function () {
+    (new TicketStatusSeeder)->run();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+
+    $disposition = TicketDisposition::factory()->create(['panel' => 'test2', 'display_name' => 'Fixed in the product']);
+    TicketDisposition::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($disposition->id));
+
+    $escalation = Ticket::factory()->closed()->create(['panel' => 'test2', 'submitter_id' => auth()->id(), 'disposition_id' => $disposition->id]);
+    Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->assertSee('Fixed in the product');
+})->after(fn () => TicketDisposition::clearBootedModels());
