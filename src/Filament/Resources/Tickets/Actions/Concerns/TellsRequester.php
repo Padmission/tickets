@@ -61,7 +61,7 @@ trait TellsRequester
         $viewer = Filament::auth()->user();
 
         return $record->submitter !== null
-            && $record->submitter_id !== $viewer?->getAuthIdentifier()
+            && ! $record->isSubmittedBy($viewer)
             && resolve(TicketAuth::class)->canReply($record, $viewer);
     }
 

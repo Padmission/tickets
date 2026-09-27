@@ -174,12 +174,12 @@ final readonly class ConversationState
 
     protected function requesterIsViewer(): bool
     {
-        return filled($this->ticket->submitter_id) && $this->ticket->submitter_id == Filament::auth()->id();
+        return $this->ticket->isSubmittedBy(Filament::auth()->id());
     }
 
     protected function requesterIsAssignee(): bool
     {
-        return filled($this->ticket->submitter_id) && $this->ticket->submitter_id == $this->ticket->assignee_id;
+        return $this->ticket->isSubmittedBy($this->ticket->assignee_id);
     }
 
     public function ownerIsViewer(): bool

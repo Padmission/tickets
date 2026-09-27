@@ -96,7 +96,7 @@ class CloseTicketAction extends Action
         $team = TicketPlugin::find($escalation->panel)?->getSupportTeamName();
 
         return match (true) {
-            $escalation->submitter_id === Filament::auth()->id() => TicketPlugin::teamText("{$key}_you", $team),
+            $escalation->isSubmittedBy(Filament::auth()->id()) => TicketPlugin::teamText("{$key}_you", $team),
             $escalation->submitter === null => TicketPlugin::teamText("{$key}_unnamed", $team),
             default => TicketPlugin::teamText($key, $team, ['handler' => resolve(GetUserDisplayName::class)->forUser($escalation->submitter)]),
         };

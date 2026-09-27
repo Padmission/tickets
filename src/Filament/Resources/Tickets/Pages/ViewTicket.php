@@ -252,7 +252,7 @@ class ViewTicket extends EditRecord
         $escalation = $this->linkedTicket();
         $viewer = Filament::auth()->user();
 
-        if ($escalation === null || $viewer === null || $this->isShowingOriginals() || $escalation->submitter_id !== $viewer->getAuthIdentifier()) {
+        if ($escalation === null || $viewer === null || $this->isShowingOriginals() || ! $escalation->isSubmittedBy($viewer)) {
             return;
         }
 
@@ -285,7 +285,7 @@ class ViewTicket extends EditRecord
         /** @var Ticket $record */
         $record = $this->getRecord();
 
-        if ($record->isNotInCurrentPanel() && Filament::auth()->id() !== $record->submitter_id) {
+        if ($record->isNotInCurrentPanel() && ! $record->isSubmittedBy(Filament::auth()->id())) {
             $escalation = resolve(TicketEscalationLinks::class)->escalationOf($record);
 
             abort_unless($escalation?->isInCurrentPanel() === true && static::getResource()::canView($escalation), 403);
@@ -823,7 +823,7 @@ class ViewTicket extends EditRecord
             };
         }
 
-        if (Filament::auth()->id() === $record->submitter_id) {
+        if ($record->isSubmittedBy(Filament::auth()->id())) {
             return __($key.'conversation_own');
         }
 
@@ -910,7 +910,7 @@ class ViewTicket extends EditRecord
 
         $key = 'padmission-tickets::tickets.escalation_status.';
         $team = static::teamOf($escalation);
-        $isOwner = $escalation->submitter_id === Filament::auth()->id();
+        $isOwner = $escalation->isSubmittedBy(Filament::auth()->id());
         $handler = $escalation->submitter === null ? null : resolve(GetUserDisplayName::class)->forUser($escalation->submitter);
         $requester = $record->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester');
         $canRead = $this->usesPane() && $this->linkedTickets()->contains(fn (Ticket $ticket): bool => $ticket->is($escalation));
@@ -1045,7 +1045,7 @@ class ViewTicket extends EditRecord
             return $membership;
         }
 
-        $handledBy = $escalation->submitter_id === Filament::auth()->id()
+        $handledBy = $escalation->isSubmittedBy(Filament::auth()->id())
             ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.handled_by_you', $team)
             : TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.handled_by_other', $team, [
                 'name' => resolve(GetUserDisplayName::class)->forUser($escalation->submitter),

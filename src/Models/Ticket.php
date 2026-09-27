@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -224,6 +225,21 @@ class Ticket extends Model
             ->where('linked_ticket_id', $this->getKey())
             ->orderBy('id')
             ->value('panel');
+    }
+
+    /*
+     * Ids compare as strings, since a driver may read the same id back as a
+     * string in one place and an integer in another.
+     */
+    public function isSubmittedBy(Model|Authenticatable|int|string|null $user): bool
+    {
+        $id = match (true) {
+            $user instanceof Model => $user->getKey(),
+            $user instanceof Authenticatable => $user->getAuthIdentifier(),
+            default => $user,
+        };
+
+        return filled($id) && filled($this->submitter_id) && (string) $id === (string) $this->submitter_id;
     }
 
     public function requesterName(): ?string

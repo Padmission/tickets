@@ -33,7 +33,7 @@ class TicketUrlService
      */
     public function workPageUrl(Ticket $ticket, Model $recipient): ?string
     {
-        if ((string) $recipient->getKey() === (string) $ticket->submitter_id) {
+        if ($ticket->isSubmittedBy($recipient)) {
             return $ticket->isEscalation() ? $this->escalationUrl($ticket) : null;
         }
 

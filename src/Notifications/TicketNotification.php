@@ -389,7 +389,7 @@ class TicketNotification extends Notification
 
     protected function isSubmitter($notifiable): bool
     {
-        return (string) $notifiable->getKey() === (string) $this->ticket->submitter_id;
+        return $this->ticket->isSubmittedBy($notifiable);
     }
 
     protected function isOwnEscalation($notifiable): bool

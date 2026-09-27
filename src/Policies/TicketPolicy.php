@@ -18,7 +18,7 @@ class TicketPolicy
 
     public function view($user, Ticket $ticket): bool
     {
-        if ($user->id === $ticket->submitter_id) {
+        if ($ticket->isSubmittedBy($user)) {
             return true;
         }
 
@@ -32,7 +32,7 @@ class TicketPolicy
 
     public function update($user, Ticket $ticket): bool
     {
-        if ($user->id === $ticket->submitter_id) {
+        if ($ticket->isSubmittedBy($user)) {
             return false;
         }
 
@@ -41,7 +41,7 @@ class TicketPolicy
 
     public function manage($user, Ticket $ticket): bool
     {
-        if ($user->id === $ticket->submitter_id) {
+        if ($ticket->isSubmittedBy($user)) {
             return false;
         }
 
@@ -63,7 +63,7 @@ class TicketPolicy
             return false;
         }
 
-        if ($user->id === $ticket->submitter_id) {
+        if ($ticket->isSubmittedBy($user)) {
             return true;
         }
 
@@ -93,16 +93,26 @@ class TicketPolicy
 
     public function delete($user, Ticket $ticket): bool
     {
-        if ($user->id === $ticket->submitter_id) {
+        if ($ticket->isSubmittedBy($user)) {
             return true;
         }
 
         return $this->isSupporter($user, $ticket);
     }
 
+    /*
+     * A queue worker may not register the ticket's panel, so it finds the
+     * plugin rather than requiring it.
+     */
     private function isSupporter($user, Ticket $ticket): bool
     {
-        $supportersQuery = TicketPlugin::get($ticket->panel)->getAllSupportersQuery();
+        $viewer = ConversationViewer::current();
+
+        if ($ticket->panel === $viewer->panelId && (string) $viewer->userId === (string) $user->getAuthIdentifier()) {
+            return $viewer->isSupporter;
+        }
+
+        $supportersQuery = TicketPlugin::find($ticket->panel)?->getAllSupportersQuery();
 
         if ($supportersQuery === null) {
             return false;

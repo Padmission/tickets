@@ -191,7 +191,7 @@ class HandOverEscalationAction extends Action
     {
         $escalation = $this->getEscalation();
 
-        return $escalation !== null && (string) $escalation->submitter_id === (string) Filament::auth()->id();
+        return $escalation?->isSubmittedBy(Filament::auth()->id()) ?? false;
     }
 
     /**

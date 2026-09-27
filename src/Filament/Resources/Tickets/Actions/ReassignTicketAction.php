@@ -116,7 +116,7 @@ class ReassignTicketAction extends Action
         $key = 'padmission-tickets::tickets.actions.reassign.escalation_stays';
         $team = TicketPlugin::find($escalation->panel)?->getSupportTeamName();
 
-        if ($escalation->submitter_id === Filament::auth()->id()) {
+        if ($escalation->isSubmittedBy(Filament::auth()->id())) {
             return TicketPlugin::teamText("{$key}_you", $team);
         }
 
