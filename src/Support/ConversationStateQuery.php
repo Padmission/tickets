@@ -4,7 +4,6 @@ namespace Padmission\Tickets\Support;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Grammar;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -21,9 +20,9 @@ use Padmission\Tickets\TicketPlugin;
  */
 final class ConversationStateQuery
 {
-    public const WAITING_ON_CODES_RANKED_FIRST = ['you', 'needs_assignment'];
+    public const WAITING_ON_CODES_RANKED_FIRST = ['you', 'you_requester', 'you_owner', 'needs_assignment'];
 
-    public const WAITING_ON_CODES_RANKED_SECOND = ['you_on_hold', 'colleague', 'colleague_on_hold'];
+    public const WAITING_ON_CODES_RANKED_SECOND = ['you_on_hold', 'colleague', 'colleague_on_hold', 'owner_colleague'];
 
     protected Ticket $ticket;
 
@@ -76,6 +75,7 @@ final class ConversationStateQuery
             'conversation_is_new' => $this->isNew(),
             'conversation_owner_id' => $this->subquery($this->escalationQuery()->select('cs_e.submitter_id')),
             'conversation_escalation_open' => $this->sql('case when %s then 1 else 0 end', $this->escalationExists(fn (QueryBuilder $query) => $query->whereNull('cs_e.closed_at'))),
+            'conversation_is_escalation' => $this->sql('case when %s or %s then 1 else 0 end', $this->originalsExist(), $this->originalAddedExists()),
         ];
     }
 
@@ -188,17 +188,17 @@ final class ConversationStateQuery
         $userTurn = $this->sql('%s = %s', $this->column('turn'), $this->literal(Turn::User->value));
 
         if (! $this->viewer->isSupporter) {
-            return [[null, [[$userTurn, 'you'], [null, 'support']]]];
+            return [[null, [[$userTurn, 'you_requester'], [null, 'support']]]];
         }
 
         $onHold = $this->onHold();
 
         $groups = [[$this->inCurrentPanel(), [
-            [$this->sql('%s and %s', $userTurn, $this->submittedByViewer()), 'you'],
+            [$this->sql('%s and %s', $userTurn, $this->submittedByViewer()), 'you_requester'],
             [$userTurn, $this->viewer->receivesEscalations ? 'contact' : 'requester'],
             [$this->sql('%s and %s', $this->mine(), $onHold), 'you_on_hold'],
             [$this->mine(), 'you'],
-            [$this->sql('(%s is null or not %s)', $this->column('assignee_id'), $this->assigneeInPool()), 'needs_assignment'],
+            [$this->sql('(%s is null or not (%s))', $this->column('assignee_id'), $this->assigneeInPool()), 'needs_assignment'],
             [$onHold, 'colleague_on_hold'],
             [null, 'colleague'],
         ]]];
@@ -206,8 +206,8 @@ final class ConversationStateQuery
         if ($this->viewer->parentPanelIds !== []) {
             $groups[] = [$this->escalationFromCurrentPanel(), [
                 [$this->sql('%s = %s', $this->column('turn'), $this->literal(Turn::Supporter->value)), 'team'],
-                [$this->submittedByViewer(), 'you'],
-                [null, 'colleague'],
+                [$this->submittedByViewer(), 'you_owner'],
+                [null, 'owner_colleague'],
             ]];
         }
 
@@ -303,30 +303,42 @@ final class ConversationStateQuery
      */
     protected function escalationFromCurrentPanel(): array
     {
-        $activities = (new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable();
+        return $this->sql(
+            '(%s in (%s) and (%s or (%s = %s and (%s or %s))))',
+            $this->column('panel'),
+            $this->bindings($this->viewer->parentPanelIds),
+            $this->originalsExist($this->viewer->panelId),
+            $this->column('source_panel'),
+            $this->binding($this->viewer->panelId),
+            $this->originalsExist(),
+            $this->originalAddedExists(),
+        );
+    }
 
-        $originals = fn (?string $panelId): QueryBuilder => $this->newQuery()
+    /**
+     * Deleted originals still count, as in Ticket::isEscalation().
+     *
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    protected function originalsExist(?string $panelId = null): array
+    {
+        return $this->sql('exists %s', $this->subquery($this->newQuery()
             ->from($this->ticket->getTable(), 'cs_c')
             ->selectRaw('1')
             ->whereColumn('cs_c.linked_ticket_id', $this->ticket->getQualifiedKeyName())
-            ->when($panelId !== null, fn (QueryBuilder $query) => $query->where('cs_c.panel', $panelId));
+            ->when($panelId !== null, fn (QueryBuilder $query) => $query->where('cs_c.panel', $panelId))));
+    }
 
-        $originalAdded = $this->newQuery()
-            ->from($activities, 'cs_o')
+    /**
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    protected function originalAddedExists(): array
+    {
+        return $this->sql('exists %s', $this->subquery($this->newQuery()
+            ->from((new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable(), 'cs_o')
             ->selectRaw('1')
             ->whereColumn('cs_o.ticket_id', $this->ticket->getQualifiedKeyName())
-            ->where('cs_o.type', ActivityType::OriginalAdded->value);
-
-        return $this->sql(
-            '(%s in (%s) and (exists %s or (%s = %s and (exists %s or exists %s))))',
-            $this->column('panel'),
-            $this->bindings($this->viewer->parentPanelIds),
-            $this->subquery($originals($this->viewer->panelId)),
-            $this->column('source_panel'),
-            $this->binding($this->viewer->panelId),
-            $this->subquery($originals(null)),
-            $this->subquery($originalAdded),
-        );
+            ->where('cs_o.type', ActivityType::OriginalAdded->value)));
     }
 
     /**
@@ -338,24 +350,18 @@ final class ConversationStateQuery
      */
     protected function assigneeInPool(): array
     {
-        $plugin = TicketPlugin::get($this->viewer->panelId);
-        $poolQuery = $plugin->getAllSupportersQuery();
-
-        if ($poolQuery === null) {
+        if ($this->viewer->supporterPool === []) {
             return $this->raw('(1 = 0)');
         }
 
-        /** @var Builder<Model> $pool */
-        $pool = app()->call($poolQuery);
-        $column = $plugin->getSupporterMatchColumn();
-        $pool->select($pool->qualifyColumn($column));
+        $userModel = TicketPlugin::resolveUserModelClass();
 
-        if ($column === $pool->getModel()->getKeyName()) {
-            return $this->sql('%s in %s', $this->column('assignee_id'), $this->subquery($pool->toBase()));
+        if ($this->viewer->supporterMatchColumn === (new $userModel)->getKeyName()) {
+            return $this->sql('%s in (%s)', $this->column('assignee_id'), $this->bindings($this->viewer->supporterPool));
         }
 
-        $assignee = TicketPlugin::resolveUserModelClass()::query();
-        $modifier = $plugin->getRelationshipScopeModifier();
+        $assignee = $userModel::query();
+        $modifier = TicketPlugin::get($this->viewer->panelId)->getRelationshipScopeModifier();
 
         if ($modifier) {
             app()->call($modifier, ['relation' => $assignee, 'model' => 'assignee']);
@@ -364,7 +370,7 @@ final class ConversationStateQuery
         $assignee
             ->selectRaw('1')
             ->whereColumn($assignee->getModel()->getQualifiedKeyName(), $this->ticket->qualifyColumn('assignee_id'))
-            ->whereIn($assignee->qualifyColumn($column), $pool);
+            ->whereIn($assignee->qualifyColumn($this->viewer->supporterMatchColumn), $this->viewer->supporterPool);
 
         return $this->sql('exists %s', $this->subquery($assignee->toBase()));
     }

@@ -26,6 +26,7 @@ final readonly class ConversationState
         public bool $isNew,
         public int|string|null $ownerId,
         public bool $escalationOpen,
+        public bool $isEscalation,
     ) {}
 
     public static function fromRow(Ticket $row): self
@@ -60,6 +61,7 @@ final readonly class ConversationState
             isNew: (bool) $row?->getAttribute('conversation_is_new'),
             ownerId: is_numeric($ownerId) ? (int) $ownerId : $ownerId,
             escalationOpen: (bool) $row?->getAttribute('conversation_escalation_open'),
+            isEscalation: (bool) $row?->getAttribute('conversation_is_escalation'),
         );
     }
 
@@ -67,17 +69,17 @@ final readonly class ConversationState
     {
         return match ($this->waitingOn) {
             null, 'closed' => null,
-            'you', 'you_on_hold' => __('padmission-tickets::tickets.resources.tickets.waiting_on.you'),
+            'you', 'you_on_hold', 'you_requester', 'you_owner' => __('padmission-tickets::tickets.resources.tickets.waiting_on.you'),
             'needs_assignment', 'requester', 'contact' => __("padmission-tickets::tickets.resources.tickets.waiting_on.{$this->waitingOn}"),
             'team' => $this->teamName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.team'),
             'support' => Turn::Supporter->getLabel(),
-            default => $this->colleagueName(),
+            default => $this->colleagueName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.colleague'),
         };
     }
 
     public function color(): string
     {
-        return in_array($this->waitingOn, ['you', 'needs_assignment'], true) ? 'warning' : 'gray';
+        return in_array($this->waitingOn, ['you', 'you_requester', 'you_owner', 'needs_assignment'], true) ? 'warning' : 'gray';
     }
 
     public function icon(): ?string
@@ -93,20 +95,18 @@ final readonly class ConversationState
     public function tooltip(): ?string
     {
         $requester = $this->ticket->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.requester');
+        $colleague = $this->colleagueName();
 
         return match ($this->waitingOn) {
             null, 'closed' => null,
             'support' => Turn::Supporter->getDescription(),
-            'you' => match (true) {
-                $this->isEscalationRow() => $this->teamHelp('you_to_team'),
-                $this->ticket->turn === Turn::User => Turn::User->getDescription(),
-                default => __(self::HELP.'.you', ['name' => $requester]),
-            },
-            'you_on_hold', 'needs_assignment', 'requester' => __(self::HELP.".{$this->waitingOn}", ['name' => $requester]),
-            'colleague_on_hold' => __(self::HELP.'.colleague_on_hold', ['name' => $requester, 'colleague' => $this->colleagueName()]),
-            'colleague' => $this->isEscalationRow()
-                ? TicketPlugin::teamText(self::HELP.'.owner_colleague', $this->teamName(), ['colleague' => $this->colleagueName()])
-                : __(self::HELP.'.colleague', ['name' => $requester, 'colleague' => $this->colleagueName()]),
+            'you_requester' => Turn::User->getDescription(),
+            'you_owner' => $this->teamName() === null
+                ? __(self::HELP.'.you_to_team_unnamed')
+                : __(self::HELP.'.you_to_team', ['team' => $this->teamName()]),
+            'you', 'you_on_hold', 'needs_assignment', 'requester' => __(self::HELP.".{$this->waitingOn}", ['name' => $requester]),
+            'colleague', 'colleague_on_hold' => __(self::HELP.".{$this->waitingOn}".($colleague === null ? '_unnamed' : ''), ['name' => $requester, 'colleague' => $colleague]),
+            'owner_colleague' => TicketPlugin::teamText(self::HELP.'.owner_colleague'.($colleague === null ? '_unnamed' : ''), $this->teamName(), ['colleague' => $colleague]),
             'contact' => $this->contactHelp($requester),
             'team' => $this->assigneeName() === null
                 ? TicketPlugin::teamText(self::HELP.'.team_unassigned', $this->teamName())
@@ -121,7 +121,7 @@ final readonly class ConversationState
 
         return match ($this->marker) {
             'escalated' => __(self::MARKER.'.escalated'),
-            'replied' => $this->ownerIsViewer()
+            'replied' => $this->ownerIsViewer() || $this->handlerName() === null
                 ? TicketPlugin::teamText(self::MARKER.'.replied', $team)
                 : TicketPlugin::teamText(self::MARKER.'.replied_to_other', $team, ['name' => $this->handlerName()]),
             'closed' => __(self::MARKER.'.closed'),
@@ -143,7 +143,11 @@ final readonly class ConversationState
             'escalated' => TicketPlugin::teamText(
                 self::MARKER_HELP.'.escalated_waiting_'
                     .($escalation?->turn === Turn::User ? 'owner' : 'team')
-                    .($this->ownerIsViewer() ? '_you' : ''),
+                    .match (true) {
+                        $this->ownerIsViewer() => '_you',
+                        $this->handlerName() === null => '_unnamed',
+                        default => '',
+                    },
                 $team,
                 ['handler' => $this->handlerName()],
             ),
@@ -183,20 +187,6 @@ final readonly class ConversationState
             : __(self::HELP.'.contact', ['name' => $name, 'organization' => $organization]);
     }
 
-    protected function teamHelp(string $key): string
-    {
-        $team = $this->teamName();
-
-        return $team === null
-            ? __(self::HELP.".{$key}_unnamed")
-            : __(self::HELP.".{$key}", ['team' => $team]);
-    }
-
-    protected function isEscalationRow(): bool
-    {
-        return $this->ticket->panel !== Filament::getCurrentOrDefaultPanel()->getId();
-    }
-
     protected function teamName(): ?string
     {
         return TicketPlugin::find($this->ticket->panel)?->getSupportTeamName();
@@ -208,7 +198,7 @@ final readonly class ConversationState
      */
     protected function colleagueName(): ?string
     {
-        return $this->isEscalationRow()
+        return $this->waitingOn === 'owner_colleague'
             ? $this->name($this->ticket->submitter)
             : $this->assigneeName();
     }

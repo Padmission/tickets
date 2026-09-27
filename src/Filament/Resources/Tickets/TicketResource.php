@@ -154,19 +154,9 @@ class TicketResource extends Resource
 
     public static function currentUserIsSupporter(int|string|null $userId): bool
     {
-        if ($userId === null) {
-            return false;
-        }
+        $viewer = ConversationViewer::current();
 
-        $supportersQuery = TicketPlugin::get()->getAllSupportersQuery();
-
-        if ($supportersQuery === null) {
-            return false;
-        }
-
-        return app()->call($supportersQuery)
-            ->whereKey($userId)
-            ->exists();
+        return $userId !== null && $viewer->userId == $userId && $viewer->isSupporter;
     }
 
     public static function getWidgets(): array
@@ -239,7 +229,7 @@ class TicketResource extends Resource
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->suffix(fn (Ticket $record): ?HtmlString => static::escalationMarker($record))
-                    ->description(fn (Ticket $record, ListTickets $livewire): ?string => static::listsEscalations($livewire)
+                    ->description(fn (Ticket $record): ?string => ConversationState::fromRow($record)->isEscalation
                         ? EscalationSummary::about($record)
                         : null)
                     // Numbers are not shown in the list, but they are in every email subject,
@@ -414,15 +404,6 @@ class TicketResource extends Resource
     public static function isEscalatedTab(ListTickets $livewire): bool
     {
         return str_contains((string) $livewire->activeTab, 'linked');
-    }
-
-    /*
-     * Every row in a panel that receives escalations is one, so each is named
-     * by the tickets it is about, as on the escalated tabs.
-     */
-    public static function listsEscalations(ListTickets $livewire): bool
-    {
-        return static::isEscalatedTab($livewire) || ConversationViewer::current()->receivesEscalations;
     }
 
     public static function submitterLabel(ListTickets $livewire): string

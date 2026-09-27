@@ -426,8 +426,11 @@ describe('Conversations in the list', function () {
         $escalation->update(['submitter_id' => $this->colleague->id]);
         $received = Livewire::test(ListTickets::class)->assertTableColumnStateSet('submitter.name', 'Maria Lopez', $escalation);
         $received->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Contact');
+        $neverEscalated = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test']);
+        $received = Livewire::test(ListTickets::class);
         expect(listCell($received, 'submitter.name', $escalation, 'label'))->toBe('Contact')
-            ->and(listCell($received, 'subject', $escalation, 'description'))->toStartWith('About ');
+            ->and(listCell($received, 'subject', $escalation, 'description'))->toStartWith('About ')
+            ->and(listCell($received, 'subject', $neverEscalated, 'description'))->toBe('');
     });
 
     it('explains who picks the assignee of an escalation', function () {
@@ -501,26 +504,49 @@ describe('Conversations in the list', function () {
     });
 });
 
-it('runs the same number of queries for a page of 5 rows as for 25', function (string $tab) {
+it('runs the same number of queries for a page of 5 rows as for 25', function (string $panel, string $tab) {
     (new TicketStatusSeeder)->run();
     TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
-    $me = $this->login();
-    $requesters = User::factory()->count(3)->create();
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    TicketPlugin::get('test2')->describeTicketOriginUsing(function (Ticket $ticket): ?string {
+        static $organizations = [];
 
-    $queries = function (int $rows) use ($me, $requesters, $tab): int {
+        return $organizations[$ticket->source_panel] ??= DB::table('users')->orderBy('id')->value('name');
+    });
+    $me = $this->login();
+    $colleague = User::factory()->create();
+
+    $queries = function (int $rows) use ($me, $colleague, $panel, $tab): int {
         for ($i = Ticket::query()->count() / 2; $i < $rows; $i++) {
-            $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $me->id, 'turn' => Turn::Supporter]);
-            $original = Ticket::factory()->open()->create(['panel' => 'test', 'submitter_id' => $requesters[$i % 3]->id, 'assignee_id' => $me->id, 'turn' => Turn::Supporter, 'linked_ticket_id' => $escalation->id]);
-            TicketActivity::factory()->create(['ticket_id' => $original->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::User, 'user_id' => $original->submitter_id]);
-            TicketActivity::factory()->create(['ticket_id' => $escalation->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::Supporter, 'user_id' => $requesters[0]->id]);
+            $requester = User::factory()->create();
+            $mine = $i % 3 === 0;
+            $escalation = Ticket::factory()->open()->create([
+                'panel' => 'test2',
+                'source_panel' => 'test',
+                'submitter_id' => $mine ? $me->id : $colleague->id,
+                'assignee_id' => $mine ? $me->id : $colleague->id,
+                'turn' => $i % 3 === 1 ? Turn::Supporter : Turn::User,
+            ]);
+            $original = Ticket::factory()->open()->create([
+                'panel' => 'test',
+                'submitter_id' => $requester->id,
+                'assignee_id' => $mine ? $me->id : $colleague->id,
+                'turn' => Turn::Supporter,
+                'linked_ticket_id' => $escalation->id,
+            ]);
+            TicketActivity::factory()->create(['ticket_id' => $original->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::User, 'user_id' => $requester->id]);
+            TicketActivity::factory()->create(['ticket_id' => $original->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::Supporter, 'user_id' => $original->assignee_id]);
+            TicketActivity::factory()->create(['ticket_id' => $escalation->id, 'type' => ActivityType::Message, 'sender' => $mine ? ActivitySender::Supporter : ActivitySender::User, 'user_id' => $escalation->submitter_id]);
         }
 
+        Filament::setCurrentPanel($panel);
         $component = Livewire::test(ListTickets::class, ['activeTab' => $tab])->set('tableRecordsPerPage', 25);
 
         DB::flushQueryLog();
         DB::enableQueryLog();
         $component->call('$refresh')->assertCountTableRecords($rows);
         DB::disableQueryLog();
+        Filament::setCurrentPanel('test');
 
         return count(DB::getQueryLog());
     };
@@ -528,4 +554,8 @@ it('runs the same number of queries for a page of 5 rows as for 25', function (s
     $five = $queries(5);
 
     expect($queries(25))->toBe($five);
-})->with(['all', 'linked']);
+})->with([
+    'all tickets' => ['test', 'all'],
+    'escalations' => ['test', 'linked'],
+    'received escalations' => ['test2', 'all'],
+]);
