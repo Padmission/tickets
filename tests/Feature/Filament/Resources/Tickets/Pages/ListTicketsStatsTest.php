@@ -1,9 +1,11 @@
 <?php
 
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
@@ -100,6 +102,27 @@ describe('Stat cards', function () {
         expect($orange)->toHaveCount(2)
             ->and(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all'])->instance()->getStats()[0]->getValue())->toBe(2)
             ->and(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'my'])->instance()->getStats()[0]->getValue())->toBe(1);
+    });
+
+    it('tells the cards to count again after a row action, such as Reassign, moves a ticket out of Needs You', function () {
+        $me = $this->login();
+        $colleague = User::factory()->create();
+        $ticket = Ticket::factory()->open()->create(['assignee_id' => $me->id, 'turn' => Turn::Supporter]);
+
+        $needsYou = Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all']);
+
+        expect($needsYou->instance()->getStats()[0]->getValue())->toBe(1);
+
+        Livewire::test(ListTickets::class)
+            ->callAction(TestAction::make(ReassignTicketAction::class)->table($ticket), ['assignee_id' => $colleague->id])
+            ->assertHasNoActionErrors()
+            ->assertDispatched('refresh-ticket-stats');
+
+        expect($ticket->refresh()->assignee_id)->toBe($colleague->id);
+
+        $needsYou->dispatch('refresh-ticket-stats');
+
+        expect($needsYou->html())->toMatch('/fi-wi-stats-overview-stat-value">\s*0\s*</');
     });
 
     it('explains Needs You without a team to pass replies on from in a panel that receives escalations', function () {

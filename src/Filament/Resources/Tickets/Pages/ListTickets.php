@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -27,6 +28,18 @@ class ListTickets extends ListRecords
     }
 
     protected static string $resource = TicketResource::class;
+
+    /*
+     * A row or bulk action can change who a ticket waits on, or remove it,
+     * which moves it between the cards above the list. They are separate
+     * components, so the table redrawing leaves them as they were.
+     */
+    protected function afterActionCalled(Action $action): void
+    {
+        parent::afterActionCalled($action);
+
+        $this->dispatch('refresh-ticket-stats');
+    }
 
     public function getHeaderWidgetsColumns(): int|array
     {

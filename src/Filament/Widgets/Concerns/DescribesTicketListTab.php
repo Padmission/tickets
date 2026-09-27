@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Widgets\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -17,6 +18,9 @@ trait DescribesTicketListTab
 {
     #[Reactive]
     public ?string $activeTab = null;
+
+    #[On('refresh-ticket-stats')]
+    public function refreshStats(): void {}
 
     /**
      * @return Builder<Ticket>|null
