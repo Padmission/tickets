@@ -1,4 +1,28 @@
-<div @class(['pad-ti-linked', 'pad-ti-linked--drawer' => $drawer])>
+{{--
+    Opens at the first message the viewer has not read, or the newest one, and
+    marks it for a moment, since that is what they came to read.
+--}}
+<div
+    @class(['pad-ti-linked', 'pad-ti-linked--drawer' => $drawer])
+    wire:key="pad-ti-linked-{{ $linked->getKey() }}"
+    x-data="{
+        reveal() {
+            const body = this.$refs.body
+            const target = body.querySelector('[data-pad-ti-first-unread]') ?? [...body.querySelectorAll('.pad-ti-transcript__messages > li')].pop()
+
+            if (! target) {
+                return
+            }
+
+            body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top - 8
+            target.classList.remove('pad-ti-transcript--highlight')
+            void target.offsetWidth
+            target.classList.add('pad-ti-transcript--highlight')
+        },
+    }"
+    x-init="$nextTick(() => reveal())"
+    x-on:pad-ti-linked-scroll.window="reveal()"
+>
     @if ($drawer)
         {{-- Pushes the page over so the drawer never covers the chat or its reply box. --}}
         <style>
@@ -44,12 +68,13 @@
         </nav>
     @endif
 
-    <div class="pad-ti-linked__body">
+    <div class="pad-ti-linked__body" x-ref="body">
         @include('padmission-tickets::filament.original-conversation', [
             'escalatedTicket' => $record,
             'originalTickets' => collect([$linked]),
             'activityService' => $activityService,
             'titleRow' => 'none',
+            'lastSeenId' => $lastSeenId,
         ])
     </div>
 </div>

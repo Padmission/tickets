@@ -123,8 +123,10 @@ return [
     ],
 
     'linked_view' => [
-        'show' => 'Show linked ticket',
-        'hide' => 'Hide linked ticket',
+        'show_escalation' => 'Show escalation',
+        'hide_escalation' => 'Hide escalation',
+        'show_originals' => '{1} Show original ticket|[2,*] Show original tickets',
+        'hide_originals' => '{1} Hide original ticket|[2,*] Hide original tickets',
         'read_only' => 'Read-only',
         'switch' => 'Original tickets',
         'open_escalation' => 'Open the escalation',
@@ -174,6 +176,12 @@ return [
     ],
 
     'ticket_number' => 'Ticket #:id',
+
+    'subheading' => [
+        'escalation' => 'Escalation · #:id',
+        'escalation_to' => 'Escalation to :team · #:id',
+        'original' => 'From :name · #:id',
+    ],
 
     'copilot' => [
         'title' => 'Support tickets',
@@ -230,6 +238,8 @@ return [
             'submitter' => 'Requested by',
             'handled_by' => 'Handled by',
             'the_requester' => 'the requester',
+            'relay_pending' => 'The team you escalated to replied · pass on to :name',
+            'relay_pending_to' => ':team replied · pass on to :name',
             'contact' => 'Contact',
             'new_message' => 'New',
             'new_message_help' => 'New message you haven\'t read',
@@ -372,11 +382,13 @@ return [
 
             'waiting_on_help' => [
                 'you' => 'You owe :name the next reply.',
+                'you_self' => 'You owe the next reply.',
                 'you_to_team' => 'You owe :team the next reply on this escalation.',
                 'you_to_team_unnamed' => 'You owe the team you escalated to the next reply on this escalation.',
                 'you_on_hold' => ':Name has your latest reply. You still owe the answer, which depends on the escalation.',
                 'colleague' => ':colleague owes :name the next reply.',
                 'colleague_unnamed' => 'A colleague owes :name the next reply.',
+                'colleague_self' => ':colleague owes the next reply.',
                 'colleague_on_hold' => ':Name has the latest reply from :colleague. The answer depends on the escalation.',
                 'colleague_on_hold_unnamed' => ':Name has your team\'s latest reply. The answer depends on the escalation.',
                 'owner_colleague' => ':colleague owes the team you escalated to the next reply on this escalation.',

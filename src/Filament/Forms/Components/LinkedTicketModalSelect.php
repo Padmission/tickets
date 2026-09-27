@@ -35,8 +35,12 @@ class LinkedTicketModalSelect extends ModalTableSelect
                 $plugin = TicketPlugin::get();
                 $origin = $plugin->describeTicketOrigin($record);
                 $requester = $record->submitter ? Filament::getUserName($record->submitter) : null;
-                $roles = $record->submitter ? UserDescription::render($plugin->describeUser($record->submitter, $record)) : null;
+                // The team an escalation was sent to needs the organization, not each person's roles there.
+                $roles = $record->submitter && ! $this->isEscalatedHere()
+                    ? UserDescription::render($plugin->describeUser($record->submitter, $record))
+                    : null;
                 $details = filled($origin) || filled($requester);
+                $relay = $this->relayPendingLabel($record, $requester);
 
                 return new HtmlString(Blade::render(<<<'BLADE'
                     <div class="ticket-card">
@@ -71,8 +75,14 @@ class LinkedTicketModalSelect extends ModalTableSelect
                                 @endif
                             </div>
                         @endif
+
+                        @if ($relay)
+                            <div class="ticket-card__relay">
+                                <x-filament::badge size="sm" color="warning">{{ $relay }}</x-filament::badge>
+                            </div>
+                        @endif
                     </div>
-                BLADE, compact('record', 'url', 'canViewTicket', 'details', 'origin', 'requester', 'roles')));
+                BLADE, compact('record', 'url', 'canViewTicket', 'details', 'origin', 'requester', 'roles', 'relay')));
             });
     }
 
@@ -81,11 +91,54 @@ class LinkedTicketModalSelect extends ModalTableSelect
      * was sent to reads it on this page, and the team that escalated it
      * answers its requester on the original, with the escalation beside it.
      */
+    protected function escalation(): ?Ticket
+    {
+        $record = isset($this->container) ? $this->getRecord() : null;
+
+        return $record instanceof Ticket ? $record : null;
+    }
+
+    protected function isEscalatedHere(): bool
+    {
+        return $this->escalation()?->isInCurrentPanel() === true;
+    }
+
+    /** @var array<int, int|string>|null */
+    protected ?array $relayPendingIds = null;
+
+    /*
+     * On the escalation's own page, the team that escalated it sees which
+     * requester still waits for the other team's reply to be passed on.
+     */
+    protected function relayPendingLabel(Ticket $original, ?string $requester): ?string
+    {
+        $escalation = $this->escalation();
+
+        if ($escalation === null || $escalation->isInCurrentPanel()) {
+            return null;
+        }
+
+        $this->relayPendingIds ??= TicketResource::getEloquentQuery()
+            ->withConversationState()
+            ->where('linked_ticket_id', $escalation->getKey())
+            ->get()
+            ->filter(fn (Ticket $row): bool => $row->getAttribute('conversation_marker') === 'replied')
+            ->modelKeys();
+
+        if (! in_array($original->getKey(), $this->relayPendingIds, true)) {
+            return null;
+        }
+
+        return TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.relay_pending', TicketPlugin::find($escalation->panel)?->getSupportTeamName(), [
+            'name' => $requester ?? __('padmission-tickets::tickets.resources.tickets.the_requester'),
+        ]);
+    }
+
     protected function originalUrl(Ticket $original): string
     {
-        $escalation = isset($this->container) ? $this->getRecord() : null;
+        $escalation = $this->escalation();
 
-        if ($escalation instanceof Ticket && $escalation->isInCurrentPanel()) {
+        if ($escalation?->isInCurrentPanel() === true) {
             return TicketResource::getUrl('view', ['record' => $escalation, 'linked' => $original->getKey()]);
         }
 

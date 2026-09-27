@@ -47,6 +47,8 @@ it('shows ticket status and priority', function () {
 });
 
 describe('Linked Tickets', function () {
+    beforeEach(fn () => (new TicketStatusSeeder)->run());
+
     it('shows CreateLinkedTicketAction when can create linked tickets', function () {
         (new TicketStatusSeeder)->run();
         TicketPlugin::get()->allowLinkedTicketsTo(['test']);
@@ -61,7 +63,7 @@ describe('Linked Tickets', function () {
     it('hides CreateLinkedTicketAction when cannot create linked tickets', function () {
         TicketPlugin::get()->allowLinkedTicketsTo([]);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertDontSee(__('padmission-tickets::tickets.actions.create_linked_ticket.label'))
@@ -71,7 +73,7 @@ describe('Linked Tickets', function () {
     it('hides linked tickets section when feature disabled', function () {
         TicketPlugin::get()->allowLinkedTicketsTo([]);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
@@ -80,7 +82,7 @@ describe('Linked Tickets', function () {
     it('shows linked tickets section when can create linked tickets', function () {
         TicketPlugin::get()->allowLinkedTicketsTo(['test']);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
     });
@@ -88,7 +90,7 @@ describe('Linked Tickets', function () {
     it('shows linked tickets section when other panel links to this', function () {
         TicketPlugin::get()->allowLinkedTicketsTo(['test']);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
@@ -107,7 +109,7 @@ describe('Linked Tickets', function () {
         Filament::setCurrentPanel('test');
         Filament::getCurrentPanel()->plugin($mockedPlugin);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
@@ -127,7 +129,7 @@ describe('Linked Tickets', function () {
         Filament::setCurrentPanel('test');
         Filament::getCurrentPanel()->plugin($mockedPlugin);
 
-        $ticket = Ticket::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
@@ -137,9 +139,9 @@ describe('Linked Tickets', function () {
     it('updates child linked tickets relationship via form', function () {
         TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
-        $parentTicket = Ticket::factory()->create();
-        $childTicket1 = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
-        $childTicket2 = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
+        $parentTicket = Ticket::factory()->open()->create();
+        $childTicket1 = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
+        $childTicket2 = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $parentTicket->id])
             ->assertFormFieldVisible('childTickets')

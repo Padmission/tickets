@@ -211,7 +211,36 @@
 }
 
 .pad-ti-escalation-status {
-	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 4) 0;
+	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 4) calc(var(--spacing) * 2);
+}
+
+/* Messages scrolled under the top edge fade out instead of showing a cut-off bubble. */
+.pad-ti-chat-wrapper {
+	mask-image: linear-gradient(to bottom, transparent 0, transparent calc(var(--spacing) * 3), #000 calc(var(--spacing) * 12));
+}
+
+.pad-ti-escalation-actions .fi-ac {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+
+	& > * {
+		width: 100%;
+	}
+}
+
+@keyframes pad-ti-highlight {
+	from {
+		box-shadow: 0 0 0 2px var(--primary-500);
+	}
+
+	to {
+		box-shadow: 0 0 0 2px transparent;
+	}
+}
+
+.pad-ti-transcript--highlight {
+	animation: pad-ti-highlight 2.5s ease-out;
 }
 
 .pad-ti-ticket-number {

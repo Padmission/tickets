@@ -20,6 +20,8 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
 use Padmission\Tickets\Policies\TicketPolicy;
+use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
@@ -261,14 +263,30 @@ it('shows the first of several roles and keeps the rest in a tooltip', function 
         ->assertSeeHtml('aria-label="Household Specialist, Inspector, Request Payments">+2</span>');
 });
 
-it('shows the ticket number once, as a small reference under the heading', function () {
+it('says under the heading whose ticket it is, or which team an escalation went to, with its number', function () {
     (new TicketStatusSeeder)->run();
     $this->login();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
 
-    $ticket = Ticket::factory()->open()->create();
+    $own = Ticket::factory()->open()->create(['submitter_id' => auth()->id()]);
+    [$escalation, $original] = contextEscalatedOriginal();
 
-    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertSeeHtml('<span class="pad-ti-ticket-number">Ticket #'.$ticket->id.'</span>');
+    Livewire::test(ViewTicket::class, ['record' => $own->id])
+        ->assertSeeHtml('<span class="pad-ti-ticket-number">Ticket #'.$own->id.'</span>');
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->assertSeeHtml('<span class="pad-ti-ticket-number">From Aisha Brooks · #'.$original->id.'</span>')
+        ->assertActionHasLabel('show-linked', 'Show escalation');
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->assertSeeHtml('<span class="pad-ti-ticket-number">Escalation to Platform Support · #'.$escalation->id.'</span>')
+        ->assertActionHasLabel('show-linked', 'Show original ticket');
+
+    Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->assertActionHasLabel('show-linked', 'Show original tickets');
 });
 
 describe('Escalation on the original\'s page', function () {
@@ -722,8 +740,125 @@ it('reads the page in a fixed number of queries whatever the number of originals
     $one = $count(1);
 
     expect($count(5))->toBe($one)
-        ->and($one)->toBeLessThanOrEqual($page === 'original' ? 27 : 14);
+        ->and($one)->toBeLessThanOrEqual($page === 'original' ? 27 : 15);
 })->with(['original', 'escalation']);
+
+describe('Page clarity', function () {
+    beforeEach(function () {
+        (new TicketStatusSeeder)->run();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    });
+
+    it('tells the chat why a closed ticket without messages is empty, and drops the Escalation card', function () {
+        $ticket = Ticket::factory()->create(['closed_at' => now()->subWeek(), 'linked_ticket_id' => null]);
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertSeeHtml('closed-empty-message="No messages. This ticket was closed 1 week ago, so replies are off."')
+            ->assertDontSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
+
+        $open = Ticket::factory()->open()->create();
+
+        Livewire::test(ViewTicket::class, ['record' => $open->id])
+            ->assertSeeHtml('closed-empty-message=""')
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
+    });
+
+    it('keeps the Escalation card on a closed ticket that was escalated', function () {
+        [$escalation, $original] = contextEscalatedOriginal();
+        $original->update(['closed_at' => now()]);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
+    });
+
+    it('names the escalation\'s handler in the pane, and says You to the viewer', function () {
+        [$escalation, $original] = contextEscalatedOriginal();
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->call('showLinked', $escalation->id)
+            ->assertSeeHtml('<dt>'.__('padmission-tickets::tickets.resources.tickets.handled_by').'</dt>')
+            ->assertSeeHtml('<dd>'."\n".'                            '.__('padmission-tickets::tickets.side_you'));
+    });
+
+    it('opens the pane at the first message the viewer has not read', function () {
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
+        $seen = contextMessage($escalation, ActivitySender::User, auth()->id());
+        resolve(TicketActivityService::class)->markAsSeen($escalation, auth()->user(), $seen->id);
+        $unread = contextMessage($escalation, ActivitySender::Supporter, null);
+
+        $html = Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertSet('linkedTicketId', $escalation->id)
+            ->html();
+
+        expect(preg_match_all('/<li[^>]*data-pad-ti-first-unread/', $html))->toBe(1)
+            ->and($html)->toContain('x-on:pad-ti-linked-scroll.window="reveal()"');
+    });
+
+    it('scrolls to the reply instead of repeating the escalation link while the pane shows it', function () {
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
+        contextMessage($escalation, ActivitySender::User, auth()->id());
+        contextMessage($escalation, ActivitySender::Supporter, null);
+        $link = 'href="'.e(ViewTicket::getUrl(['record' => $escalation, 'linked' => $original->id])).'"';
+
+        $open = Livewire::test(ViewTicket::class, ['record' => $original->id])->html();
+        $closed = Livewire::test(ViewTicket::class, ['record' => $original->id])->call('closeLinked')->html();
+
+        expect($open)->toContain('x-on:click="$dispatch(\'pad-ti-linked-scroll\')"')
+            ->and(substr_count($open, $link))->toBe(1)
+            ->and($closed)->toContain('wire:click="showLinked('.$escalation->id.')"')
+            ->and(substr_count($closed, $link))->toBe(2);
+    });
+
+    it('explains Handled by and Contact only on the escalation pages they appear on', function () {
+        TicketPlugin::get()->fieldHelp(TicketPlugin::FIELD_HELP_SUMMARY);
+        [$escalation, $original] = contextEscalatedOriginal();
+        $help = TestAction::make('field-help')->schemaComponent('fieldHelp', schema: 'form');
+        $handledBy = 'The person on your team who talks with Platform Support here.';
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->call('closeLinked')
+            ->mountAction($help)
+            ->assertMountedActionModalDontSee($handledBy)
+            ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.resources.tickets.hints.contact'));
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->mountAction($help)
+            ->assertMountedActionModalSee($handledBy);
+    });
+
+    it('marks each original whose reply from the other team still has to be passed on', function () {
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::User]);
+        $other = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => User::factory()->create(['name' => 'Felix Moreno'])->id]);
+        contextMessage($escalation, ActivitySender::User, auth()->id());
+        contextMessage($escalation, ActivitySender::Supporter, null);
+        contextMessage($other, ActivitySender::Supporter, auth()->id());
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSee('Platform Support replied · pass on to Aisha Brooks')
+            ->assertDontSee('pass on to Felix Moreno');
+    });
+
+    it('says You for the viewer in the sidebar', function () {
+        $ticket = Ticket::factory()->open()->create(['submitter_id' => auth()->id(), 'assignee_id' => auth()->id()]);
+
+        $html = Livewire::test(ViewTicket::class, ['record' => $ticket->id])->html();
+
+        expect(substr_count($html, '                '.__('padmission-tickets::tickets.side_you')."\n"))->toBe(2);
+    });
+});
+
+it('never tells the viewer they owe themselves a reply, nor that someone owes it to themselves', function () {
+    (new TicketStatusSeeder)->run();
+    $viewer = $this->login();
+    $colleague = User::factory()->create(['name' => 'Mike Shore']);
+
+    $own = Ticket::factory()->open()->create(['submitter_id' => $viewer->id, 'assignee_id' => $viewer->id, 'turn' => Turn::Supporter]);
+    $theirs = Ticket::factory()->open()->create(['submitter_id' => $colleague->id, 'assignee_id' => $colleague->id, 'turn' => Turn::Supporter]);
+
+    expect(ConversationState::for($own)->tooltip())->toBe('You owe the next reply.')
+        ->and(ConversationState::for($theirs)->tooltip())->toBe('Mike Shore owes the next reply.');
+});
 
 class OnlyOwnEscalationsPolicy extends TestTicketPolicy
 {

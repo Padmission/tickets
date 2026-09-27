@@ -8,16 +8,28 @@
 
     $plugin = TicketPlugin::get();
     $titleRow ??= 'full';
+    $lastSeenId ??= null;
     $viewer = Filament::auth()->user();
 @endphp
 
 <div class="pad-ti-transcript">
     @foreach ($originalTickets as $ticket)
         @php
-            $submitterName = $ticket->submitter
-                ? Filament::getUserName($ticket->submitter)
-                : $ticket->submitter_data?->name;
-            $submitterDescription = UserDescription::render($plugin->describeUser($ticket->submitter, $ticket));
+            $submitterIsViewer = filled($ticket->submitter_id) && $ticket->submitter_id === $viewer?->getAuthIdentifier();
+            $submitterName = match (true) {
+                $submitterIsViewer => __('padmission-tickets::tickets.side_you'),
+                $ticket->submitter !== null => Filament::getUserName($ticket->submitter),
+                default => $ticket->submitter_data?->name,
+            };
+            // Roles help to place a stranger; beside the chat they only crowd the header.
+            $submitterDescription = $submitterIsViewer || $titleRow === 'none'
+                ? null
+                : UserDescription::render($plugin->describeUser($ticket->submitter, $ticket));
+            $submitterLabel = match (true) {
+                ! $ticket->isEscalation() => __('padmission-tickets::tickets.actions.view_original_conversation.requested_by'),
+                $ticket->isInCurrentPanel() => __('padmission-tickets::tickets.resources.tickets.contact'),
+                default => __('padmission-tickets::tickets.resources.tickets.handled_by'),
+            };
             $assignee = $ticket->isNotInCurrentPanel() ? TicketAssignee::for($ticket) : $ticket->assignee;
             $assigneeName = match (true) {
                 $assignee !== null => Filament::getUserName($assignee),
@@ -44,7 +56,7 @@
 
                 <dl class="pad-ti-transcript__people">
                     <div>
-                        <dt>{{ __('padmission-tickets::tickets.actions.view_original_conversation.requested_by') }}</dt>
+                        <dt>{{ $submitterLabel }}</dt>
                         <dd>
                             {{ $submitterName ?? '-' }}
                             @if (filled($submitterDescription))
@@ -60,21 +72,26 @@
                 </dl>
             </header>
 
+            @php
+                $activities = $activityService->getActivities($ticket, user: $viewer);
+                $firstUnreadId = $lastSeenId === null ? null : $activities->first(fn ($activity): bool => $activity->getKey() > $lastSeenId)?->getKey();
+            @endphp
+
             <ol class="pad-ti-transcript__messages">
-                @forelse ($activityService->getActivities($ticket, user: $viewer) as $activity)
+                @forelse ($activities as $activity)
                     @if ($activity->sender === ActivitySender::System || ! in_array($activity->type, [ActivityType::Message, ActivityType::InternalMessage]))
-                        <li class="pad-ti-transcript__event">
+                        <li class="pad-ti-transcript__event" @if ($activity->getKey() === $firstUnreadId) data-pad-ti-first-unread @endif>
                             {{ $activity->plainTextContent() }}
-                            · {{ $activity->created_at?->format($plugin->getDateTimeDisplayFormat()) }}
+                            · {{ $activity->created_at?->format(TicketPlugin::MESSAGE_TIME_FORMAT) }}
                         </li>
                     @else
                         <li @class([
                             'pad-ti-transcript__message',
                             'pad-ti-transcript__message--internal' => $activity->type === ActivityType::InternalMessage,
-                        ])>
+                        ]) @if ($activity->getKey() === $firstUnreadId) data-pad-ti-first-unread @endif>
                             <div class="pad-ti-transcript__meta">
                                 <strong>{{ $activity->senderName }}</strong>
-                                · {{ $activity->created_at?->format($plugin->getDateTimeDisplayFormat()) }}
+                                · {{ $activity->created_at?->format(TicketPlugin::MESSAGE_TIME_FORMAT) }}
                                 @if ($activity->type === ActivityType::InternalMessage)
                                     · {{ __('padmission-tickets::tickets.actions.view_original_conversation.internal_note') }}
                                 @endif

@@ -11,7 +11,8 @@
             @php
                 $avatarUrl = Filament::getUserAvatarUrl($ticket->submitter);
                 $name = Filament::getUserName($ticket->submitter);
-                $description = UserDescription::render(TicketPlugin::get()->describeUser($ticket->submitter, $ticket));
+                $isViewer = $ticket->submitter_id === Filament::auth()->id();
+                $description = $isViewer ? null : UserDescription::render(TicketPlugin::get()->describeUser($ticket->submitter, $ticket));
             @endphp
 
             <x-filament::avatar
@@ -21,7 +22,7 @@
             />
 
             <div>
-                {{ $name }}
+                {{ $isViewer ? __('padmission-tickets::tickets.side_you') : $name }}
 
                 @if (filled($description))
                     <div class="avatar-entry__description">

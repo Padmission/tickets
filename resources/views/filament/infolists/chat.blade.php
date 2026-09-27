@@ -46,6 +46,7 @@
         polling-interval="10000"
         has-elevated-rights="{{ $isSubmitter ? 'false' : 'true' }}"
         placeholder="{{ $placeholder ?? __('padmission-tickets::chat.chat.placeholder') }}"
+        closed-empty-message="{{ $closedEmptyMessage ?? '' }}"
         can-reply="{{ $canReply ? 'true' : 'false' }}"
         keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
     ></chat-component>

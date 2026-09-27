@@ -19,6 +19,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
@@ -96,8 +97,21 @@ class ViewTicket extends EditRecord
         $this->showLinked($requested);
     }
 
+    /*
+     * Where the viewer stopped reading the pane's ticket, taken before it is
+     * marked read, so the pane can open at the first message they missed.
+     */
+    protected ?int $linkedLastSeenId = null;
+
     public function rendering(): void
     {
+        $linked = $this->linkedTicket();
+        $viewer = Filament::auth()->user();
+
+        $this->linkedLastSeenId = $linked === null || $viewer === null
+            ? null
+            : resolve(TicketActivityService::class)->getUserState($linked, $viewer)?->last_seen_activity_id;
+
         $this->markLinkedEscalationSeen();
     }
 
@@ -332,10 +346,18 @@ class ViewTicket extends EditRecord
      */
     public function getSubheading(): string|Htmlable|null
     {
-        return new HtmlString(sprintf(
-            '<span class="pad-ti-ticket-number">%s</span>',
-            e(__('padmission-tickets::tickets.ticket_number', ['id' => $this->getRecord()->getKey()])),
-        ));
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+        $id = $record->getKey();
+        $requester = $record->requesterName();
+
+        $text = match (true) {
+            $record->isEscalation() => TicketPlugin::teamText('padmission-tickets::tickets.subheading.escalation', TicketPlugin::find($record->panel)?->getSupportTeamName(), ['id' => $id]),
+            filled($requester) && Filament::auth()->id() !== $record->submitter_id => __('padmission-tickets::tickets.subheading.original', ['name' => $requester, 'id' => $id]),
+            default => __('padmission-tickets::tickets.ticket_number', ['id' => $id]),
+        };
+
+        return new HtmlString(sprintf('<span class="pad-ti-ticket-number">%s</span>', e($text)));
     }
 
     protected function getHeaderActions(): array
@@ -433,7 +455,12 @@ class ViewTicket extends EditRecord
 
                         ViewEntry::make('chat')
                             ->view('padmission-tickets::filament.infolists.chat')
-                            ->viewData(fn (): array => ['placeholder' => $this->chatPlaceholder()]),
+                            ->viewData(fn (Ticket $record): array => [
+                                'placeholder' => $this->chatPlaceholder(),
+                                'closedEmptyMessage' => $record->isClosed
+                                    ? __('padmission-tickets::chat.chat.closed_empty', ['time' => $record->closed_at?->diffForHumans()])
+                                    : null,
+                            ]),
                     ]),
 
                 // Rendered after the chat and moved into place with CSS order, so opening
@@ -463,7 +490,10 @@ class ViewTicket extends EditRecord
                                 ->slideOver()
                                 ->modalWidth(Width::Medium)
                                 ->modalHeading(__('padmission-tickets::tickets.resources.tickets.field_help.heading'))
-                                ->modalContent(view('padmission-tickets::filament.field-help'))
+                                ->modalContent(fn (Ticket $record): ViewContract => view('padmission-tickets::filament.field-help', [
+                                    'handledBy' => $this->isEscalatedElsewhere($record),
+                                    'contact' => $this->isEscalatedHere($record),
+                                ]))
                                 ->modalSubmitAction(false)
                                 ->modalCancelActionLabel(__('padmission-tickets::tickets.actions.view_original_conversation.close')),
                         ])
@@ -561,7 +591,7 @@ class ViewTicket extends EditRecord
                             ->placeholder(__('padmission-tickets::tickets.resources.tickets.no_messages'))
                             ->dateTime()
                             ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
-                            ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
+                            ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::MESSAGE_TIME_FORMAT))
                             ->columnSpanFull(),
 
                         TextEntry::make('closed_at')
@@ -569,7 +599,7 @@ class ViewTicket extends EditRecord
                             ->visible(fn (Ticket $record) => $record->isClosed)
                             ->dateTime()
                             ->formatStateUsing(fn ($state) => $state?->diffForHumans())
-                            ->tooltip(fn ($state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
+                            ->tooltip(fn ($state) => $state?->format(TicketPlugin::MESSAGE_TIME_FORMAT))
                             ->columnSpanFull(),
 
                     ]),
@@ -582,7 +612,10 @@ class ViewTicket extends EditRecord
                             )
                             : __('padmission-tickets::tickets.resources.tickets.linked_tickets'))
                         ->description(fn (Ticket $record): ?string => $this->describeEscalation($record))
-                        ->visible(fn (Ticket $record): bool => TicketPlugin::get($record->panel)->hasLinkedTickets() && $this->canSeeEscalation($record))
+                        // A closed ticket that was never escalated has nothing to say or offer here.
+                        ->visible(fn (Ticket $record): bool => TicketPlugin::get($record->panel)->hasLinkedTickets()
+                            && $this->canSeeEscalation($record)
+                            && ! ($record->isClosed && blank($record->linked_ticket_id) && ! $record->isEscalation()))
                         ->compact()
                         ->schema([
                             Text::make(fn (Ticket $record): string => $this->describeMembership($record))
@@ -593,13 +626,15 @@ class ViewTicket extends EditRecord
                                 AddToEscalationAction::make()->authorize(static::canEdit(...)),
                                 Action::make('open-escalation')
                                     ->label(__('padmission-tickets::tickets.linked_view.open_escalation'))
+                                    ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                                     ->color('gray')
                                     ->url(fn (Ticket $record): ?string => $this->openEscalationUrl($record))
                                     ->visible(fn (Ticket $record): bool => $this->escalationOf($record)?->isClosed === false
                                         && $this->openEscalationUrl($record) !== null),
-                                RemoveFromEscalationAction::make()->authorize(static::canEdit(...)),
+                                RemoveFromEscalationAction::make()->button()->authorize(static::canEdit(...)),
                             ])
                                 ->key('escalationActions')
+                                ->extraAttributes(['class' => 'pad-ti-escalation-actions'])
                                 ->fullWidth(),
 
                             Text::make(fn (): string => TicketPlugin::teamText(
@@ -652,6 +687,7 @@ class ViewTicket extends EditRecord
             'drawer' => $drawer,
             'headings' => $this->linkedTickets()->mapWithKeys(fn (Ticket $ticket): array => [$ticket->getKey() => $this->linkedTicketHeading($ticket)]),
             'headerLink' => $linked === null ? null : $this->linkedHeaderLink($linked),
+            'lastSeenId' => $this->linkedLastSeenId,
             'activityService' => resolve(TicketActivityService::class),
         ];
     }
@@ -686,7 +722,11 @@ class ViewTicket extends EditRecord
 
     protected function showLinkedLabel(): string
     {
-        return __('padmission-tickets::tickets.linked_view.'.($this->linkedTicketId === null ? 'show' : 'hide'));
+        $key = 'padmission-tickets::tickets.linked_view.'.($this->linkedTicketId === null ? 'show' : 'hide');
+
+        return $this->isShowingOriginals()
+            ? trans_choice("{$key}_originals", $this->linkedTickets()->count())
+            : __("{$key}_escalation");
     }
 
     /*

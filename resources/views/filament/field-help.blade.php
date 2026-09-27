@@ -9,12 +9,12 @@
         $label('status') => $hint('status'),
         $label('priority') => $hint('priority'),
         $label('submitter') => $hint('submitter'),
-        ...($plugin->getLinkedTicketParentPanels() === [] ? [] : [
+        ...(($handledBy ?? false) ? [
             $label('handled_by') => TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.handled_by', $plugin->getEscalationTargetName()),
-        ]),
-        ...($plugin->getLinkedTicketChildPanels() === [] ? [] : [
+        ] : []),
+        ...(($contact ?? false) ? [
             $label('contact') => $hint('contact'),
-        ]),
+        ] : []),
         $label('assignee') => $hint('assignee'),
         $label('turn') => $hint('turn'),
         $label('disposition') => $hint('disposition'),

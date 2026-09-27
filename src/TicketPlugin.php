@@ -37,6 +37,11 @@ class TicketPlugin implements Plugin
 
     public const KEEP_WAITING_CHECKBOX = 'checkbox';
 
+    /*
+     * How the chat and everything beside it show a message's time.
+     */
+    public const MESSAGE_TIME_FORMAT = 'M j, g:i A';
+
     public const LINKED_VIEW_MODAL = 'modal';
 
     public const LINKED_VIEW_BESIDE = 'beside';

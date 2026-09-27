@@ -21,6 +21,7 @@ return [
         'send' => 'Send',
         'placeholder' => 'Start typing …',
         'placeholder_reply_to' => 'Reply to :name…',
+        'closed_empty' => 'No messages. This ticket was closed :time, so replies are off.',
         'new_messages' => 'New messages',
         'add_attachments' => 'Add attachments',
         'bold' => 'Bold',

@@ -104,8 +104,17 @@ final readonly class ConversationState
             'you_owner' => $this->teamName() === null
                 ? __(self::HELP.'.you_to_team_unnamed')
                 : __(self::HELP.'.you_to_team', ['team' => $this->teamName()]),
-            'you', 'you_on_hold', 'needs_assignment', 'requester' => __(self::HELP.".{$this->waitingOn}", ['name' => $requester]),
-            'colleague', 'colleague_on_hold' => __(self::HELP.".{$this->waitingOn}".($colleague === null ? '_unnamed' : ''), ['name' => $requester, 'colleague' => $colleague]),
+            // Nobody is told they owe themselves a reply.
+            'you' => $this->requesterIsViewer()
+                ? __(self::HELP.'.you_self')
+                : __(self::HELP.'.you', ['name' => $requester]),
+            'you_on_hold', 'needs_assignment', 'requester' => __(self::HELP.".{$this->waitingOn}", ['name' => $requester]),
+            'colleague' => match (true) {
+                $colleague === null => __(self::HELP.'.colleague_unnamed', ['name' => $requester]),
+                $this->requesterIsAssignee() => __(self::HELP.'.colleague_self', ['colleague' => $colleague]),
+                default => __(self::HELP.'.colleague', ['name' => $requester, 'colleague' => $colleague]),
+            },
+            'colleague_on_hold' => __(self::HELP.'.colleague_on_hold'.($colleague === null ? '_unnamed' : ''), ['name' => $requester, 'colleague' => $colleague]),
             'owner_colleague' => TicketPlugin::teamText(self::HELP.'.owner_colleague'.($colleague === null ? '_unnamed' : ''), $this->teamName(), ['colleague' => $colleague]),
             'contact' => $this->contactHelp($requester),
             'team' => $this->assigneeName() === null
@@ -157,6 +166,16 @@ final readonly class ConversationState
             'closed' => __(self::MARKER_HELP.'.closed', ['time' => $escalation?->closed_at?->diffForHumans()]),
             default => null,
         };
+    }
+
+    protected function requesterIsViewer(): bool
+    {
+        return filled($this->ticket->submitter_id) && $this->ticket->submitter_id == Filament::auth()->id();
+    }
+
+    protected function requesterIsAssignee(): bool
+    {
+        return filled($this->ticket->submitter_id) && $this->ticket->submitter_id == $this->ticket->assignee_id;
     }
 
     public function ownerIsViewer(): bool

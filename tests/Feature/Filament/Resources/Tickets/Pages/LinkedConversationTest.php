@@ -69,10 +69,10 @@ describe('on an escalation sent to this panel', function () {
             ->assertSee(__('padmission-tickets::tickets.linked_view.read_only'))
             ->assertDontSeeHtml('pad-ti-linked__header-link')
             ->assertDontSeeHtml('pad-ti-transcript__title')
-            ->assertActionHasLabel('show-linked', 'Hide linked ticket')
+            ->assertActionHasLabel('show-linked', 'Hide original ticket')
             ->callAction('show-linked')
             ->assertSet('linkedTicketId', null)
-            ->assertActionHasLabel('show-linked', 'Show linked ticket');
+            ->assertActionHasLabel('show-linked', 'Show original ticket');
     });
 
     it('switches between several originals and closes again', function () {
@@ -189,7 +189,7 @@ describe('on the side that escalated', function () {
             ->assertSee('Escalation to Platform Support')
             ->assertSeeHtml('href="'.e(ViewTicket::getUrl(['record' => $escalation, 'linked' => $original->id])).'"')
             ->assertSee(__('padmission-tickets::tickets.linked_view.open_escalation'))
-            ->assertActionHasLabel('show-linked', 'Hide linked ticket');
+            ->assertActionHasLabel('show-linked', 'Hide escalation');
     });
 
     it('shows its originals on the escalation page, each linking to its own page', function () {
@@ -204,7 +204,7 @@ describe('on the side that escalated', function () {
             ->assertSet('linkedTicketId', null)
             ->assertSee('Conversation with Platform Support')
             ->assertSee("About Aisha Brooks's ticket. Aisha Brooks never sees this conversation.")
-            ->assertActionHasLabel('show-linked', 'Show linked ticket')
+            ->assertActionHasLabel('show-linked', 'Show original ticket')
             ->callAction('show-linked')
             ->assertSet('linkedTicketId', $original->id)
             ->assertSee(['The rent is too high', "Aisha Brooks's original ticket"])

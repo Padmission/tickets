@@ -193,6 +193,17 @@ customElements.define(
 				}
 
 				if (messages.length === 0) {
+					if (ticket.is_closed && this.closedEmptyMessage && this.messages.length === 0) {
+						this.renderMessages([
+							{
+								id: "closed-empty",
+								content: this.closedEmptyMessage,
+								side: "system",
+								created_at: null,
+							},
+						]);
+					}
+
 					return;
 				}
 
@@ -260,9 +271,13 @@ customElements.define(
 
 				const messageDate = new Date(message.created_at);
 				const hasDateChanged =
-					lastDate === true || formatter(lastDate) !== formatter(messageDate);
-				const absoluteDate = messageDate.toLocaleTimeString([], {
-					hour: "2-digit",
+					Boolean(message.created_at) &&
+					(lastDate === true || formatter(lastDate) !== formatter(messageDate));
+				// Same as the ticket page's MESSAGE_TIME_FORMAT, e.g. "Sep 25, 7:15 AM".
+				const absoluteDate = messageDate.toLocaleString([], {
+					month: "short",
+					day: "numeric",
+					hour: "numeric",
 					minute: "2-digit",
 				});
 

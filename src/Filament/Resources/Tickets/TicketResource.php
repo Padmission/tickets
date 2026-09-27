@@ -291,7 +291,7 @@ class TicketResource extends Resource
                         'primary',
                         __('padmission-tickets::tickets.resources.tickets.new_message_help'),
                     ) : null)
-                    ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::get()->getDateTimeDisplayFormat()))
+                    ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::MESSAGE_TIME_FORMAT))
                     ->sortable(),
             ])
             ->filters([

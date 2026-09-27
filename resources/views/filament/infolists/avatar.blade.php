@@ -1,6 +1,7 @@
 @php
     use Filament\Facades\Filament;
     use Padmission\Tickets\Filament\Infolists\UserDescription;
+    use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
     use Padmission\Tickets\TicketPlugin;
 
     $user = $getState();
@@ -9,7 +10,8 @@
     if ($user) {
         $avatarUrl = Filament::getUserAvatarUrl($user);
         $name = Filament::getUserName($user);
-        $description = UserDescription::render(TicketPlugin::get()->describeUser($user, $getRecord()));
+        $isViewer = TicketResource::isAssignedToCurrentUser($record);
+        $description = $isViewer ? null : UserDescription::render(TicketPlugin::get()->describeUser($user, $getRecord()));
     }
 @endphp
 <x-dynamic-component :component="$getEntryWrapperView()" :entry="$entry">
@@ -22,7 +24,7 @@
             />
 
             <div>
-                {{ $name }}
+                {{ $isViewer ? __('padmission-tickets::tickets.side_you') : $name }}
 
                 @if (filled($description))
                     <div class="avatar-entry__description">
