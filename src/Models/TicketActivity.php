@@ -116,6 +116,9 @@ class TicketActivity extends Model
         return Attribute::get(fn ($value) => match ($this->type) {
             ActivityType::Opened => __('padmission-tickets::activities.opened'),
             ActivityType::Closed => __('padmission-tickets::activities.closed'),
+            ActivityType::Reopened => blank($this->user_id)
+                ? __('padmission-tickets::activities.reopened_unknown')
+                : __('padmission-tickets::activities.reopened', ['name' => $this->actorName()]),
             ActivityType::AssigneeChanged => filled($this->activityData('to'))
                 ? __('padmission-tickets::activities.assigned_to', ['name' => resolve(GetUserDisplayName::class)($this->activityData('to'))])
                 : __('padmission-tickets::activities.unassigned'),

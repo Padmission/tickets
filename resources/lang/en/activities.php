@@ -3,6 +3,8 @@
 return [
     'opened' => 'Conversation started',
     'closed' => 'Conversation closed',
+    'reopened' => 'Conversation reopened by :name',
+    'reopened_unknown' => 'Conversation reopened',
     'status_changed' => 'Status changed from :from to :to',
     'priority_changed' => 'Priority changed from :from to :to',
     'turn_changed' => '"Waiting on" changed from :from to :to',

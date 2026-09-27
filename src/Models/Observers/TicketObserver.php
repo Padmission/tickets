@@ -53,6 +53,21 @@ class TicketObserver
         if ($ticket->wasChanged('status_id') && ! $ticket->isExplicitCloseCall()) {
             $this->handleStatusClosureActivitiesAndEvents($ticket);
         }
+
+        $this->handleReopening($ticket);
+    }
+
+    /*
+     * Whatever reopened it, both sides see that the conversation carries on,
+     * or the last thing either reads is that it closed.
+     */
+    protected function handleReopening(Ticket $ticket): void
+    {
+        if (! $ticket->wasChanged('closed_at') || $ticket->closed_at !== null || $ticket->getOriginal('closed_at') === null) {
+            return;
+        }
+
+        $ticket->addTicketActivity(ActivityType::Reopened, ActivitySender::System, auth()->id());
     }
 
     protected function handleStatusTransition(Ticket $ticket): void

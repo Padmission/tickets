@@ -12,6 +12,7 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -236,6 +237,37 @@ describe('Closed status of the ticket\'s own panel and tenant', function () {
             ->closed_at->toBeNull()
             ->closed_by->toBeNull();
     });
+
+    it('tells both sides the conversation was reopened, whatever reopened it', function (bool $byStatus) {
+        (new TicketStatusSeeder)->run();
+
+        $statuses = TicketStatus::withoutGlobalScopes()->where('panel', 'test2')->orderBy('order')->get();
+        $requester = User::factory()->create();
+        $supporter = User::factory()->create(['name' => 'Kevin McKee']);
+        $ticket = Ticket::factory()->create(['panel' => 'test2', 'status_id' => $statuses->first()->id, 'submitter_id' => $requester->id]);
+
+        $this->actingAs($supporter);
+        $ticket->close(closedById: $supporter->id);
+
+        $byStatus
+            ? $ticket->refresh()->update(['status_id' => $statuses->first()->id])
+            : $ticket->refresh()->update(['closed_at' => null, 'closed_by' => null]);
+
+        $service = resolve(TicketActivityService::class);
+
+        foreach ([$requester, $supporter] as $reader) {
+            expect($service->getActivities($ticket, user: $reader)->last())
+                ->type->toBe(ActivityType::Reopened)
+                ->content->toBe('Conversation reopened by Kevin McKee');
+        }
+
+        $ticket->update(['subject' => 'Still open']);
+
+        expect($ticket->ticketActivities()->where('type', ActivityType::Reopened)->count())->toBe(1);
+    })->with([
+        'by setting an open status' => [true],
+        'by clearing the closed time' => [false],
+    ]);
 
     it('leaves open and closed alone for a ticket whose panel has no statuses', function () {
         [$first, $second] = TicketStatus::factory()->count(2)->create(['panel' => 'test']);
