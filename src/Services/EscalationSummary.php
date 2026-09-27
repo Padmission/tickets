@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Services;
 
 use Illuminate\Support\Collection;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 /*
  * An escalation is named by the people whose tickets it is about, because a
@@ -32,11 +33,57 @@ class EscalationSummary
         };
     }
 
+    /*
+     * Names the originals where no panel's scopes can be relied on, such as
+     * a queue worker that binds a tenant but not the panel the escalation
+     * was sent to.
+     */
+    public static function forEscalation(Ticket $escalation): string
+    {
+        return static::originals(static::originalsOf($escalation));
+    }
+
+    /**
+     * Past the host's scopes, but only the escalation's own tenant and never
+     * a deleted original, with each requester loaded the same way.
+     *
+     * @return Collection<int, Ticket>
+     */
+    public static function originalsOf(Ticket $escalation): Collection
+    {
+        $query = app(TicketEscalationLinks::class)->linkedOriginalsQuery($escalation->getKey());
+        $model = $query->getModel();
+
+        $query->whereNull($model->qualifyColumn($model->getDeletedAtColumn()))->orderBy($model->getQualifiedKeyName());
+
+        if (config('padmission-tickets.tenancy.enabled')) {
+            $query->where($model->qualifyColumn('tenant_id'), $escalation->getAttribute('tenant_id'));
+        }
+
+        /** @var Collection<int, Ticket> $originals */
+        $originals = $query->get();
+
+        $requesters = TicketPlugin::resolveUserModelClass()::query()
+            ->withoutGlobalScopes()
+            ->whereKey($originals->pluck('submitter_id')->filter()->unique()->values()->all())
+            ->get()
+            ->keyBy(fn ($user): string => (string) $user->getKey());
+
+        return $originals->each(fn (Ticket $original): Ticket => $original->setRelation(
+            'submitter',
+            $requesters->get((string) $original->submitter_id),
+        ));
+    }
+
     /**
      * @param  Collection<int, Ticket>  $originals
      */
     public static function originals(Collection $originals): string
     {
+        if ($originals->isEmpty()) {
+            return __(self::KEY.'.escalation_originals.none');
+        }
+
         $requesters = static::requesters($originals);
 
         if ($requesters === null) {

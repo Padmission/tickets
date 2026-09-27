@@ -37,11 +37,8 @@ class NotificationRecipientService
 
         $recipients = collect();
 
-        if (
-            $event->ticket->submitter
-            && ($recipientFlag & NotificationRecipient::User->value) === NotificationRecipient::User->value
-        ) {
-            $recipients->push($event->ticket->submitter);
+        if (($recipientFlag & NotificationRecipient::User->value) === NotificationRecipient::User->value) {
+            $recipients->push($this->getSubmitter($event->ticket));
         }
         if (($recipientFlag & NotificationRecipient::Supporter->value) === NotificationRecipient::Supporter->value) {
             $assignee = $this->getAssignee($event->ticket);
@@ -77,6 +74,31 @@ class NotificationRecipientService
             ->whereKey($ids->all())
             ->get()
             ->values();
+    }
+
+    /*
+     * Found through the ticket's own panel, as the assignee is: a reply can
+     * come through the chat's API, where no panel lifts the sender's tenant
+     * scope from someone who escalated from another tenant.
+     */
+    private function getSubmitter(Ticket $ticket): ?Authenticatable
+    {
+        if (blank($ticket->submitter_id)) {
+            return null;
+        }
+
+        $relation = $ticket->submitter();
+        $modifier = $ticket->isNotInCurrentPanel()
+            ? TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier()
+            : null;
+
+        if ($modifier !== null) {
+            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'submitter']);
+        }
+
+        $submitter = $relation->first();
+
+        return $submitter instanceof Authenticatable ? $submitter : null;
     }
 
     private function getAssignee(Ticket $ticket): ?Authenticatable

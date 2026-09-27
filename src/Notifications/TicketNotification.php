@@ -4,13 +4,21 @@ namespace Padmission\Tickets\Notifications;
 
 use ArrayObject;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketUrlService;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketNotification extends Notification
 {
@@ -55,19 +63,46 @@ class TicketNotification extends Notification
          * likewise always deserves a distinct email, even when a debounced
          * activity notification already consumed the closing activity. A
          * hand over changes who the other team's replies go to, which both
-         * people must hear about whatever they have read.
+         * people must hear about whatever they have read. Whoever just
+         * escalated needs no "New ticket" email about their own escalation.
          */
-        if (in_array($this->notificationType, ['created', 'closed', 'handedover'], true)) {
+        if ($this->notificationType === 'created') {
+            return ! $this->isOwnEscalation($notifiable);
+        }
+
+        if (in_array($this->notificationType, ['closed', 'handedover'], true)) {
             return true;
         }
 
-        return $this->getUnreadActivities($notifiable)->isNotEmpty();
+        $activities = $this->getUnreadActivities($notifiable);
+
+        // The owner hears of a reply; the other team's own notes, such as closing it, come some other way or not at all.
+        if ($this->notificationType === 'activity' && $this->isOwnEscalation($notifiable)) {
+            return $activities->contains(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message
+                && $activity->sender === ActivitySender::Supporter);
+        }
+
+        return $activities->isNotEmpty();
     }
 
     public function toMail($notifiable): MailMessage
     {
-        $urlService = resolve(TicketUrlService::class);
+        $wording = $this->wording($notifiable);
 
+        $message = match ($this->notificationType) {
+            'created' => $this->createdMail($wording),
+            'closed' => $this->closedMail($wording),
+            default => $this->historyMail($notifiable, $wording),
+        };
+
+        return $message->subject($wording['subject']);
+    }
+
+    /**
+     * @param  array<string, string|null>  $wording
+     */
+    protected function historyMail($notifiable, array $wording): MailMessage
+    {
         $maxEvents = config('padmission-tickets.notification-max-events', 10);
 
         $activities = $this->getUnreadActivities($notifiable);
@@ -90,37 +125,233 @@ class TicketNotification extends Notification
         }
 
         return (new MailMessage)
-            ->subject($this->getEmailSubject())
             ->markdown($this->getView(), [
+                ...$wording,
                 'notification' => $this,
                 'notificationType' => $this->notificationType,
                 'ticket' => $this->ticket,
-                'actionUrl' => $urlService->getActionUrl($this->ticket),
                 'activities' => $activities,
                 'hasMoreActivities' => $hasMoreActivities,
                 'maxEvents' => $maxEvents,
             ]);
     }
 
+    /**
+     * @param  array<string, string|null>  $wording
+     */
+    protected function createdMail(array $wording): MailMessage
+    {
+        return (new MailMessage)
+            ->markdown('padmission-tickets::mails.ticket-created', [
+                ...$wording,
+                'notification' => $this,
+                'ticket' => $this->ticket,
+                'assigneeName' => $this->assigneeName(),
+            ]);
+    }
+
+    /**
+     * @param  array<string, string|null>  $wording
+     */
+    protected function closedMail(array $wording): MailMessage
+    {
+        $dispositionName = TicketPlugin::resolveModelClass(TicketDisposition::class)::query()
+            ->withoutGlobalScopes()
+            ->find($this->ticket->disposition_id)
+            ?->display_name;
+
+        $lastSupporterMessage = $this->ticket->ticketActivities()
+            ->where('type', ActivityType::Message)
+            ->where('sender', ActivitySender::Supporter)
+            ->latest('id')
+            ->first();
+
+        return (new MailMessage)
+            ->markdown('padmission-tickets::mails.ticket-closed', [
+                ...$wording,
+                'notification' => $this,
+                'ticket' => $this->ticket,
+                'dispositionName' => $dispositionName,
+                'lastSupporterMessage' => $lastSupporterMessage?->plainTextContent(),
+            ]);
+    }
+
     public function toDatabase($notifiable): array
     {
+        $wording = $this->wording($notifiable);
+
         $activities = $this->getUnreadActivities($notifiable);
 
         $this->markActivitiesAsSent($notifiable, $activities);
 
+        $body = $this->notificationType === 'handedover'
+            ? $wording['intro']
+            : $activities->last()?->plainTextContent(30) ?? $wording['intro'];
+
         return FilamentNotification::make()
-            ->title($this->getEmailSubject())
-            ->body(
-                $activities->last()?->plainTextContent(30)
-                    ?? __("padmission-tickets::notifications.ticket-{$this->notificationType}.intro")
-            )
+            ->title($wording['subject'])
+            ->body($body)
             ->actions([
                 Action::make('view')
-                    ->label(__('padmission-tickets::notifications.general.action'))
-                    ->url(resolve(TicketUrlService::class)->getActionUrl($this->ticket))
+                    ->label($wording['actionLabel'])
+                    ->url($wording['actionUrl'])
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();
+    }
+
+    /**
+     * What one recipient reads, the same in the email and the bell.
+     *
+     * @return array{subject: string, headline: string, intro: string, actionLabel: string, actionUrl: string, latestReplyLabel?: string, supporterLabel?: string|null}
+     */
+    protected function wording($notifiable): array
+    {
+        $key = "padmission-tickets::notifications.ticket-{$this->notificationType}";
+
+        $wording = [
+            'subject' => $this->subjectLine("{$key}.subject"),
+            'headline' => __("{$key}.headline"),
+            'intro' => __($this->notificationType === 'created' && $this->isSubmitter($notifiable) ? "{$key}.intro_requester" : "{$key}.intro"),
+            'actionLabel' => __('padmission-tickets::notifications.general.action'),
+            'actionUrl' => resolve(TicketUrlService::class)->getActionUrlFor($this->ticket, $notifiable),
+        ];
+
+        if ($this->notificationType === 'handedover') {
+            return [...$wording, ...$this->handedOverWording($notifiable)];
+        }
+
+        if (! $this->isOwnEscalation($notifiable)) {
+            return $wording;
+        }
+
+        return match ($this->notificationType) {
+            'activity' => [...$wording, ...$this->escalationReplyWording($key)],
+            'closed' => [...$wording, ...$this->escalationClosedWording($key)],
+            default => $wording,
+        };
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    protected function escalationReplyWording(string $key): array
+    {
+        $team = $this->escalationTeamName();
+
+        return [
+            'subject' => TicketPlugin::teamText("{$key}.subject_escalation", $team, $this->subjectReplacements()),
+            'headline' => __("{$key}.headline_escalation"),
+            'intro' => TicketPlugin::teamText("{$key}.intro_escalation", $team, ['originals' => EscalationSummary::forEscalation($this->ticket)]),
+            'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
+            // The other team's people may be out of the owner's reach here, so they go by their team's name.
+            'supporterLabel' => $team,
+        ];
+    }
+
+    /*
+     * The requesters are still waiting on the originals, so the email says
+     * how many are open and, when one is, opens it with the escalation beside it.
+     *
+     * @return array<string, string>
+     */
+    protected function escalationClosedWording(string $key): array
+    {
+        $team = $this->escalationTeamName();
+        $originals = EscalationSummary::originalsOf($this->ticket);
+        $open = $originals->whereNull('closed_at')->values();
+        $replace = ['originals' => EscalationSummary::originals($originals)];
+
+        $wording = [
+            'subject' => TicketPlugin::teamText("{$key}.subject_escalation", $team, $this->subjectReplacements()),
+            'headline' => __("{$key}.headline_escalation"),
+            'intro' => $open->isEmpty()
+                ? TicketPlugin::teamText("{$key}.intro_escalation", $team, $replace)
+                : trans_choice($team === null ? "{$key}.intro_escalation_open" : "{$key}.intro_escalation_open_to", $open->count(), [
+                    ...$replace,
+                    ...($team === null ? [] : ['team' => $team]),
+                    'name' => (string) $open->first()->requesterName(),
+                    'count' => $open->count(),
+                ]),
+            'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
+            'latestReplyLabel' => TicketPlugin::teamText("{$key}.latest_reply", $team),
+        ];
+
+        $originalUrl = $open->count() === 1 ? resolve(TicketUrlService::class)->originalUrl($open->first(), $this->ticket) : null;
+
+        if ($originalUrl === null) {
+            return $wording;
+        }
+
+        return [
+            ...$wording,
+            'actionLabel' => __('padmission-tickets::notifications.general.action_original', ['name' => (string) $open->first()->requesterName()]),
+            'actionUrl' => $originalUrl,
+        ];
+    }
+
+    /*
+     * Whoever the escalation was taken from can no longer open it, so their
+     * link goes to a ticket they still answer, or to their team's escalations.
+     *
+     * @return array<string, string>
+     */
+    protected function handedOverWording($notifiable): array
+    {
+        $key = 'padmission-tickets::notifications.ticket-handedover';
+        $team = $this->escalationTeamName();
+        $replace = [
+            'actor' => $this->event->actor !== null ? Filament::getUserName($this->event->actor) : __('padmission-tickets::notifications.general.sender-support'),
+            'originals' => EscalationSummary::forEscalation($this->ticket),
+        ];
+
+        if ((string) $notifiable->getKey() !== (string) $this->event->fromId) {
+            return [
+                'intro' => TicketPlugin::teamText("{$key}.intro", $team, $replace),
+                'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
+            ];
+        }
+
+        $original = EscalationSummary::originalsOf($this->ticket)->whereNull('closed_at')->first();
+        $url = resolve(TicketUrlService::class)->unviewableEscalationUrl($this->ticket);
+
+        return [
+            'subject' => $this->subjectLine("{$key}.subject_taken"),
+            'headline' => __("{$key}.headline_taken"),
+            'intro' => TicketPlugin::teamText("{$key}.intro_taken", $team, $replace),
+            ...($url === null ? [] : [
+                'actionLabel' => $original !== null
+                    ? __('padmission-tickets::notifications.general.action_original', ['name' => (string) $original->requesterName()])
+                    : __('padmission-tickets::notifications.general.action_escalations'),
+                'actionUrl' => $url,
+            ]),
+        ];
+    }
+
+    /*
+     * The team this escalation went to, named where the panel that receives
+     * it is registered. Hosts whose workers leave that panel out override it.
+     */
+    public function escalationTeamName(): ?string
+    {
+        return TicketPlugin::find($this->ticket->panel)?->getSupportTeamName();
+    }
+
+    protected function assigneeName(): ?string
+    {
+        $assignee = TicketAssignee::for($this->ticket);
+
+        return $assignee === null ? null : Filament::getUserName($assignee);
+    }
+
+    protected function isSubmitter($notifiable): bool
+    {
+        return (string) $notifiable->getKey() === (string) $this->ticket->submitter_id;
+    }
+
+    protected function isOwnEscalation($notifiable): bool
+    {
+        return $this->isSubmitter($notifiable) && $this->ticket->isEscalation();
     }
 
     protected function getUnreadActivities($notifiable): Collection
@@ -155,13 +386,19 @@ class TicketNotification extends Notification
         return 'padmission-tickets::mails.ticket-history';
     }
 
-    protected function getEmailSubject(): string
+    protected function subjectLine(string $key): string
     {
-        $key = "padmission-tickets::notifications.ticket-{$this->notificationType}.subject";
+        return __($key, $this->subjectReplacements());
+    }
 
-        return __($key, [
+    /**
+     * @return array{subject: string, ticket_id: int|string}
+     */
+    protected function subjectReplacements(): array
+    {
+        return [
             'subject' => $this->ticket->subject,
             'ticket_id' => $this->ticket->id,
-        ]);
+        ];
     }
 }

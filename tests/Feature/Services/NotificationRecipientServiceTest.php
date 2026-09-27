@@ -235,3 +235,22 @@ test('a hand over tells the two people it moved between, except whoever did it',
     'taken over by a colleague' => ['to', ['from']],
     'moved by someone else' => ['third', ['from', 'to']],
 ]);
+
+test('the submitter of another panel\'s ticket is found through that panel\'s scopes', function () {
+    $submitter = User::factory()->create();
+    $replier = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => $submitter->id]);
+    Gate::define('update', fn () => true);
+
+    // 'acting-tenant' stands in for the replier's tenant scope, which only the ticket's own panel lifts.
+    TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($submitter->id));
+
+    try {
+        $recipients = app(NotificationRecipientService::class)->getNotificationRecipients(new TicketActivityEvent($ticket->fresh(), ActivityType::Message, null, $replier));
+    } finally {
+        User::clearBootedModels();
+    }
+
+    expect($recipients->map->getKey()->all())->toContain($submitter->id);
+});

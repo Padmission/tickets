@@ -4,9 +4,9 @@
 
 @component('padmission-tickets::mails.layout', ['notification' => $notification])
     <x-mail::unindent-html>
-        # {{ __('padmission-tickets::notifications.ticket-'.$notificationType.'.headline') }}
+        # {{ $headline ?? __('padmission-tickets::notifications.ticket-'.$notificationType.'.headline') }}
 
-        {{ __('padmission-tickets::notifications.ticket-'.$notificationType.'.intro') }}
+        {{ $intro ?? __('padmission-tickets::notifications.ticket-'.$notificationType.'.intro') }}
 
         @if($activities->count())
             <h3 style="text-align: center; text-transform:uppercase; margin-top: 24px;">
@@ -35,7 +35,7 @@
 
                         $senderName = match($activity->sender) {
                             ActivitySender::User => $activity->user ? $activity->userName : __('padmission-tickets::notifications.general.sender-you'),
-                            ActivitySender::Supporter => $activity->user ? $activity->userName : __('padmission-tickets::notifications.general.sender-support'),
+                            ActivitySender::Supporter => $activity->user ? $activity->userName : ($supporterLabel ?? __('padmission-tickets::notifications.general.sender-support')),
                             default => null
                         };
                     @endphp
@@ -72,7 +72,7 @@
 
         @if(isset($actionUrl))
             <x-mail::button :url="$actionUrl">
-                {{ __('padmission-tickets::notifications.general.action') }}
+                {{ $actionLabel ?? __('padmission-tickets::notifications.general.action') }}
             </x-mail::button>
         @endif
     </x-mail::unindent-html>

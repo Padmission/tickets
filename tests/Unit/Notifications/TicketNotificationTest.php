@@ -174,7 +174,7 @@ test('generates correct email subject for different types', function () {
     $event = new TicketCreatedEvent($this->ticket);
     $notification = new TicketNotification($this->ticket, $event);
 
-    $subject = invade($notification)->getEmailSubject();
+    $subject = invade($notification)->wording($this->user)['subject'];
 
     // Should contain the ticket ID and subject
     expect($subject)->toContain((string) $this->ticket->id);
@@ -444,7 +444,7 @@ test('a hand over is always sent, even with nothing unread', function () {
     $notification = new TicketNotification($ticket, new TicketHandedOverEvent($ticket, $from, $from->id, $to->id));
 
     expect($notification->shouldSend($to))->toBeTrue()
-        ->and($notification->toMail($to)->subject)->toBe("Escalation handed over #{$ticket->id} – {$ticket->subject}");
+        ->and($notification->toMail($to)->subject)->toBe("Escalation handed to you #{$ticket->id} – {$ticket->subject}");
 });
 
 test('a hand over shows unread messages without using up their own notification', function () {

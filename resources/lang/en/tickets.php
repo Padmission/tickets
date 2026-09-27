@@ -413,6 +413,7 @@ return [
                 'two' => ':first\'s and :second\'s tickets',
                 'many' => 'tickets from :first and :count others',
                 'unnamed' => '{1} 1 ticket|[2,*] :count tickets',
+                'none' => 'tickets since removed from it',
             ],
             'escalation_about' => 'About :originals',
             'escalation_about_some_closed' => ':about, :closed of :total closed',
