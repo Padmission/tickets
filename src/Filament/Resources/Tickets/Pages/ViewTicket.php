@@ -54,6 +54,7 @@ use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAssignee;
+use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\TicketPlugin;
@@ -193,11 +194,16 @@ class ViewTicket extends EditRecord
     {
         $this->forgetLinks();
 
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
         if ($action instanceof HandOverEscalationAction || $action instanceof CloseEscalationAction) {
-            /** @var Ticket $record */
-            $record = $this->getRecord();
             $record->refresh();
         }
+
+        // The chat keeps its own state, so it is told when an action closed or reopened the
+        // ticket, changed who may reply or wrote to the requester.
+        $this->dispatch('ticket-chat-changed', canReply: $record->isOpen && resolve(TicketAuth::class)->canReply($record, Filament::auth()->user()));
     }
 
     /*

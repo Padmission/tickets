@@ -10,6 +10,7 @@ import humanFileSize from "./helpers/human-file-size.js";
 import isCutOffAtTop from "./helpers/cut-off-at-top.js";
 import formatMessageTime from "./helpers/format-message-time.js";
 import ticketSubject from "./helpers/ticket-subject.js";
+import isComposerShown from "./helpers/composer-shown.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -224,10 +225,10 @@ customElements.define(
 					);
 				}
 
-				if (ticket.is_closed) {
-					this.rootNode().querySelector("[data-composer]").style.display =
-						"none";
+				this.rootNode().querySelector("[data-composer]").style.display =
+					isComposerShown(this.canReply, ticket.is_closed) ? "" : "none";
 
+				if (ticket.is_closed) {
 					// Closed by someone else while this chat was open, so the page around it can catch up.
 					if (this.seenOpen) {
 						this.seenOpen = false;
@@ -412,6 +413,14 @@ customElements.define(
 
 			this.observeMessages();
 			this.hideMessagesCutOffAtTop();
+		}
+
+		// The page this chat sits on calls it after an action that can change whether the viewer
+		// may reply or what the conversation holds, rather than leave it to the next poll.
+		refreshTicket(canReply) {
+			this.canReply = canReply ? "true" : "false";
+
+			return this.loadMessages();
 		}
 
 		startPolling() {

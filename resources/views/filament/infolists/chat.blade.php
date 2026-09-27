@@ -58,6 +58,8 @@
         chat.addEventListener('message-sent', (event) => {
             Livewire.dispatch('message-sent');
         })
+
+        window.addEventListener('ticket-chat-changed', (event) => chat.refreshTicket?.(event.detail.canReply))
     </script>
 
     <script
