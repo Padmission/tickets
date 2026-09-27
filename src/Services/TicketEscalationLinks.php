@@ -73,7 +73,7 @@ class TicketEscalationLinks
 
             $escalation = static::query()->withoutGlobalScopes()->find($escalationId);
 
-            $original->update(['linked_ticket_id' => null]);
+            $this->writeLink($original, null);
 
             $this->addActivity($original, ActivityType::RemovedFromEscalation, ['escalation' => $escalationId]);
 
@@ -119,7 +119,7 @@ class TicketEscalationLinks
             }
 
             foreach ($toRemove as $id) {
-                $locked[$id]->update(['linked_ticket_id' => null]);
+                $this->writeLink($locked[$id], null);
                 $this->addActivity($locked[$id], ActivityType::RemovedFromEscalation, ['escalation' => $escalation->getKey()]);
                 $this->addActivity($escalation, ActivityType::OriginalRemoved, ['original' => $id]);
             }
@@ -142,10 +142,19 @@ class TicketEscalationLinks
 
     protected function link(Ticket $original, Ticket $escalation): void
     {
-        $original->update(['linked_ticket_id' => $escalation->getKey()]);
+        $this->writeLink($original, $escalation->getKey());
 
         $this->addActivity($original, ActivityType::AddedToEscalation, ['escalation' => $escalation->getKey()]);
         $this->addActivity($escalation, ActivityType::OriginalAdded, ['original' => $original->getKey()]);
+    }
+
+    /*
+     * The link is not news to the requester, so it leaves updated_at alone:
+     * that timestamp was the one trace of an escalation in their list.
+     */
+    protected function writeLink(Ticket $original, int|string|null $escalationId): void
+    {
+        $original::withoutTimestamps(fn () => $original->update(['linked_ticket_id' => $escalationId]));
     }
 
     /*

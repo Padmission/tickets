@@ -204,6 +204,44 @@ describe('Originals on an escalated ticket', function () {
     });
 });
 
+describe('Link changes leave the original untouched', function () {
+    beforeEach(function () {
+        $this->escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+        $this->original = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        $this->updatedAt = $this->original->refresh()->updated_at->toDateTimeString();
+
+        $this->travel(1)->hour();
+    });
+
+    it('keeps updated_at when the original is linked', function () {
+        resolve(TicketEscalationLinks::class)->addToEscalation($this->original, $this->escalation->id);
+
+        expect($this->original->refresh())
+            ->linked_ticket_id->toBe($this->escalation->id)
+            ->updated_at->toDateTimeString()->toBe($this->updatedAt);
+    });
+
+    it('keeps updated_at when the original is removed', function () {
+        Ticket::withoutTimestamps(fn () => $this->original->update(['linked_ticket_id' => $this->escalation->id]));
+
+        resolve(TicketEscalationLinks::class)->removeFromEscalation($this->original);
+
+        expect($this->original->refresh())
+            ->linked_ticket_id->toBeNull()
+            ->updated_at->toDateTimeString()->toBe($this->updatedAt);
+    });
+
+    it('keeps updated_at when the escalation drops the original', function () {
+        Ticket::withoutTimestamps(fn () => $this->original->update(['linked_ticket_id' => $this->escalation->id]));
+
+        resolve(TicketEscalationLinks::class)->syncOriginals($this->escalation, []);
+
+        expect($this->original->refresh())
+            ->linked_ticket_id->toBeNull()
+            ->updated_at->toDateTimeString()->toBe($this->updatedAt);
+    });
+});
+
 describe('Escalated tabs in a cross-tenant panel', function () {
     beforeEach(function () {
         config()->set('padmission-tickets.tenancy.enabled', true);
