@@ -211,7 +211,12 @@
 }
 
 .pad-ti-escalation-status {
-	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 4) calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 4);
+	border-bottom: 1px solid var(--color-gray-200);
+
+	.dark & {
+		border-color: rgba(255, 255, 255, 0.1);
+	}
 }
 
 /* Messages scrolled under the top edge fade out instead of showing a cut-off bubble. */
@@ -373,9 +378,27 @@
 		box-shadow: none;
 	}
 
+	/* Who handles the ticket stays in view; only its messages scroll. */
 	.pad-ti-linked__body {
-		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
 		max-height: 60svh;
+		overflow: hidden;
+
+		.pad-ti-transcript,
+		.pad-ti-transcript__ticket {
+			display: flex;
+			flex-direction: column;
+			flex: 1;
+			min-height: 0;
+		}
+
+		.pad-ti-transcript__messages {
+			flex: 1;
+			min-height: 0;
+			overflow-y: auto;
+		}
 	}
 }
 

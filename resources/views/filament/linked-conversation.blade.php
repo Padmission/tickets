@@ -8,13 +8,14 @@
     x-data="{
         reveal() {
             const body = this.$refs.body
+            const messages = body.querySelector('.pad-ti-transcript__messages') ?? body
             const target = body.querySelector('[data-pad-ti-first-unread]') ?? [...body.querySelectorAll('.pad-ti-transcript__messages > li')].pop()
 
             if (! target) {
                 return
             }
 
-            body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top - 8
+            messages.scrollTop += target.getBoundingClientRect().top - messages.getBoundingClientRect().top - 8
             target.classList.remove('pad-ti-transcript--highlight')
             void target.offsetWidth
             target.classList.add('pad-ti-transcript--highlight')
