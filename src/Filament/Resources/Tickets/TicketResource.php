@@ -419,9 +419,7 @@ class TicketResource extends Resource
      */
     public static function orderByRank(Builder $query, string $direction): Builder
     {
-        [$rank, $bindings] = ConversationStateQuery::rankExpression(ConversationViewer::current());
-
-        return $query->orderByRaw($rank.' '.($direction === 'desc' ? 'desc' : 'asc'), $bindings);
+        return ConversationStateQuery::orderByRank($query, ConversationViewer::current(), $direction);
     }
 
     public static function isEscalatedTab(ListTickets $livewire): bool

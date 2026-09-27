@@ -6,16 +6,13 @@ use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Lang;
-use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Support\ConversationStateQuery;
 use Padmission\Tickets\Support\ConversationViewer;
@@ -153,42 +150,17 @@ class ListTickets extends ListRecords
         return $this->ticketsInTab($tab)->open()->count();
     }
 
-    /*
+    /**
      * An escalation stays listed after all its originals were removed, through
      * the history note written when the first was added, so its owner does not
      * lose it.
+     *
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
      */
     protected static function escalationsFromThisPanel(Builder $query): Builder
     {
-        $panelId = Filament::getCurrentOrDefaultPanel()->getId();
-        $activities = (new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable();
-
-        return $query->where(fn (Builder $query): Builder => $query
-            ->whereHas('childTickets', static::originalsFromThisPanel(...))
-            ->orWhere(fn (Builder $query): Builder => $query
-                ->where($query->qualifyColumn('source_panel'), $panelId)
-                ->whereIn($query->qualifyColumn('panel'), array_keys(TicketPlugin::get()->getLinkedTicketParentPanels()))
-                ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
-                    ->selectRaw('1')
-                    ->from($activities, 'escalation_activities')
-                    ->whereColumn('escalation_activities.ticket_id', $query->qualifyColumn('id'))
-                    ->where('escalation_activities.type', ActivityType::OriginalAdded->value))));
-    }
-
-    /*
-     * whereHas never runs the panel's relationship scope hook, so the host's
-     * tenant scope would otherwise stay on the originals and, in a cross-tenant
-     * panel, hide escalations whose originals belong to another tenant.
-     */
-    protected static function originalsFromThisPanel(Builder $query): Builder
-    {
-        $modifier = TicketPlugin::get()->getRelationshipScopeModifier();
-
-        if ($modifier) {
-            app()->call($modifier, ['relation' => $query, 'model' => 'childTickets']);
-        }
-
-        return $query->where($query->qualifyColumn('panel'), Filament::getCurrentOrDefaultPanel()->getId());
+        return $query->escalationsFrom(Filament::getCurrentOrDefaultPanel()->getId());
     }
 
     /**

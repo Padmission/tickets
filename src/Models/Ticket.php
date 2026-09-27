@@ -104,6 +104,26 @@ class Ticket extends Model
     }
 
     /*
+     * Twin of isEscalationFrom(). The originals are read without any scope, as
+     * there, so a host's tenant scope never hides another tenant's originals.
+     */
+    public function scopeEscalationsFrom(Builder $query, string $panelId): Builder
+    {
+        $id = $query->qualifyColumn($this->getKeyName());
+
+        return $query
+            ->whereIn($query->qualifyColumn('panel'), array_keys(TicketPlugin::find($panelId)?->getLinkedTicketParentPanels() ?? []))
+            ->where(fn (Builder $query): Builder => $query
+                ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                    ->selectRaw('1')
+                    ->from($this->getTable(), 'panel_originals')
+                    ->whereColumn('panel_originals.linked_ticket_id', $id)
+                    ->where('panel_originals.panel', $panelId))
+                ->orWhere(fn (Builder $query): Builder => $this->whereEscalation($query
+                    ->where($query->qualifyColumn('source_panel'), $panelId))));
+    }
+
+    /*
      * Twin of isEscalation(). Comparing panel with source_panel cannot tell,
      * because widget tickets filed into a target panel differ too.
      */
@@ -112,7 +132,7 @@ class Ticket extends Model
         $id = $query->qualifyColumn($this->getKeyName());
         $activities = (new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable();
 
-        return $query
+        return $query->where(fn (Builder $query): Builder => $query
             ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
                 ->selectRaw('1')
                 ->from($this->getTable(), 'escalation_originals')
@@ -121,7 +141,7 @@ class Ticket extends Model
                 ->selectRaw('1')
                 ->from($activities, 'escalation_activities')
                 ->whereColumn('escalation_activities.ticket_id', $id)
-                ->where('escalation_activities.type', ActivityType::OriginalAdded->value));
+                ->where('escalation_activities.type', ActivityType::OriginalAdded->value)));
     }
 
     /*
@@ -146,6 +166,10 @@ class Ticket extends Model
         // A list row that already loaded its originals needs no query per row.
         if ($this->isEscalation === null && $this->relationLoaded('childTickets') && $this->childTickets->isNotEmpty()) {
             return $this->isEscalation = true;
+        }
+
+        if ($this->isEscalation === null && array_key_exists('conversation_is_escalation', $this->attributes)) {
+            return $this->isEscalation = (bool) $this->attributes['conversation_is_escalation'];
         }
 
         return $this->isEscalation ??= $this->newQueryWithoutScopes()->where('linked_ticket_id', $this->getKey())->exists()

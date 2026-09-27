@@ -79,7 +79,7 @@ final readonly class ConversationState
 
     public function color(): string
     {
-        return in_array($this->waitingOn, ['you', 'you_requester', 'you_owner', 'needs_assignment'], true) ? 'warning' : 'gray';
+        return in_array($this->waitingOn, ConversationStateQuery::WAITING_ON_CODES_RANKED_FIRST, true) ? 'warning' : 'gray';
     }
 
     public function icon(): ?string

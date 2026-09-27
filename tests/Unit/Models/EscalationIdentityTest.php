@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
@@ -100,4 +101,33 @@ it('answers again after a refresh', function () {
 
     expect($escalation->isEscalation())->toBeFalse()
         ->and($escalation->refresh()->isEscalation())->toBeTrue();
+});
+
+it('finds in SQL exactly the escalations isEscalationFrom() names', function (Closure $scenario, bool $expected) {
+    $escalation = $scenario();
+
+    expect($escalation->isEscalationFrom('test'))->toBe($expected)
+        ->and(Ticket::query()->escalationsFrom('test')->whereKey($escalation->id)->exists())->toBe($expected);
+})->with([
+    'by an original in the panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => null]), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])), true],
+    'by source, its original in another panel and no history note' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test3', 'linked_ticket_id' => $escalation->id])), true],
+    'by source, its originals all removed' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']), fn (Ticket $escalation) => $escalation->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System)), true],
+    'by a deleted original in the panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => null]), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])->delete()), true],
+    'a widget ticket filed from the panel' => [fn () => Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']), false],
+    'from another panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test3']), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test3', 'linked_ticket_id' => $escalation->id])), false],
+    'in a panel the panel cannot escalate to' => [fn () => tap(Ticket::factory()->create(['panel' => 'test3', 'source_panel' => 'test']), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])), false],
+]);
+
+it('takes a list row\'s escalation identity from its conversation state', function () {
+    $escalation = Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']);
+    Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
+    $plain = Ticket::factory()->create();
+
+    $rows = Ticket::query()->withConversationState()->whereKey([$escalation->id, $plain->id])->get()->keyBy('id');
+
+    DB::enableQueryLog();
+
+    expect($rows[$escalation->id]->isEscalation())->toBeTrue()
+        ->and($rows[$plain->id]->isEscalation())->toBeFalse()
+        ->and(DB::getQueryLog())->toBeEmpty();
 });

@@ -6,6 +6,8 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Grammar;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
@@ -56,6 +58,30 @@ final class ConversationStateQuery
     }
 
     /**
+     * Sorts by the selected rank rather than a second copy of its SQL.
+     *
+     * @template TBuilder of Builder
+     *
+     * @param  TBuilder  $query
+     * @return TBuilder
+     */
+    public static function orderByRank(Builder $query, ConversationViewer $viewer, string $direction): Builder
+    {
+        $direction = $direction === 'desc' ? 'desc' : 'asc';
+        $alias = ' as '.$query->getQuery()->getGrammar()->wrap('conversation_rank');
+
+        foreach ($query->getQuery()->columns ?? [] as $column) {
+            if ($column instanceof Expression && str_ends_with((string) $column->getValue($query->getQuery()->getGrammar()), $alias)) {
+                return $query->orderBy('conversation_rank', $direction);
+            }
+        }
+
+        [$rank, $bindings] = self::rankExpression($viewer);
+
+        return $query->orderByRaw("{$rank} {$direction}", $bindings);
+    }
+
+    /**
      * @return array{0: string, 1: array<int, mixed>}
      */
     public static function rankExpression(ConversationViewer $viewer): array
@@ -75,7 +101,7 @@ final class ConversationStateQuery
             'conversation_is_new' => $this->isNew(),
             'conversation_owner_id' => $this->subquery($this->escalationQuery()->select('cs_e.submitter_id')),
             'conversation_escalation_open' => $this->sql('case when %s then 1 else 0 end', $this->escalationExists(fn (QueryBuilder $query) => $query->whereNull('cs_e.closed_at'))),
-            'conversation_is_escalation' => $this->sql('case when %s or %s then 1 else 0 end', $this->originalsExist(), $this->originalAddedExists()),
+            'conversation_is_escalation' => $this->sql('case when %s then 1 else 0 end', $this->condition($this->ticket->newQueryWithoutScopes()->escalations())),
         ];
     }
 
@@ -99,9 +125,7 @@ final class ConversationStateQuery
             closed: $this->raw('3'),
             value: fn (string $code): array => $this->raw((string) $this->rankOf($code)),
             otherwise: $this->raw('2'),
-            first: $this->viewer->isSupporter && $this->viewer->userId !== null
-                ? [[$this->sql('%s and %s', $this->openInCurrentPanel(), $this->relayPending(ownedByViewer: true)), $this->raw('0')]]
-                : [],
+            relayOwnedByViewer: $this->raw('0'),
         );
     }
 
@@ -124,18 +148,23 @@ final class ConversationStateQuery
         }
 
         return $this->sql(
-            'case when %s and %s then case when %s then %s when %s then %s else %s end end',
+            'case when %s then case when %s is not null then %s else %s end end',
             $this->openInCurrentPanel(),
-            $this->escalationExists(),
-            $this->relayPending(),
+            $this->relay(),
             $this->literal('replied'),
-            $this->escalationExists(fn (QueryBuilder $query) => $query->whereNotNull('cs_e.closed_at')),
-            $this->literal('closed'),
-            $this->literal('escalated'),
+            $this->subquery($this->escalationQuery()->selectRaw(sprintf(
+                'case when %s is null then %s else %s end',
+                $this->grammar->wrap('cs_e.closed_at'),
+                $this->grammar->quoteString('escalated'),
+                $this->grammar->quoteString('closed'),
+            ))),
         );
     }
 
     /**
+     * The two branches never both hold: one needs a row in the current
+     * panel, the other a row in a panel it escalates to.
+     *
      * @return array{0: string, 1: array<int, mixed>}
      */
     protected function isNew(): array
@@ -153,120 +182,157 @@ final class ConversationStateQuery
 
         $branches = [
             $this->sql(
-                'when %s and %s and (%s is null or %s <> %s) and %s > %s then 1',
+                'when %s and %s and (%s is null or %s <> %s) then %s',
                 $this->inCurrentPanel(),
                 $this->mine(),
                 $this->column('submitter_id'),
                 $this->column('submitter_id'),
                 $this->binding($this->viewer->userId),
                 $requesterMessage,
-                $lastSeen,
             ),
         ];
 
         if ($this->viewer->parentPanelIds !== []) {
             $branches[] = $this->sql(
-                'when %s = %s and %s and %s > %s then 1',
+                'when %s = %s and %s then %s',
                 $this->column('submitter_id'),
                 $this->binding($this->viewer->userId),
                 $this->escalationFromCurrentPanel(),
                 $this->latestMessage($this->ticket->getKeyName(), ActivitySender::Supporter),
-                $lastSeen,
             );
         }
 
-        return $this->sql('case '.str_repeat('%s ', count($branches)).'else 0 end', ...$branches);
+        return $this->sql(
+            'case when (case '.str_repeat('%s ', count($branches)).'else 0 end) > %s then 1 else 0 end',
+            ...[...$branches, $lastSeen],
+        );
+    }
+
+    /**
+     * An original's branches are written twice, once knowing it is on hold
+     * and once knowing it is not, so the costly relay and hold checks run
+     * once per row instead of once per branch that needs them.
+     *
+     * @param  array{0: string, 1: array<int, mixed>}  $closed
+     * @param  Closure(string): array{0: string, 1: array<int, mixed>}  $value
+     * @param  array{0: string, 1: array<int, mixed>}|null  $otherwise
+     * @param  array{0: string, 1: array<int, mixed>}|null  $relayOwnedByViewer
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    protected function caseOverGroups(array $closed, Closure $value, ?array $otherwise = null, ?array $relayOwnedByViewer = null): array
+    {
+        $userTurn = $this->sql('%s = %s', $this->column('turn'), $this->literal(Turn::User->value));
+
+        if (! $this->viewer->isSupporter) {
+            return $this->sql(
+                'case when %s is not null then %s when %s then %s else %s end',
+                $this->column('closed_at'),
+                $closed,
+                $userTurn,
+                $value('you_requester'),
+                $value('support'),
+            );
+        }
+
+        $original = fn (bool $onHold): array => $this->choose([
+            ...($onHold ? [] : [
+                [$this->sql('%s and %s', $userTurn, $this->submittedByViewer()), $value('you_requester')],
+                [$userTurn, $value($this->viewer->receivesEscalations ? 'contact' : 'requester')],
+            ]),
+            [$this->mine(), $value($onHold ? 'you_on_hold' : 'you')],
+            [$this->sql('(%s is null or not (%s))', $this->column('assignee_id'), $this->assigneeInPool()), $value('needs_assignment')],
+            [null, $value($onHold ? 'colleague_on_hold' : 'colleague')],
+        ]);
+
+        $parts = [
+            [$this->sql('%s is not null', $this->column('closed_at')), $closed],
+            [$this->inCurrentPanel(), $this->sql(
+                'case %s '.($relayOwnedByViewer === null ? '' : 'when %s then %s ').'when %s then %s else %s end',
+                $this->relayOrHold(),
+                ...[
+                    ...($relayOwnedByViewer === null ? [] : [$this->literal('relay_mine'), $relayOwnedByViewer]),
+                    $this->literal('hold'),
+                    $original(true),
+                    $original(false),
+                ],
+            )],
+        ];
+
+        if ($this->viewer->parentPanelIds !== []) {
+            $parts[] = [$this->escalationFromCurrentPanel(), $this->choose([
+                [$this->sql('%s = %s', $this->column('turn'), $this->literal(Turn::Supporter->value)), $value('team')],
+                [$this->submittedByViewer(), $value('you_owner')],
+                [null, $value('owner_colleague')],
+            ])];
+        }
+
+        if ($otherwise !== null) {
+            $parts[] = [null, $otherwise];
+        }
+
+        return $this->choose($parts);
     }
 
     /**
      * A null condition is the fallback (else).
      *
-     * @return list<array{0: array{0: string, 1: array<int, mixed>}|null, 1: list<array{0: array{0: string, 1: array<int, mixed>}|null, 1: string}>}>
-     */
-    protected function groups(): array
-    {
-        $userTurn = $this->sql('%s = %s', $this->column('turn'), $this->literal(Turn::User->value));
-
-        if (! $this->viewer->isSupporter) {
-            return [[null, [[$userTurn, 'you_requester'], [null, 'support']]]];
-        }
-
-        $onHold = $this->onHold();
-
-        $groups = [[$this->inCurrentPanel(), [
-            [$this->sql('%s and %s', $userTurn, $this->submittedByViewer()), 'you_requester'],
-            [$userTurn, $this->viewer->receivesEscalations ? 'contact' : 'requester'],
-            [$this->sql('%s and %s', $this->mine(), $onHold), 'you_on_hold'],
-            [$this->mine(), 'you'],
-            [$this->sql('(%s is null or not (%s))', $this->column('assignee_id'), $this->assigneeInPool()), 'needs_assignment'],
-            [$onHold, 'colleague_on_hold'],
-            [null, 'colleague'],
-        ]]];
-
-        if ($this->viewer->parentPanelIds !== []) {
-            $groups[] = [$this->escalationFromCurrentPanel(), [
-                [$this->sql('%s = %s', $this->column('turn'), $this->literal(Turn::Supporter->value)), 'team'],
-                [$this->submittedByViewer(), 'you_owner'],
-                [null, 'owner_colleague'],
-            ]];
-        }
-
-        return $groups;
-    }
-
-    /**
-     * @param  array{0: string, 1: array<int, mixed>}  $closed
-     * @param  Closure(string): array{0: string, 1: array<int, mixed>}  $value
-     * @param  list<array{0: array{0: string, 1: array<int, mixed>}, 1: array{0: string, 1: array<int, mixed>}}>  $first
-     * @param  array{0: string, 1: array<int, mixed>}|null  $otherwise
+     * @param  list<array{0: array{0: string, 1: array<int, mixed>}|null, 1: array{0: string, 1: array<int, mixed>}}>  $branches
      * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function caseOverGroups(array $closed, Closure $value, array $first = [], ?array $otherwise = null): array
+    protected function choose(array $branches): array
     {
-        $parts = [$this->sql('when %s is not null then %s', $this->column('closed_at'), $closed)];
-
-        foreach ($first as [$condition, $result]) {
-            $parts[] = $this->sql('when %s then %s', $condition, $result);
-        }
-
-        $groups = $this->groups();
-
-        foreach ($groups as [$condition, $branches]) {
-            $inner = [];
-
-            foreach ($branches as [$branchCondition, $code]) {
-                $inner[] = $branchCondition === null
-                    ? $this->sql('else %s', $value($code))
-                    : $this->sql('when %s then %s', $branchCondition, $value($code));
-            }
-
-            $choice = $this->sql('case '.str_repeat('%s ', count($inner)).'end', ...$inner);
-
-            $parts[] = $condition === null
-                ? $this->sql('else %s', $choice)
-                : $this->sql('when %s then %s', $condition, $choice);
-        }
-
-        if ($otherwise !== null && end($groups)[0] !== null) {
-            $parts[] = $this->sql('else %s', $otherwise);
-        }
+        $parts = array_map(fn (array $branch): array => $branch[0] === null
+            ? $this->sql('else %s', $branch[1])
+            : $this->sql('when %s then %s', $branch[0], $branch[1]), $branches);
 
         return $this->sql('case '.str_repeat('%s ', count($parts)).'end', ...$parts);
     }
 
     /**
-     * An owner who asked the original themselves reads the reply there, so
-     * nothing is pending for them to pass on.
+     * On an original: "relay_mine" or "relay" while a reply from the team
+     * waits to be passed on, "hold" while it is on hold, otherwise null.
      *
      * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function relayPending(bool $ownedByViewer = false): array
+    protected function relayOrHold(): array
     {
-        $team = $this->latestMessage('linked_ticket_id', ActivitySender::Supporter);
-
         return $this->sql(
-            '(%s and %s > %s and %s > %s)',
-            $this->escalationExists(fn (QueryBuilder $query) => $query
+            'coalesce(%s, case when %s = %s and %s and %s = %s then %s end)',
+            $this->relay(),
+            $this->column('turn'),
+            $this->literal(Turn::Supporter->value),
+            $this->escalationExists(fn (QueryBuilder $query) => $query->whereNull('cs_e.closed_at')),
+            $this->subquery($this->newQuery()
+                ->from((new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable(), 'cs_l')
+                ->select('cs_l.sender')
+                ->whereColumn('cs_l.ticket_id', $this->ticket->getQualifiedKeyName())
+                ->where('cs_l.type', ActivityType::Message->value)
+                ->whereIn('cs_l.sender', [ActivitySender::User->value, ActivitySender::Supporter->value])
+                ->orderByDesc('cs_l.id')
+                ->limit(1)),
+            $this->literal(ActivitySender::Supporter->value),
+            $this->literal('hold'),
+        );
+    }
+
+    /**
+     * "relay_mine" or "relay" while the team's latest message on the
+     * escalation is newer than the organization's latest on this original and
+     * the owner's latest on the escalation, otherwise null. An owner who asked
+     * the original themselves reads the reply there, so nothing is pending for
+     * them to pass on.
+     *
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    protected function relay(): array
+    {
+        return $this->sql(
+            '(case when %s > %s(%s, %s) then %s end)',
+            $this->latestMessage('linked_ticket_id', ActivitySender::Supporter),
+            $this->raw($this->ticket->getConnection()->getDriverName() === 'sqlite' ? 'max' : 'greatest'),
+            $this->latestMessage($this->ticket->getKeyName(), ActivitySender::Supporter),
+            $this->latestMessage('linked_ticket_id', ActivitySender::User),
+            $this->subquery($this->escalationQuery()
                 ->where(fn (QueryBuilder $query) => $query
                     ->whereNull('cs_e.submitter_id')
                     ->orWhereNull($this->ticket->qualifyColumn('submitter_id'))
@@ -274,27 +340,10 @@ final class ConversationStateQuery
                 ->where(fn (QueryBuilder $query) => $query
                     ->whereNotNull('cs_e.submitter_id')
                     ->orWhereNotNull($this->ticket->qualifyColumn('submitter_id')))
-                ->when($ownedByViewer, fn (QueryBuilder $query) => $query->where('cs_e.submitter_id', $this->viewer->userId))),
-            $team,
-            $this->latestMessage($this->ticket->getKeyName(), ActivitySender::Supporter),
-            $team,
-            $this->latestMessage('linked_ticket_id', ActivitySender::User),
-        );
-    }
-
-    /**
-     * @return array{0: string, 1: array<int, mixed>}
-     */
-    protected function onHold(): array
-    {
-        return $this->sql(
-            '(%s = %s and %s and not %s and %s > %s)',
-            $this->column('turn'),
-            $this->literal(Turn::Supporter->value),
-            $this->escalationExists(fn (QueryBuilder $query) => $query->whereNull('cs_e.closed_at')),
-            $this->relayPending(),
-            $this->latestMessage($this->ticket->getKeyName(), ActivitySender::Supporter),
-            $this->latestMessage($this->ticket->getKeyName(), ActivitySender::User),
+                ->selectRaw(
+                    sprintf('case when %s = ? then %s else %s end', $this->grammar->wrap('cs_e.submitter_id'), $this->grammar->quoteString('relay_mine'), $this->grammar->quoteString('relay')),
+                    [$this->viewer->userId],
+                )),
         );
     }
 
@@ -303,48 +352,28 @@ final class ConversationStateQuery
      */
     protected function escalationFromCurrentPanel(): array
     {
-        return $this->sql(
-            '(%s in (%s) and (%s or (%s = %s and (%s or %s))))',
-            $this->column('panel'),
-            $this->bindings($this->viewer->parentPanelIds),
-            $this->originalsExist($this->viewer->panelId),
-            $this->column('source_panel'),
-            $this->binding($this->viewer->panelId),
-            $this->originalsExist(),
-            $this->originalAddedExists(),
-        );
+        return $this->condition($this->ticket->newQueryWithoutScopes()->escalationsFrom($this->viewer->panelId));
     }
 
     /**
-     * Deleted originals still count, as in Ticket::isEscalation().
+     * A model scope's conditions, so this SQL and the model's own checks
+     * agree.
      *
+     * @param  Builder<Ticket>  $query
      * @return array{0: string, 1: array<int, mixed>}
      */
-    protected function originalsExist(?string $panelId = null): array
+    protected function condition(Builder $query): array
     {
-        return $this->sql('exists %s', $this->subquery($this->newQuery()
-            ->from($this->ticket->getTable(), 'cs_c')
-            ->selectRaw('1')
-            ->whereColumn('cs_c.linked_ticket_id', $this->ticket->getQualifiedKeyName())
-            ->when($panelId !== null, fn (QueryBuilder $query) => $query->where('cs_c.panel', $panelId))));
-    }
+        $query = $query->toBase();
 
-    /**
-     * @return array{0: string, 1: array<int, mixed>}
-     */
-    protected function originalAddedExists(): array
-    {
-        return $this->sql('exists %s', $this->subquery($this->newQuery()
-            ->from((new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable(), 'cs_o')
-            ->selectRaw('1')
-            ->whereColumn('cs_o.ticket_id', $this->ticket->getQualifiedKeyName())
-            ->where('cs_o.type', ActivityType::OriginalAdded->value)));
+        return ['('.preg_replace('/^where /', '', $query->getGrammar()->compileWheres($query)).')', $query->getBindings()];
     }
 
     /**
      * A pool that keeps one account per person misses that person's other
      * accounts, which may belong to another tenant, so those are loaded through
-     * the panel's relationship scopes and matched by email.
+     * the panel's relationship scopes and matched by email, whatever its case,
+     * as ConversationViewer matches the viewer.
      *
      * @return array{0: string, 1: array<int, mixed>}
      */
@@ -370,7 +399,10 @@ final class ConversationStateQuery
         $assignee
             ->selectRaw('1')
             ->whereColumn($assignee->getModel()->getQualifiedKeyName(), $this->ticket->qualifyColumn('assignee_id'))
-            ->whereIn($assignee->qualifyColumn($this->viewer->supporterMatchColumn), $this->viewer->supporterPool);
+            ->whereIn(
+                DB::raw('lower('.$this->grammar->wrap($assignee->qualifyColumn($this->viewer->supporterMatchColumn)).')'),
+                array_map(fn (int|string $value): string => mb_strtolower((string) $value), $this->viewer->supporterPool),
+            );
 
         return $this->sql('exists %s', $this->subquery($assignee->toBase()));
     }

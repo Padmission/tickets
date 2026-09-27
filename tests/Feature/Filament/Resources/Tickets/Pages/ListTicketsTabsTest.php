@@ -126,7 +126,7 @@ it('shows linked tickets tabs when feature enabled', function () {
 });
 
 it('linked tickets only shows tickets that have a child ticket from the current panel', function () {
-    TicketPlugin::get()->allowLinkedTicketsTo(['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
 
     (new TicketStatusSeeder)->run();
 
@@ -153,7 +153,7 @@ it('linked tickets only shows tickets that have a child ticket from the current 
 });
 
 it('filters my linked tickets tab by linked ticket id and submitter', function () {
-    TicketPlugin::get()->allowLinkedTicketsTo(['test']);
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
     (new TicketStatusSeeder)->run();
 
     $user = $this->login();
