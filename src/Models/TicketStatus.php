@@ -66,7 +66,7 @@ class TicketStatus extends Model
         $modifier = TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier();
 
         if ($modifier) {
-            $query = app()->call($modifier, ['relation' => $query, 'model' => 'status']);
+            app()->call($modifier, ['relation' => $query, 'model' => 'status']);
         }
 
         /** @var ?static */

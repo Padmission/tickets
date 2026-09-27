@@ -1,10 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketEscalationLinks;
+use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
 function expectEscalation(Ticket $ticket, bool $expected): void
@@ -131,3 +135,17 @@ it('takes a list row\'s escalation identity from its conversation state', functi
         ->and($rows[$plain->id]->isEscalation())->toBeFalse()
         ->and(DB::getQueryLog())->toBeEmpty();
 });
+
+it('lets a panel\'s scope modifier change a lookup in place, returning nothing', function () {
+    $person = User::factory()->create(['name' => 'Kevin McKee']);
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($person->id));
+    TicketPlugin::get('test2')->modifyRelationshipScopes(function ($relation): void {
+        $relation->withoutGlobalScope('acting-tenant');
+    });
+    (new TicketStatusSeeder)->run();
+
+    $ticket = Ticket::factory()->create(['panel' => 'test2', 'assignee_id' => $person->id]);
+
+    expect(TicketAssignee::for($ticket)?->getKey())->toBe($person->id)
+        ->and(TicketStatus::getClosedStatusFor($ticket))->not->toBeNull();
+})->after(fn () => User::clearBootedModels());

@@ -93,7 +93,7 @@ class NotificationRecipientService
             : null;
 
         if ($modifier !== null) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'submitter']);
+            app()->call($modifier, ['relation' => $relation, 'model' => 'submitter']);
         }
 
         $submitter = $relation->first();

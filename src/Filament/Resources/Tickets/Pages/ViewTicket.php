@@ -136,7 +136,8 @@ class ViewTicket extends EditRecord
         return $this->linkedTickets ??= ($this->hasOriginals()
             ? $this->originals()
             : collect([$record->parentTicket])->filter())
-            ->filter(fn (Ticket $ticket): bool => $user !== null && Gate::forUser($user)->allows('view', $ticket))
+            // The team an escalation was sent to reads every original beside it, as authorizeAccess() lets it.
+            ->filter(fn (Ticket $ticket): bool => $this->isEscalatedHere($record) || ($user !== null && Gate::forUser($user)->allows('view', $ticket)))
             ->values();
     }
 
@@ -180,6 +181,7 @@ class ViewTicket extends EditRecord
         $this->escalationStatus = null;
         $this->escalations = [];
         $this->conversationState = null;
+        $this->editable = [];
     }
 
     /*
@@ -311,9 +313,20 @@ class ViewTicket extends EditRecord
         return $record->isNotInCurrentPanel() || $this->canEdit($record);
     }
 
+    /**
+     * Asked by several actions and sections on each render.
+     *
+     * @var array<string, bool>
+     */
+    protected array $editable = [];
+
     protected function canEdit(?Ticket $record): bool
     {
-        return static::getResource()::canEdit($record);
+        if ($record === null) {
+            return static::getResource()::canEdit($record);
+        }
+
+        return $this->editable[(string) $record->getKey()] ??= static::getResource()::canEdit($record);
     }
 
     /**
@@ -1180,7 +1193,7 @@ class ViewTicket extends EditRecord
 
         // The organization side needs no sentence: the membership line or the two
         // escalate choices already say where the ticket stands.
-        return filled($record->linked_ticket_id) || $record->childTickets()->doesntExist()
+        return filled($record->linked_ticket_id) || ! $this->hasOriginals()
             ? null
             : __($key.(TicketPlugin::get()->getLinkedConversationView() === TicketPlugin::LINKED_VIEW_MODAL ? '.escalated_from' : '.escalated_from_beside'));
     }

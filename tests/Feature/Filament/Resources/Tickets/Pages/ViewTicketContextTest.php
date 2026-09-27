@@ -1,6 +1,7 @@
 <?php
 
 use Filament\Actions\Testing\TestAction;
+use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
@@ -747,6 +748,46 @@ it('reads the page in a fixed number of queries whatever the number of originals
         ->and($one)->toBeLessThanOrEqual($page === 'original' ? 27 : 15);
 })->with(['original', 'escalation']);
 
+it('reads an escalation page in a fixed number of queries under the package policy', function (string $panel) {
+    (new TicketStatusSeeder)->run();
+    Gate::policy(Ticket::class, TicketPolicy::class);
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+    $staff = User::factory()->create(['name' => 'Kevin McKee']);
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey(auth()->id()));
+    TicketPlugin::get('test2')->allSupportersQuery(fn () => User::query()->whereKey($staff->id));
+
+    if ($panel === 'test2') {
+        Filament::setCurrentPanel('test2');
+        $this->login($staff);
+        TicketPlugin::get('test')->allSupportersQuery(fn () => User::query()->whereKey(User::query()->where('name', '!=', 'Kevin McKee')->value('id')));
+    }
+
+    $count = function (int $originals) use ($staff): int {
+        $owner = User::query()->where('name', '!=', 'Kevin McKee')->orderBy('id')->firstOrFail();
+        [$escalation] = contextEscalatedOriginal(['assignee_id' => $staff->id], $owner->id);
+
+        foreach (range(2, $originals) as $ignored) {
+            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        }
+
+        Once::flush();
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])->assertOk();
+
+        return count(DB::getQueryLog());
+    };
+
+    $one = $count(1);
+
+    expect($count(5))->toBe($one);
+})->with([
+    'the escalating team\'s page' => ['test'],
+    'the receiving team\'s page' => ['test2'],
+]);
+
 describe('Page clarity', function () {
     beforeEach(function () {
         (new TicketStatusSeeder)->run();
@@ -780,10 +821,11 @@ describe('Page clarity', function () {
     it('names the escalation\'s handler in the pane, and says You to the viewer', function () {
         [$escalation, $original] = contextEscalatedOriginal();
 
-        Livewire::test(ViewTicket::class, ['record' => $original->id])
+        $html = Livewire::test(ViewTicket::class, ['record' => $original->id])
             ->call('showLinked', $escalation->id)
-            ->assertSeeHtml('<dt>'.__('padmission-tickets::tickets.resources.tickets.handled_by').'</dt>')
-            ->assertSeeHtml('<dd>'."\n".'                            '.__('padmission-tickets::tickets.side_you'));
+            ->html();
+
+        expect($html)->toMatch('/<dt>\s*'.preg_quote(__('padmission-tickets::tickets.resources.tickets.handled_by'), '/').'\s*<\/dt>\s*<dd>\s*'.preg_quote(__('padmission-tickets::tickets.side_you'), '/').'\s*</');
     });
 
     it('opens the pane at the first message the viewer has not read', function () {

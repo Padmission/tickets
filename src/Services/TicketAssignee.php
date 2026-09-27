@@ -33,7 +33,7 @@ class TicketAssignee
             return $relation->first();
         }
 
-        $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
+        app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
 
         return static::onlyName($relation->first());
     }

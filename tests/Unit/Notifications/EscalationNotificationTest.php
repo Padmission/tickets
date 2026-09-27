@@ -58,9 +58,16 @@ function padmissionReply(Ticket $escalation, User $padmission, string $content =
     ]);
 }
 
+/**
+ * What the recipient's email says, read from the email itself.
+ *
+ * @return array<string, mixed>
+ */
 function wordingFor(Ticket $ticket, object $event, User $recipient): array
 {
-    return invade(new TicketNotification($ticket, $event))->wording($recipient);
+    $mail = (new TicketNotification($ticket, $event))->toMail($recipient);
+
+    return [...$mail->viewData, 'subject' => $mail->subject];
 }
 
 it('tells the owner the team replied on their escalation, and links the escalation with its original beside it', function () {

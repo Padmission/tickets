@@ -250,6 +250,25 @@ describe('on the side that escalated', function () {
         'reply, colleague' => [true, false],
     ]);
 
+    it('opens the ticket named in the address, from the escalation and from an original', function () {
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => auth()->id()]);
+        $first = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        $second = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        $stranger = Ticket::factory()->open()->create();
+
+        Livewire::withQueryParams(['linked' => $second->id])
+            ->test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSet('linkedTicketId', $second->id);
+
+        Livewire::withQueryParams(['linked' => $escalation->id])
+            ->test(ViewTicket::class, ['record' => $first->id])
+            ->assertSet('linkedTicketId', $escalation->id);
+
+        Livewire::withQueryParams(['linked' => $stranger->id])
+            ->test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSet('linkedTicketId', null);
+    });
+
     it('shows the requester of an escalated original nothing of the escalation, even when asked for it', function () {
         Gate::policy(Ticket::class, TicketPolicy::class);
 
