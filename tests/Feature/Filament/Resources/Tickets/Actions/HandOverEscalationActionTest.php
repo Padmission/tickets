@@ -98,6 +98,24 @@ it('lets the owner hand the escalation to a colleague from Handled by', function
         && $event->toId === $this->colleague->id);
 });
 
+it('leaves the dialog as it was while the browser leaves an escalation its owner handed over, since the page now refuses them', function () {
+    Event::fake([TicketHandedOverEvent::class]);
+    $this->login($this->owner);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->mountAction(handOverHint())
+        ->fillForm(['new_owner' => $this->colleague->id])
+        ->callMountedAction()
+        ->assertRedirect(TicketResource::getUrl('index', ['tab' => 'linked']))
+        ->assertActionMounted(handOverHint())
+        ->assertSchemaStateSet(['new_owner' => $this->colleague->id], 'mountedActionSchema0');
+
+    expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id);
+
+    // What emptying the owner field asked for: the page's next request is refused.
+    $page->call('$refresh')->assertForbidden();
+});
+
 it('offers only the escalating team, without the owner, and refuses anyone else', function () {
     $this->login($this->owner);
 
