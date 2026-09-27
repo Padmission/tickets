@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Notifications;
 
 use ArrayObject;
+use Carbon\CarbonInterval;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification as FilamentNotification;
@@ -10,14 +11,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Services\EscalationSummary;
+use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketUrlService;
@@ -119,23 +121,40 @@ class TicketNotification extends Notification
     protected function decideHandOver($notifiable): bool
     {
         $handedToThem = (string) $notifiable->getKey() === (string) $this->event->toId;
-        $untold = 'padmission-tickets:hand-over-untold:'.$this->ticket->getKey().':'.$notifiable->getKey();
 
         if ($this->isSubmitter($notifiable) !== $handedToThem) {
-            if ($handedToThem) {
-                Cache::put($untold, true, now()->addDay());
-            }
-
             return false;
         }
 
-        if ($handedToThem) {
-            Cache::forget($untold);
+        return $handedToThem || $this->wasToldTheyHeldIt($notifiable);
+    }
 
+    /*
+     * Worked out from the history rather than from which email went first,
+     * since both can fall due together: the "handed to you" email went out
+     * only if they still held the escalation when it was due.
+     */
+    protected function wasToldTheyHeldIt($notifiable): bool
+    {
+        $key = (string) $notifiable->getKey();
+        $handOvers = $this->ticket->ticketActivities()->where('type', ActivityType::HandedOver)->orderBy('id')->get();
+
+        $lost = $handOvers->last(fn (TicketActivity $activity): bool => (string) ($activity->data['from'] ?? '') === $key);
+        $gained = $lost === null ? null : $handOvers->last(fn (TicketActivity $activity): bool => $activity->id < $lost->id
+            && (string) ($activity->data['to'] ?? '') === $key);
+
+        // Held from the start, or taken over by themselves.
+        if ($gained === null || (string) $gained->user_id === $key) {
             return true;
         }
 
-        return ! Cache::pull($untold, false);
+        if (resolve(NotificationRecipientService::class)->getUserNotificationStrategy($notifiable) === NotificationStrategy::Immediate) {
+            return true;
+        }
+
+        $debounce = (int) config('padmission-tickets.notification-debounce', CarbonInterval::minutes(5)->totalSeconds);
+
+        return $gained->created_at->copy()->addSeconds($debounce)->lte($lost->created_at);
     }
 
     protected function isActor($notifiable): bool

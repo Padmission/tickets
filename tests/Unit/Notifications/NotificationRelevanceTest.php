@@ -170,19 +170,30 @@ it('names the team or the organization, never Support, for a writer it cannot fi
         ->and($html)->not->toContain('>Support<');
 });
 
-it('does not tell someone it was taken from them when they were never told it was handed to them', function () {
+it('does not tell someone it was taken from them when they were never told it was handed to them', function (int $heldForSeconds, bool $told) {
+    config(['padmission-tickets.notification-debounce' => 120]);
+    $this->travelTo(now()->startOfSecond());
+    $this->escalation->addTicketActivity(ActivityType::HandedOver, ActivitySender::System, $this->owner->id, ['from' => $this->owner->id, 'to' => $this->colleague->id]);
+    $this->travel($heldForSeconds)->seconds();
+    $this->escalation->addTicketActivity(ActivityType::HandedOver, ActivitySender::System, $this->third->id, ['from' => $this->colleague->id, 'to' => $this->third->id]);
+    $this->escalation->update(['submitter_id' => $this->third->id]);
+
     $handedToColleague = new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id);
     $takenFromColleague = new TicketHandedOverEvent($this->escalation, $this->third, $this->colleague->id, $this->third->id);
-    $this->escalation->update(['submitter_id' => $this->third->id]);
 
-    expect((new TicketNotification($this->escalation, $handedToColleague))->shouldSend($this->colleague))->toBeFalse()
-        ->and((new TicketNotification($this->escalation, $takenFromColleague))->shouldSend($this->colleague))->toBeFalse();
+    // Whichever of the two falls due first.
+    expect((new TicketNotification($this->escalation, $takenFromColleague))->shouldSend($this->colleague))->toBe($told)
+        ->and((new TicketNotification($this->escalation, $handedToColleague))->shouldSend($this->colleague))->toBeFalse();
+})->with([
+    'taken before the first email was due' => [30, false],
+    'taken after it went out' => [121, true],
+]);
 
+it('tells whoever held the escalation from the start that it was taken from them', function () {
+    $this->escalation->addTicketActivity(ActivityType::HandedOver, ActivitySender::System, $this->colleague->id, ['from' => $this->owner->id, 'to' => $this->colleague->id]);
     $this->escalation->update(['submitter_id' => $this->colleague->id]);
-    expect((new TicketNotification($this->escalation, $handedToColleague))->shouldSend($this->colleague))->toBeTrue();
 
-    $this->escalation->update(['submitter_id' => $this->third->id]);
-    expect((new TicketNotification($this->escalation, $takenFromColleague))->shouldSend($this->colleague))->toBeTrue();
+    expect((new TicketNotification($this->escalation, new TicketHandedOverEvent($this->escalation, $this->colleague, $this->owner->id, $this->colleague->id)))->shouldSend($this->owner))->toBeTrue();
 });
 
 it('says a ticket was assigned to you once in the subject', function () {
