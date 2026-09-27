@@ -623,7 +623,7 @@ class ViewTicket extends EditRecord
                             ->placeholder(__('padmission-tickets::tickets.resources.tickets.no_messages'))
                             ->dateTime()
                             ->formatStateUsing(fn (?CarbonImmutable $state) => $state?->diffForHumans())
-                            ->tooltip(fn (?CarbonImmutable $state) => $state?->format(TicketPlugin::MESSAGE_TIME_FORMAT))
+                            ->tooltip(fn (?CarbonImmutable $state) => TicketPlugin::formatMessageTime($state))
                             ->columnSpanFull(),
 
                         TextEntry::make('closed_at')
@@ -631,7 +631,7 @@ class ViewTicket extends EditRecord
                             ->visible(fn (Ticket $record) => $record->isClosed)
                             ->dateTime()
                             ->formatStateUsing(fn ($state) => $state?->diffForHumans())
-                            ->tooltip(fn ($state) => $state?->format(TicketPlugin::MESSAGE_TIME_FORMAT))
+                            ->tooltip(fn ($state) => TicketPlugin::formatMessageTime($state))
                             ->columnSpanFull(),
 
                     ]),

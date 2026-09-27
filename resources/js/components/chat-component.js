@@ -273,12 +273,14 @@ customElements.define(
 				const hasDateChanged =
 					Boolean(message.created_at) &&
 					(lastDate === true || formatter(lastDate) !== formatter(messageDate));
-				// Same as the ticket page's MESSAGE_TIME_FORMAT, e.g. "Sep 25, 7:15 AM".
+				// Same as the ticket page's MESSAGE_TIME_FORMAT, e.g. "Sep 25, 7:15 AM", and in
+				// the page's timezone when it gives one, so the chat agrees with the rest of the page.
 				const absoluteDate = messageDate.toLocaleString([], {
 					month: "short",
 					day: "numeric",
 					hour: "numeric",
 					minute: "2-digit",
+					...(this.timezone ? { timeZone: this.timezone } : {}),
 				});
 
 				// biome-ignore format: preserve template formatting

@@ -49,6 +49,7 @@ class OpenEscalationsTable
                     ->label(__('padmission-tickets::tickets.actions.add_to_escalation.escalated_at'))
                     ->since()
                     ->dateTimeTooltip(TicketPlugin::get()->getDateTimeDisplayFormat())
+                    ->timezone(TicketPlugin::get()->getDisplayTimezone())
                     ->sortable(),
 
                 TextColumn::make('originals_count')

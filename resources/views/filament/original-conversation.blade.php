@@ -82,7 +82,7 @@
                     @if ($activity->sender === ActivitySender::System || ! in_array($activity->type, [ActivityType::Message, ActivityType::InternalMessage]))
                         <li class="pad-ti-transcript__event" @if ($activity->getKey() === $firstUnreadId) data-pad-ti-first-unread @endif>
                             {{ $activity->plainTextContent() }}
-                            · {{ $activity->created_at?->format(TicketPlugin::MESSAGE_TIME_FORMAT) }}
+                            · {{ TicketPlugin::formatMessageTime($activity->created_at) }}
                         </li>
                     @else
                         <li @class([
@@ -91,7 +91,7 @@
                         ]) @if ($activity->getKey() === $firstUnreadId) data-pad-ti-first-unread @endif>
                             <div class="pad-ti-transcript__meta">
                                 <strong>{{ $activity->senderName }}</strong>
-                                · {{ $activity->created_at?->format(TicketPlugin::MESSAGE_TIME_FORMAT) }}
+                                · {{ TicketPlugin::formatMessageTime($activity->created_at) }}
                                 @if ($activity->type === ActivityType::InternalMessage)
                                     · {{ __('padmission-tickets::tickets.actions.view_original_conversation.internal_note') }}
                                 @endif

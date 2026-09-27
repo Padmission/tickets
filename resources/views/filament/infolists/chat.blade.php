@@ -49,6 +49,7 @@
         closed-empty-message="{{ $closedEmptyMessage ?? '' }}"
         can-reply="{{ $canReply ? 'true' : 'false' }}"
         keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
+        timezone="{{ TicketPlugin::get()->getDisplayTimezone() }}"
     ></chat-component>
 
     <script>

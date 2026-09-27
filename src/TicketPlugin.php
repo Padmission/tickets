@@ -2,11 +2,13 @@
 
 namespace Padmission\Tickets;
 
+use Carbon\CarbonInterface;
 use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Filament\Schemas\Components\Component;
+use Filament\Support\Facades\FilamentTimezone;
 use Filament\Tables\Columns\Column;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -105,6 +107,8 @@ class TicketPlugin implements Plugin
     protected mixed $relationshipScopeModifier = null;
 
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
+
+    protected string|Closure|null $displayTimezone = null;
 
     public static function make(): self
     {
@@ -237,6 +241,33 @@ class TicketPlugin implements Plugin
     public function getDateTimeDisplayFormat(): string
     {
         return $this->dateTimeDisplayFormat;
+    }
+
+    /*
+     * The timezone every ticket time is shown in: the chat, the linked pane
+     * and the tooltips. Without it the chat followed the browser while the
+     * rest of the page followed the server.
+     */
+    public function displayTimezone(string|Closure|null $timezone): static
+    {
+        $this->displayTimezone = $timezone;
+
+        return $this;
+    }
+
+    public function getDisplayTimezone(): string
+    {
+        $timezone = $this->displayTimezone instanceof Closure ? app()->call($this->displayTimezone) : $this->displayTimezone;
+
+        return filled($timezone) ? (string) $timezone : FilamentTimezone::get();
+    }
+
+    /*
+     * A ticket time as the page shows it, in the display timezone.
+     */
+    public static function formatMessageTime(?CarbonInterface $time): ?string
+    {
+        return $time?->copy()->setTimezone(static::get()->getDisplayTimezone())->format(static::MESSAGE_TIME_FORMAT);
     }
 
     public function escalationLevel(string $level): static

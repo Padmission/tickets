@@ -4,6 +4,7 @@
 
     $chatConfig = TicketPlugin::get()->getChatWidgetConfig();
     $chatPrimaryColor = $chatConfig->getPrimaryColor();
+    $chatTimezone = TicketPlugin::get()->getDisplayTimezone();
 @endphp
 
 <div class="flex h-full min-h-0 flex-col bg-white dark:bg-gray-900">
@@ -156,6 +157,7 @@
                 x-ref="chat"
                 ticket-id=""
                 config="{{ $chatConfig->toJs() }}"
+                timezone="{{ $chatTimezone }}"
                 scroll-threshold="100"
                 polling-interval="10000"
             ></chat-component>
@@ -245,6 +247,7 @@
                     x-ref="chat"
                     ticket-id="{{ $activeTicket->getKey() }}"
                     config="{{ $chatConfig->toJs() }}"
+                    timezone="{{ $chatTimezone }}"
                     scroll-threshold="100"
                     polling-interval="10000"
                     has-elevated-rights="false"

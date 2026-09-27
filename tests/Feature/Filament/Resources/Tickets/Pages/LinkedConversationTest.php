@@ -1,5 +1,6 @@
 <?php
 
+use Carbon\CarbonImmutable;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
@@ -306,4 +307,26 @@ it('has nothing to show on a ticket without linked tickets', function () {
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertActionHidden('show-linked');
+});
+
+it('shows every ticket time in the panel\'s display timezone: the pane, the tooltips and the chat', function () {
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+    TicketPlugin::get()->displayTimezone(fn (): string => 'America/Phoenix');
+
+    $escalation = Ticket::factory()->open()->create(['submitter_id' => User::factory()->create()->id]);
+    $original = originalWithMessage($escalation, 'The rent looks wrong');
+    $original->ticketActivities()->update(['created_at' => '2026-09-25 14:15:00']);
+    linkedMessage($escalation, ActivitySender::User, $escalation->submitter_id)->update(['created_at' => '2026-09-25 14:20:00']);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id, 'linkedTicketId' => $original->id])
+        ->assertSee('Sep 25, 7:15 AM')
+        ->assertDontSee('Sep 25, 2:15 PM')
+        ->assertSeeHtml('timezone="America/Phoenix"');
+
+    expect(TicketPlugin::formatMessageTime(CarbonImmutable::parse('2026-09-25 14:20:00', 'UTC')))->toBe('Sep 25, 7:20 AM');
+
+    TicketPlugin::get()->displayTimezone(null);
+
+    expect(TicketPlugin::get()->getDisplayTimezone())->toBe(config('app.timezone'))
+        ->and(TicketPlugin::formatMessageTime(CarbonImmutable::parse('2026-09-25 14:20:00', 'UTC')))->toBe('Sep 25, 2:20 PM');
 });
