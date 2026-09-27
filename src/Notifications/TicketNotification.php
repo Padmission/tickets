@@ -6,9 +6,12 @@ use ArrayObject;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification as FilamentNotification;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
@@ -34,11 +37,20 @@ class TicketNotification extends Notification
      */
     protected ArrayObject $unreadActivities;
 
+    /**
+     * Whether to send, decided once per notifiable for every channel, since
+     * the decision can record that a hand over went untold.
+     *
+     * @var ArrayObject<int|string, bool>
+     */
+    protected ArrayObject $decisions;
+
     public function __construct(
         protected Ticket $ticket,
         protected $event,
     ) {
         $this->unreadActivities = new ArrayObject;
+        $this->decisions = new ArrayObject;
 
         $this->notificationType = str($this->event::class)
             ->afterLast('\\')
@@ -55,6 +67,11 @@ class TicketNotification extends Notification
 
     public function shouldSend($notifiable): bool
     {
+        return $this->decisions[$notifiable->getKey()] ??= $this->decideToSend($notifiable);
+    }
+
+    protected function decideToSend($notifiable): bool
+    {
         /*
          * A created event is an acknowledgement of the ticket itself, so it
          * must not be gated on unread activity: the ticket may not have any
@@ -70,16 +87,20 @@ class TicketNotification extends Notification
             return ! $this->isOwnEscalation($notifiable);
         }
 
+        // Nobody is emailed about what they did themselves.
+        if (in_array($this->notificationType, ['closed', 'assigned'], true) && $this->isActor($notifiable)) {
+            return false;
+        }
+
         if ($this->notificationType === 'closed') {
             return true;
         }
 
-        // A later move, which tells them itself or was their own, can overtake a debounced one.
         if ($this->notificationType === 'handedover') {
-            return $this->isSubmitter($notifiable) === ((string) $notifiable->getKey() === (string) $this->event->toId);
+            return $this->decideHandOver($notifiable);
         }
 
-        $activities = $this->getUnreadActivities($notifiable);
+        $activities = $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable));
 
         // The owner hears of a reply; the other team's own notes, such as closing it, come some other way or not at all.
         if ($this->notificationType === 'activity' && $this->isOwnEscalation($notifiable)) {
@@ -88,6 +109,40 @@ class TicketNotification extends Notification
         }
 
         return $activities->isNotEmpty();
+    }
+
+    /*
+     * A later move, which tells them itself or was their own, can overtake a
+     * debounced one. Someone never told the escalation was handed to them is
+     * not told either that it was taken from them.
+     */
+    protected function decideHandOver($notifiable): bool
+    {
+        $handedToThem = (string) $notifiable->getKey() === (string) $this->event->toId;
+        $untold = 'padmission-tickets:hand-over-untold:'.$this->ticket->getKey().':'.$notifiable->getKey();
+
+        if ($this->isSubmitter($notifiable) !== $handedToThem) {
+            if ($handedToThem) {
+                Cache::put($untold, true, now()->addDay());
+            }
+
+            return false;
+        }
+
+        if ($handedToThem) {
+            Cache::forget($untold);
+
+            return true;
+        }
+
+        return ! Cache::pull($untold, false);
+    }
+
+    protected function isActor($notifiable): bool
+    {
+        $actor = $this->event->actor ?? null;
+
+        return $actor !== null && (string) $actor->getAuthIdentifier() === (string) $notifiable->getKey();
     }
 
     public function toMail($notifiable): MailMessage
@@ -114,10 +169,6 @@ class TicketNotification extends Notification
 
         $this->markActivitiesAsSent($notifiable, $activities);
 
-        if ($this->notificationType === 'handedover') {
-            $activities = $this->handOverActivities($activities);
-        }
-
         $hasMoreActivities = $activities->count() > $maxEvents;
 
         /*
@@ -131,6 +182,12 @@ class TicketNotification extends Notification
          */
         if ($hasMoreActivities) {
             $activities = $activities->slice(1, $maxEvents);
+        }
+
+        $activities = $this->reportedActivities($notifiable, $activities);
+
+        if ($this->notificationType === 'handedover') {
+            $activities = $this->handOverActivities($activities);
         }
 
         return (new MailMessage)
@@ -196,7 +253,7 @@ class TicketNotification extends Notification
         $body = match ($this->notificationType) {
             'handedover' => $wording['intro'],
             'created' => $this->openingActivities($notifiable, $activities)->last()?->plainTextContent(30) ?? $wording['intro'],
-            default => $activities->last()?->plainTextContent(30) ?? $wording['intro'],
+            default => $this->reportedActivities($notifiable, $activities)->last()?->plainTextContent(30) ?? $wording['intro'],
         };
 
         return FilamentNotification::make()
@@ -382,9 +439,70 @@ class TicketNotification extends Notification
 
     protected function assigneeName(): ?string
     {
-        $assignee = TicketAssignee::for($this->ticket);
+        $assignee = TicketAssignee::for($this->ticket) ?? $this->findUser($this->ticket->assignee_id);
 
         return $assignee === null ? null : Filament::getUserName($assignee);
+    }
+
+    /*
+     * Someone named in the ticket's history, found through the ticket's own
+     * panel. Hosts whose queue workers leave that panel's scopes in place
+     * override it, so another tenant's people are still named.
+     */
+    protected function findUser(int|string|null $id): ?Model
+    {
+        if (blank($id)) {
+            return null;
+        }
+
+        $query = TicketPlugin::resolveUserModelClass()::query();
+        $modifier = TicketPlugin::find($this->ticket->panel)?->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            app()->call($modifier, ['relation' => $query, 'model' => 'user']);
+        }
+
+        return $query->find($id);
+    }
+
+    /*
+     * The history as the email shows it: an assignment names the person, not
+     * their number.
+     */
+    public function activityContent(TicketActivity $activity): string
+    {
+        $assignee = $activity->type === ActivityType::AssigneeChanged ? $this->findUser($activity->data['to'] ?? null) : null;
+
+        return $assignee !== null
+            ? __('padmission-tickets::activities.assigned_to', ['name' => resolve(GetUserDisplayName::class)->forUser($assignee)])
+            : (string) $activity->content;
+    }
+
+    /*
+     * Who wrote a message. When they can't be found here, the side they wrote
+     * for is named instead: the other team, or the organization and its contact.
+     */
+    public function senderName(TicketActivity $activity, ?string $supporterLabel = null): ?string
+    {
+        if ($activity->sender === ActivitySender::System) {
+            return null;
+        }
+
+        $writer = $activity->user ?? $this->findUser($activity->user_id);
+
+        if ($writer !== null) {
+            return resolve(GetUserDisplayName::class)->forUser($writer);
+        }
+
+        if ($activity->sender === ActivitySender::Supporter) {
+            return $supporterLabel
+                ?? ($this->ticket->isEscalation() ? $this->escalationTeamName() : null)
+                ?? __('padmission-tickets::notifications.general.sender-support');
+        }
+
+        $organization = $this->ticket->isEscalation() ? TicketPlugin::find($this->ticket->panel)?->describeTicketOrigin($this->ticket) : null;
+
+        return $organization ?? $this->ticket->requesterName() ?? __('padmission-tickets::notifications.general.sender-you');
     }
 
     protected function isSubmitter($notifiable): bool
@@ -441,6 +559,25 @@ class TicketNotification extends Notification
         return $activities->takeUntil(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message
             && $activity->sender !== ActivitySender::System
             && (string) $activity->user_id !== (string) $notifiable->getKey());
+    }
+
+    /**
+     * The activities worth telling this recipient about: not what they did
+     * themselves, and not the close of a closed ticket, which the closed
+     * notification tells.
+     *
+     * @param  Collection<int, TicketActivity>  $activities
+     * @return Collection<int, TicketActivity>
+     */
+    protected function reportedActivities($notifiable, Collection $activities): Collection
+    {
+        $closedStatusId = $this->ticket->isClosed ? (string) $this->ticket->status_id : null;
+
+        return $activities
+            ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
+                || ($closedStatusId !== null && $activity->type === ActivityType::Closed)
+                || ($closedStatusId !== null && $activity->type === ActivityType::StatusChanged && (string) ($activity->data['to'] ?? '') === $closedStatusId))
+            ->values();
     }
 
     /**

@@ -33,11 +33,7 @@
                             default => 'padding: 8px 12px; background: #fef3c7; border-radius: 32px; font-size: .8em; font-weight: 500; color: rgba(145.67, 64.502, 15.012);',
                         };
 
-                        $senderName = match($activity->sender) {
-                            ActivitySender::User => $activity->user ? $activity->userName : __('padmission-tickets::notifications.general.sender-you'),
-                            ActivitySender::Supporter => $activity->user ? $activity->userName : ($supporterLabel ?? __('padmission-tickets::notifications.general.sender-support')),
-                            default => null
-                        };
+                        $senderName = $notification->senderName($activity, $supporterLabel ?? null);
                     @endphp
                     <tr>
                         <td style="padding-bottom: 16px">
@@ -49,7 +45,7 @@
                                         align="{{ $align === 'center' ? 'center' : 'left' }}"
                                         style="{{ $style }}"
                                     >
-                                        {!! strip_tags($activity->content) !!}
+                                        {!! strip_tags($notification->activityContent($activity)) !!}
                                     </td>
                                 </tr>
                                 @if ($senderName)

@@ -209,12 +209,11 @@ test('queued notification renders correct message sides for each recipient witho
         ->side->toBe(ActivitySide::Other)
         ->userName->not->toBe(__('padmission-tickets::tickets.side_you'));
 
-    $supporterMail = (new TicketNotification($ticket, $event))->toMail($supporter);
-    $supporterActivity = $supporterMail->viewData['activities']->first();
+    // Nobody is told about their own message.
+    $supporterNotification = new TicketNotification($ticket, $event);
 
-    expect($supporterActivity)
-        ->side->toBe(ActivitySide::Me)
-        ->userName->toBe(__('padmission-tickets::tickets.side_you'));
+    expect($supporterNotification->shouldSend($supporter))->toBeFalse()
+        ->and($supporterNotification->toMail($supporter)->viewData['activities'])->toBeEmpty();
 });
 
 test('queued notification includes management activities for the supporter recipient without auth', function () {
