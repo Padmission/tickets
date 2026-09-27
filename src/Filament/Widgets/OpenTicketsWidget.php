@@ -29,9 +29,11 @@ class OpenTicketsWidget extends BaseWidget
 
         return [
             Stat::make(__('padmission-tickets::widgets.open_tickets.label'), $count)
-                ->description(__('padmission-tickets::widgets.open_tickets.description'))
+                ->description($this->isOnEscalatedTab()
+                    ? __('padmission-tickets::widgets.open_tickets.description_escalations')
+                    : __('padmission-tickets::widgets.open_tickets.description'))
                 ->descriptionIcon('heroicon-m-inbox')
-                ->color('warning'),
+                ->color('gray'),
         ];
     }
 }

@@ -10,6 +10,7 @@ return [
     'open_tickets' => [
         'label' => 'Open Tickets',
         'description' => 'Tickets not yet closed',
+        'description_escalations' => 'Escalations not yet closed',
     ],
 
     'open_support_tickets' => [

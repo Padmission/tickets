@@ -148,6 +148,33 @@ it('finds a ticket by the number quoted from an email', function (string $prefix
         ->assertCanNotSeeTableRecords([$other]);
 })->with(['plain' => '', 'with hash' => '#']);
 
+it('keeps priority off until chosen and lets the subject wrap, so the list fits the screen', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    Ticket::factory()->open()->create();
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnExists('priority.display_name', fn (TextColumn $column): bool => $column->isToggledHiddenByDefault())
+        ->assertCanNotRenderTableColumn('priority.display_name')
+        ->assertTableColumnExists('subject', fn (TextColumn $column): bool => $column->canWrap());
+});
+
+it('names each ticket\'s organization under its subject in the panel escalations are sent to', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+    TicketPlugin::get()->describeTicketOriginUsing(fn (Ticket $ticket): string => "Org of {$ticket->id}");
+
+    $plain = Ticket::factory()->open()->create();
+    $escalation = Ticket::factory()->open()->create();
+    Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id, 'submitter_id' => User::factory()->create(['name' => 'Aisha Brooks'])->id]);
+
+    Livewire::test(ListTickets::class)
+        ->assertTableColumnHasDescription('subject', "Org of {$plain->id}", $plain)
+        ->assertTableColumnHasDescription('subject', "Org of {$escalation->id} · About Aisha Brooks's ticket", $escalation);
+});
+
 it('offers the ticket number as a sortable column that is off until chosen', function () {
     (new TicketStatusSeeder)->run();
     $this->login();

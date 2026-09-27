@@ -65,7 +65,10 @@ describe('Stat cards', function () {
         // All counts the escalation's original too, which lives in this panel.
         foreach (['all' => 4, 'my' => 2, 'linked' => 1, 'my_linked' => 1] as $tab => $open) {
             expect($tabs[$tab]->getBadge())->toBe((string) $open)
-                ->and($stat(OpenTicketsWidget::class, $tab)->getValue())->toBe($open);
+                ->and($stat(OpenTicketsWidget::class, $tab))
+                ->getValue()->toBe($open)
+                ->getColor()->toBe('gray')
+                ->getDescription()->toBe(str_contains($tab, 'linked') ? 'Escalations not yet closed' : 'Tickets not yet closed');
         }
 
         expect($stat(OpenSupporterTickets::class, 'all'))

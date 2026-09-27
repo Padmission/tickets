@@ -98,6 +98,21 @@ class TicketResource extends Resource
      * loaded through that team's panel (TicketAssignee); the team is named only
      * when even that lookup finds nobody.
      */
+    /*
+     * The panel escalations are sent to names each ticket's organization here
+     * rather than in a column of its own, so the list fits the screen.
+     */
+    protected static function subjectDescription(Ticket $record): ?string
+    {
+        $origin = count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0
+            ? TicketPlugin::get()->describeTicketOrigin($record)
+            : null;
+
+        $about = ConversationState::fromRow($record)->isEscalation ? EscalationSummary::about($record) : null;
+
+        return collect([$origin, $about])->filter()->implode(' · ') ?: null;
+    }
+
     public static function assigneeLabel(Ticket $record): ?string
     {
         if ($record->assignee !== null) {
@@ -210,11 +225,14 @@ class TicketResource extends Resource
                     ->color(fn ($record) => $record->status->colorPalette)
                     ->sortable(),
 
+                // Off by default so the list fits a laptop screen; the Waiting on column
+                // already puts what needs attention first.
                 TextColumn::make('priority.display_name')
                     ->label(__('padmission-tickets::tickets.resources.priorities.model_label'))
                     ->badge()
                     ->color(fn ($record) => $record->priority->colorPalette)
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('turn')
                     ->label(__('padmission-tickets::tickets.resources.tickets.turn'))
@@ -229,9 +247,9 @@ class TicketResource extends Resource
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->suffix(fn (Ticket $record): ?HtmlString => static::escalationMarker($record))
-                    ->description(fn (Ticket $record): ?string => ConversationState::fromRow($record)->isEscalation
-                        ? EscalationSummary::about($record)
-                        : null)
+                    ->wrap()
+                    ->extraHeaderAttributes(['style' => 'min-width: 9rem'])
+                    ->description(fn (Ticket $record): ?string => static::subjectDescription($record))
                     // Numbers are not shown in the list, but they are in every email subject,
                     // so "1842" or "#1842" still finds the ticket.
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query
@@ -245,12 +263,14 @@ class TicketResource extends Resource
                     ->state(fn (Ticket $record): ?string => filled($record->submitter_id) && $record->submitter_id == Filament::auth()->id()
                         ? __('padmission-tickets::tickets.side_you')
                         : $record->submitter?->getAttribute('name'))
+                    ->wrap()
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('assignee.name')
                     ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
                     ->state(fn (Ticket $record): ?string => static::assigneeLabel($record))
+                    ->wrap()
                     ->tooltip(fn (ListTickets $livewire): ?string => static::isEscalatedTab($livewire)
                         ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere', TicketPlugin::get()->getEscalationTargetName())
                         : null)
