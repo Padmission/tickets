@@ -374,7 +374,7 @@ describe('Conversations in the list', function () {
 
         $component = Livewire::test(ListTickets::class);
 
-        expect(listCell($component, 'subject', $waitingOnTeam))->toContain('Escalated')->toContain('You asked Platform Support about this. Platform Support owes the next reply there.')
+        expect(listCell($component, 'subject', $waitingOnTeam))->toContain('Escalated')->toContain('You handle the conversation with Platform Support. Platform Support owes the next reply there.')
             ->and(listCell($component, 'subject', $waitingOnColleague))->toContain('Escalated')->toContain('Platform Support is waiting on Maria Lopez on the escalation.')
             ->and(listCell($component, 'subject', $replied))->toContain('Platform Support replied')->toContain('fi-color-warning')
             ->toContain('Platform Support replied on the escalation after your team last wrote. Read it, then answer Platform Support there or pass the answer on to Aisha Brooks here.')

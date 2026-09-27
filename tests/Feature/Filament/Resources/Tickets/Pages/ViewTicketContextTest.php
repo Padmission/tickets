@@ -23,6 +23,7 @@ use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketUserState;
 use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
@@ -475,11 +476,29 @@ describe('Escalation status line', function () {
         $link = 'href="'.e(ViewTicket::getUrl(['record' => $escalation, 'linked' => $original->id])).'"';
         expect(substr_count($html, $link))->toBe(1);
     })->with([
-        'the team, asked by the viewer' => [Turn::Supporter, true, 'You asked Platform Support about this. Platform Support owes the next reply there.', false],
-        'the team, asked by a colleague' => [Turn::Supporter, false, 'Maria Lopez asked Platform Support about this. Platform Support owes the next reply there.', false],
+        'the team, handled by the viewer' => [Turn::Supporter, true, 'You handle the conversation with Platform Support. Platform Support owes the next reply there.', false],
+        'the team, handled by a colleague' => [Turn::Supporter, false, 'Maria Lopez handles the conversation with Platform Support. Platform Support owes the next reply there.', false],
         'the viewer' => [Turn::User, true, 'Platform Support is waiting on you on the escalation.', true],
         'a colleague' => [Turn::User, false, 'Platform Support is waiting on Maria Lopez on the escalation.', true],
     ]);
+
+    it('names whoever an escalation was handed to as handling it, never as having asked', function () {
+        $colleague = User::factory()->create(['name' => 'Cheyenne Morrow']);
+        [$escalation, $original] = contextEscalatedOriginal(['turn' => Turn::Supporter]);
+        contextMessage($escalation, ActivitySender::User, auth()->id());
+
+        expect(resolve(TicketEscalationLinks::class)->handOver($escalation, $colleague->id, auth()->id()))->toBeTrue();
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertSee('Cheyenne Morrow handles the conversation with Platform Support. Platform Support owes the next reply there.')
+            ->assertDontSee('asked Platform Support');
+
+        $this->login($colleague);
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->assertSee('You handle the conversation with Platform Support. Platform Support owes the next reply there.')
+            ->assertDontSee('asked Platform Support');
+    });
 
     it('adds that the requester is still waiting for a reply', function () {
         [$escalation, $original] = contextEscalatedOriginal();
@@ -716,7 +735,7 @@ it('re-renders the badge and the status line above the chat after a message whil
 
     expect($partials)
         ->toContain('pad-ti-escalation-status')
-        ->toContain('You asked Platform Support about this.')
+        ->toContain('You handle the conversation with Platform Support.')
         ->not->toContain('hasn&#039;t had a reply')
         ->toContain(__('padmission-tickets::tickets.resources.tickets.waiting_on.requester'));
 });

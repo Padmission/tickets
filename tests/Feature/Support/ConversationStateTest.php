@@ -482,7 +482,7 @@ it('names nobody rather than leaving a gap when the person handling an escalatio
         ->markerLabel()->toBe('Platform Support replied')
         ->markerColor()->toBe('gray')
         ->and(ConversationState::for($waiting->load('parentTicket')))
-        ->markerTooltip()->toBe('Your team asked Platform Support about this. Platform Support owes the next reply there.');
+        ->markerTooltip()->toBe('Your team handles the conversation with Platform Support. Platform Support owes the next reply there.');
 
     $unowned = conversationEscalation(['submitter_id' => null, 'turn' => Turn::User]);
     $unowned->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System, $this->me->id);
