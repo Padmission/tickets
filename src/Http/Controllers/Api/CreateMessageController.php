@@ -80,6 +80,7 @@ class CreateMessageController
         $this->attachAttachments($activity, $ticket, $request->user(), $attachmentIds);
 
         $activity->side = ActivitySide::Me;
+        $activity->isOwn = true;
 
         $messages->push($activity);
 

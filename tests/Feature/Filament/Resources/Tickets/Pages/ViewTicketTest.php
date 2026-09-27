@@ -13,6 +13,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
@@ -299,5 +300,34 @@ describe('Escalation explanation', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from_beside'));
+    });
+});
+
+describe('Composer', function () {
+    it('offers keeping the ticket waiting only to the side that answers it', function () {
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+
+        $owner = User::factory()->create();
+        $escalation = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => $owner->id]);
+        Ticket::factory()->create(['linked_ticket_id' => $escalation->id]);
+
+        $this->actingAs($owner);
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSeeHtml('has-elevated-rights="false"')
+            ->assertDontSeeHtml('has-elevated-rights="true"');
+
+        Filament::setCurrentPanel('test2');
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertSeeHtml('has-elevated-rights="true"');
+    })->after(fn () => Filament::setCurrentPanel('test'));
+
+    it('gives the reply box the default placeholder', function () {
+        $ticket = Ticket::factory()->create();
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertSeeHtml('placeholder="'.e(__('padmission-tickets::chat.chat.placeholder')).'"');
     });
 });

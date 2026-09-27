@@ -19,6 +19,8 @@ return [
         'max_file_size' => 'The max file size is :size.',
         'droparea' => 'Drop to add files',
         'send' => 'Send',
+        'placeholder' => 'Start typing …',
+        'placeholder_reply_to' => 'Reply to :name…',
         'new_messages' => 'New messages',
         'add_attachments' => 'Add attachments',
         'bold' => 'Bold',
@@ -30,7 +32,7 @@ return [
         'lock_turn' => 'We still owe a reply',
         'lock_turn_help' => 'Tick this if your team still needs to follow up. Otherwise the ticket waits on the requester after you send.',
         'send_keep_waiting' => 'Send, still working on it',
-        'send_keep_waiting_help' => 'Sends your message and keeps the ticket waiting on support.',
+        'send_keep_waiting_help' => 'Sends your message and keeps the ticket waiting on your side.',
 
         'screenshot' => [
             'capture' => 'Capture screenshot',

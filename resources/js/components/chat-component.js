@@ -155,7 +155,7 @@ customElements.define(
 				extensions: [
 					StarterKit,
 					Placeholder.configure({
-						placeholder: "Start typing …",
+						placeholder: this.placeholder || __("chat.placeholder"),
 					}),
 					Link.configure({
 						openOnClick: false,

@@ -25,6 +25,7 @@ use Padmission\Tickets\TicketPlugin;
 
 /**
  * @property ActivitySide $side
+ * @property bool $isOwn
  */
 #[ObservedBy(TicketActivityObserver::class)]
 class TicketActivity extends Model
@@ -93,7 +94,7 @@ class TicketActivity extends Model
     protected function userName(): Attribute
     {
         return Attribute::get(function () {
-            if ($this->side === ActivitySide::Me) {
+            if ($this->isOwn === true) {
                 return __('padmission-tickets::tickets.side_you');
             }
 

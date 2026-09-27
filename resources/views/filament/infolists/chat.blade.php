@@ -12,6 +12,7 @@
     $primaryColor = $config->getPrimaryColor();
 
     $canReply = resolve(TicketAuth::class)->canReply($this->record, Filament::auth()->user());
+    $isSubmitter = Filament::auth()->id() === $this->record->submitter_id;
 @endphp
 <div
     class="pad-ti-chat-wrapper"
@@ -43,7 +44,8 @@
         config="{{ $config->toJs() }}"
         scroll-threshold="100"
         polling-interval="10000"
-        has-elevated-rights="true"
+        has-elevated-rights="{{ $isSubmitter ? 'false' : 'true' }}"
+        placeholder="{{ $placeholder ?? __('padmission-tickets::chat.chat.placeholder') }}"
         can-reply="{{ $canReply ? 'true' : 'false' }}"
         keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
     ></chat-component>

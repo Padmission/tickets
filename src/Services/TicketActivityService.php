@@ -70,16 +70,18 @@ class TicketActivityService
             ->get()
             ->reverse()
             ->values()
-            ->map(function (TicketActivity $message) use ($currentSender) {
+            ->map(function (TicketActivity $message) use ($currentSender, $user) {
                 $message->side = match (true) {
                     $message->sender === ActivitySender::System => ActivitySide::System,
                     $message->sender === $currentSender => ActivitySide::Me,
                     default => ActivitySide::Other,
                 };
 
+                // Several people write on the same side, so only the viewer's own messages read "You".
+                $message->isOwn = $user !== null && $message->user_id !== null && $message->user_id == $user->getKey();
+
                 return $message;
             });
-
     }
 
     public function getUnreadActivities(

@@ -196,6 +196,20 @@ it('lets a supporter reply when the policy has no reply ability', function () {
         ->assertOk();
 });
 
+it('names the message just sent as the sender\'s own', function () {
+    $supporter = User::factory()->create(['name' => 'Test Admin']);
+    $ticket = Ticket::factory()->open()->create();
+
+    $this->actingAs($supporter);
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Happy to help',
+        ])
+        ->assertOk()
+        ->assertJsonPath('messages.0.user_name', __('padmission-tickets::tickets.side_you'));
+});
+
 it('keeps the turn only when the answering side asks to', function (bool $fromSubmitter, Turn $expected) {
     $submitter = User::factory()->create();
     $supporter = User::factory()->create();

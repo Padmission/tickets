@@ -245,6 +245,30 @@ test('activities perspective comes from the provided user when no one is authent
         ->userName->toBe(__('padmission-tickets::tickets.side_you'));
 });
 
+test('a colleague\'s message on the viewer\'s side is named, not "You"', function () {
+    $submitter = User::factory()->create();
+    $supporter = User::factory()->create();
+    $colleague = User::factory()->create(['name' => 'Maria Lopez']);
+    $ticket = Ticket::factory()->create(['submitter_id' => $submitter->id, 'assignee_id' => $supporter->id]);
+
+    [$own, $colleagues] = collect([$supporter, $colleague])->map(fn (User $author) => TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $author->id,
+        'sender' => ActivitySender::Supporter,
+        'type' => ActivityType::Message,
+    ]))->all();
+
+    $activities = $this->service->getActivities($ticket, user: $supporter)->keyBy('id');
+
+    expect($activities[$colleagues->id])
+        ->side->toBe(ActivitySide::Me)
+        ->isOwn->toBeFalse()
+        ->userName->toBe('Maria Lopez')
+        ->and($activities[$own->id])
+        ->isOwn->toBeTrue()
+        ->userName->toBe(__('padmission-tickets::tickets.side_you'));
+});
+
 test('supporter perspective includes management activity types without auth while submitter does not', function () {
     $submitter = User::factory()->create();
     $supporter = User::factory()->create();
