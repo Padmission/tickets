@@ -7,6 +7,7 @@ import fetchJson from "./helpers/fetch-json";
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
 import humanFileSize from "./helpers/human-file-size.js";
+import isCutOffAtTop from "./helpers/cut-off-at-top.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -38,6 +39,7 @@ customElements.define(
 			this.messageContent = "";
 			this.messageObserver = null;
 			this.messageListObserver = null;
+			this.messageListResizeObserver = null;
 
 			this.isNearBottom = true;
 			this.dropIndex = 0;
@@ -65,6 +67,10 @@ customElements.define(
 
 			if (this.messageListObserver) {
 				this.messageListObserver.disconnect();
+			}
+
+			if (this.messageListResizeObserver) {
+				this.messageListResizeObserver.disconnect();
 			}
 
 			// Flush pending mark-seen call before disconnecting
@@ -145,7 +151,25 @@ customElements.define(
 				this.scrollToBottomBtn.style.display = this.isNearBottom
 					? "none"
 					: "flex";
+
+				this.hideMessagesCutOffAtTop();
 			});
+
+			this.messageListResizeObserver = new ResizeObserver(() =>
+				this.hideMessagesCutOffAtTop(),
+			);
+			this.messageListResizeObserver.observe(this.messagesElement);
+		}
+
+		hideMessagesCutOffAtTop() {
+			const list = this.messagesElement.getBoundingClientRect();
+
+			for (const item of this.messagesElement.children) {
+				item.toggleAttribute(
+					"data-cut-off",
+					isCutOffAtTop(item.getBoundingClientRect(), list.top, list.height),
+				);
+			}
 		}
 
 		initTipTapEditor() {
@@ -384,6 +408,7 @@ customElements.define(
 			});
 
 			this.observeMessages();
+			this.hideMessagesCutOffAtTop();
 		}
 
 		startPolling() {

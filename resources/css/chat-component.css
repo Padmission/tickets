@@ -148,6 +148,14 @@
 	&::-webkit-scrollbar-thumb:hover {
 		background-color: var(--scrollbar-thumb-hover-bg);
 	}
+
+	& > * {
+		transition: opacity 150ms ease-out;
+	}
+
+	& > [data-cut-off] {
+		opacity: 0;
+	}
 }
 
 .scroll-to-bottom-wrapper {

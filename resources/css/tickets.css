@@ -219,11 +219,6 @@
 	}
 }
 
-/* Messages scrolled under the top edge fade out instead of showing a cut-off bubble. */
-.pad-ti-chat-wrapper {
-	mask-image: linear-gradient(to bottom, transparent 0, transparent calc(var(--spacing) * 3), #000 calc(var(--spacing) * 12));
-}
-
 .pad-ti-escalation-actions .fi-ac {
 	display: flex;
 	flex-direction: column;
