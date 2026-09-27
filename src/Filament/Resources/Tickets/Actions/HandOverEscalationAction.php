@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
+use ArrayObject;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -31,6 +32,16 @@ class HandOverEscalationAction extends Action
 
     /** @var array<string, ?Ticket> */
     protected array $escalations = [];
+
+    /**
+     * Per record, whether the dialog is a hand over and who it offers, read
+     * once a request. The dialog is drawn again after the move, which would
+     * otherwise show the opposite dialog while the browser leaves or it
+     * closes. Filament clones the action per record, and the clones share it.
+     *
+     * @var ArrayObject<string, array{owner: bool, choices?: array<int|string, string>}>
+     */
+    protected ArrayObject $dialogs;
 
     public static function getDefaultName(): ?string
     {
@@ -65,6 +76,8 @@ class HandOverEscalationAction extends Action
     {
         parent::setUp();
 
+        $this->dialogs = new ArrayObject;
+
         $key = 'padmission-tickets::tickets.actions.';
 
         // Hand over keeps the host's dialog style; Take over is always a centred confirm.
@@ -73,7 +86,7 @@ class HandOverEscalationAction extends Action
         // Filament evaluates these on a clone of the action per record, so they
         // read the action they are handed rather than $this.
         $this
-            ->label(fn (self $action): string => __($action->viewerIsOwner() ? $key.'hand_over.label' : $key.'hand_over.take_over_label'))
+            ->label(fn (self $action): string => __($action->ownsEscalation() ? $key.'hand_over.label' : $key.'hand_over.take_over_label'))
             ->icon(Heroicon::OutlinedArrowsRightLeft)
             ->color('gray')
             ->authorize(fn (self $action): bool => static::isAvailableFor($action->getEscalation()))
@@ -134,7 +147,9 @@ class HandOverEscalationAction extends Action
     protected function handOver(array $data, Component $livewire): void
     {
         $escalation = $this->getEscalation();
-        $isOwner = $this->viewerIsOwner();
+        $this->viewerIsOwner();
+        $this->choices();
+        $isOwner = $this->ownsEscalation();
         $to = $isOwner ? $this->choiceKey($data['new_owner'] ?? null) : Filament::auth()->id();
 
         if ($escalation === null || blank($to)) {
@@ -192,11 +207,41 @@ class HandOverEscalationAction extends Action
         return null;
     }
 
+    /*
+     * Whether this request's dialog is a hand over, settled the first time
+     * it is asked. What the move itself does is decided by ownsEscalation().
+     */
     protected function viewerIsOwner(): bool
+    {
+        return $this->dialog()['owner'];
+    }
+
+    protected function ownsEscalation(): bool
     {
         $escalation = $this->getEscalation();
 
         return $escalation?->isSubmittedBy(Filament::auth()->id()) ?? false;
+    }
+
+    /**
+     * @return array{owner: bool, choices?: array<int|string, string>}
+     */
+    protected function dialog(): array
+    {
+        $key = $this->dialogKey();
+
+        if (! $this->dialogs->offsetExists($key)) {
+            $this->dialogs[$key] = ['owner' => $this->ownsEscalation()];
+        }
+
+        return $this->dialogs[$key];
+    }
+
+    protected function dialogKey(): string
+    {
+        $record = $this->getRecord();
+
+        return $record instanceof Ticket ? (string) $record->getKey() : '';
     }
 
     /**
@@ -206,6 +251,20 @@ class HandOverEscalationAction extends Action
      * @return array<int|string, string>
      */
     protected function choices(): array
+    {
+        $dialog = $this->dialog();
+
+        if (array_key_exists('choices', $dialog)) {
+            return $dialog['choices'];
+        }
+
+        return ($this->dialogs[$this->dialogKey()] = [...$dialog, 'choices' => $this->findChoices()])['choices'];
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    protected function findChoices(): array
     {
         $escalation = $this->getEscalation();
         $supportersQuery = $this->sourcePlugin()?->getAllSupportersQuery();

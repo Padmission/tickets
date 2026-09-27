@@ -65,6 +65,33 @@ function takeOverInBox(): TestAction
     return TestAction::make('take-over-escalation')->schemaComponent('escalationActions', schema: 'form');
 }
 
+it('draws the dialog it opened as, not the other one, once the escalation has moved', function (string $who, Closure $page, Closure $action, array $data, string $shown, string $other) {
+    Event::fake([TicketHandedOverEvent::class]);
+    $this->login($who === 'owner' ? $this->owner : $this->colleague);
+
+    $component = $page()->mountAction($action())->assertMountedActionModalSee($shown);
+
+    foreach ($data as $field => $value) {
+        $component->fillForm([$field => $this->{$value}->id]);
+    }
+
+    $component->callMountedAction()->assertHasNoFormErrors();
+
+    expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id);
+
+    $drawn = json_encode($component->effects['partials'] ?? []);
+
+    expect($drawn)->not->toContain($other);
+
+    if ($who === 'owner' && str_contains($drawn, 'fi-modal')) {
+        expect($drawn)->toContain($shown)->toContain('Maria Lopez');
+    }
+})->with([
+    'a hand over on the escalation, which leaves for the list' => ['owner', fn () => Livewire::test(ViewTicket::class, ['record' => test()->escalation->id]), fn () => handOverHint(), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?'],
+    'a hand over from the list' => ['owner', fn () => Livewire::test(ListTickets::class, ['activeTab' => 'linked']), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->escalation), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?'],
+    'a colleague\'s take over from the Escalation box on the original' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox(), [], 'Take over this escalation?', 'Hand over this escalation'],
+]);
+
 it('lets the owner hand the escalation to a colleague from Handled by', function () {
     Event::fake([TicketHandedOverEvent::class]);
     $this->login($this->owner);
