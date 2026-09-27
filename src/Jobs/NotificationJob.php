@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Notification;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -115,7 +116,14 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
-        return "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}-{$this->notificationType}";
+        $id = "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}-{$this->notificationType}";
+
+        // A take over and a hand back tell the same person different things, so neither may replace the other.
+        if ($this->event instanceof TicketHandedOverEvent) {
+            $id .= "-{$this->event->fromId}-{$this->event->toId}";
+        }
+
+        return $id;
     }
 
     public function getUserId(): string|int
