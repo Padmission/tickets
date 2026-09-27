@@ -106,6 +106,13 @@ class LinkedTicketModalSelect extends ModalTableSelect
     /** @var array<int, int|string>|null */
     protected ?array $relayPendingIds = null;
 
+    public function forgetRelayPending(): static
+    {
+        $this->relayPendingIds = null;
+
+        return $this;
+    }
+
     /*
      * On the escalation's own page, the team that escalated it sees which
      * requester still waits for the other team's reply to be passed on.

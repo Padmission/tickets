@@ -721,6 +721,53 @@ it('re-renders the badge and the status line above the chat after a message whil
         ->toContain(__('padmission-tickets::tickets.resources.tickets.waiting_on.requester'));
 });
 
+it('drops an original\'s pass-on marker from the Escalation box once the owner answers the other team', function () {
+    (new TicketStatusSeeder)->run();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    [$escalation, $original] = contextEscalatedOriginal();
+    $original->update(['assignee_id' => auth()->id()]);
+    contextMessage($escalation, ActivitySender::User, auth()->id());
+    contextMessage($escalation, ActivitySender::Supporter, User::factory()->create()->id);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->assertSee('Platform Support replied · pass on to Aisha Brooks');
+
+    contextMessage($escalation, ActivitySender::User, auth()->id());
+
+    $page->dispatch('message-sent');
+
+    expect(json_encode($page->effects['partials'] ?? [], JSON_UNESCAPED_UNICODE))
+        ->toContain('Aisha Brooks')
+        ->not->toContain('replied · pass on');
+});
+
+it('re-renders the Escalation box after a message on every page that shows it', function (string $record, string $panel) {
+    (new TicketStatusSeeder)->run();
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    [$escalation, $original] = contextEscalatedOriginal();
+
+    if ($panel === 'test2') {
+        Filament::setCurrentPanel('test2');
+    }
+
+    // The details column, and the Escalation box in it, is hidden while an original is open beside it.
+    $page = Livewire::test(ViewTicket::class, ['record' => $record === 'escalation' ? $escalation->id : $original->id])
+        ->call('closeLinked')
+        ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'));
+
+    $page->dispatch('message-sent');
+
+    expect(array_keys($page->effects['partials'] ?? []))->toContain('schema-component::form.escalation');
+})->with([
+    'the escalation, by the team that escalated it' => ['escalation', 'test'],
+    'the original, by the team that escalated it' => ['original', 'test'],
+    'the escalation, by the team it was sent to' => ['escalation', 'test2'],
+]);
+
 it('reads the page in a fixed number of queries whatever the number of originals', function (string $page) {
     (new TicketStatusSeeder)->run();
     TicketPlugin::get()->allowLinkedTicketsTo(['test2']);

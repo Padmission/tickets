@@ -485,17 +485,26 @@ class ViewTicket extends EditRecord
     #[On('message-sent')]
     public function rerenderAfterMessage()
     {
+        $this->forgetLinks();
+
+        $originals = $this->getSchemaComponent('form.childTickets');
+
+        if ($originals instanceof LinkedTicketModalSelect) {
+            $originals->forgetRelayPending();
+        }
+
         /** @var Ticket $record */
         $record = $this->getRecord();
 
         $this->conversationState = ConversationState::for($record);
-        $this->escalationStatus = null;
 
         $this->skipRender();
         $this->partiallyRenderSchemaComponent('form.turn');
         $this->partiallyRenderSchemaComponent('form.latestMessage.created_at');
         $this->partiallyRenderSchemaComponent('form.chatTurn');
         $this->partiallyRenderSchemaComponent('form.escalationStatus');
+        // A reply on either side can settle whether a requester still waits to hear the other team's answer.
+        $this->partiallyRenderSchemaComponent('form.escalation');
     }
 
     public function form(Schema $schema): Schema
@@ -712,6 +721,7 @@ class ViewTicket extends EditRecord
                                 TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.linked_tickets_help', TicketPlugin::get($record->panel)->getEscalationTargetName() ?? TicketPlugin::find($record->panel)?->getSupportTeamName()),
                             )
                             : __('padmission-tickets::tickets.resources.tickets.linked_tickets'))
+                        ->key('escalation', isInheritable: false)
                         ->description(fn (Ticket $record): ?string => $this->describeEscalation($record))
                         // A closed ticket that was never escalated has nothing to say or offer here.
                         ->visible(fn (Ticket $record): bool => TicketPlugin::get($record->panel)->hasLinkedTickets()
