@@ -492,3 +492,16 @@ it('names nobody rather than leaving a gap when the person handling an escalatio
         ->label()->toBe('A colleague')
         ->tooltip()->toBe('A colleague owes Platform Support the next reply on this escalation.');
 });
+
+it('matches a supporter\'s email whatever its case', function () {
+    $pooled = User::factory()->create(['email' => 'kevin@example.com']);
+    $viewer = User::factory()->create(['email' => 'Kevin@Example.com']);
+
+    TicketPlugin::get('test2')
+        ->allSupportersQuery(fn () => User::query()->whereKey($pooled->id))
+        ->matchSupportersBy('email');
+    Filament::setCurrentPanel('test2');
+    $this->actingAs($viewer);
+
+    expect(ConversationViewer::current()->isSupporter)->toBeTrue();
+});

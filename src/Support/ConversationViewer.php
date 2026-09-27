@@ -43,7 +43,7 @@ final readonly class ConversationViewer
                 assigneeIds: $userId === null ? [] : $plugin->getCurrentUserAssigneeIds(),
                 isSupporter: $user instanceof Model
                     && $user->getKey() == $userId
-                    && in_array($user->getAttribute($column), $pool, false),
+                    && static::inPool($user, $column, $pool),
                 panelId: $panelId,
                 receivesEscalations: count($plugin->getLinkedTicketChildPanels()) > 0,
                 parentPanelIds: array_keys($plugin->getLinkedTicketParentPanels()),
@@ -51,6 +51,24 @@ final readonly class ConversationViewer
                 supporterPool: $pool,
             );
         });
+    }
+
+    /**
+     * Emails match whatever their case, as they do under MySQL's collation.
+     *
+     * @param  array<int, int|string>  $pool
+     */
+    protected static function inPool(Model $user, string $column, array $pool): bool
+    {
+        if ($column === $user->getKeyName()) {
+            return in_array($user->getKey(), $pool, false);
+        }
+
+        return in_array(
+            mb_strtolower((string) $user->getAttribute($column)),
+            array_map(fn (int|string $value): string => mb_strtolower((string) $value), $pool),
+            true,
+        );
     }
 
     /**
