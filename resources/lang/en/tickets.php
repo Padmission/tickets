@@ -409,7 +409,7 @@ return [
             ],
 
             'escalation_originals' => [
-                'one' => ':name\'s ticket',
+                'one' => '{1} :name\'s ticket|[2,*] :name\'s :count tickets',
                 'two' => ':first\'s and :second\'s tickets',
                 'many' => 'tickets from :first and :count others',
                 'unnamed' => '{1} 1 ticket|[2,*] :count tickets',

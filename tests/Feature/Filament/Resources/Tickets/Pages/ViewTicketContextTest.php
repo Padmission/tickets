@@ -396,12 +396,14 @@ describe('Conversation headings', function () {
             ->assertSeeHtml('placeholder="'.e(__('padmission-tickets::chat.chat.placeholder')).'"');
     });
 
-    it('names the other team on the escalation and says who never sees it', function (int $originals, string $description) {
+    it('names the other team on the escalation and says who never sees it', function (array $originals, string $description) {
         $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => auth()->id()]);
         TicketActivity::factory()->create(['ticket_id' => $escalation->id, 'type' => ActivityType::OriginalAdded, 'sender' => ActivitySender::System]);
 
-        foreach (array_slice(['Aisha Brooks', 'Felix Moreno'], 0, $originals) as $name) {
-            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => User::factory()->create(['name' => $name])->id]);
+        $people = collect(['Aisha Brooks', 'Felix Moreno'])->mapWithKeys(fn (string $name): array => [$name => User::factory()->create(['name' => $name])]);
+
+        foreach ($originals as $name) {
+            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => $people[$name]->id]);
         }
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
@@ -409,9 +411,10 @@ describe('Conversation headings', function () {
             ->assertSee($description)
             ->assertSeeHtml('placeholder="Reply to Platform Support…"');
     })->with([
-        'one original' => [1, "About Aisha Brooks's ticket. Aisha Brooks never sees this conversation."],
-        'two originals' => [2, "About Aisha Brooks's and Felix Moreno's tickets. The requesters never see this conversation."],
-        'none left' => [0, 'Not linked to any ticket.'],
+        'one original' => [['Aisha Brooks'], "About Aisha Brooks's ticket. Aisha Brooks never sees this conversation."],
+        'two originals' => [['Aisha Brooks', 'Felix Moreno'], "About Aisha Brooks's and Felix Moreno's tickets. The requesters never see this conversation."],
+        'two originals from one requester' => [['Aisha Brooks', 'Aisha Brooks'], "About Aisha Brooks's 2 tickets. Aisha Brooks never sees this conversation."],
+        'none left' => [[], 'Not linked to any ticket.'],
     ]);
 
     it('addresses the reply box to the contact on an escalation sent here', function () {

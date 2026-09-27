@@ -852,7 +852,7 @@ class ViewTicket extends EditRecord
             return __($key.'conversation_about_none');
         }
 
-        $requester = $originals->count() === 1 ? $originals->first()->requesterName() : null;
+        $requester = EscalationSummary::soleRequester($originals);
         $replace = [
             'originals' => EscalationSummary::originals($originals),
             'name' => $requester,

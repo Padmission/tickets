@@ -18,6 +18,7 @@ use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
+use Padmission\Tickets\ValueObjects\SubmitterData;
 
 it('lists open tickets whatever status they have, and hides closed ones', function () {
     (new TicketStatusSeeder)->run();
@@ -418,6 +419,36 @@ describe('Conversations in the list', function () {
             ->and(listCell($component, 'subject', $emptied, 'description'))->toBe('Not linked to any ticket');
 
         expect(listCell(Livewire::test(ListTickets::class), 'subject', Ticket::factory()->open()->create(), 'description'))->toBe('');
+    });
+
+    it('names each requester once however many of their tickets an escalation is about', function () {
+        $aisha = User::factory()->create(['name' => 'Aisha Brooks']);
+        $felix = User::factory()->create(['name' => 'Felix Moreno']);
+        $henry = User::factory()->create(['name' => 'Henry Silva']);
+        $about = function (array $requesters): string {
+            $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->me->id]);
+
+            foreach ($requesters as $requester) {
+                Ticket::factory()->open()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id, 'submitter_id' => $requester->id]);
+            }
+
+            return EscalationSummary::about($escalation->load('childTickets'));
+        };
+
+        expect($about([$aisha, $aisha]))->toBe('About Aisha Brooks\'s 2 tickets')
+            ->and($about([$aisha, $aisha, $aisha]))->toBe('About Aisha Brooks\'s 3 tickets')
+            ->and($about([$aisha, $felix, $aisha]))->toBe('About Aisha Brooks\'s and Felix Moreno\'s tickets')
+            ->and($about([$aisha, $felix, $aisha, $henry]))->toBe('About tickets from Aisha Brooks and 2 others');
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->me->id]);
+        Ticket::factory()->count(2)->open()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id, 'submitter_id' => null, 'submitter_data' => new SubmitterData('Guest Person', 'guest@example.com')]);
+
+        expect(EscalationSummary::about($escalation->load('childTickets')))->toBe('About Guest Person\'s 2 tickets');
+
+        $component = Livewire::test(ListTickets::class, ['activeTab' => 'linked']);
+        $listed = Ticket::query()->whereKey(Ticket::query()->where('linked_ticket_id', '!=', null)->where('submitter_id', $aisha->id)->value('linked_ticket_id'))->sole();
+
+        expect(listCell($component, 'subject', $listed, 'description'))->toBe('About Aisha Brooks\'s 2 tickets');
     });
 
     it('names a guest requester by the name they gave, and counts unnamed ones', function () {

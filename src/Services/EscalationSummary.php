@@ -37,16 +37,53 @@ class EscalationSummary
      */
     public static function originals(Collection $originals): string
     {
-        $names = $originals->sortBy('id')->map(fn (Ticket $original): ?string => $original->requesterName())->values();
+        $requesters = static::requesters($originals);
 
-        if ($names->contains(fn (?string $name): bool => blank($name))) {
-            return trans_choice(self::KEY.'.escalation_originals.unnamed', $names->count(), ['count' => $names->count()]);
+        if ($requesters === null) {
+            return trans_choice(self::KEY.'.escalation_originals.unnamed', $originals->count(), ['count' => $originals->count()]);
         }
 
-        return match ($names->count()) {
-            1 => __(self::KEY.'.escalation_originals.one', ['name' => $names[0]]),
-            2 => __(self::KEY.'.escalation_originals.two', ['first' => $names[0], 'second' => $names[1]]),
-            default => __(self::KEY.'.escalation_originals.many', ['first' => $names[0], 'count' => $names->count() - 1]),
+        return match ($requesters->count()) {
+            1 => trans_choice(self::KEY.'.escalation_originals.one', $requesters[0]['count'], ['name' => $requesters[0]['name'], 'count' => $requesters[0]['count']]),
+            2 => __(self::KEY.'.escalation_originals.two', ['first' => $requesters[0]['name'], 'second' => $requesters[1]['name']]),
+            default => __(self::KEY.'.escalation_originals.many', ['first' => $requesters[0]['name'], 'count' => $requesters->count() - 1]),
         };
+    }
+
+    /*
+     * The one person every original came from, so a page can say that they,
+     * rather than "the requesters", never see the escalation.
+     *
+     * @param  Collection<int, Ticket>  $originals
+     */
+    public static function soleRequester(Collection $originals): ?string
+    {
+        $requesters = static::requesters($originals);
+
+        return $requesters?->count() === 1 ? $requesters[0]['name'] : null;
+    }
+
+    /**
+     * Each person once, in the order of their first ticket, so two tickets
+     * from the same person do not name them twice. Null when any original
+     * has no name to show.
+     *
+     * @param  Collection<int, Ticket>  $originals
+     * @return Collection<int, array{name: string, count: int}>|null
+     */
+    protected static function requesters(Collection $originals): ?Collection
+    {
+        $sorted = $originals->sortBy('id')->values();
+
+        if ($sorted->isEmpty() || $sorted->contains(fn (Ticket $original): bool => blank($original->requesterName()))) {
+            return null;
+        }
+
+        return $sorted
+            ->groupBy(fn (Ticket $original): string => filled($original->submitter_id)
+                ? 'user:'.$original->submitter_id
+                : 'guest:'.mb_strtolower((string) ($original->submitter_data->email ?? $original->requesterName())))
+            ->map(fn (Collection $tickets): array => ['name' => (string) $tickets->first()->requesterName(), 'count' => $tickets->count()])
+            ->values();
     }
 }
