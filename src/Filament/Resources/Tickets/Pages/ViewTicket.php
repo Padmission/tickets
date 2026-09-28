@@ -754,7 +754,10 @@ class ViewTicket extends EditRecord
                                 HandOverEscalationAction::make('take-over-escalation')
                                     ->escalationUsing(fn (Ticket $record): ?Ticket => $this->escalationOf($record))
                                     ->button()
-                                    ->hidden(fn (Ticket $record): bool => $record->isClosed || $this->openEscalationUrl($record) !== null),
+                                    // The status line offers it too when the other team replied to a colleague.
+                                    ->hidden(fn (Ticket $record): bool => $record->isClosed
+                                        || $this->openEscalationUrl($record) !== null
+                                        || ($this->escalationStatus()['takeOver'] ?? false)),
                                 RemoveFromEscalationAction::make()->button()->authorize($this->authorizesEdit(...)),
                             ])
                                 ->key('escalationActions')

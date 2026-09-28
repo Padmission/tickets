@@ -222,9 +222,14 @@ it('offers Take over in the status line when the other team replied to a colleag
     $this->escalation->ticketActivities()->create(['type' => ActivityType::Message, 'sender' => ActivitySender::Supporter, 'user_id' => $this->padmission->id, 'content' => 'Which household?']);
     $this->login($this->colleague);
 
-    Livewire::test(ViewTicket::class, ['record' => $this->original->id])
+    $page = Livewire::test(ViewTicket::class, ['record' => $this->original->id])
         ->assertSee('Padmission replied to Test Admin on the escalation.')
-        ->assertActionVisible('takeOver')
+        ->assertActionVisible('takeOver');
+
+    // Once: the Escalation box leaves it to the status line.
+    expect($page->html())->not->toContain("mountAction('take-over-escalation'");
+
+    $page
         ->callAction('takeOver')
         ->assertNotified('You now handle this escalation');
 
