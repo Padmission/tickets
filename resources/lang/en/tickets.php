@@ -50,6 +50,17 @@ return [
             'success' => 'Escalation closed',
         ],
 
+        'bulk_close' => [
+            'label' => 'Close',
+            'modal_heading' => 'Close the selected tickets?',
+            'modal_description' => 'Each ticket is closed as it would be on its own: the requester is told, and nobody can reply to it after that. Tickets already closed, or that you can\'t close, are skipped.',
+            'modal_description_received' => 'Each escalation is closed as it would be on its own: the team that escalated it is told, and its original tickets stay open. Escalations already closed, or that you can\'t close, are skipped.',
+            'disposition_help' => 'Each ticket gets the disposition of this name from its own organization. A ticket whose organization has none by this name is skipped.',
+            'submit' => 'Close tickets',
+            'closed' => '{0} No tickets were closed.|{1} Closed 1 ticket.|[2,*] Closed :count tickets.',
+            'skipped' => '{1} 1 was skipped.|[2,*] :count were skipped.',
+        ],
+
         'delete' => [
             'label' => 'Delete',
             'modal_heading' => 'Delete this ticket?',

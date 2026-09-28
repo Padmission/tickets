@@ -5,20 +5,15 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
 use Padmission\Tickets\Actions\GetUserDisplayName;
-use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Services\TicketCloser;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 
 class CloseTicketAction extends Action
 {
-    use ScopesLookupsToTicket;
-
     public static function getDefaultName(): ?string
     {
         return 'close-ticket';
@@ -46,23 +41,21 @@ class CloseTicketAction extends Action
             ->slideOver(false)
             ->icon('heroicon-o-check-circle');
 
-        $this->schema(fn (Ticket $record): array => $this->dispositionsExist($record) ? [
+        // A disposition is required only when the ticket's own panel and tenant offers one.
+        $this->schema(fn (Ticket $record): array => resolve(TicketCloser::class)->dispositionsFor($record)->exists() ? [
             Select::make('disposition')
                 ->label(__('padmission-tickets::tickets.actions.close.disposition.label'))
                 ->relationship(
                     'disposition',
                     'display_name',
-                    fn ($query) => $this->scopeDispositionsToTicket($query, $this->getRecord()),
+                    fn ($query) => resolve(TicketCloser::class)->dispositionsFor($record, $query),
                 )
                 ->lazy()
                 ->required(),
         ] : []);
 
         $this->action(function (Ticket $record, Component $livewire, $data) {
-            $record->close(
-                dispositionId: $data['disposition'] ?? null,
-                closedById: Filament::auth()->id()
-            );
+            resolve(TicketCloser::class)->close($record, $data['disposition'] ?? null);
 
             $livewire->dispatch('refresh-sidebar');
         });
@@ -128,29 +121,5 @@ class CloseTicketAction extends Action
                 ->first();
 
         return blank($organization) ? $name : __($key.'contact_at', ['name' => $name, 'organization' => $organization]);
-    }
-
-    /*
-     * Asked the way the disposition options are loaded, so a disposition is
-     * required only when the ticket's own panel and tenant offers one.
-     */
-    protected function dispositionsExist(Ticket $record): bool
-    {
-        /** @var Builder<TicketDisposition> $query */
-        $query = Relation::noConstraints(fn (): Relation => $record->disposition())->getQuery();
-
-        return $this->scopeDispositionsToTicket($query, $record)->exists();
-    }
-
-    /**
-     * The relation keeps deleted dispositions, so a closed ticket still shows
-     * its own, but a deleted one is never offered.
-     *
-     * @param  Builder<TicketDisposition>  $query
-     * @return Builder<TicketDisposition>
-     */
-    protected function scopeDispositionsToTicket(Builder $query, mixed $record): Builder
-    {
-        return $this->scopeLookupToTicket($query, $record)->withoutTrashed();
     }
 }

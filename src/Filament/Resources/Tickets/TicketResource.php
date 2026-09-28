@@ -37,6 +37,7 @@ use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Services\EscalationSummary;
+use Padmission\Tickets\Services\TicketCloser;
 use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\Support\ConversationStateQuery;
 use Padmission\Tickets\Support\ConversationViewer;
@@ -490,11 +491,79 @@ class TicketResource extends Resource
                         })
                         ->successNotificationTitle(__('padmission-tickets::tickets.resources.tickets.assigned_successfully'))
                         ->deselectRecordsAfterCompletion(),
+                    static::bulkCloseAction(),
                     DeleteBulkAction::make()
                         ->authorizeIndividualRecords('delete'),
                 ])
                     ->hidden(fn (ListTickets $livewire): bool => static::isEscalatedTab($livewire)),
             ]);
+    }
+
+    /*
+     * Each selected ticket is closed exactly as its own Close dialog would,
+     * skipping those already closed or that the viewer may not close. The
+     * disposition is chosen by name, since an escalation panel's selection
+     * spans organizations that each keep their own.
+     */
+    protected static function bulkCloseAction(): BulkAction
+    {
+        $key = 'padmission-tickets::tickets.actions.bulk_close.';
+        $closer = fn (): TicketCloser => resolve(TicketCloser::class);
+        $dispositionNames = fn (Collection $records): array => $records
+            ->whereInstanceOf(Ticket::class)
+            ->filter(fn (Ticket $ticket): bool => $closer()->canClose($ticket))
+            ->flatMap(fn (Ticket $ticket): array => $closer()->dispositionsFor($ticket)->pluck('display_name')->all())
+            ->unique()
+            ->sort()
+            ->mapWithKeys(fn (string $name): array => [$name => $name])
+            ->all();
+
+        return BulkAction::make('close-tickets')
+            ->label(__($key.'label'))
+            ->icon('heroicon-o-check-circle')
+            ->requiresConfirmation()
+            ->modalHeading(__($key.'modal_heading'))
+            ->modalDescription(fn (): string => __(count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0 ? $key.'modal_description_received' : $key.'modal_description'))
+            ->modalSubmitActionLabel(__($key.'submit'))
+            ->schema(fn (Collection $records): array => $dispositionNames($records) === [] ? [] : [
+                Select::make('disposition')
+                    ->label(__('padmission-tickets::tickets.actions.close.disposition.label'))
+                    ->helperText(__($key.'disposition_help'))
+                    ->options($dispositionNames($records))
+                    ->required(),
+            ])
+            // As bulk Assign: evaluated as the action runs, where a host can observe it.
+            ->authorize(fn (Collection $records): bool => $records->isEmpty()
+                || $records->whereInstanceOf(Ticket::class)->contains(fn (Ticket $ticket): bool => $closer()->canClose($ticket)))
+            ->action(function (Collection $records, array $data) use ($key, $closer): void {
+                $closed = 0;
+
+                foreach ($records->whereInstanceOf(Ticket::class) as $ticket) {
+                    if (! $closer()->canClose($ticket)) {
+                        continue;
+                    }
+
+                    $dispositions = $closer()->dispositionsFor($ticket);
+                    $dispositionId = filled($data['disposition'] ?? null)
+                        ? $dispositions->clone()->where('display_name', $data['disposition'])->value('id')
+                        : null;
+
+                    if ($dispositionId === null && $dispositions->exists()) {
+                        continue;
+                    }
+
+                    $closer()->close($ticket, $dispositionId);
+                    $closed++;
+                }
+
+                $skipped = $records->count() - $closed;
+
+                Notification::make()
+                    ->title(trim(trans_choice($key.'closed', $closed).' '.($skipped > 0 ? trans_choice($key.'skipped', $skipped) : '')))
+                    ->status($skipped > 0 ? 'warning' : 'success')
+                    ->send();
+            })
+            ->deselectRecordsAfterCompletion();
     }
 
     /**
