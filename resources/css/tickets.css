@@ -326,7 +326,8 @@
 		gap: calc(var(--spacing) * 3);
 	}
 
-	.pad-ti-linked__header-link {
+	.pad-ti-linked__header-link,
+	.pad-ti-linked__person-actions {
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
