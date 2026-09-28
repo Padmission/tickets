@@ -134,6 +134,19 @@ class TicketResource extends Resource
             ->count();
     }
 
+    /*
+     * The Assigned to cell shows an escalation's assignee from the panel it
+     * was sent to, such as Padmission staff from another tenant, whom the
+     * list's own scopes hide. Searching and sorting read the same name, and
+     * only for the tickets the list already shows, so they match the cell.
+     *
+     * @return Builder<Model>
+     */
+    protected static function assigneeNames(): Builder
+    {
+        return TicketPlugin::resolveUserModelClass()::query()->withoutGlobalScopes();
+    }
+
     public static function getModel(): string
     {
         return TicketPlugin::resolveModelClass(Ticket::class);
@@ -334,8 +347,16 @@ class TicketResource extends Resource
                     ->tooltip(fn (ListTickets $livewire): ?string => static::isEscalatedTab($livewire)
                         ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere', TicketPlugin::get()->getEscalationTargetName())
                         : null)
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIn(
+                        $query->qualifyColumn('assignee_id'),
+                        static::assigneeNames()->where('name', 'like', "%{$search}%")->select(static::assigneeNames()->getModel()->getQualifiedKeyName()),
+                    ))
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(
+                        static::assigneeNames()
+                            ->select('name')
+                            ->whereColumn(static::assigneeNames()->getModel()->getQualifiedKeyName(), $query->qualifyColumn('assignee_id')),
+                        $direction,
+                    )),
 
                 TextColumn::make('source_panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.source_panel'))

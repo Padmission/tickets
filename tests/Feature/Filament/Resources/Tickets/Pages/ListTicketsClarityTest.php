@@ -618,3 +618,37 @@ it('runs the same number of queries for a page of 5 rows as for 25', function (s
     'escalations' => ['test', 'linked'],
     'received escalations' => ['test2', 'all'],
 ]);
+
+describe('Assigned to on the Escalations tab', function () {
+    it('finds and sorts an escalation by the assignee the row shows, from the team it went to', function () {
+        (new TicketStatusSeeder)->run();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+        TicketPlugin::get('test2')->supportTeamName('Platform Support');
+        $me = $this->login();
+
+        $kevin = User::factory()->create(['name' => 'Kevin McKee']);
+        $aaron = User::factory()->create(['name' => 'Aaron Abbott']);
+
+        // Stands in for the list's tenant scope, which the team's own panel lifts.
+        TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+        User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot([$kevin->id, $aaron->id]));
+
+        $escalation = fn (User $assignee): Ticket => tap(Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $me->id, 'assignee_id' => $assignee->id]), function (Ticket $escalation): void {
+            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        });
+
+        $byKevin = $escalation($kevin);
+        $byAaron = $escalation($aaron);
+
+        Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
+            ->assertSee('Kevin McKee')
+            ->searchTable('Kevin')
+            ->assertCanSeeTableRecords([$byKevin])
+            ->assertCanNotSeeTableRecords([$byAaron])
+            ->searchTable('')
+            ->sortTable('assignee.name')
+            ->assertCanSeeTableRecords([$byAaron, $byKevin], inOrder: true)
+            ->sortTable('assignee.name', 'desc')
+            ->assertCanSeeTableRecords([$byKevin, $byAaron], inOrder: true);
+    })->after(fn () => User::clearBootedModels());
+});
