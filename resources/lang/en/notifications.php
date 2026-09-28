@@ -9,7 +9,7 @@ return [
         'sender-support' => 'Support',
         'ticket_label' => 'Ticket:',
         'assigned_to_label' => 'Assigned to:',
-        'closed_as_label' => 'Closed as:',
+        'disposition_label' => 'Disposition:',
         'action_escalation' => 'Open the escalation',
         'action_original' => 'Open :name\'s ticket',
         'action_original_unnamed' => 'Open the original ticket',

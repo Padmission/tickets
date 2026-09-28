@@ -13,6 +13,7 @@ use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
@@ -432,4 +433,14 @@ it('sends a requester one closed email, with the answer, when support answers an
     expect($answer->shouldSend($this->aisha))->toBeFalse()
         ->and($closed->shouldSend($this->aisha))->toBeTrue()
         ->and((string) $closed->toMail($this->aisha)->render())->toContain('Fixed on our side.');
+});
+
+it('labels how a ticket was closed as its disposition, which reads apart from the originals still open', function () {
+    $disposition = TicketDisposition::factory()->create(['display_name' => 'Resolved', 'panel' => 'test2']);
+    $this->escalation->close(dispositionId: $disposition->id, closedById: $this->padmission->id);
+
+    $html = (string) (new TicketNotification($this->escalation->refresh(), new TicketClosedEvent($this->escalation, $this->padmission)))->toMail($this->owner)->render();
+
+    expect($html)->toContain('Disposition:')
+        ->and($html)->not->toContain('Closed as:');
 });

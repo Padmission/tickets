@@ -9,7 +9,7 @@
         @endif
 
         @if (filled($dispositionName ?? null))
-            **{{ __('padmission-tickets::notifications.general.closed_as_label') }}** {{ $dispositionName }}
+            **{{ __('padmission-tickets::notifications.general.disposition_label') }}** {{ $dispositionName }}
         @endif
 
         @if (filled($lastSupporterMessage ?? null))
