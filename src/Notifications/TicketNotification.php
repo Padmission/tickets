@@ -102,6 +102,11 @@ class TicketNotification extends Notification
             return $this->decideHandOver($notifiable);
         }
 
+        // The closed email tells them itself and quotes the latest reply, so a reply notice due beside it would only contradict it.
+        if ($this->notificationType === 'activity' && $this->closeTellsThem($notifiable)) {
+            return false;
+        }
+
         $activities = $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable));
 
         // The owner hears of a reply; the other team's own notes, such as closing it, come some other way or not at all.
@@ -155,6 +160,14 @@ class TicketNotification extends Notification
         $debounce = (int) config('padmission-tickets.notification-debounce', CarbonInterval::minutes(5)->totalSeconds);
 
         return $gained->created_at->copy()->addSeconds($debounce)->lte($lost->created_at);
+    }
+
+    protected function closeTellsThem($notifiable): bool
+    {
+        return $this->ticket->isClosed
+            && $this->isSubmitter($notifiable)
+            && filled($this->ticket->closed_by)
+            && (string) $this->ticket->closed_by !== (string) $notifiable->getKey();
     }
 
     protected function isActor($notifiable): bool
