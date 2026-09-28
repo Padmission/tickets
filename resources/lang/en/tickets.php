@@ -353,6 +353,9 @@ return [
 
             'badges' => [
                 'my' => 'Open tickets assigned to you',
+                'needs_you' => 'Tickets that need you: waiting on your reply, with nobody assigned, or with a reply to pass on from the team you escalated to',
+                'needs_you_to' => 'Tickets that need you: waiting on your reply, with nobody assigned, or with a reply from :team to pass on',
+                'needs_you_received' => 'Tickets that need you: waiting on your reply or with nobody assigned',
                 'tab' => 'Open tickets in this tab',
             ],
 

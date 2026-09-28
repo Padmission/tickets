@@ -80,6 +80,8 @@ class TicketPlugin implements Plugin
 
     protected bool $pinLinkedConversation = false;
 
+    protected bool $navigationBadgeCountsNeedsYou = false;
+
     protected mixed $additionalTicketDetails = [];
 
     protected mixed $additionalTableColumns = [];
@@ -453,6 +455,24 @@ class TicketPlugin implements Plugin
     public function shouldPinLinkedConversation(): bool
     {
         return $this->pinLinkedConversation;
+    }
+
+    /*
+     * The sidebar badge counts what the Needs You card counts rather than the
+     * viewer's open assigned tickets. Turned on per panel: an organization's
+     * own panel wants the tickets needing them, a panel like Padmission's own
+     * the tickets it holds.
+     */
+    public function navigationBadgeCountsNeedsYou(bool $condition = true): static
+    {
+        $this->navigationBadgeCountsNeedsYou = $condition;
+
+        return $this;
+    }
+
+    public function shouldNavigationBadgeCountNeedsYou(): bool
+    {
+        return $this->navigationBadgeCountsNeedsYou;
     }
 
     /**

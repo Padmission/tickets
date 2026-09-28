@@ -31,14 +31,16 @@ class ListTickets extends ListRecords
 
     /*
      * A row or bulk action can change who a ticket waits on, or remove it,
-     * which moves it between the cards above the list. They are separate
-     * components, so the table redrawing leaves them as they were.
+     * which moves it between the cards above the list and can change the
+     * sidebar badge. Both are separate components, so the table redrawing
+     * leaves them as they were.
      */
     protected function afterActionCalled(Action $action): void
     {
         parent::afterActionCalled($action);
 
         $this->dispatch('refresh-ticket-stats');
+        $this->dispatch('refresh-sidebar');
     }
 
     public function getHeaderWidgetsColumns(): int|array
@@ -220,9 +222,7 @@ class ListTickets extends ListRecords
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.all'))
                 ->badge(fn (): int => $this->openTicketCount('all'))
                 ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
-                ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                    $query->tap(new CurrentPanelScope)
-                )),
+                ->modifyQueryUsing(fn (Builder $query) => TicketResource::allTicketsQuery($query)),
 
             'my' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my'))

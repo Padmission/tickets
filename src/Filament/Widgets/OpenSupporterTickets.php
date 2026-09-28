@@ -5,10 +5,9 @@ namespace Padmission\Tickets\Filament\Widgets;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\Concerns\DescribesTicketListTab;
 use Padmission\Tickets\Services\TicketMetricsService;
-use Padmission\Tickets\Support\ConversationStateQuery;
-use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 
 class OpenSupporterTickets extends BaseWidget
@@ -55,13 +54,11 @@ class OpenSupporterTickets extends BaseWidget
             ];
         }
 
-        $viewer = ConversationViewer::current();
-        [$rank, $bindings] = ConversationStateQuery::rankExpression($viewer);
-        $needsYou = $query->open()->whereRaw("{$rank} = 0", $bindings)->count();
+        $needsYou = TicketResource::countNeedsYou($query);
 
         return [
             Stat::make(__('padmission-tickets::widgets.needs_you.label'), $needsYou)
-                ->description($viewer->receivesEscalations || $viewer->parentPanelIds === []
+                ->description(TicketResource::describesReceivedTickets()
                     ? __('padmission-tickets::widgets.needs_you.description_received')
                     : TicketPlugin::teamText('padmission-tickets::widgets.needs_you.description', $team))
                 ->descriptionIcon('heroicon-m-inbox')

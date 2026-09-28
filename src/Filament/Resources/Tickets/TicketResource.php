@@ -55,14 +55,73 @@ class TicketResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $count = static::countOpenTicketsAssignedToCurrentUser();
+        $count = match (true) {
+            ! static::badgeCountsNeedsYou() => static::countOpenTicketsAssignedToCurrentUser(),
+            ConversationViewer::current()->isSupporter => static::countNeedsYou(),
+            default => 0,
+        };
 
         return $count > 0 ? (string) $count : null;
     }
 
+    /**
+     * @return string|array<int|string, string|int>|null
+     */
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return static::badgeCountsNeedsYou() ? 'warning' : parent::getNavigationBadgeColor();
+    }
+
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return __('padmission-tickets::tickets.resources.tickets.badges.my');
+        if (! static::badgeCountsNeedsYou()) {
+            return __('padmission-tickets::tickets.resources.tickets.badges.my');
+        }
+
+        return static::describesReceivedTickets()
+            ? __('padmission-tickets::tickets.resources.tickets.badges.needs_you_received')
+            : TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.badges.needs_you', TicketPlugin::get()->getEscalationTargetName());
+    }
+
+    protected static function badgeCountsNeedsYou(): bool
+    {
+        return TicketPlugin::get()->shouldNavigationBadgeCountNeedsYou();
+    }
+
+    /*
+     * A panel that receives escalations, or has nowhere to escalate to, has no
+     * other team's reply to pass on.
+     */
+    public static function describesReceivedTickets(): bool
+    {
+        $viewer = ConversationViewer::current();
+
+        return $viewer->receivesEscalations || $viewer->parentPanelIds === [];
+    }
+
+    /**
+     * The All tab's tickets.
+     *
+     * @param  Builder<Ticket>|null  $query
+     * @return Builder<Ticket>
+     */
+    public static function allTicketsQuery(?Builder $query = null): Builder
+    {
+        return static::scopeListQueryToSupporterOrSubmitter(($query ?? static::getEloquentQuery())->tap(new CurrentPanelScope));
+    }
+
+    /*
+     * What the Needs You card counts and the list ranks first, the orange
+     * rows: shared by the card and the sidebar badge so they never disagree.
+     *
+     * @param  Builder<Ticket>|null  $tickets
+     */
+    public static function countNeedsYou(?Builder $tickets = null): int
+    {
+        [$rank, $bindings] = ConversationStateQuery::rankExpression(ConversationViewer::current());
+
+        /** @phpstan-ignore method.notFound */
+        return ($tickets ?? static::allTicketsQuery())->open()->whereRaw("{$rank} = 0", $bindings)->count();
     }
 
     public static function countOpenTicketsAssignedToCurrentUser(): int

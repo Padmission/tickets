@@ -20,16 +20,16 @@ return [
 
     'needs_you' => [
         'label' => 'Needs You',
-        'description' => 'Open tickets waiting on your reply, with nobody assigned, or with a reply to pass on from the team you escalated to',
-        'description_to' => 'Open tickets waiting on your reply, with nobody assigned, or with a reply from :team to pass on',
-        'description_received' => 'Open tickets waiting on your reply or with nobody assigned',
+        'description' => 'Waiting on you, unassigned, or the other team replied',
+        'description_to' => 'Waiting on you, unassigned, or :team replied',
+        'description_received' => 'Waiting on you or unassigned',
     ],
 
     'escalations_waiting' => [
         'label' => 'Waiting on the Other Team',
         'label_to' => 'Waiting on :team',
-        'description' => 'Open escalations where the team you escalated to owes the next reply',
-        'description_to' => 'Open escalations where :team owes the next reply',
+        'description' => 'Escalations the other team owes a reply on',
+        'description_to' => 'Escalations :team owes a reply on',
     ],
 
     'close_time' => [
