@@ -124,3 +124,27 @@ test("measures the cut in typed characters, not escaped ones", () => {
 test("keeps the given budget", () => {
 	assert.equal(ticketSubject("one two three four", 10), "one two…");
 });
+
+test("leaves out markup the message quotes, which a subject may not carry", () => {
+	assert.equal(
+		ticketSubject(
+			"<p>My page shows &lt;b&gt;x&lt;/b&gt; and &lt;script&gt;alert(1)&lt;/script&gt;</p>",
+		),
+		"My page shows x and alert(1)",
+	);
+	assert.equal(
+		ticketSubject("<p>Open javascript:alert(1)</p>"),
+		"Open alert(1)",
+	);
+});
+
+test("keeps a less-than sign that starts no tag", () => {
+	assert.equal(
+		ticketSubject("<p>Rent &lt; 200 since March</p>"),
+		"Rent < 200 since March",
+	);
+});
+
+test("leaves nothing when the message is only markup, for the chat to name it", () => {
+	assert.equal(ticketSubject("<p>&lt;script&gt;&lt;/script&gt;</p>"), "");
+});

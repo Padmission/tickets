@@ -839,7 +839,7 @@ customElements.define(
 		}
 
 		async createTicket() {
-			const subject = ticketSubject(this.messageContent);
+			const subject = ticketSubject(this.messageContent) || __("chat.default_subject");
 
 			const url = window.location.origin + window.location.pathname;
 

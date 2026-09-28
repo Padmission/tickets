@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
 use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
@@ -16,6 +17,7 @@ use Padmission\Tickets\Http\DataMappers\TicketMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Rules\PlainText;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketReopening;
 use Padmission\Tickets\TicketPlugin;
@@ -84,15 +86,20 @@ class CreateTicketController
     private function validateAndSanitizeSubject(Request $request): string
     {
         $request->validate([
-            'subject' => 'required|string|max:255',
+            'subject' => ['required', 'string', 'max:255'],
         ]);
 
         /*
          * The subject is plain text, never parsed as HTML: Tiptap's getText()
          * returned it HTML-escaped and dropped whatever followed a "<". Older
-         * widget builds send it still escaped, so entities are read once.
+         * widget builds send it still escaped, so entities are read once, and
+         * markup is refused in what they spell out.
          */
-        return Str::squish(html_entity_decode((string) $request->input('subject'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $subject = Str::squish(html_entity_decode((string) $request->input('subject'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        Validator::make(['subject' => $subject], ['subject' => [new PlainText]])->validate();
+
+        return $subject;
     }
 
     private function resolveTargetPanelId(): string

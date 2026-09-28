@@ -263,3 +263,21 @@ class ReadsButMayNotReplyPolicy extends TestTicketPolicy
         return false;
     }
 }
+
+it('refuses a file name carrying markup', function () {
+    createStorageMock();
+
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson(route('padmission-tickets::api.attachment-url', ['ticket' => $ticket]), [
+            'filename' => '<img src=x onerror=alert(1)>.jpg',
+            'content_type' => 'image/jpeg',
+            'content_length' => '1024',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['filename' => 'The filename can\'t contain HTML or code.']);
+
+    $this->assertDatabaseCount(TicketAttachment::class, 0);
+});

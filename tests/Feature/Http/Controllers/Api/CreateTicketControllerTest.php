@@ -73,8 +73,25 @@ it('stores the subject as the plain text that was typed, so it reads and searche
     'an ampersand' => ['Rent & utilities', 'Rent & utilities'],
     'angle brackets' => ['Rent < last year > this year', 'Rent < last year > this year'],
     'double quotes' => ['The "utility" allowance', 'The "utility" allowance'],
-    'markup, kept as text' => ['<b>Rent</b> <img src=x onerror=alert(1)>', '<b>Rent</b> <img src=x onerror=alert(1)>'],
+    'a less-than sign that starts no tag' => ['Rent <200 since March', 'Rent <200 since March'],
     'escaped, as older widget builds send it' => ['Household 14&#039;s rent &amp; &quot;utility&quot; &lt; last year', 'Household 14\'s rent & "utility" < last year'],
+]);
+
+it('refuses a subject carrying markup, however it is sent', function (string $sent) {
+    $this->actingAs(User::factory()->create());
+    TicketStatus::factory()->create();
+    TicketPriority::factory()->create();
+
+    $this->postJson(route('padmission-tickets::api.store'), ['subject' => $sent])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['subject' => 'The subject can\'t contain HTML or code.']);
+
+    expect(Ticket::query()->count())->toBe(0);
+})->with([
+    'a tag' => ['<b>Rent</b> is wrong'],
+    'an event handler in a tag' => ['Rent <img src=x onerror=alert(1)>'],
+    'a script URL' => ['Open javascript:alert(1)'],
+    'a tag escaped, as older widget builds send it' => ['&lt;script&gt;alert(1)&lt;/script&gt;'],
 ]);
 
 it('requires a subject', function () {

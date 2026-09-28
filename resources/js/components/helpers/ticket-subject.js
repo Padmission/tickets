@@ -24,13 +24,21 @@ function decodeEntities(text) {
 	});
 }
 
+// The subject is taken from a message, which may quote markup as text. The server refuses markup
+// in a subject, so it is removed here, as the server removes it from a subject nobody typed.
+function withoutMarkup(text) {
+	return text
+		.replace(/<[a-z!/?][^>]*>?/gi, " ")
+		.replace(/(?:java|vb)script\s*:|data\s*:\s*[a-z]+\/[\w.+-]+/gi, "");
+}
+
 // A ticket started from the widget is named after the start of its first message, cut at the
 // last whole word that fits so it never ends mid-word, with an ellipsis when anything was cut.
 // When a sentence ends within what fits, the subject stops there, whole and with no ellipsis,
 // unless that leaves under half the budget, where a short fragment such as "Dr." would.
 // A single word too long to fit is cut where the budget ends instead.
 export default function ticketSubject(html, maxLength = 40) {
-	const text = decodeEntities(html.replace(/<[^>]*>/g, " "))
+	const text = withoutMarkup(decodeEntities(html.replace(/<[^>]*>/g, " ")))
 		.replace(/\s+/g, " ")
 		.trim();
 

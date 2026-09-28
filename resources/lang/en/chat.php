@@ -33,6 +33,7 @@ return [
         'lock_turn' => 'We still owe a reply',
         'lock_turn_help' => 'Tick this if your team still needs to follow up. Otherwise the ticket waits on the requester after you send.',
         'closed_on' => 'This ticket was closed on :date.',
+        'default_subject' => 'Support request',
         'reopen_dialog' => [
             'heading_same_problem' => 'This ticket is closed. Is this the same problem?',
             'body_same_problem' => 'Reopen it to send your message, or start a new ticket with it that links back to this one.',

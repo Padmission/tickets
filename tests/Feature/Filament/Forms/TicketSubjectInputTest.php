@@ -30,7 +30,7 @@ beforeEach(function () {
     $this->subject = 'Error: <script>x</script> onclick=alert(1) when rent < 200';
 });
 
-it('escalates a ticket whose subject looks like markup, keeping the subject as typed', function () {
+it('escalates a ticket from before the rule whose subject looks like markup, keeping its subject', function () {
     TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
     $ticket = Ticket::factory()->open()->create(['subject' => $this->subject, 'linked_ticket_id' => null]);
 
@@ -44,7 +44,7 @@ it('escalates a ticket whose subject looks like markup, keeping the subject as t
     expect(Ticket::query()->withoutGlobalScopes()->whereKey($ticket->refresh()->linked_ticket_id)->value('subject'))->toBe($this->subject);
 });
 
-it('edits a ticket whose subject looks like markup, keeping the subject as it was', function () {
+it('edits a ticket from before the rule whose subject looks like markup, keeping its subject', function () {
     $ticket = Ticket::factory()->open()->create(['subject' => $this->subject]);
     $priority = TicketPriority::query()->whereKeyNot($ticket->priority_id)->value('id');
 
@@ -58,6 +58,34 @@ it('edits a ticket whose subject looks like markup, keeping the subject as it wa
     expect($ticket->refresh())
         ->priority_id->toBe($priority)
         ->subject->toBe($this->subject);
+});
+
+it('refuses an escalation subject changed to carry markup', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    $ticket = Ticket::factory()->open()->create(['subject' => 'Rent is wrong', 'linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->callAction(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'), [
+            'subject' => 'Rent <script>alert(1)</script>',
+            'message' => '<p>Please check.</p>',
+        ])
+        ->assertHasFormErrors(['subject']);
+
+    expect($ticket->refresh()->linked_ticket_id)->toBeNull();
+});
+
+it('keeps an escalation subject typed with a less-than sign that starts no tag, as typed', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    $ticket = Ticket::factory()->open()->create(['subject' => 'Rent is wrong', 'linked_ticket_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->callAction(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'), [
+            'subject' => 'Rent < 200 since March',
+            'message' => '<p>Please check.</p>',
+        ])
+        ->assertHasNoFormErrors();
+
+    expect(Ticket::query()->withoutGlobalScopes()->whereKey($ticket->refresh()->linked_ticket_id)->value('subject'))->toBe('Rent < 200 since March');
 });
 
 it('still applies the host rules to other text inputs', function () {
