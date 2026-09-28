@@ -56,7 +56,7 @@ class TicketActivityService
     ): Collection {
         $user ??= auth()->user();
 
-        $currentSender = $user?->getKey() === $ticket->submitter_id
+        $currentSender = $ticket->isSubmittedBy($user)
             ? ActivitySender::User
             : ActivitySender::Supporter;
 

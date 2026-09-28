@@ -364,3 +364,19 @@ test('senders are named through the ticket panel relationship scopes, not the vi
 
     expect($activities->first()->userName)->toBe('Sender From Another Tenant');
 })->after(fn () => User::clearBootedModels());
+
+test('the submitter reads as the requester however their id is held on the ticket', function () {
+    $message = TicketActivity::factory()->create([
+        'ticket_id' => $this->ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::User,
+        'user_id' => $this->user->id,
+    ]);
+
+    // As a form select or a request hands it over: a string.
+    $this->ticket->submitter_id = (string) $this->user->id;
+
+    $activities = $this->service->getActivities($this->ticket, user: $this->user);
+
+    expect($activities->firstWhere('id', $message->id)->side)->toBe(ActivitySide::Me);
+});

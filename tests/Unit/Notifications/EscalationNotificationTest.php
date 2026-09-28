@@ -372,3 +372,34 @@ it('leaves the name out when the open original has no requester name', function 
         ->and($closed['actionLabel'])->toBe('Open the original ticket')
         ->and($taken['actionLabel'])->toBe('Open the original ticket');
 });
+
+it('keeps every escalation note out of the requester\'s email and bell, while support still reads them', function () {
+    $supporterReply = TicketActivity::factory()->create([
+        'ticket_id' => $this->original->id,
+        'user_id' => $this->owner->id,
+        'sender' => ActivitySender::Supporter,
+        'type' => ActivityType::Message,
+        'content' => '<p>We are looking into it.</p>',
+    ]);
+
+    // The notes an original carries; Original added and removed are written on the escalation, which its requester cannot open.
+    $escalationNotes = [ActivityType::Escalated, ActivityType::RemovedFromEscalation, ActivityType::AddedToEscalation];
+
+    foreach ($escalationNotes as $type) {
+        $this->original->addTicketActivity($type, ActivitySender::System, $this->owner->id, data: ['escalation' => $this->escalation->id]);
+    }
+
+    // Each channel marks what it shows as sent, so each starts from nothing sent.
+    $notification = function () {
+        $this->original->ticketUserStates()->delete();
+
+        return new TicketNotification($this->original, new TicketActivityEvent($this->original, ActivityType::Escalated, null, $this->owner));
+    };
+    $types = fn (User $recipient) => $notification()->toMail($recipient)->viewData['activities']->pluck('type')->all();
+    $bell = fn (User $recipient) => $notification()->toDatabase($recipient)['body'];
+
+    expect($types($this->aisha))->toBe([ActivityType::Message])
+        ->and($bell($this->aisha))->toBe(e($supporterReply->plainTextContent()))
+        ->and($types($this->colleague))->toBe([ActivityType::Message, ...$escalationNotes])
+        ->and($bell($this->colleague))->toBe(e(TicketActivity::plainText($this->original->ticketActivities()->latest('id')->first()->content)));
+});
