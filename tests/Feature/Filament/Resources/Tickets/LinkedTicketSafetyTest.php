@@ -5,6 +5,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
@@ -65,6 +67,8 @@ describe('with tenants', function () {
 
     it('refuses to link another tenant\'s ticket', function () {
         $ticket = Ticket::factory()->create(['tenant_id' => 1, 'linked_ticket_id' => null]);
+        Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test', 'tenant_id' => 1])
+            ->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System);
         $otherTenant = Ticket::factory()->create(['panel' => 'test2', 'tenant_id' => 2]);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])

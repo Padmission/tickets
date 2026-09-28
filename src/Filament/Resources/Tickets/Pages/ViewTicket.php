@@ -766,7 +766,7 @@ class ViewTicket extends EditRecord
                                 TicketPlugin::get()->getEscalationTargetName(),
                             ))
                                 ->color('gray')
-                                ->visible(fn (Ticket $record): bool => CreateLinkedTicketAction::isAvailableFor($record) && static::canEdit($record)),
+                                ->visible(fn (Ticket $record): bool => AddToEscalationAction::isAvailableFor($record) && static::canEdit($record)),
 
                             LinkedTicketModalSelect::make('childTickets')
                                 ->relationship(

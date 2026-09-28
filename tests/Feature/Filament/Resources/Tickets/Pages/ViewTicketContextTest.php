@@ -623,7 +623,7 @@ describe('Escalation box on an original', function () {
         Livewire::test(ViewTicket::class, ['record' => $original->id])
             ->assertSee('The escalation to Platform Support is closed.')
             ->assertSee('Escalate to Platform Support again')
-            ->assertSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']))
+            ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']))
             ->assertDontSee(__('padmission-tickets::tickets.linked_view.open_escalation'));
     });
 });

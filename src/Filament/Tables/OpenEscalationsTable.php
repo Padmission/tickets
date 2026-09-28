@@ -3,14 +3,30 @@
 namespace Padmission\Tickets\Filament\Tables;
 
 use Filament\Facades\Filament;
+use Filament\Support\Services\RelationshipJoiner;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class OpenEscalationsTable
 {
+    /*
+     * Built from the same base query the picker's table starts from, so the
+     * action is offered only when the picker would list something.
+     */
+    public static function hasEscalationsFor(Ticket $ticket): bool
+    {
+        $relationship = Relation::noConstraints(fn (): Relation => $ticket->parentTicket());
+
+        return LinkedTicketCandidates::openEscalations(
+            app(RelationshipJoiner::class)->prepareQueryForNoConstraints($relationship),
+            $ticket,
+        )->exists();
+    }
+
     public static function configure(Table $table): Table
     {
         return $table

@@ -39,7 +39,7 @@ class AddToEscalationAction extends Action
             ->color('gray')
             ->slideOver()
             ->modalWidth(Width::FourExtraLarge)
-            ->visible(fn (Ticket $record): bool => CreateLinkedTicketAction::isAvailableFor($record))
+            ->visible(fn (Ticket $record): bool => static::isAvailableFor($record))
             ->fillForm(fn (Ticket $record): array => static::requesterMessageDefaults($record))
             ->schema([
                 TableSelect::make('escalation')
@@ -76,5 +76,15 @@ class AddToEscalationAction extends Action
                     ->title(TicketPlugin::teamText('padmission-tickets::tickets.actions.add_to_escalation.success', TicketPlugin::get()->getEscalationTargetName()))
                     ->send();
             });
+    }
+
+    /*
+     * An original that could be escalated but whose organization has no open
+     * escalation to join would only open an empty picker.
+     */
+    public static function isAvailableFor(Ticket $record): bool
+    {
+        return CreateLinkedTicketAction::isAvailableFor($record)
+            && OpenEscalationsTable::hasEscalationsFor($record);
     }
 }

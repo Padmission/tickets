@@ -616,6 +616,7 @@ describe('Telling the requester', function () {
     });
 
     it('writes no message when the ticket cannot join the escalation', function () {
+        escalationFrom();
         $closed = Ticket::factory()->closed()->create(['panel' => 'test2']);
         $original = Ticket::factory()->open()->create(['turn' => Turn::Supporter]);
 

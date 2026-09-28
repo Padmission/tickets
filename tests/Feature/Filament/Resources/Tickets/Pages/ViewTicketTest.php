@@ -53,6 +53,7 @@ describe('Linked Tickets', function () {
         TicketPlugin::get()->allowLinkedTicketsTo(['test']);
 
         $ticket = Ticket::factory()->open()->create();
+        escalationFrom(attributes: ['panel' => 'test']);
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertActionVisible(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'))
@@ -279,6 +280,7 @@ describe('Escalation explanation', function () {
         (new TicketStatusSeeder)->run();
 
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        escalationFrom();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']))

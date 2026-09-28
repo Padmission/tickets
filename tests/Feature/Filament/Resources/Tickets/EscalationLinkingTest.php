@@ -38,12 +38,27 @@ beforeEach(function () {
 describe('Adding to an existing escalation', function () {
     it('offers both ways to escalate, with help naming the team', function () {
         $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        escalationFrom();
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertActionVisible(escalationAction(CreateLinkedTicketAction::class))
             ->assertActionVisible(escalationAction(AddToEscalationAction::class))
             ->assertSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']));
     });
+
+    it('offers no way to add to an escalation when the picker would have none to list', function (Closure $escalations) {
+        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        $escalations();
+
+        Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->assertActionVisible(escalationAction(CreateLinkedTicketAction::class))
+            ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.label'))
+            ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.help_to', ['team' => 'Platform Support']));
+    })->with([
+        'no escalations at all' => fn (): Closure => fn () => null,
+        'only a closed one' => fn (): Closure => fn () => escalationFrom(state: 'closed'),
+        'only another panel\'s' => fn (): Closure => fn () => escalationFrom('test2'),
+    ]);
 
     it('offers only open escalations', function () {
         $ticket = Ticket::factory()->open()->create();
