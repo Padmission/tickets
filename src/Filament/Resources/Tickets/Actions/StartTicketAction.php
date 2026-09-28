@@ -60,7 +60,7 @@ class StartTicketAction extends Action
             ->icon(Heroicon::Plus)
             ->modalHeading(__(self::KEY.'label'))
             ->visible(fn (): bool => TicketPlugin::get()->canStartTickets())
-            ->authorize('startTicket')
+            ->authorize('openTicketFromList')
             // Whatever a host makes actions default to, this is a slide-over, as Escalate is.
             ->slideOver()
             ->modalWidth(Width::Large)

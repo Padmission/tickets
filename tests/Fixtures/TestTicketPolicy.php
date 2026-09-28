@@ -22,7 +22,7 @@ class TestTicketPolicy
         return true;
     }
 
-    public function startTicket(User $user): bool
+    public function openTicketFromList(User $user): bool
     {
         return true;
     }

@@ -36,7 +36,7 @@ class TicketPolicy
      * organization or as a question for the team they escalate to. Everyone
      * else starts one from the chat.
      */
-    public function startTicket($user): bool
+    public function openTicketFromList($user): bool
     {
         return TicketPlugin::find(Filament::getCurrentPanel()?->getId())?->isSupporter($user) ?? false;
     }
