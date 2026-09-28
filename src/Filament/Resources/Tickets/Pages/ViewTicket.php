@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Carbon\CarbonImmutable;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
@@ -66,6 +67,8 @@ use Padmission\Tickets\TicketPlugin;
 class ViewTicket extends EditRecord
 {
     use ExplainsStaleEscalationActions;
+
+    protected const int PERSON_ACTION_SLOTS = 3;
 
     protected static string $resource = TicketResource::class;
 
@@ -592,7 +595,10 @@ class ViewTicket extends EditRecord
                 // it never re-creates the chat component and loses a draft reply.
                 Group::make([
                     View::make('padmission-tickets::filament.linked-conversation')
-                        ->viewData(fn (): array => $this->linkedViewData(drawer: false)),
+                        ->viewData(fn (): array => $this->linkedViewData(drawer: false))
+                        ->schema([
+                            Actions::make(fn (): array => $this->linkedRequesterActions())->key('linkedRequesterActions'),
+                        ]),
                 ])
                     ->visible(fn (): bool => $this->linkedView() === TicketPlugin::LINKED_VIEW_BESIDE)
                     ->columnSpan(['lg' => 5])
@@ -664,7 +670,8 @@ class ViewTicket extends EditRecord
                                         ->color('primary')
                                         ->link()
                                         ->size('sm'),
-                                ),
+                                )
+                                ->hintActions($this->personActionSlots(fn (Ticket $record): ?Model => $record->submitter)),
                             fn (Ticket $record): string => match (true) {
                                 $this->isEscalatedHere($record) => __('padmission-tickets::tickets.resources.tickets.contact'),
                                 $this->isEscalatedElsewhere($record) => __('padmission-tickets::tickets.resources.tickets.handled_by'),
@@ -814,6 +821,52 @@ class ViewTicket extends EditRecord
                         ]),
                 ]),
             ]);
+    }
+
+    /*
+     * Hint actions come one to a closure, so each slot offers one of the
+     * host's person actions, styled as the sidebar's Change link.
+     *
+     * @param  Closure(Ticket): ?Model  $person
+     * @return list<Closure(Ticket): ?Action>
+     */
+    protected function personActionSlots(Closure $person): array
+    {
+        return array_map(
+            fn (int $slot): Closure => fn (Ticket $record): ?Action => $this->styledPersonActions($person($record), $record)[$slot] ?? null,
+            range(0, self::PERSON_ACTION_SLOTS - 1),
+        );
+    }
+
+    /**
+     * @return list<Action>
+     */
+    protected function styledPersonActions(?Model $person, Ticket $ticket): array
+    {
+        if ($person === null) {
+            return [];
+        }
+
+        return array_map(
+            fn (Action $action): Action => $action->icon(null)->color('primary')->link()->size('sm'),
+            TicketPlugin::get()->getPersonActions($person, $ticket),
+        );
+    }
+
+    /*
+     * Beside an escalation, the requester of the original it shows.
+     *
+     * @return list<Action>
+     */
+    protected function linkedRequesterActions(): array
+    {
+        $linked = $this->linkedTicket();
+
+        if ($linked === null || $linked->isEscalation()) {
+            return [];
+        }
+
+        return $this->styledPersonActions($linked->submitter, $linked);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace Padmission\Tickets;
 
 use Carbon\CarbonInterface;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
@@ -83,6 +84,8 @@ class TicketPlugin implements Plugin
     protected bool $navigationBadgeCountsNeedsYou = false;
 
     public const int DEFAULT_REOPEN_WINDOW_DAYS = 30;
+
+    protected ?Closure $personActions = null;
 
     protected int|Closure $reopenWindowDays = self::DEFAULT_REOPEN_WINDOW_DAYS;
 
@@ -493,6 +496,32 @@ class TicketPlugin implements Plugin
     public function getReopenWindowDays(): int
     {
         return (int) value($this->reopenWindowDays);
+    }
+
+    /*
+     * Actions the host offers beside each person a ticket names, such as
+     * impersonating them. Their rules stay the host's.
+     */
+    public function personActionsUsing(?Closure $callback): static
+    {
+        $this->personActions = $callback;
+
+        return $this;
+    }
+
+    /**
+     * @return list<Action>
+     */
+    public function getPersonActions(Model $person, Ticket $ticket): array
+    {
+        if ($this->personActions === null) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            (array) app()->call($this->personActions, ['person' => $person, 'ticket' => $ticket]),
+            fn (mixed $action): bool => $action instanceof Action,
+        ));
     }
 
     /**

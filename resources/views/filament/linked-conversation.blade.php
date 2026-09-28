@@ -48,6 +48,12 @@
                 {{ $headerLink['label'] }}
             </x-filament::link>
         @endif
+
+        @if (isset($getChildSchema))
+            <div class="pad-ti-linked__person-actions">
+                {{ $getChildSchema() }}
+            </div>
+        @endif
     </header>
 
     @if ($linkedTickets->count() > 1)
