@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Queue;
@@ -8,6 +9,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketActivityEvent;
+use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Events\TicketHandedOverEvent;
@@ -513,3 +515,32 @@ test('the bell shows a subject, a message and a name as the text they are, not a
         ->and($bell['body'])->toBe('Try &lt;b&gt;this&lt;/b&gt; &amp; rent &lt; 200')
         ->and(str($bell['body'])->sanitizeHtml()->toString())->toBe($bell['body']);
 });
+
+test('the bell names the person a ticket was assigned to, as the email does, where only the email\'s lookup finds them', function () {
+    $user = User::factory()->create();
+    $staff = User::factory()->create(['name' => 'Kevin McKee']);
+    $ticket = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => $user->id, 'assignee_id' => $staff->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::AssigneeChanged,
+        'sender' => ActivitySender::System,
+        'user_id' => null,
+        'data' => ['from' => null, 'to' => $staff->id],
+    ]);
+
+    // A queue worker: the ticket's panel has no tickets plugin to lift the host's tenant scope,
+    // and the host's notification finds people past it, as Padmission's does.
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($staff->id));
+    invade(Filament\Facades\Filament::getPanel('test2'))->plugins = [];
+
+    $notification = new class($ticket, new TicketAssignedEvent($ticket)) extends TicketNotification
+    {
+        protected function findUser(int|string|null $id): ?Model
+        {
+            return parent::findUser($id) ?? User::query()->withoutGlobalScope('acting-tenant')->find($id);
+        }
+    };
+
+    expect($notification->toDatabase(User::factory()->create())['body'])->toBe('Assigned to Kevin McKee');
+})->after(fn () => User::clearBootedModels());

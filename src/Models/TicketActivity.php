@@ -73,8 +73,11 @@ class TicketActivity extends Model
 
     public function plainTextContent(?int $words = null): ?string
     {
-        $content = $this->content;
+        return static::plainText($this->content, $words);
+    }
 
+    public static function plainText(?string $content, ?int $words = null): ?string
+    {
         if ($content === null) {
             return null;
         }

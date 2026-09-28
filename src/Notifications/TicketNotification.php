@@ -272,8 +272,8 @@ class TicketNotification extends Notification
 
         $body = match ($this->notificationType) {
             'handedover' => $wording['intro'],
-            'created' => $this->openingActivities($notifiable, $activities)->last()?->plainTextContent(30) ?? $wording['intro'],
-            default => $this->reportedActivities($notifiable, $activities)->last()?->plainTextContent(30) ?? $wording['intro'],
+            'created' => $this->bellText($this->openingActivities($notifiable, $activities)->last(), $notifiable) ?? $wording['intro'],
+            default => $this->bellText($this->reportedActivities($notifiable, $activities)->last(), $notifiable) ?? $wording['intro'],
         };
 
         return FilamentNotification::make()
@@ -491,6 +491,15 @@ class TicketNotification extends Notification
      * moved between, found through the ticket's own panel rather than by their
      * number, and the recipient reads as "You".
      */
+    /*
+     * The bell shows the activity as the email does, so an assignment names
+     * the person, whom the activity alone cannot find on a queue worker.
+     */
+    protected function bellText(?TicketActivity $activity, mixed $notifiable): ?string
+    {
+        return $activity === null ? null : TicketActivity::plainText($this->activityContent($activity, $notifiable), 30);
+    }
+
     public function activityContent(TicketActivity $activity, mixed $notifiable = null): string
     {
         if ($activity->type !== ActivityType::AssigneeChanged) {
