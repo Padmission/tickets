@@ -544,3 +544,22 @@ test('the bell names the person a ticket was assigned to, as the email does, whe
 
     expect($notification->toDatabase(User::factory()->create())['body'])->toBe('Assigned to Kevin McKee');
 })->after(fn () => User::clearBootedModels());
+
+test('the closed email quotes support\'s last reply to whoever asked, never to support itself', function () {
+    $requester = User::factory()->create();
+    $supporter = User::factory()->create();
+    $ticket = Ticket::factory()->create(['submitter_id' => $requester->id, 'assignee_id' => $supporter->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+        'user_id' => $supporter->id,
+        'content' => '<p>The rent is fixed.</p>',
+    ]);
+
+    $mail = fn (User $recipient) => (new TicketNotification($ticket, new TicketClosedEvent($ticket)))->toMail($recipient);
+
+    expect($mail($requester)->viewData['lastSupporterMessage'])->toBe('The rent is fixed.')
+        ->and($mail($supporter)->viewData['lastSupporterMessage'])->toBeNull();
+});

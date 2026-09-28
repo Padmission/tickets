@@ -222,12 +222,18 @@ it('tells the new owner the escalation was handed to them', function () {
 });
 
 it('tells the previous owner the escalation was taken over and links a ticket they can still open', function () {
+    $this->escalation->ticketActivities()->create(['type' => ActivityType::Message, 'sender' => ActivitySender::Supporter, 'content' => '<p>Padmission answer</p>']);
+    $this->escalation->addTicketActivity(ActivityType::HandedOver, ActivitySender::System, $this->colleague->id, data: ['from' => $this->owner->id, 'to' => $this->colleague->id]);
     $this->escalation->update(['submitter_id' => $this->colleague->id]);
     $event = new TicketHandedOverEvent($this->escalation, $this->colleague, $this->owner->id, $this->colleague->id);
     $notification = new TicketNotification($this->escalation, $event);
 
     $mail = $notification->toMail($this->owner);
     $bell = $notification->toDatabase($this->owner);
+
+    // They can no longer open the escalation, so none of its conversation is shown.
+    expect($mail->viewData['activities'] ?? collect())->toBeEmpty()
+        ->and((string) $mail->render())->not->toContain('Padmission answer');
 
     expect($mail->subject)->toBe("Escalation taken over #{$this->escalation->id} – Recert rent is wrong")
         ->and($mail->viewData['headline'])->toBe('Escalation taken over')

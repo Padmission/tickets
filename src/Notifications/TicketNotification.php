@@ -170,7 +170,7 @@ class TicketNotification extends Notification
 
         $message = match ($this->notificationType) {
             'created' => $this->createdMail($wording),
-            'closed' => $this->closedMail($wording),
+            'closed' => $this->closedMail($wording, $notifiable),
             default => $this->historyMail($notifiable, $wording),
         };
 
@@ -205,8 +205,10 @@ class TicketNotification extends Notification
 
         $activities = $this->reportedActivities($notifiable, $activities);
 
+        // Whoever it was taken from can no longer open the escalation, so its
+        // conversation is not shown to them; the intro says who has it now.
         if ($this->notificationType === 'handedover') {
-            $activities = $this->handOverActivities($activities);
+            $activities = $this->isSubmitter($notifiable) ? $this->handOverActivities($activities) : $activities->take(0);
         }
 
         return (new MailMessage)
@@ -239,14 +241,15 @@ class TicketNotification extends Notification
     /**
      * @param  array<string, string|null>  $wording
      */
-    protected function closedMail(array $wording): MailMessage
+    protected function closedMail(array $wording, mixed $notifiable = null): MailMessage
     {
         $dispositionName = TicketPlugin::resolveModelClass(TicketDisposition::class)::query()
             ->withoutGlobalScopes()
             ->find($this->ticket->disposition_id)
             ?->display_name;
 
-        $lastSupporterMessage = $this->ticket->ticketActivities()
+        // Support's last reply is news to whoever asked, not to support itself.
+        $lastSupporterMessage = $notifiable !== null && ! $this->isSubmitter($notifiable) ? null : $this->ticket->ticketActivities()
             ->where('type', ActivityType::Message)
             ->where('sender', ActivitySender::Supporter)
             ->latest('id')
