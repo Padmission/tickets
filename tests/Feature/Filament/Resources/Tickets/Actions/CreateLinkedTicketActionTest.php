@@ -364,7 +364,7 @@ describe('Escalating again', function () {
             ->updated_at->toDateTimeString()->toBe($updatedAt)
             ->and($types($original))->toBe([
                 [ActivityType::RemovedFromEscalation, ['escalation' => $oldEscalation->id]],
-                [ActivityType::AddedToEscalation, ['escalation' => $newEscalation->id]],
+                [ActivityType::Escalated, ['escalation' => $newEscalation->id]],
             ])
             ->and($types($oldEscalation))->toBe([[ActivityType::OriginalRemoved, ['original' => $original->id]]])
             ->and($types($newEscalation))->toBe([[ActivityType::OriginalAdded, ['original' => $original->id]]]);
@@ -504,7 +504,8 @@ describe('Telling the requester', function () {
 
         expect($original->refresh()->turn)->toBe(Turn::Supporter)
             ->and($original->linked_ticket_id)->toBe($escalation->id)
-            ->and($activities->pluck('type')->all())->toBe([ActivityType::AddedToEscalation, ActivityType::Message])
+            ->and($activities->pluck('type')->all())->toBe([ActivityType::Escalated, ActivityType::Message])
+            ->and($activities->first()->plainTextContent())->toBe('Escalated to the Platform Support escalation by '.$viewer->name)
             ->and($message->sender)->toBe(ActivitySender::Supporter)
             ->and($message->user_id)->toBe($viewer->id)
             ->and($message->getRawOriginal('content'))->toContain('We are on it')->not->toContain('<script>');

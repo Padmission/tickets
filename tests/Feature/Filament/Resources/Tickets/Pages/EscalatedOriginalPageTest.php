@@ -67,7 +67,7 @@ it('tells the owner to pass on a reply that came before the escalation closed, n
         ->assertDontSee('answer Padmission there');
 
     expect(ConversationState::for($this->original->refresh()->load('parentTicket')))
-        ->markerTooltip()->toBe('Padmission replied before the escalation was closed. Pass the answer on to Aisha Brooks here.');
+        ->markerTooltip()->toBe('Padmission replied before the escalation was closed. Pass the answer on to Aisha Brooks on their ticket.');
 });
 
 it('offers Read the reply only while the escalation is not beside the chat, and Open the escalation once', function () {

@@ -10,6 +10,7 @@ return [
     'turn_changed' => '"Waiting on" changed from :from to :to',
     'unknown' => 'Unknown',
     'assigned_to' => 'Assigned to :name',
+    'escalated' => 'Escalated to :escalation by :name',
     'added_to_escalation' => 'Added to :escalation by :name',
     'removed_from_escalation' => 'Removed from :escalation by :name',
     'original_added' => ':original added to this escalation by :name',

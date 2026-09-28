@@ -130,6 +130,7 @@ class TicketActivity extends Model
                 'from' => $this->priorityLabel($this->activityData('from')),
                 'to' => $this->priorityLabel($this->activityData('to')),
             ]),
+            ActivityType::Escalated => $this->escalationNote('escalated'),
             ActivityType::AddedToEscalation => $this->escalationNote('added_to_escalation'),
             ActivityType::RemovedFromEscalation => $this->escalationNote('removed_from_escalation'),
             ActivityType::OriginalAdded => $this->originalNote('original_added'),

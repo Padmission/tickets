@@ -85,6 +85,15 @@ describe('Stat cards', function () {
             ->getValue()->toBe(1);
     });
 
+    it('shows Needs You in gray when nothing is waiting on the viewer', function () {
+        $this->login();
+
+        expect(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all'])->instance()->getStats()[0])
+            ->getLabel()->toBe('Needs You')
+            ->getValue()->toBe(0)
+            ->getColor()->toBe('gray');
+    });
+
     it('counts the rows that need the viewer as Needs You, the same rows the list ranks first', function () {
         $me = $this->login();
         $colleague = User::factory()->create();

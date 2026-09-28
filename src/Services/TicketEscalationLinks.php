@@ -82,7 +82,7 @@ class TicketEscalationLinks
 
     public function linkNewEscalation(Ticket $original, Ticket $escalation): void
     {
-        $this->link($original, $escalation);
+        $this->link($original, $escalation, started: true);
     }
 
     /*
@@ -215,11 +215,15 @@ class TicketEscalationLinks
         return static::query()->withoutGlobalScopes()->where('linked_ticket_id', $escalationId);
     }
 
-    protected function link(Ticket $original, Ticket $escalation): void
+    protected function link(Ticket $original, Ticket $escalation, bool $started = false): void
     {
         $this->writeLink($original, $escalation->getKey());
 
-        $this->addActivity($original, ActivityType::AddedToEscalation, ['escalation' => $escalation->getKey()]);
+        $this->addActivity(
+            $original,
+            $started ? ActivityType::Escalated : ActivityType::AddedToEscalation,
+            ['escalation' => $escalation->getKey()],
+        );
         $this->addActivity($escalation, ActivityType::OriginalAdded, ['original' => $original->getKey()]);
         $escalation->forgetIsEscalation();
     }

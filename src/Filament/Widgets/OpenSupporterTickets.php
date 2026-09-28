@@ -57,14 +57,15 @@ class OpenSupporterTickets extends BaseWidget
 
         $viewer = ConversationViewer::current();
         [$rank, $bindings] = ConversationStateQuery::rankExpression($viewer);
+        $needsYou = $query->open()->whereRaw("{$rank} = 0", $bindings)->count();
 
         return [
-            Stat::make(__('padmission-tickets::widgets.needs_you.label'), $query->open()->whereRaw("{$rank} = 0", $bindings)->count())
+            Stat::make(__('padmission-tickets::widgets.needs_you.label'), $needsYou)
                 ->description($viewer->receivesEscalations || $viewer->parentPanelIds === []
                     ? __('padmission-tickets::widgets.needs_you.description_received')
                     : TicketPlugin::teamText('padmission-tickets::widgets.needs_you.description', $team))
                 ->descriptionIcon('heroicon-m-inbox')
-                ->color('warning'),
+                ->color($needsYou > 0 ? 'warning' : 'gray'),
         ];
     }
 }

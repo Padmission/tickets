@@ -377,7 +377,7 @@ describe('Conversations in the list', function () {
         expect(listCell($component, 'subject', $waitingOnTeam))->toContain('Escalated')->toContain('You handle the conversation with Platform Support. Platform Support owes the next reply there.')
             ->and(listCell($component, 'subject', $waitingOnColleague))->toContain('Escalated')->toContain('Platform Support is waiting on Maria Lopez on the escalation.')
             ->and(listCell($component, 'subject', $replied))->toContain('Platform Support replied')->toContain('fi-color-warning')
-            ->toContain('Platform Support replied on the escalation after your team last wrote. Read it, then answer Platform Support there or pass the answer on to Aisha Brooks here.')
+            ->toContain('Platform Support replied on the escalation after your team last wrote. Read it, then answer Platform Support there or pass the answer on to Aisha Brooks on their ticket.')
             ->and(listCell($component, 'subject', $repliedToOther))->toMatch('/>\s*Platform Support replied to Maria Lopez\s*</')->toContain('pad-ti-marker')->not->toContain('fi-color-warning')
             ->toContain('Platform Support replied to Maria Lopez on the escalation after your team last wrote. Maria Lopez passes the answer on to Aisha Brooks.')
             ->and(listCell($component, 'subject', $closed))->toContain('Escalation closed')->toContain('The escalation was closed 1 day ago.')

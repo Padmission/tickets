@@ -4,7 +4,7 @@ return [
     'open_modal' => 'Open support chat',
 
     'defaults' => [
-        'intro_message' => 'Our support team of real people are here to help. Please give us as much detail as possible and we will respond as soon as someone is available.',
+        'intro_message' => 'Our support team of real people is here to help. Please give us as much detail as possible and we will respond as soon as someone is available.',
         'auto_response' => 'Thanks for your message! We will respond soon.',
     ],
     'close_modal' => 'Close modal',

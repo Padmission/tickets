@@ -48,7 +48,7 @@ it('uses the package defaults when no intro or auto-response is set', function (
         $config->introMessage(fn (): ?string => $returned)->autoResponse(fn (): ?string => $returned);
     }
 
-    expect($config->getIntroMessage())->toStartWith('Our support team of real people are here to help.')
+    expect($config->getIntroMessage())->toStartWith('Our support team of real people is here to help.')
         ->and($config->getAutoResponse())->toBe('Thanks for your message! We will respond soon.');
 })->with([
     'nothing set' => [false, null],
