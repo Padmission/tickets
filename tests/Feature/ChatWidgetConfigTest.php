@@ -56,6 +56,15 @@ it('uses the package defaults when no intro or auto-response is set', function (
     'closure returning an empty string' => [true, ''],
 ]);
 
+it('names the defaults an unset message falls back to, for settings forms to show', function () {
+    $config = ChatWidgetConfig::make();
+
+    expect(ChatWidgetConfig::defaultIntroMessage())->toBe($config->getIntroMessage())
+        ->toBe(__('padmission-tickets::chat.defaults.intro_message'))
+        ->and(ChatWidgetConfig::defaultAutoResponse())->toBe($config->getAutoResponse())
+        ->toBe(__('padmission-tickets::chat.defaults.auto_response'));
+});
+
 it('prefers a configured auto-response over the default', function () {
     expect(ChatWidgetConfig::make()->autoResponse('We are on it.')->getAutoResponse())->toBe('We are on it.');
 });

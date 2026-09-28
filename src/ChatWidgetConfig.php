@@ -131,7 +131,16 @@ final class ChatWidgetConfig
 
     public function getIntroMessage(): string
     {
-        return $this->resolveMessage($this->introMessage) ?? __('padmission-tickets::chat.defaults.intro_message');
+        return $this->resolveMessage($this->introMessage) ?? self::defaultIntroMessage();
+    }
+
+    /*
+     * What the widget shows when no intro message is set, for a settings form
+     * to show as the message an empty field uses.
+     */
+    public static function defaultIntroMessage(): string
+    {
+        return __('padmission-tickets::chat.defaults.intro_message');
     }
 
     /**
@@ -147,7 +156,12 @@ final class ChatWidgetConfig
 
     public function getAutoResponse(): string
     {
-        return $this->resolveMessage($this->autoResponse) ?? __('padmission-tickets::chat.defaults.auto_response');
+        return $this->resolveMessage($this->autoResponse) ?? self::defaultAutoResponse();
+    }
+
+    public static function defaultAutoResponse(): string
+    {
+        return __('padmission-tickets::chat.defaults.auto_response');
     }
 
     protected function resolveMessage(string|Htmlable|Closure|null $message): ?string
