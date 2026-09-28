@@ -454,7 +454,7 @@ return [
                 'you_self' => 'You owe the next reply.',
                 'you_owner' => 'You owe the team you escalated to the next reply on this escalation.',
                 'you_owner_to' => 'You owe :team the next reply on this escalation.',
-                'you_on_hold' => ':Name has your latest reply. You still owe the answer, which depends on the escalation.',
+                'you_on_hold' => ':Name has your latest reply. The answer depends on the escalation, so you still owe them one.',
                 'colleague' => ':colleague owes :name the next reply.',
                 'colleague_unnamed' => 'A colleague owes :name the next reply.',
                 'colleague_self' => ':colleague owes the next reply.',

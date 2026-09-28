@@ -406,7 +406,7 @@ it('names who owes the next message', function () {
         ->label()->toBe('You')
         ->color()->toBe('gray')
         ->icon()->toBe('heroicon-m-clock')
-        ->tooltip()->toBe('Aisha Brooks has your latest reply. You still owe the answer, which depends on the escalation.')
+        ->tooltip()->toBe('Aisha Brooks has your latest reply. The answer depends on the escalation, so you still owe them one.')
         ->and(ConversationState::for($escalation))
         ->label()->toBe('Platform Support')
         ->icon()->toBe('heroicon-m-building-office')
