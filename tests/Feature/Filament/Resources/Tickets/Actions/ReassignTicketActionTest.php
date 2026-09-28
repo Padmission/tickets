@@ -100,24 +100,22 @@ it('looks up supporters for the ticket being reassigned', function () {
     expect($ticket->refresh()->assignee_id)->toEqual($teammate->id);
 });
 
-it('explains who can be assigned instead of offering an empty list', function () {
+it('says no one can be assigned yet, and why, with only a way to close', function () {
     $this->login();
-    $ticket = Ticket::factory()->open()->create();
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => null]);
 
     TicketPlugin::get()
         ->allSupportersQuery(fn () => User::query()->whereRaw('1 = 0'))
-        ->assignableUsersDescription('Give a teammate the Helpdesk role to assign them tickets.');
+        ->assignableUsersDescription('Give a teammate the Helpdesk role, then assign them here.');
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->mountAction(inlineReassign())
-        ->assertMountedActionModalSee([
-            __('padmission-tickets::tickets.actions.reassign.nobody_to_assign'),
-            'Give a teammate the Helpdesk role to assign them tickets.',
-        ])
+        ->assertMountedActionModalSee(['No one can be assigned yet', 'Give a teammate the Helpdesk role, then assign them here.', 'Close'])
+        ->assertMountedActionModalDontSee(['Assign to me', 'Reassign'])
         ->assertSchemaComponentHidden('assignee_id', 'mountedActionSchema0');
 });
 
-it('does not offer the person who already has the ticket', function () {
+it('says no one can be assigned when only the person who has it could be', function () {
     $assignee = $this->login();
     $ticket = Ticket::factory()->open()->create(['assignee_id' => $assignee->id]);
 
@@ -125,35 +123,42 @@ it('does not offer the person who already has the ticket', function () {
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->mountAction(inlineReassign())
-        ->assertMountedActionModalSee(__('padmission-tickets::tickets.actions.reassign.nobody_to_assign'));
+        ->assertMountedActionModalSee('No one can be assigned yet');
 });
 
-it('points to the named escalation team only where the ticket can be escalated', function () {
+it('asks who answers the requester of a ticket nobody has yet', function () {
     $this->login();
-    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
-    TicketPlugin::get('test2')->supportTeamName('Platform Support');
-
-    $sentence = __('padmission-tickets::tickets.actions.reassign.modal_description_escalation_to', ['team' => 'Platform Support']);
-
-    $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => null, 'submitter_id' => User::factory()->create(['name' => 'Nina Patel'])->id]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->mountAction(inlineReassign())
-        ->assertMountedActionModalSee($sentence);
+        ->assertMountedActionModalSee(['Assign ticket', 'Choose who answers Nina Patel.', 'Assign to'])
+        ->assertMountedActionModalDontSee('Reassign');
+});
 
-    $escalated = Ticket::factory()->open()->create([
-        'linked_ticket_id' => Ticket::factory()->create(['panel' => 'test2'])->id,
-    ]);
-
-    Livewire::test(ViewTicket::class, ['record' => $escalated->id])
-        ->mountAction(inlineReassign())
-        ->assertMountedActionModalDontSee($sentence);
-
-    TicketPlugin::get()->allowLinkedTicketsTo([]);
+it('hands a ticket from its assignee to a teammate', function () {
+    $this->login();
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => User::factory()->create(['name' => 'Maria Lopez'])->id]);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->mountAction(inlineReassign())
-        ->assertMountedActionModalDontSee($sentence);
+        ->assertMountedActionModalSee(['Reassign ticket', 'Hand this ticket from Maria Lopez to a teammate.', 'Reassign']);
+});
+
+it('offers only Assign to me when the viewer is the one person who can be assigned', function () {
+    $viewer = $this->login();
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => null]);
+
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($viewer->id));
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(inlineReassign())
+        ->assertMountedActionModalSee(['Assign ticket', 'Assign to me'])
+        ->assertSchemaComponentHidden('assignee_id', 'mountedActionSchema0')
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    expect((string) $ticket->refresh()->assignee_id)->toBe((string) $viewer->id);
 });
 
 it('says the escalation stays with whoever handles it', function (bool $viewerIsOwner, string $sentence) {
@@ -174,7 +179,7 @@ it('says the escalation stays with whoever handles it', function (bool $viewerIs
         ->mountAction(inlineReassign())
         ->assertMountedActionModalDontSee('Its escalation to Platform Support');
 })->with([
-    'a colleague handles it' => [false, 'Its escalation to Platform Support stays with Maria Lopez, who gets Platform Support\'s replies. Use Hand over on the escalation to change that.'],
+    'a colleague handles it' => [false, 'Its escalation to Platform Support stays with Maria Lopez.'],
     'the viewer handles it' => [true, 'Its escalation to Platform Support stays with you.'],
 ]);
 

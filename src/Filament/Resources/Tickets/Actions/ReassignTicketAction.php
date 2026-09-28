@@ -5,7 +5,6 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -18,6 +17,14 @@ use Padmission\Tickets\TicketPlugin;
 
 class ReassignTicketAction extends Action
 {
+    protected const NOBODY = 'nobody';
+
+    protected const ONLY_VIEWER = 'only_viewer';
+
+    protected const ASSIGN = 'assign';
+
+    protected const REASSIGN = 'reassign';
+
     public static function getDefaultName(): ?string
     {
         return 'reassign-ticket';
@@ -27,43 +34,48 @@ class ReassignTicketAction extends Action
     {
         parent::setUp();
 
+        $key = 'padmission-tickets::tickets.actions.reassign.';
+
         $this
             ->label(fn (Ticket $record): string => $record->assignee_id
-                ? __('padmission-tickets::tickets.actions.reassign.label')
-                : __('padmission-tickets::tickets.actions.reassign.label_unassigned'))
-            ->modalHeading(__('padmission-tickets::tickets.actions.reassign.modal_heading'))
+                ? __($key.'label')
+                : __($key.'label_unassigned'))
+            ->modalHeading(fn (Ticket $record): string => match (static::situation($record)) {
+                self::NOBODY => __($key.'modal_heading_nobody'),
+                self::REASSIGN => __($key.'modal_heading'),
+                default => __($key.'modal_heading_unassigned'),
+            })
             ->modalDescription(fn (Ticket $record): string => static::describe($record))
-            ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.reassign.submit'))
-            ->modalSubmitAction(fn (Action $action, Ticket $record) => static::choices($record) === [] ? false : $action)
+            ->modalSubmitActionLabel(fn (Ticket $record): string => match (static::situation($record)) {
+                self::ONLY_VIEWER => __($key.'assign_to_me'),
+                self::REASSIGN => __($key.'submit'),
+                default => __($key.'submit_unassigned'),
+            })
+            ->modalSubmitAction(fn (Action $action, Ticket $record) => static::situation($record) === self::NOBODY ? false : $action)
+            ->modalCancelActionLabel(fn (Ticket $record): ?string => static::situation($record) === self::NOBODY ? __($key.'close') : null)
             ->icon(Heroicon::OutlinedUserPlus)
             ->color('gray')
             ->slideOver(false)
             ->modalWidth(Width::Medium)
             ->hidden(fn (Ticket $record): bool => $record->isNotInCurrentPanel() || $record->isClosed)
             ->schema([
-                Text::make(__('padmission-tickets::tickets.actions.reassign.nobody_to_assign'))
-                    ->visible(fn (Ticket $record): bool => static::choices($record) === []),
-
-                Text::make(fn (): string => TicketPlugin::get()->getAssignableUsersDescription()
-                    ?? __('padmission-tickets::tickets.actions.reassign.who_can_be_assigned'))
-                    ->color('gray')
-                    ->visible(fn (Ticket $record): bool => static::choices($record) === []),
-
                 Select::make('assignee_id')
-                    ->label(__('padmission-tickets::tickets.actions.reassign.new_assignee'))
+                    ->label(__($key.'new_assignee'))
                     ->options(fn (Ticket $record): array => static::choices($record))
-                    ->visible(fn (Ticket $record): bool => static::choices($record) !== [])
+                    ->visible(fn (Ticket $record): bool => in_array(static::situation($record), [self::ASSIGN, self::REASSIGN], true))
                     ->searchable()
                     ->required()
                     ->hintAction(
                         Action::make('assign-to-me')
-                            ->label(__('padmission-tickets::tickets.actions.reassign.assign_to_me'))
+                            ->label(__($key.'assign_to_me'))
                             ->visible(fn (Ticket $record): bool => static::currentUserChoiceId($record) !== null)
                             ->action(fn (Set $set, Ticket $record) => $set('assignee_id', static::currentUserChoiceId($record))),
                     ),
             ])
             ->action(function (Ticket $record, array $data, Component $livewire): void {
-                if (! resolve(TicketReassignment::class)->assign($record, $data['assignee_id'] ?? null)) {
+                $assigneeId = static::situation($record) === self::ONLY_VIEWER ? static::currentUserChoiceId($record) : ($data['assignee_id'] ?? null);
+
+                if (! resolve(TicketReassignment::class)->assign($record, $assigneeId)) {
                     $this->failureNotificationTitle(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'));
                     $this->failure();
 
@@ -74,27 +86,39 @@ class ReassignTicketAction extends Action
 
                 $this->success();
             })
-            ->successNotificationTitle(__('padmission-tickets::tickets.actions.reassign.success'));
+            ->successNotificationTitle(__($key.'success'));
+    }
+
+    /*
+     * The dialog asks only what there is to decide: nothing when nobody can be
+     * picked, and a single "Assign to me" when the viewer is the only one.
+     */
+    protected static function situation(Ticket $record): string
+    {
+        $choices = static::choices($record);
+
+        return match (true) {
+            $choices === [] => self::NOBODY,
+            count($choices) === 1 && static::currentUserChoiceId($record) !== null => self::ONLY_VIEWER,
+            filled($record->assignee_id) => self::REASSIGN,
+            default => self::ASSIGN,
+        };
     }
 
     protected static function describe(Ticket $record): string
     {
-        $sentences = [__('padmission-tickets::tickets.actions.reassign.modal_description')];
+        $key = 'padmission-tickets::tickets.actions.reassign.';
 
-        if ($record->assignee !== null) {
-            $sentences[] = __('padmission-tickets::tickets.actions.reassign.currently_assigned', [
-                'name' => Filament::getUserName($record->assignee),
-            ]);
+        if (static::situation($record) === self::NOBODY) {
+            return TicketPlugin::get()->getAssignableUsersDescription() ?? __($key.'who_can_be_assigned');
         }
 
-        if (CreateLinkedTicketAction::isAvailableFor($record)) {
-            $sentences[] = TicketPlugin::teamText(
-                'padmission-tickets::tickets.actions.reassign.modal_description_escalation',
-                TicketPlugin::get()->getEscalationTargetName(),
-            );
-        }
-
-        $sentences[] = static::describeEscalationOwner($record);
+        $sentences = [
+            $record->assignee !== null
+                ? __($key.'modal_description', ['assignee' => Filament::getUserName($record->assignee)])
+                : __($key.'modal_description_unassigned', ['requester' => $record->requesterName() ?? __($key.'the_requester')]),
+            static::describeEscalationOwner($record),
+        ];
 
         return implode(' ', array_filter($sentences));
     }
