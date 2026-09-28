@@ -121,3 +121,12 @@ it('gives its chat the display timezone, so its times match the ticket page', fu
         ->call('showCreateForm')
         ->assertSeeHtml('timezone="America/Phoenix"');
 });
+
+it('tells the assistant which ticket it shows, and when it went back to the list', function () {
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertDispatched('padmission-copilot-ticket-shown', ticketId: $this->ticket->id)
+        ->call('showList')
+        ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null)
+        ->call('showCreateForm')
+        ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null);
+});

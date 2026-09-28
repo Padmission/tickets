@@ -45,6 +45,7 @@ class CopilotTicketPanel extends Component
         $this->view = 'list';
         $this->activeTicketId = null;
         $this->resetValidation();
+        $this->announceShownTicket();
     }
 
     public function showCreateForm(): void
@@ -52,6 +53,7 @@ class CopilotTicketPanel extends Component
         $this->view = 'create';
         $this->activeTicketId = null;
         $this->resetValidation();
+        $this->announceShownTicket();
     }
 
     public function setFilter(string $filter): void
@@ -70,6 +72,17 @@ class CopilotTicketPanel extends Component
         $this->view = 'detail';
         $this->resetValidation();
         $this->dispatch('padmission-copilot-ticket-seen');
+        $this->announceShownTicket();
+    }
+
+    /*
+     * The assistant mounts this pane again whenever its Tickets tab comes
+     * back, with the ticket it last knew of, which is the one a deep link
+     * opened unless it is told what the pane shows now.
+     */
+    protected function announceShownTicket(): void
+    {
+        $this->dispatch('padmission-copilot-ticket-shown', ticketId: $this->activeTicketId);
     }
 
     #[On('padmission-ticket-created-from-copilot')]
