@@ -31,6 +31,28 @@ test("keeps a whole first sentence that fits, with its period and no ellipsis", 
 	);
 });
 
+test("stops at a sentence that ends before the budget, rather than adding part of the next", () => {
+	assert.equal(
+		ticketSubject(
+			"<p>UXCHECK rent wrong for household 14. The rent after the recert is $200 too high.</p>",
+		),
+		"UXCHECK rent wrong for household 14.",
+	);
+	assert.equal(
+		ticketSubject(
+			"<p>Recert rent is wrong. Why is that? It changed again.</p>",
+		),
+		"Recert rent is wrong. Why is that?",
+	);
+});
+
+test("keeps whole words rather than stopping at a short fragment that ends in a period", () => {
+	assert.equal(
+		ticketSubject("<p>Dr. Smith says the recert rent for unit 14 is wrong</p>"),
+		"Dr. Smith says the recert rent for unit…",
+	);
+});
+
 test("keeps a sentence that ends exactly at the budget", () => {
 	assert.equal(
 		ticketSubject(`<p>${"a".repeat(35)} bbb. More text follows here.</p>`),

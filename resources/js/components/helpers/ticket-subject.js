@@ -26,7 +26,8 @@ function decodeEntities(text) {
 
 // A ticket started from the widget is named after the start of its first message, cut at the
 // last whole word that fits so it never ends mid-word, with an ellipsis when anything was cut.
-// A cut that falls where a sentence ends keeps the sentence whole and needs no ellipsis.
+// When a sentence ends within what fits, the subject stops there, whole and with no ellipsis,
+// unless that leaves under half the budget, where a short fragment such as "Dr." would.
 // A single word too long to fit is cut where the budget ends instead.
 export default function ticketSubject(html, maxLength = 40) {
 	const text = decodeEntities(html.replace(/<[^>]*>/g, " "))
@@ -45,9 +46,10 @@ export default function ticketSubject(html, maxLength = 40) {
 	}
 
 	const cut = room.slice(0, lastSpace);
+	const sentence = cut.match(/^.*[^.][.!?](?= |$)/);
 
-	if (/[^.][.!?]$/.test(cut)) {
-		return cut;
+	if (sentence !== null && sentence[0].length >= maxLength / 2) {
+		return sentence[0];
 	}
 
 	return `${cut.replace(/[\s.,;:!?-]+$/, "")}…`;
