@@ -104,6 +104,9 @@ class TicketActivity extends Model
     }
 
     /**
+     * The content is HTML, as the chat and the ticket page render it, so
+     * every name and label a note quotes is escaped here.
+     *
      * @return Attribute<string,never>
      */
     protected function content(): Attribute
@@ -115,19 +118,19 @@ class TicketActivity extends Model
             ActivityType::Closed => __('padmission-tickets::activities.closed'),
             ActivityType::Reopened => blank($this->user_id)
                 ? __('padmission-tickets::activities.reopened_unknown')
-                : __('padmission-tickets::activities.reopened', ['name' => $this->actorName()]),
+                : __('padmission-tickets::activities.reopened', ['name' => e($this->actorName())]),
             ActivityType::AssigneeChanged => $this->assigneeNote(auth()->id()),
             ActivityType::TurnChanged => __('padmission-tickets::activities.turn_changed', [
                 'from' => $this->turnLabel($this->activityData('from')),
                 'to' => $this->turnLabel($this->activityData('to')),
             ]),
             ActivityType::StatusChanged => __('padmission-tickets::activities.status_changed', [
-                'from' => $this->statusLabel($this->activityData('from')),
-                'to' => $this->statusLabel($this->activityData('to')),
+                'from' => e($this->statusLabel($this->activityData('from'))),
+                'to' => e($this->statusLabel($this->activityData('to'))),
             ]),
             ActivityType::PriorityChanged => __('padmission-tickets::activities.priority_changed', [
-                'from' => $this->priorityLabel($this->activityData('from')),
-                'to' => $this->priorityLabel($this->activityData('to')),
+                'from' => e($this->priorityLabel($this->activityData('from'))),
+                'to' => e($this->priorityLabel($this->activityData('to'))),
             ]),
             ActivityType::Escalated => $this->escalationNote('escalated'),
             ActivityType::AddedToEscalation => $this->escalationNote('added_to_escalation'),
@@ -262,7 +265,7 @@ class TicketActivity extends Model
 
         return __(
             (string) $to === (string) $this->user_id ? 'padmission-tickets::activities.taken_over' : 'padmission-tickets::activities.handed_over',
-            ['from' => $this->nameOf($from), 'to' => $this->nameOf($to)],
+            ['from' => e($this->nameOf($from)), 'to' => e($this->nameOf($to))],
         );
     }
 

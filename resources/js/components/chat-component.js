@@ -10,6 +10,8 @@ import humanFileSize from "./helpers/human-file-size.js";
 import isCutOffAtTop from "./helpers/cut-off-at-top.js";
 import formatMessageTime from "./helpers/format-message-time.js";
 import ticketSubject from "./helpers/ticket-subject.js";
+import escapeHtml from "./helpers/escape-html.js";
+import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
 import isComposerShown from "./helpers/composer-shown.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
@@ -321,55 +323,9 @@ customElements.define(
 					(lastDate === true || formatter(lastDate) !== formatter(messageDate));
 				const absoluteDate = formatMessageTime(messageDate, this.timezone);
 
-				// biome-ignore format: preserve template formatting
-				const renderedHtml = render(`
-                    ${
-                        hasDateChanged
-                            ? ` <time datetime="${absoluteDate}" class="message-date">${absoluteDate}</time>`
-                            : ""
-                    }
-
-                    <div
-                        class="message"
-                        data-side="${message.side}"
-                        data-message-id="${message.id}"
-                    >
-                        <div class="message__content">
-                            <div class="markdown">
-                                ${message.content || ''}
-                            </div>
-
-                            ${message.attachments ? `
-                                <div class="message__attachments">
-                                    ${message.attachments?.map((attachment) =>
-                                        `
-                                            <button
-                                                class="attachment"
-                                                data-preview="${attachment.filepath}"
-                                                data-preview-type="${attachment.type}"
-                                                target="_blank"
-                                            >
-                                                ${
-                                                    attachment.type === 'file'
-                                                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>'
-                                                        : ''
-                                                }
-                                                ${
-                                                    attachment.type === 'image'
-                                                        ? `<img src="${attachment.preview_url}">`
-                                                        : `<span>${attachment.filename}</span>`
-                                                }
-                                            </button>
-                                        `
-                                        ).join('') ?? ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div class="message__sender">
-                            ${message.user_name}
-                        </div>
-                    </div>
-                `);
+				const renderedHtml = render(
+					messageHtml(message, { dateChanged: hasDateChanged, date: absoluteDate }),
+				);
 
 				renderedHtml.querySelectorAll("[data-preview]").forEach((el) =>
 					el.addEventListener("click", async (event) => {
@@ -398,8 +354,8 @@ customElements.define(
 
 						const previewEl =
 							type === "image"
-								? render(`<img src="${temporaryUrl.url}" alt="">`)
-								: render(`<video src="${temporaryUrl.url}" controls>`);
+								? render(`<img src="${escapeHtml(temporaryUrl.url)}" alt="">`)
+								: render(`<video src="${escapeHtml(temporaryUrl.url)}" controls>`);
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
@@ -706,30 +662,11 @@ customElements.define(
 			// biome-ignore format: preserve template formatting
 			const node = render(`
                 <div class="attachments">
-                    ${this.attachments.map((attachment, index) => `
-                        <div class="attachment">
-                            <button
-                                class="button-icon"
-                                @click="removeAttachment"
-                                data-index="${index}"
-                            >
-                                <span class="sr-only">Remove</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-                            </button>
-
-                            ${
-                                attachment.type === 'file'
-                                    ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>'
-                                    : ''
-                            }
-
-                            ${
-                                attachment.type.startsWith('image/')
-                                    ? `<img src="${URL.createObjectURL(attachment)}">`
-                                    : `<span>${attachment.name}</span>`
-                            }
-                        </div>
-                    `,).join("")}
+                    ${this.attachments.map((attachment, index) => pendingAttachmentHtml(
+                        attachment,
+                        index,
+                        attachment.type.startsWith('image/') ? URL.createObjectURL(attachment) : null,
+                    )).join("")}
                 </div>
             `);
 
@@ -976,7 +913,7 @@ customElements.define(
                         data-droparea
                         @drop="handleDroppedFiles"
                     >
-                        <span>${__('chat.droparea')}</span>
+                        <span>${escapeHtml(__('chat.droparea'))}</span>
                     </div>
 
                     <div class="message-list" data-chat-messages>
@@ -988,7 +925,7 @@ customElements.define(
                             class="scroll-to-bottom"
                             data-chat-scroll-to-bottom
                         >
-                            <span class="chat__badge">${__('chat.new_messages')}</span>
+                            <span class="chat__badge">${escapeHtml(__('chat.new_messages'))}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -1021,7 +958,7 @@ customElements.define(
                                         style="display: none;"
                                     >
 
-                                    <span class="sr-only">${__('chat.add_attachments')}</span>
+                                    <span class="sr-only">${escapeHtml(__('chat.add_attachments'))}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
                                 </label>
                             `: ''}
@@ -1032,7 +969,7 @@ customElements.define(
                                     class="button button-icon"
                                     @click="takeScreenshot"
                                 >
-                                    <span class="sr-only">${__('chat.screenshot.capture')}</span>
+                                    <span class="sr-only">${escapeHtml(__('chat.screenshot.capture'))}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
                                 </button>
                             `: ''}
@@ -1042,7 +979,7 @@ customElements.define(
                                 type="button"
                                 @click="toggleBold"
                             >
-                                <span class="sr-only">${__('chat.bold')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.bold'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
                             </button>
 
@@ -1051,7 +988,7 @@ customElements.define(
                                 type="button"
                                 @click="setLink"
                             >
-                                <span class="sr-only">${__('chat.link')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.link'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                             </button>
 
@@ -1060,7 +997,7 @@ customElements.define(
                                 type="button"
                                 @click="toggleList"
                             >
-                                <span class="sr-only">${__('chat.unordered_list')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.unordered_list'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
                             </button>
 
@@ -1069,7 +1006,7 @@ customElements.define(
                                 type="button"
                                 @click="toggleOrderedList"
                             >
-                                <span class="sr-only">${__('chat.ordered_list')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.ordered_list'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
                             </button>
 
@@ -1079,9 +1016,9 @@ customElements.define(
                                         <button
                                             type="submit"
                                             data-chat-submit-keep-waiting
-                                            title="${__('chat.send_keep_waiting_help')}"
+                                            title="${escapeHtml(__('chat.send_keep_waiting_help'))}"
                                         >
-                                            <span>${__('chat.send_keep_waiting')}</span>
+                                            <span>${escapeHtml(__('chat.send_keep_waiting'))}</span>
                                         </button>
                                     `
                                     : ""
@@ -1093,7 +1030,7 @@ customElements.define(
                                     <path d="M2 12C2 6.47715 6.47715 2 12 2V5C8.13401 5 5 8.13401 5 12H2Z" fill="currentColor"></path>
                                 </svg>
 
-                                <span>${__('chat.send')}</span>
+                                <span>${escapeHtml(__('chat.send'))}</span>
                             </button>
                         </div>
 
@@ -1101,11 +1038,11 @@ customElements.define(
                             this.hasElevatedRights === "true" && this.keepWaitingStyle !== "button"
                                 ? `
                                     <div class="composer__options">
-                                        <label title="${__('chat.lock_turn_help')}">
+                                        <label title="${escapeHtml(__('chat.lock_turn_help'))}">
                                             <input type="checkbox" data-chat-lock-turn aria-describedby="chat-lock-turn-help" />
-                                            ${__('chat.lock_turn')}
+                                            ${escapeHtml(__('chat.lock_turn'))}
                                         </label>
-                                        <span id="chat-lock-turn-help" class="sr-only">${__('chat.lock_turn_help')}</span>
+                                        <span id="chat-lock-turn-help" class="sr-only">${escapeHtml(__('chat.lock_turn_help'))}</span>
                                     </div>
                                 `
                                 : ""
@@ -1123,7 +1060,7 @@ customElements.define(
                             class="button-icon"
                             formmethod="dialog"
                         >
-                            <span class="sr-only">${__('close_modal')}</span>
+                            <span class="sr-only">${escapeHtml(__('close_modal'))}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                          </button>
                     </form>

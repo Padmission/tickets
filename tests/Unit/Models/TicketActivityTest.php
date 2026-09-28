@@ -81,3 +81,22 @@ test('an assignee change escapes the names it shows, since history is rendered a
 
     expect($activity->content)->toBe('Breya took this ticket from &lt;b&gt;Hoyt&lt;/b&gt;');
 });
+
+test('reopen and hand over notes escape the names they show, since history is rendered as HTML', function (ActivityType $type, Closure $data, string $expected): void {
+    $actor = User::factory()->create(['name' => '<img src=x onerror="a">']);
+    $other = User::factory()->create(['name' => 'O\'Neil & "Co"']);
+
+    $activity = TicketActivity::factory()->create([
+        'ticket_id' => Ticket::factory()->create()->id,
+        'sender' => ActivitySender::System,
+        'type' => $type,
+        'user_id' => $actor->id,
+        'data' => $data($actor, $other),
+    ]);
+
+    expect($activity->content)->toBe($expected)
+        ->not->toContain('<img');
+})->with([
+    'reopened' => [ActivityType::Reopened, fn (): array => [], 'Conversation reopened by &lt;img src=x onerror=&quot;a&quot;&gt;'],
+    'handed over' => [ActivityType::HandedOver, fn (User $actor, User $other): array => ['from' => $actor->id, 'to' => $other->id], '&lt;img src=x onerror=&quot;a&quot;&gt; handed this escalation to O&#039;Neil &amp; &quot;Co&quot;'],
+]);

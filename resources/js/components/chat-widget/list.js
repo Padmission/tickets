@@ -3,6 +3,7 @@ import render from "../helpers/render";
 import fetchJson from "../helpers/fetch-json.js";
 import config from "../helpers/config.js";
 import ticketListMarkup from "../helpers/ticket-list-markup.js";
+import escapeHtml from "../helpers/escape-html.js";
 import __ from "../helpers/trans.js";
 
 customElements.define(
@@ -64,14 +65,14 @@ customElements.define(
 			return render(`
                 <div class="chat-list-tickets">
                     <header>
-                        <h2>${__('list.heading')}</h2>
+                        <h2>${escapeHtml(__('list.heading'))}</h2>
 
                         <form data-close-dialog>
                             <button
                                 class="button-icon"
                                 formmethod="dialog"
                             >
-                                <span class="sr-only">${__('close_modal')}</span>
+                                <span class="sr-only">${escapeHtml(__('close_modal'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                              </button>
                         </form>
@@ -79,17 +80,17 @@ customElements.define(
 
                     <main>
                         <h3>
-                            ${__('list.subheading')}
+                            ${escapeHtml(__('list.subheading'))}
                         </h3>
 
 
                         ${config.documentationUrl ?
                             `<a
                                 class="button"
-                                href="${config.documentationUrl}"
+                                href="${escapeHtml(config.documentationUrl)}"
                                 target="_blank"
                             >
-                                <span>${__('list.go_to_docs')}</span>
+                                <span>${escapeHtml(__('list.go_to_docs'))}</span>
 
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
                             </a>` : ''
@@ -99,12 +100,12 @@ customElements.define(
                             class="button"
                             @click="createTicket"
                         >
-                            <span>${__('list.create_ticket')}</span>
+                            <span>${escapeHtml(__('list.create_ticket'))}</span>
 
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
 
-                        <h3>${__('list.tickets_heading')}</h3>
+                        <h3>${escapeHtml(__('list.tickets_heading'))}</h3>
 
                         <div data-ticket-list>
                         </div>

@@ -1,6 +1,7 @@
 import BaseElement from "./helpers/base-element.js";
 import render from "./helpers/render.js";
 import config from "./helpers/config.js";
+import escapeHtml from "./helpers/escape-html.js";
 import __ from "./helpers/trans.js";
 
 import "./chat-component.js";
@@ -165,7 +166,7 @@ customElements.define(
                     class="button-icon"
                     data-open-dialog
                 >
-                    <span class="sr-only">${__('open_modal')}</span>
+                    <span class="sr-only">${escapeHtml(__('open_modal'))}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle-question-icon lucide-message-circle-question"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                     <span data-unread-badge></span>
                 </button>
