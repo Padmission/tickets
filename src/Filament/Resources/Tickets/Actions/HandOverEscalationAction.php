@@ -80,9 +80,6 @@ class HandOverEscalationAction extends Action
 
         $key = 'padmission-tickets::tickets.actions.';
 
-        // Hand over keeps the host's dialog style; Take over is always a centred confirm.
-        $hostSlideOver = $this->isModalSlideOver;
-
         // Filament evaluates these on a clone of the action per record, so they
         // read the action they are handed rather than $this.
         $this
@@ -91,7 +88,8 @@ class HandOverEscalationAction extends Action
             ->color('gray')
             ->authorize(fn (self $action): bool => static::isAvailableFor($action->getEscalation()))
             ->requiresConfirmation(fn (self $action): bool => ! $action->viewerIsOwner())
-            ->slideOver(fn (self $action): bool => $action->viewerIsOwner() && (bool) $action->evaluate($hostSlideOver))
+            // A centred dialog, as Reassign is, whatever a host makes actions default to; Take over is a centred confirm.
+            ->slideOver(false)
             ->modalIcon(fn (self $action): ?Heroicon => $action->viewerIsOwner() ? null : Heroicon::OutlinedArrowsRightLeft)
             ->modalWidth(Width::Medium)
             ->extraModalWindowAttributes(fn (self $action): array => $action->leavesPage() ? ['x-on:click.capture' => self::LEAVING_GUARD] : [])

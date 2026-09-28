@@ -334,7 +334,7 @@ it('moves access, replies, My Escalations and notifications to the new owner', f
         ->toBe('Test Admin handed this escalation to Maria Lopez');
 });
 
-it('asks Take over as a centred confirm, whatever the host\'s dialog style', function () {
+it('asks Take over as a centred confirm and Hand over in a centred dialog, whatever the host\'s dialog style', function () {
     Action::configureUsing(fn (Action $action) => $action->slideOver());
 
     $this->login($this->colleague);
@@ -345,7 +345,7 @@ it('asks Take over as a centred confirm, whatever the host\'s dialog style', fun
     $this->login($this->owner);
 
     Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
-        ->assertActionExists(handOverHint(), fn (HandOverEscalationAction $action): bool => $action->isModalSlideOver() && ! $action->isConfirmationRequired());
+        ->assertActionExists(handOverHint(), fn (HandOverEscalationAction $action): bool => ! $action->isModalSlideOver() && ! $action->isConfirmationRequired());
 });
 
 it('asks the escalating team\'s pool once per request, however many rows it offers Take over on', function () {
