@@ -144,6 +144,10 @@ class TicketActivity extends Model
             ActivityType::HandedOver => $this->handOverNote(),
             ActivityType::FollowsUp => $this->followsUpNote(),
             ActivityType::OpenedFor => $this->openedForNote(auth()->id()),
+            ActivityType::SubjectChanged => __('padmission-tickets::activities.subject_changed', [
+                'from' => e($this->subjectText($this->activityData('from'))),
+                'to' => e($this->subjectText($this->activityData('to'))),
+            ]),
             default => $value
         });
     }
@@ -411,6 +415,12 @@ class TicketActivity extends Model
         return TicketPriority::withoutGlobalScope(CurrentPanelScope::class)
             ->find($id)
             ->display_name ?? $this->unknownLabel();
+    }
+
+    // As the ticket reads its subject: one from the chat widget was stored escaped.
+    protected function subjectText(mixed $subject): string
+    {
+        return is_string($subject) ? html_entity_decode($subject, ENT_QUOTES | ENT_HTML5, 'UTF-8') : $this->unknownLabel();
     }
 
     protected function unknownLabel(): string

@@ -11,6 +11,7 @@ return [
     'opened_for_you' => ':name opened this ticket for you',
     'status_changed' => 'Status changed from :from to :to',
     'priority_changed' => 'Priority changed from :from to :to',
+    'subject_changed' => 'Subject changed from ":from" to ":to"',
     'turn_changed' => '"Waiting on" changed from :from to :to',
     'unknown' => 'Unknown',
     'assigned_to' => 'Assigned to :name',

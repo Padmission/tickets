@@ -13,9 +13,8 @@ use Livewire\Component;
 use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketEscalationLinks;
+use Padmission\Tickets\Services\TicketReassignment;
 use Padmission\Tickets\TicketPlugin;
-
-use function app;
 
 class ReassignTicketAction extends Action
 {
@@ -64,14 +63,12 @@ class ReassignTicketAction extends Action
                     ),
             ])
             ->action(function (Ticket $record, array $data, Component $livewire): void {
-                if (! array_key_exists($data['assignee_id'] ?? '', static::choices($record))) {
+                if (! resolve(TicketReassignment::class)->assign($record, $data['assignee_id'] ?? null)) {
                     $this->failureNotificationTitle(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'));
                     $this->failure();
 
                     return;
                 }
-
-                $record->update(['assignee_id' => $data['assignee_id']]);
 
                 $livewire->dispatch('refresh-sidebar');
 
@@ -127,23 +124,11 @@ class ReassignTicketAction extends Action
     }
 
     /**
-     * The ticket goes to the supporters query so a host can scope it to the
-     * ticket, such as its tenant, rather than to whoever is looking.
-     *
      * @return array<int|string, string>
      */
     protected static function choices(Ticket $record): array
     {
-        $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
-
-        if (! $allSupportersQuery) {
-            return [];
-        }
-
-        return app()->call($allSupportersQuery, ['ticket' => $record])
-            ->pluck('name', 'id')
-            ->except($record->assignee_id)
-            ->all();
+        return resolve(TicketReassignment::class)->choices($record);
     }
 
     protected static function currentUserChoiceId(Ticket $record): int|string|null

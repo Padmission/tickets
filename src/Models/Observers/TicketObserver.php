@@ -37,6 +37,21 @@ class TicketObserver
 
         $this->handlePriorityTransition($ticket);
         $this->handleAssignmentChange($ticket);
+        $this->handleSubjectChange($ticket);
+    }
+
+    protected function handleSubjectChange(Ticket $ticket): void
+    {
+        if (! $ticket->isDirty('subject')) {
+            return;
+        }
+
+        $ticket->addTicketActivity(
+            ActivityType::SubjectChanged,
+            ActivitySender::System,
+            auth()->id(),
+            ['from' => $ticket->getRawOriginal('subject'), 'to' => $ticket->getAttributes()['subject']],
+        );
     }
 
     public function saving(Ticket $ticket): void

@@ -38,6 +38,8 @@ enum ActivityType: string
 
     case OpenedFor = 'opened-for';
 
+    case SubjectChanged = 'subject-changed';
+
     // Keeps an escalation that was never about an original ticket an escalation.
     case AskedDirectly = 'asked-directly';
 }

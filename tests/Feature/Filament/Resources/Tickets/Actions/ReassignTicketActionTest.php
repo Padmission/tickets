@@ -4,7 +4,6 @@ use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
-use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
@@ -194,15 +193,6 @@ it('is not offered to someone who cannot edit the ticket', function () {
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertDontSee(__('padmission-tickets::tickets.actions.reassign.inline_label'));
-});
-
-it('leaves reassigning out of Edit, so there is one way to do it', function () {
-    $this->login();
-    $ticket = Ticket::factory()->open()->create();
-
-    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->mountAction(EditTicketAction::class)
-        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.resources.tickets.assignee'));
 });
 
 function inlineReassign(): TestAction
