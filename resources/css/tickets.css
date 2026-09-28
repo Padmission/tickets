@@ -509,3 +509,14 @@
 	text-overflow: clip;
 	white-space: normal;
 }
+
+/*
+ * The ticket list's stat cards sit level: each card is its own widget, and a
+ * longer description, such as Needs You's, would otherwise leave it taller
+ * than its neighbours. The row already stretches every widget; this passes
+ * that height down to the card.
+ */
+.fi-resource-tickets .fi-wi-stats-overview
+	:is(.fi-grid, .fi-grid-col, .fi-sc-component, .fi-sc-section, .fi-section, .fi-section-content-ctn, .fi-section-content, .fi-wi-stats-overview-stat) {
+	height: 100%;
+}
