@@ -14,7 +14,11 @@ import escapeHtml from "./helpers/escape-html.js";
 import lockScrollWhileOpen from "./helpers/scroll-lock.js";
 import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
 import isComposerShown from "./helpers/composer-shown.js";
-import reopenDialog, { NEW_TICKET, REOPEN, closedTicketLine } from "./helpers/reopen-dialog.js";
+import reopenDialog, {
+	NEW_TICKET,
+	REOPEN,
+	closedTicketLine,
+} from "./helpers/reopen-dialog.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -116,7 +120,8 @@ customElements.define(
 				.querySelector("[data-composer]")
 				.addEventListener("submit", (event) => {
 					this.sendMessage(
-						event.submitter?.hasAttribute("data-chat-submit-keep-waiting") ?? false,
+						event.submitter?.hasAttribute("data-chat-submit-keep-waiting") ??
+							false,
 					);
 					event.preventDefault();
 				});
@@ -229,7 +234,8 @@ customElements.define(
 
 				this.ticket = ticket;
 				this.reopenChoices = ticket.reopen_choices ?? [];
-				this.reopenWindowDays = ticket.reopen_window_days ?? this.reopenWindowDays;
+				this.reopenWindowDays =
+					ticket.reopen_window_days ?? this.reopenWindowDays;
 				this.showTicketState(ticket);
 
 				if (ticket.is_closed) {
@@ -243,7 +249,11 @@ customElements.define(
 				}
 
 				if (messages.length === 0) {
-					if (ticket.is_closed && this.closedEmptyMessage && this.messages.length === 0) {
+					if (
+						ticket.is_closed &&
+						this.closedEmptyMessage &&
+						this.messages.length === 0
+					) {
 						this.renderMessages([
 							{
 								id: "closed-empty",
@@ -326,7 +336,10 @@ customElements.define(
 				const absoluteDate = formatMessageTime(messageDate, this.timezone);
 
 				const renderedHtml = render(
-					messageHtml(message, { dateChanged: hasDateChanged, date: absoluteDate }),
+					messageHtml(message, {
+						dateChanged: hasDateChanged,
+						date: absoluteDate,
+					}),
 				);
 
 				renderedHtml.querySelectorAll("[data-preview]").forEach((el) =>
@@ -357,7 +370,9 @@ customElements.define(
 						const previewEl =
 							type === "image"
 								? render(`<img src="${escapeHtml(temporaryUrl.url)}" alt="">`)
-								: render(`<video src="${escapeHtml(temporaryUrl.url)}" controls>`);
+								: render(
+										`<video src="${escapeHtml(temporaryUrl.url)}" controls>`,
+									);
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
@@ -375,10 +390,22 @@ customElements.define(
 
 		showTicketState(ticket) {
 			this.rootNode().querySelector("[data-composer]").style.display =
-				isComposerShown(this.canReply, ticket?.is_closed ?? false, this.reopenChoices) ? "" : "none";
+				isComposerShown(
+					this.canReply,
+					ticket?.is_closed ?? false,
+					this.reopenChoices,
+				)
+					? ""
+					: "none";
 
 			const line = this.rootNode().querySelector("[data-chat-closed-line]");
-			const text = ticket?.is_closed ? closedTicketLine(ticket.closed_at, undefined, this.timezone || undefined) : "";
+			const text = ticket?.is_closed
+				? closedTicketLine(
+						ticket.closed_at,
+						undefined,
+						this.timezone || undefined,
+					)
+				: "";
 
 			line.textContent = text;
 			line.hidden = text === "";
@@ -407,7 +434,9 @@ customElements.define(
 					element.type = "button";
 					element.textContent = button.label;
 					element.dataset.reopenChoice = button.choice;
-					element.className = button.primary ? "reopen__button reopen__button--primary" : "reopen__button";
+					element.className = button.primary
+						? "reopen__button reopen__button--primary"
+						: "reopen__button";
 					element.addEventListener("click", () => {
 						dialog.close();
 
@@ -839,7 +868,8 @@ customElements.define(
 		}
 
 		async createTicket() {
-			const subject = ticketSubject(this.messageContent) || __("chat.default_subject");
+			const subject =
+				ticketSubject(this.messageContent) || __("chat.default_subject");
 
 			const url = window.location.origin + window.location.pathname;
 
@@ -916,7 +946,9 @@ customElements.define(
 				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
-				this.dispatchEvent(new CustomEvent("message-sent", { detail: { reopened: reopen } }));
+				this.dispatchEvent(
+					new CustomEvent("message-sent", { detail: { reopened: reopen } }),
+				);
 			} catch (error) {
 				console.log("Sending failed", error);
 				this.setError((await this.responseMessage(error)) || __("chat.error"));
