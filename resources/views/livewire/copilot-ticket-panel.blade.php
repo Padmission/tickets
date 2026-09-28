@@ -131,26 +131,18 @@
             wire:ignore
             wire:key="copilot-ticket-chat-create"
             data-padmission-copilot-chat
-            x-data
-            x-init="
-                const handleTicketCreated = (event) => {
-                    if (! event.detail?.id) {
-                        return
-                    }
-
-                    Livewire.dispatch('padmission-ticket-created-from-copilot', { ticketId: Number(event.detail.id) })
-                }
-
-                const handleMessageSent = () => Livewire.dispatch('padmission-ticket-message-sent-from-copilot')
-
-                window.addEventListener('ticket-created', handleTicketCreated)
-                $refs.chat.addEventListener('message-sent', handleMessageSent)
-
-                $cleanup(() => {
-                    window.removeEventListener('ticket-created', handleTicketCreated)
-                    $refs.chat.removeEventListener('message-sent', handleMessageSent)
-                })
-            "
+            x-data="{
+                handleTicketCreated: (event) => event.detail?.id && Livewire.dispatch('padmission-ticket-created-from-copilot', { ticketId: Number(event.detail.id) }),
+                handleMessageSent: () => Livewire.dispatch('padmission-ticket-message-sent-from-copilot'),
+                init() {
+                    window.addEventListener('ticket-created', this.handleTicketCreated)
+                    this.$refs.chat.addEventListener('message-sent', this.handleMessageSent)
+                },
+                destroy() {
+                    window.removeEventListener('ticket-created', this.handleTicketCreated)
+                    this.$refs.chat?.removeEventListener('message-sent', this.handleMessageSent)
+                },
+            }"
             class="min-h-0 flex-1"
         >
             <chat-component
@@ -233,22 +225,23 @@
                 wire:ignore
                 wire:key="copilot-ticket-chat-{{ $activeTicket->getKey() }}"
                 data-padmission-copilot-chat
-                x-data
-                x-init="
-                    const handleMessageSent = () => Livewire.dispatch('padmission-ticket-message-sent-from-copilot')
-                    const handleTicketClosed = () => $wire.$refresh()
-                    const handleChatChanged = (event) => String(event.detail?.ticketId) === $refs.chat.getAttribute('ticket-id') && $refs.chat.refreshTicket?.(event.detail.canReply)
-
-                    $refs.chat.addEventListener('message-sent', handleMessageSent)
-                    $refs.chat.addEventListener('ticket-closed', handleTicketClosed)
-                    window.addEventListener('ticket-chat-changed', handleChatChanged)
-
-                    $cleanup(() => {
-                        $refs.chat.removeEventListener('message-sent', handleMessageSent)
-                        $refs.chat.removeEventListener('ticket-closed', handleTicketClosed)
-                        window.removeEventListener('ticket-chat-changed', handleChatChanged)
-                    })
-                "
+                x-data="{
+                    handleMessageSent: () => Livewire.dispatch('padmission-ticket-message-sent-from-copilot'),
+                    handleTicketClosed: null,
+                    handleChatChanged: null,
+                    init() {
+                        this.handleTicketClosed = () => this.$wire.$refresh()
+                        this.handleChatChanged = (event) => String(event.detail?.ticketId) === this.$refs.chat.getAttribute('ticket-id') && this.$refs.chat.refreshTicket?.(event.detail.canReply)
+                        this.$refs.chat.addEventListener('message-sent', this.handleMessageSent)
+                        this.$refs.chat.addEventListener('ticket-closed', this.handleTicketClosed)
+                        window.addEventListener('ticket-chat-changed', this.handleChatChanged)
+                    },
+                    destroy() {
+                        this.$refs.chat?.removeEventListener('message-sent', this.handleMessageSent)
+                        this.$refs.chat?.removeEventListener('ticket-closed', this.handleTicketClosed)
+                        window.removeEventListener('ticket-chat-changed', this.handleChatChanged)
+                    },
+                }"
                 class="min-h-0 flex-1"
             >
                 <chat-component

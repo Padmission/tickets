@@ -99,8 +99,8 @@ it('redraws the header as closed, without Resolve, when the chat sees the ticket
     $this->ticket->update(['status_id' => $open->id]);
 
     $panel = Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
-        ->assertSeeHtml('const handleTicketClosed = () => $wire.$refresh()')
-        ->assertSeeHtml("addEventListener('ticket-closed', handleTicketClosed)")
+        ->assertSeeHtml('this.handleTicketClosed = () => this.$wire.$refresh()')
+        ->assertSeeHtml("addEventListener('ticket-closed', this.handleTicketClosed)")
         ->assertSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
         ->assertSeeInOrder([$this->ticket->subject, 'Waiting on support']);
 
@@ -129,4 +129,10 @@ it('tells the assistant which ticket it shows, and when it went back to the list
         ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null)
         ->call('showCreateForm')
         ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null);
+});
+
+it('tears its chat listeners down with Alpine\'s own destroy, not a $cleanup the hosts\' Livewire does not have', function () {
+    Livewire::test(CopilotTicketPanel::class)->assertDontSeeHtml('$cleanup');
+    Livewire::test(CopilotTicketPanel::class)->call('showCreateForm')->assertDontSeeHtml('$cleanup')->assertSeeHtml('destroy()');
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])->assertDontSeeHtml('$cleanup')->assertSeeHtml('destroy()');
 });
