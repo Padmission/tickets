@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Models;
 
+use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -115,9 +116,7 @@ class TicketActivity extends Model
             ActivityType::Reopened => blank($this->user_id)
                 ? __('padmission-tickets::activities.reopened_unknown')
                 : __('padmission-tickets::activities.reopened', ['name' => $this->actorName()]),
-            ActivityType::AssigneeChanged => filled($this->activityData('to'))
-                ? __('padmission-tickets::activities.assigned_to', ['name' => $this->nameOf($this->activityData('to'))])
-                : __('padmission-tickets::activities.unassigned'),
+            ActivityType::AssigneeChanged => $this->assigneeNote(auth()->id()),
             ActivityType::TurnChanged => __('padmission-tickets::activities.turn_changed', [
                 'from' => $this->turnLabel($this->activityData('from')),
                 'to' => $this->turnLabel($this->activityData('to')),
@@ -208,6 +207,52 @@ class TicketActivity extends Model
             'original' => $this->ticketReference($original, $label, $original === null ? null : $this->originalUrl($original)),
             'name' => e($this->actorName()),
         ]);
+    }
+
+    /**
+     * A ticket moving from one person to another says so and who moved it, so
+     * taking it from a colleague never reads like a first assignment. The
+     * viewer reads as "You"; everyone else is named by the given lookup.
+     *
+     * @param  (Closure(mixed): string)|null  $name
+     */
+    public function assigneeNote(int|string|null $viewerId, ?Closure $name = null): string
+    {
+        $name ??= fn (mixed $id): string => $this->nameOf($id);
+        $from = $this->activityData('from');
+        $to = $this->activityData('to');
+
+        if (blank($to)) {
+            return __('padmission-tickets::activities.unassigned');
+        }
+
+        if (blank($from)) {
+            return __('padmission-tickets::activities.assigned_to', ['name' => e($name($to))]);
+        }
+
+        $person = fn (mixed $id, bool $opensSentence): string => filled($viewerId) && (string) $id === (string) $viewerId
+            ? __($opensSentence ? 'padmission-tickets::activities.you' : 'padmission-tickets::activities.you_later')
+            : e($name($id));
+
+        return match (true) {
+            blank($this->user_id) => __('padmission-tickets::activities.reassigned_unknown', [
+                'from' => $person($from, false),
+                'to' => $person($to, false),
+            ]),
+            (string) $this->user_id === (string) $to => __('padmission-tickets::activities.assignee_taken', [
+                'to' => $person($to, true),
+                'from' => $person($from, false),
+            ]),
+            (string) $this->user_id === (string) $from => __('padmission-tickets::activities.assignee_handed', [
+                'from' => $person($from, true),
+                'to' => $person($to, false),
+            ]),
+            default => __('padmission-tickets::activities.reassigned', [
+                'name' => $person($this->user_id, true),
+                'from' => $person($from, false),
+                'to' => $person($to, false),
+            ]),
+        };
     }
 
     protected function handOverNote(): string

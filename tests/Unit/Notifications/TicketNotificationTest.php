@@ -471,3 +471,24 @@ test('a hand over shows unread messages without using up their own notification'
         ->and($reply->toMail($to)->viewData['activities']->pluck('content')->all())->toContain('Which unit?')
         ->and((new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message, null, $team)))->shouldSend($to))->toBeFalse();
 });
+
+test('the email history says a ticket was taken from someone, reading the recipient as you', function () {
+    $taker = User::factory()->create(['name' => 'Breya Birdsong']);
+    $previous = User::factory()->create(['name' => 'Hoyt Wyman']);
+    $ticket = Ticket::factory()->create(['assignee_id' => $taker->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'sender' => ActivitySender::System,
+        'type' => ActivityType::AssigneeChanged,
+        'user_id' => $taker->id,
+        'data' => ['from' => $previous->id, 'to' => $taker->id],
+    ]);
+
+    $notification = new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::AssigneeChanged));
+
+    $rendered = (string) $notification->toMail($previous)->render();
+
+    expect($rendered)->toContain('Breya Birdsong took this ticket from you')
+        ->not->toContain('Assigned to Breya Birdsong');
+});

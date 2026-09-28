@@ -213,6 +213,7 @@ class TicketNotification extends Notification
             ->markdown($this->getView(), [
                 ...$wording,
                 'notification' => $this,
+                'notifiable' => $notifiable,
                 'notificationType' => $this->notificationType,
                 'ticket' => $this->ticket,
                 'activities' => $activities,
@@ -485,16 +486,23 @@ class TicketNotification extends Notification
     }
 
     /*
-     * The history as the email shows it: an assignment names the person, not
-     * their number.
+     * The history as the email shows it: an assignment names the people it
+     * moved between, found through the ticket's own panel rather than by their
+     * number, and the recipient reads as "You".
      */
-    public function activityContent(TicketActivity $activity): string
+    public function activityContent(TicketActivity $activity, mixed $notifiable = null): string
     {
-        $assignee = $activity->type === ActivityType::AssigneeChanged ? $this->findUser($activity->data['to'] ?? null) : null;
+        if ($activity->type !== ActivityType::AssigneeChanged) {
+            return (string) $activity->content;
+        }
 
-        return $assignee !== null
-            ? __('padmission-tickets::activities.assigned_to', ['name' => resolve(GetUserDisplayName::class)->forUser($assignee)])
-            : (string) $activity->content;
+        return $activity->assigneeNote($notifiable?->getKey(), function (mixed $id): string {
+            $user = $this->findUser(is_numeric($id) || is_string($id) ? $id : null);
+
+            return $user !== null
+                ? resolve(GetUserDisplayName::class)->forUser($user)
+                : __('padmission-tickets::activities.user_display.user_not_found', ['id' => $id]);
+        });
     }
 
     /*

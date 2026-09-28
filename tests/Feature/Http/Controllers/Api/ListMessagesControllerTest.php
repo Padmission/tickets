@@ -215,7 +215,7 @@ it('names the people an escalation\'s history mentions through the ticket\'s own
         'Assigned to Kevin McKee',
         'Conversation reopened by Kevin McKee',
         "{$colleague->name} took over this escalation from {$owner->name}",
-        "Assigned to user {$stranger->id}",
+        "Kevin McKee handed this ticket to user {$stranger->id}",
     ]);
 })->with([
     'the escalating team\'s widget' => [['X-Padmission-Tickets-Panel' => 'panel-test']],

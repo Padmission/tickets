@@ -45,7 +45,7 @@
                                         align="{{ $align === 'center' ? 'center' : 'left' }}"
                                         style="{{ $style }}"
                                     >
-                                        {!! strip_tags($notification->activityContent($activity)) !!}
+                                        {!! strip_tags($notification->activityContent($activity, $notifiable ?? null)) !!}
                                     </td>
                                 </tr>
                                 @if ($senderName)
