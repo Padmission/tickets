@@ -6,7 +6,6 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Panel;
 use Filament\Support\Enums\Width;
@@ -17,6 +16,7 @@ use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\TellsRequester;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -63,7 +63,7 @@ class CreateLinkedTicketAction extends Action
                             ->mapWithKeys(fn (Panel $panel) => [$panel->getId() => TicketPlugin::getSupportTeamNameForPanel($panel) ?? ucfirst($panel->getId())])
                     ),
 
-                TextInput::make('subject')
+                TicketSubjectInput::make('subject')
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.subject'))
                     ->required(),
 

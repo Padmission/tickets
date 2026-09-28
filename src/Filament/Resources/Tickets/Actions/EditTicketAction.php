@@ -4,10 +4,10 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Blade;
 use Livewire\Component;
+use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Models\Ticket;
 
@@ -39,7 +39,7 @@ class EditTicketAction extends EditAction
                 $livewire->dispatch('refresh-sidebar');
             })
             ->schema([
-                TextInput::make('subject')
+                TicketSubjectInput::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->disabled()
                     ->required(),
