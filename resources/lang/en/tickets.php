@@ -134,6 +134,7 @@ return [
             'modal_heading_unassigned' => 'Assign ticket',
             'modal_heading_nobody' => 'No one can be assigned yet',
             'modal_description' => 'Hand this ticket from :assignee to a teammate.',
+            'modal_description_yours' => 'Hand this ticket from you to a teammate.',
             'modal_description_unassigned' => 'Choose who answers :requester.',
             'the_requester' => 'the requester',
             'escalation_stays' => 'Its escalation stays with :name.',

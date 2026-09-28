@@ -114,9 +114,11 @@ class ReassignTicketAction extends Action
         }
 
         $sentences = [
-            $record->assignee !== null
-                ? __($key.'modal_description', ['assignee' => Filament::getUserName($record->assignee)])
-                : __($key.'modal_description_unassigned', ['requester' => $record->requesterName() ?? __($key.'the_requester')]),
+            match (true) {
+                $record->assignee === null => __($key.'modal_description_unassigned', ['requester' => $record->requesterName() ?? __($key.'the_requester')]),
+                in_array($record->assignee_id, TicketPlugin::get()->getCurrentUserAssigneeIds()) => __($key.'modal_description_yours'),
+                default => __($key.'modal_description', ['assignee' => Filament::getUserName($record->assignee)]),
+            },
             static::describeEscalationOwner($record),
         ];
 

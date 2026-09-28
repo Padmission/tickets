@@ -145,6 +145,15 @@ it('hands a ticket from its assignee to a teammate', function () {
         ->assertMountedActionModalSee(['Reassign ticket', 'Hand this ticket from Maria Lopez to a teammate.', 'Reassign']);
 });
 
+it('hands the viewer\'s own ticket from them', function () {
+    $viewer = $this->login();
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => $viewer->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(inlineReassign())
+        ->assertMountedActionModalSee('Hand this ticket from you to a teammate.');
+});
+
 it('offers only Assign to me when the viewer is the one person who can be assigned', function () {
     $viewer = $this->login();
     $ticket = Ticket::factory()->open()->create(['assignee_id' => null]);
