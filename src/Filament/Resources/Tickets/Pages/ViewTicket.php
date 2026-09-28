@@ -954,7 +954,9 @@ class ViewTicket extends EditRecord
         ];
         $received = $record->isInCurrentPanel() ? 'received_' : '';
 
-        return __($key.'conversation_about_'.$received.(filled($requester) ? 'one' : 'many'), $replace);
+        return filled($requester)
+            ? __($key.'conversation_about_'.$received.'one', $replace)
+            : trans_choice($key.'conversation_about_'.$received.'many', $originals->count(), $replace);
     }
 
     protected function chatPlaceholder(): ?string
@@ -1225,8 +1227,19 @@ class ViewTicket extends EditRecord
 
         // The organization side needs no sentence: the membership line or the two
         // escalate choices already say where the ticket stands.
-        return filled($record->linked_ticket_id) || ! $this->hasOriginals()
-            ? null
-            : __($key.(TicketPlugin::get()->getLinkedConversationView() === TicketPlugin::LINKED_VIEW_MODAL ? '.escalated_from' : '.escalated_from_beside'));
+        if (filled($record->linked_ticket_id) || ! $this->hasOriginals()) {
+            return null;
+        }
+
+        if (TicketPlugin::get()->getLinkedConversationView() === TicketPlugin::LINKED_VIEW_MODAL) {
+            return __($key.'.escalated_from');
+        }
+
+        $originals = $this->originals();
+        $requester = EscalationSummary::soleRequester($originals);
+
+        return filled($requester)
+            ? __($key.'.escalated_from_beside_named', ['name' => $requester])
+            : trans_choice($key.'.escalated_from_beside', $originals->count());
     }
 }

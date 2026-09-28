@@ -44,7 +44,7 @@ it('lets the owner close the escalation with a centred confirm and no dispositio
         ->mountAction(CloseEscalationAction::class)
         ->assertMountedActionModalSee([
             'Close this escalation?',
-            'Padmission is told it was closed. Nobody can reply to it after that, and it can\'t be reopened. Its original tickets stay open.',
+            'Padmission is told it was closed. Nobody can reply to it after that, and it can\'t be reopened. The original ticket stays open.',
             'Close escalation',
         ])
         ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))
@@ -107,4 +107,20 @@ it('writes the closed status of the escalation\'s own panel and tenant', functio
         ->assertHasNoActionErrors();
 
     expect($this->escalation->refresh()->status_id)->toBe($closed[2]->id);
+});
+
+it('tells the owner how many originals stay open, counting only the open ones', function () {
+    $this->login($this->owner);
+    Ticket::factory()->open()->create(['linked_ticket_id' => $this->escalation->id]);
+    Ticket::factory()->open()->create(['linked_ticket_id' => $this->escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->mountAction(CloseEscalationAction::class)
+        ->assertMountedActionModalSee('The 3 original tickets stay open.');
+
+    $this->original->close(closedById: $this->owner->id);
+
+    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->mountAction(CloseEscalationAction::class)
+        ->assertMountedActionModalSee('The 2 original tickets stay open.');
 });

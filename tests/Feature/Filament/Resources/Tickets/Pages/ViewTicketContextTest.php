@@ -406,7 +406,7 @@ describe('Conversation headings', function () {
         $people = collect(['Aisha Brooks', 'Felix Moreno'])->mapWithKeys(fn (string $name): array => [$name => User::factory()->create(['name' => $name])]);
 
         foreach ($originals as $name) {
-            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => $people[$name]->id]);
+            Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => $name === null ? null : $people[$name]->id, 'submitter_data' => null]);
         }
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
@@ -417,6 +417,7 @@ describe('Conversation headings', function () {
         'one original' => [['Aisha Brooks'], "About Aisha Brooks's ticket. Aisha Brooks never sees this conversation."],
         'two originals' => [['Aisha Brooks', 'Felix Moreno'], "About Aisha Brooks's and Felix Moreno's tickets. The requesters never see this conversation."],
         'two originals from one requester' => [['Aisha Brooks', 'Aisha Brooks'], "About Aisha Brooks's 2 tickets. Aisha Brooks never sees this conversation."],
+        'one unnamed original' => [[null], 'The requester never sees this conversation.'],
         'none left' => [[], 'Not linked to any ticket.'],
     ]);
 

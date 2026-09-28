@@ -133,14 +133,14 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. Its original ticket stays open; Test Admin updates the requester. Nobody can reply to it after that, and it can't be reopened.")
+        ->assertMountedActionModalSee("{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Nobody can reply to it after that, and it can't be reopened.")
         ->assertMountedActionModalDontSee('The requester is told it was closed.');
 
     Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. Its 2 original tickets stay open; Test Admin updates the requesters.");
+        ->assertMountedActionModalSee("{$contact} is told it was closed. The 2 original tickets stay open; Test Admin updates the requesters.");
 })->with([
     'with an organization' => ['Test Organization', 'Test Admin at Test Organization'],
     'without one' => [null, 'Test Admin'],

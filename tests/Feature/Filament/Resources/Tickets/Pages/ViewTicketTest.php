@@ -298,16 +298,28 @@ describe('Escalation explanation', function () {
             ->assertDontSee('View escalation');
     });
 
-    it('explains where an escalated ticket came from', function () {
+    it('explains where an escalated ticket came from, and who never sees it, by how many originals it has', function (array $requesters, string $sentence) {
         TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
         $ticket = Ticket::factory()->create();
-        Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $ticket->id]);
+
+        foreach ($requesters as $name) {
+            Ticket::factory()->create([
+                'panel' => 'test2',
+                'linked_ticket_id' => $ticket->id,
+                'submitter_id' => $name === null ? null : User::factory()->create(['name' => $name])->id,
+                'submitter_data' => null,
+            ]);
+        }
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->call('closeLinked')
-            ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_from_beside'));
-    });
+            ->assertSee("You're talking with the team that escalated this. {$sentence}");
+    })->with([
+        'one named original' => [['Aisha Brooks'], 'Aisha Brooks never sees this conversation.'],
+        'one unnamed original' => [[null], 'The requester never sees this conversation.'],
+        'originals from two people' => [['Aisha Brooks', 'Felix Moreno'], 'The requesters never see this conversation.'],
+    ]);
 });
 
 describe('Composer', function () {

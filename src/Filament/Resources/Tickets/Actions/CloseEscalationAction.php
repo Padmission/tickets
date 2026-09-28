@@ -9,6 +9,7 @@ use Livewire\Component;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\TicketPlugin;
 
 /*
@@ -32,10 +33,10 @@ class CloseEscalationAction extends Action
         $this
             ->label(__($key.'label'))
             ->modalHeading(__($key.'modal_heading'))
-            ->modalDescription(fn (Ticket $record): string => TicketPlugin::teamText(
-                $key.'modal_description',
-                TicketPlugin::find($record->panel)?->getSupportTeamName(),
-            ))
+            ->modalDescription(fn (Ticket $record): string => implode(' ', array_filter([
+                TicketPlugin::teamText($key.'modal_description', TicketPlugin::find($record->panel)?->getSupportTeamName()),
+                trans_choice($key.'originals_stay_open', $open = resolve(TicketEscalationLinks::class)->linkedOriginalsQuery($record->getKey())->whereNull('closed_at')->count(), ['count' => $open]),
+            ])))
             ->modalSubmitActionLabel(__($key.'submit'))
             ->button()
             ->color('gray')
