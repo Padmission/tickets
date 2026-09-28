@@ -26,6 +26,7 @@ use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Support\ConversationViewer;
 use RuntimeException;
 
 class TicketPlugin implements Plugin
@@ -114,6 +115,10 @@ class TicketPlugin implements Plugin
     protected mixed $customTicketQuery = null;
 
     protected mixed $relationshipScopeModifier = null;
+
+    protected ?Closure $requestersQuery = null;
+
+    protected bool|Closure|null $startsTickets = null;
 
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
@@ -804,6 +809,75 @@ class TicketPlugin implements Plugin
         }
 
         return $baseQuery;
+    }
+
+    /*
+     * The people a supporter may open a ticket for from the ticket list,
+     * before the search narrows them. Left unset, it is every user the host's
+     * own scopes let this panel see, which for a tenant panel should be the
+     * tenant's users.
+     */
+    public function requestersQuery(?Closure $query): static
+    {
+        $this->requestersQuery = $query;
+
+        return $this;
+    }
+
+    /**
+     * @return Builder<Model>
+     */
+    public function getRequestersQuery(): Builder
+    {
+        if ($this->requestersQuery !== null) {
+            return app()->call($this->requestersQuery);
+        }
+
+        return static::resolveUserModelClass()::query();
+    }
+
+    /*
+     * Whether supporters may start a ticket from the ticket list. By default
+     * a panel that receives other teams' escalations does not, since its
+     * people answer other organizations rather than their own.
+     */
+    public function startsTickets(bool|Closure|null $condition = true): static
+    {
+        $this->startsTickets = $condition;
+
+        return $this;
+    }
+
+    public function canStartTickets(): bool
+    {
+        if ($this->startsTickets === null) {
+            return count($this->getLinkedTicketChildPanels()) === 0;
+        }
+
+        return (bool) value($this->startsTickets);
+    }
+
+    /*
+     * Whether the user is in this panel's supporter pool, read from the page's
+     * viewer when it is them rather than by another query.
+     */
+    public function isSupporter(Model $user): bool
+    {
+        $viewer = ConversationViewer::current();
+
+        if ($viewer->panelId === $this->panel?->getId() && (string) $viewer->userId === (string) $user->getKey()) {
+            return $viewer->isSupporter;
+        }
+
+        $supportersQuery = $this->getAllSupportersQuery();
+
+        if ($supportersQuery === null) {
+            return false;
+        }
+
+        return app()->call($supportersQuery)
+            ->where($this->getSupporterMatchColumn(), $user->getAttribute($this->getSupporterMatchColumn()))
+            ->exists();
     }
 
     public function modifyRelationshipScopes(Closure $callback): static

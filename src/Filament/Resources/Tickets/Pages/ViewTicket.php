@@ -752,11 +752,13 @@ class ViewTicket extends EditRecord
                             : __('padmission-tickets::tickets.resources.tickets.linked_tickets'))
                         ->key('escalation', isInheritable: false)
                         ->description(fn (Ticket $record): ?string => $this->describeEscalation($record))
-                        // A closed ticket that was never escalated has nothing to say or offer here.
+                        // A closed ticket that was never escalated has nothing to say or offer here, and a
+                        // question asked directly is joined from the original's side, if ever.
                         ->visible(fn (Ticket $record): bool => TicketPlugin::get($record->panel)->hasLinkedTickets()
                             && ($record->isInCurrentPanel() || $this->isEscalatedElsewhere($record))
                             && $this->canSeeEscalation($record)
-                            && ! ($record->isClosed && blank($record->linked_ticket_id) && ! $record->isEscalation()))
+                            && ! ($record->isClosed && blank($record->linked_ticket_id) && ! $record->isEscalation())
+                            && ($this->hasOriginals() || ! $record->isDirectQuestion()))
                         ->compact()
                         ->schema([
                             Text::make(fn (Ticket $record): string => $this->describeMembership($record))
@@ -1007,6 +1009,12 @@ class ViewTicket extends EditRecord
         }
 
         $originals = $this->originals();
+
+        if ($originals->isEmpty() && $record->isDirectQuestion()) {
+            return $record->isSubmittedBy(Filament::auth()->id())
+                ? __($key.'conversation_about_question_own')
+                : __($key.'conversation_about_question', ['name' => $record->requesterName() ?? __('padmission-tickets::tickets.actions.close.the_contact')]);
+        }
 
         if ($originals->isEmpty()) {
             return __($key.'conversation_about_none');

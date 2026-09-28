@@ -35,4 +35,9 @@ enum ActivityType: string
     case HandedOver = 'handed-over';
 
     case FollowsUp = 'follows-up';
+
+    case OpenedFor = 'opened-for';
+
+    // Keeps an escalation that was never about an original ticket an escalation.
+    case AskedDirectly = 'asked-directly';
 }

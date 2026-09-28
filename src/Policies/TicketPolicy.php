@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Policies;
 
+use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
@@ -28,6 +29,16 @@ class TicketPolicy
     public function create($user): bool
     {
         return true;
+    }
+
+    /*
+     * Supporters start tickets from the ticket list, for someone in their
+     * organization or as a question for the team they escalate to. Everyone
+     * else starts one from the chat.
+     */
+    public function startTicket($user): bool
+    {
+        return TicketPlugin::find(Filament::getCurrentPanel()?->getId())?->isSupporter($user) ?? false;
     }
 
     public function update($user, Ticket $ticket): bool

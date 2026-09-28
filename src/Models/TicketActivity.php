@@ -143,8 +143,25 @@ class TicketActivity extends Model
             ActivityType::OriginalRemoved => $this->originalNote('original_removed'),
             ActivityType::HandedOver => $this->handOverNote(),
             ActivityType::FollowsUp => $this->followsUpNote(),
+            ActivityType::OpenedFor => $this->openedForNote(auth()->id()),
             default => $value
         });
+    }
+
+    /*
+     * The requester reads that it was opened for them, and the supporter who
+     * opened it reads it as their own.
+     */
+    public function openedForNote(int|string|null $viewerId): string
+    {
+        $requesterId = $this->activityData('requester');
+        $key = 'padmission-tickets::activities.opened_for';
+
+        return match (true) {
+            filled($viewerId) && (string) $viewerId === (string) $requesterId => __("{$key}_you", ['name' => e($this->actorName())]),
+            filled($viewerId) && (string) $viewerId === (string) $this->user_id => __("{$key}_by_you", ['requester' => e($this->nameOf($requesterId))]),
+            default => __($key, ['name' => e($this->actorName()), 'requester' => e($this->nameOf($requesterId))]),
+        };
     }
 
     /*

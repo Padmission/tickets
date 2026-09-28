@@ -22,6 +22,11 @@ class TestTicketPolicy
         return true;
     }
 
+    public function startTicket(User $user): bool
+    {
+        return true;
+    }
+
     public function update(User $user, Ticket $ticket): bool
     {
         return true;

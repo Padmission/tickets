@@ -8,6 +8,12 @@
             **{{ __('padmission-tickets::notifications.general.ticket_label') }}** {{ $ticket->subject }}
         @endif
 
+        @if (filled($openingMessage ?? null))
+            **{{ $openingMessageLabel }}**
+
+            {{ $openingMessage }}
+        @endif
+
         @if (filled($assigneeName ?? null))
             **{{ __('padmission-tickets::notifications.general.assigned_to_label') }}** {{ $assigneeName }}
         @else

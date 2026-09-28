@@ -8,6 +8,7 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Lang;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\StartTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
@@ -215,7 +216,9 @@ class ListTickets extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            StartTicketAction::make(),
+        ];
     }
 
     public function getTabs(): array

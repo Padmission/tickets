@@ -58,6 +58,14 @@ class Ticket extends Model
 
     protected ?bool $isEscalation = null;
 
+    protected ?bool $isDirectQuestion = null;
+
+    /*
+     * The history notes that make a ticket an escalation after its originals
+     * are gone, or before it ever had one.
+     */
+    protected const array ESCALATION_MARKERS = [ActivityType::OriginalAdded, ActivityType::AskedDirectly];
+
     /*
      * Tickets opened from the chat widget were stored with their subject
      * HTML-escaped, so it is read back as the plain text that was typed.
@@ -155,7 +163,7 @@ class Ticket extends Model
                 ->selectRaw('1')
                 ->from($activities, 'escalation_activities')
                 ->whereColumn('escalation_activities.ticket_id', $id)
-                ->where('escalation_activities.type', ActivityType::OriginalAdded->value)));
+                ->whereIn('escalation_activities.type', array_map(fn (ActivityType $type): string => $type->value, static::ESCALATION_MARKERS))));
     }
 
     /*
@@ -190,13 +198,39 @@ class Ticket extends Model
             || TicketPlugin::resolveModelClass(TicketActivity::class)::query()
                 ->withoutGlobalScopes()
                 ->where('ticket_id', $this->getKey())
-                ->where('type', ActivityType::OriginalAdded)
+                ->whereIn('type', static::ESCALATION_MARKERS)
                 ->exists();
+    }
+
+    /*
+     * An escalation asked straight of the other team, which no original ticket
+     * has ever joined. Once one is added it is an escalation like any other,
+     * even after that original is removed again.
+     */
+    public function isDirectQuestion(): bool
+    {
+        if ($this->isDirectQuestion !== null) {
+            return $this->isDirectQuestion;
+        }
+
+        if (! $this->isEscalation() || ($this->relationLoaded('childTickets') && $this->childTickets->isNotEmpty())) {
+            return $this->isDirectQuestion = false;
+        }
+
+        $markers = TicketPlugin::resolveModelClass(TicketActivity::class)::query()
+            ->withoutGlobalScopes()
+            ->where('ticket_id', $this->getKey())
+            ->whereIn('type', static::ESCALATION_MARKERS)
+            ->distinct()
+            ->pluck('type');
+
+        return $this->isDirectQuestion = $markers->contains(ActivityType::AskedDirectly) && ! $markers->contains(ActivityType::OriginalAdded);
     }
 
     public function forgetIsEscalation(): void
     {
         $this->isEscalation = null;
+        $this->isDirectQuestion = null;
     }
 
     public function refresh()

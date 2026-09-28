@@ -20,7 +20,7 @@ class EscalationSummary
         $originals = $escalation->childTickets;
 
         if ($originals->isEmpty()) {
-            return __(self::KEY.'.escalation_about_none');
+            return __($escalation->isDirectQuestion() ? self::KEY.'.escalation_about_question' : self::KEY.'.escalation_about_none');
         }
 
         $about = __(self::KEY.'.escalation_about', ['originals' => static::originals($originals)]);

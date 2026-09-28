@@ -28,6 +28,9 @@ return [
         'headline' => 'New Ticket',
         'intro' => 'A new ticket has been created.',
         'intro_requester' => 'We\'ve received your support request and will follow up as soon as we can.',
+        'intro_opened_for_you' => ':name opened this ticket for you.',
+        'intro_opened_for' => ':name opened this ticket for :requester.',
+        'message_from' => ':name wrote:',
         'unassigned' => 'A support specialist will be assigned shortly.',
         'outro' => 'Please review the ticket details and respond as needed.',
     ],
@@ -42,6 +45,8 @@ return [
         'headline_escalation' => 'Reply on your escalation',
         'intro_escalation_to' => ':team replied on your escalation about :originals. Answer :team on the escalation, or pass the answer on to the requester on their own ticket.',
         'intro_escalation' => 'The team you escalated to replied on your escalation about :originals. Answer them on the escalation, or pass the answer on to the requester on their own ticket.',
+        'intro_question_to' => ':team replied on your question.',
+        'intro_question' => 'The team you escalate to replied on your question.',
     ],
 
     'ticket-assigned' => [
@@ -67,6 +72,8 @@ return [
         'intro_escalation_open_unnamed' => 'The team you escalated to closed your escalation about :originals. Its ticket is still open. Update the requester and close it when they\'re done.',
         'intro_escalation_to' => ':team closed your escalation about :originals.',
         'intro_escalation' => 'The team you escalated to closed your escalation about :originals.',
+        'intro_question_to' => ':team closed your question.',
+        'intro_question' => 'The team you escalate to closed your question.',
     ],
 
     'ticket-handedover' => [
@@ -82,6 +89,14 @@ return [
         'intro_taken' => ':actor took over the escalation about :originals. Replies from the team you escalated to now go to them.',
         'intro_taken_unnamed_to' => 'A colleague took over the escalation to :team about :originals. :team\'s replies now go to them.',
         'intro_taken_unnamed' => 'A colleague took over the escalation about :originals. Replies from the team you escalated to now go to them.',
+        'intro_question_to' => ':actor handed you the question to :team. :team\'s replies now come to you.',
+        'intro_question' => ':actor handed you the question. Replies from the team you escalate to now come to you.',
+        'intro_question_unnamed_to' => 'The question to :team was handed to you. :team\'s replies now come to you.',
+        'intro_question_unnamed' => 'The question was handed to you. Replies from the team you escalate to now come to you.',
+        'intro_taken_question_to' => ':actor took over the question to :team. :team\'s replies now go to them.',
+        'intro_taken_question' => ':actor took over the question. Replies from the team you escalate to now go to them.',
+        'intro_taken_question_unnamed_to' => 'A colleague took over the question to :team. :team\'s replies now go to them.',
+        'intro_taken_question_unnamed' => 'A colleague took over the question. Replies from the team you escalate to now go to them.',
         'outro' => '',
     ],
 

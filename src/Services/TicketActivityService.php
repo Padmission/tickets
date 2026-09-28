@@ -108,12 +108,13 @@ class TicketActivityService
         ) {
             return array_filter(
                 ActivityType::cases(),
-                fn (ActivityType $type) => $type !== ActivityType::TurnChanged
+                fn (ActivityType $type) => ! in_array($type, [ActivityType::TurnChanged, ActivityType::AskedDirectly], true)
             );
         }
 
         return [
             ActivityType::Opened,
+            ActivityType::OpenedFor,
             ActivityType::Message,
             ActivityType::Closed,
             ActivityType::Reopened,

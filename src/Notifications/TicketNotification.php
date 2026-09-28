@@ -47,6 +47,11 @@ class TicketNotification extends Notification
      */
     protected ArrayObject $decisions;
 
+    /**
+     * @var array{note: ?TicketActivity, message: ?TicketActivity}|null
+     */
+    protected ?array $openedFor = null;
+
     public function __construct(
         protected Ticket $ticket,
         protected $event,
@@ -86,7 +91,7 @@ class TicketNotification extends Notification
          * escalated needs no "New ticket" email about their own escalation.
          */
         if ($this->notificationType === 'created') {
-            return ! $this->isOwnEscalation($notifiable);
+            return ! $this->isOwnEscalation($notifiable) && ($this->isSubmitter($notifiable) || ! $this->isActor($notifiable));
         }
 
         // Nobody is emailed about what they did themselves.
@@ -214,7 +219,7 @@ class TicketNotification extends Notification
         $wording = $this->wording($notifiable);
 
         $message = match ($this->notificationType) {
-            'created' => $this->createdMail($wording),
+            'created' => $this->createdMail($wording, $notifiable),
             'closed' => $this->closedMail($wording, $notifiable),
             default => $this->historyMail($notifiable, $wording),
         };
@@ -272,14 +277,18 @@ class TicketNotification extends Notification
     /**
      * @param  array<string, string|null>  $wording
      */
-    protected function createdMail(array $wording): MailMessage
+    protected function createdMail(array $wording, mixed $notifiable = null): MailMessage
     {
+        $opening = $notifiable !== null && $this->isSubmitter($notifiable) ? $this->openedFor()['message'] : null;
+
         return (new MailMessage)
             ->markdown('padmission-tickets::mails.ticket-created', [
                 ...$wording,
                 'notification' => $this,
                 'ticket' => $this->ticket,
                 'assigneeName' => $this->assigneeName(),
+                'openingMessage' => $opening?->plainTextContent(),
+                'openingMessageLabel' => $opening === null ? null : __('padmission-tickets::notifications.ticket-created.message_from', ['name' => $this->senderName($opening)]),
             ]);
     }
 
@@ -320,7 +329,7 @@ class TicketNotification extends Notification
 
         $body = match ($this->notificationType) {
             'handedover' => $wording['intro'],
-            'created' => $this->bellText($this->openingActivities($notifiable, $activities)->last(), $notifiable) ?? $wording['intro'],
+            'created' => ($this->openedFor()['note'] === null ? $this->bellText($this->openingActivities($notifiable, $activities)->last(), $notifiable) : null) ?? $wording['intro'],
             default => $this->bellText($this->reportedActivities($notifiable, $activities)->last(), $notifiable) ?? $wording['intro'],
         };
 
@@ -349,7 +358,7 @@ class TicketNotification extends Notification
         $wording = [
             'subject' => $this->subjectLine("{$key}.subject"),
             'headline' => __("{$key}.headline"),
-            'intro' => __($this->notificationType === 'created' && $this->isSubmitter($notifiable) ? "{$key}.intro_requester" : "{$key}.intro"),
+            'intro' => $this->notificationType === 'created' ? $this->createdIntro($notifiable) : __("{$key}.intro"),
             'actionLabel' => __('padmission-tickets::notifications.general.action'),
             'actionUrl' => resolve(TicketUrlService::class)->getActionUrlFor($this->ticket, $notifiable),
         ];
@@ -382,6 +391,51 @@ class TicketNotification extends Notification
         };
     }
 
+    /*
+     * A ticket a supporter opened for the requester says so, to them and to
+     * whoever it was given to.
+     */
+    protected function createdIntro($notifiable): string
+    {
+        $key = 'padmission-tickets::notifications.ticket-created';
+        $note = $this->openedFor()['note'];
+
+        if ($note === null) {
+            return __($this->isSubmitter($notifiable) ? "{$key}.intro_requester" : "{$key}.intro");
+        }
+
+        $user = $this->findUser($note->user_id);
+        $opener = $user === null ? __('padmission-tickets::notifications.general.sender-support') : resolve(GetUserDisplayName::class)->forUser($user);
+
+        return $this->isSubmitter($notifiable)
+            ? __("{$key}.intro_opened_for_you", ['name' => $opener])
+            : __("{$key}.intro_opened_for", ['name' => $opener, 'requester' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.actions.close.the_contact')]);
+    }
+
+    /**
+     * The note saying a supporter opened the ticket for the requester, and the
+     * message they opened it with. The created notification tells the
+     * requester of both, so no other notification repeats them.
+     *
+     * @return array{note: ?TicketActivity, message: ?TicketActivity}
+     */
+    protected function openedFor(): array
+    {
+        if ($this->openedFor !== null) {
+            return $this->openedFor;
+        }
+
+        $note = $this->ticket->ticketActivities()->where('type', ActivityType::OpenedFor)->orderBy('id')->first();
+
+        $message = $note === null ? null : $this->ticket->ticketActivities()
+            ->where('type', ActivityType::Message)
+            ->where('id', '>', $note->getKey())
+            ->orderBy('id')
+            ->first();
+
+        return $this->openedFor = ['note' => $note, 'message' => $message];
+    }
+
     /**
      * @return array<string, string|null>
      */
@@ -392,7 +446,9 @@ class TicketNotification extends Notification
         return [
             'subject' => TicketPlugin::teamText("{$key}.subject_escalation", $team, $this->subjectReplacements()),
             'headline' => __("{$key}.headline_escalation"),
-            'intro' => TicketPlugin::teamText("{$key}.intro_escalation", $team, ['originals' => EscalationSummary::forEscalation($this->ticket)]),
+            'intro' => $this->ticket->isDirectQuestion()
+                ? TicketPlugin::teamText("{$key}.intro_question", $team)
+                : TicketPlugin::teamText("{$key}.intro_escalation", $team, ['originals' => EscalationSummary::forEscalation($this->ticket)]),
             'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
         ];
     }
@@ -406,6 +462,17 @@ class TicketNotification extends Notification
     protected function escalationClosedWording(string $key): array
     {
         $team = $this->escalationTeamName();
+
+        if ($this->ticket->isDirectQuestion()) {
+            return [
+                'subject' => TicketPlugin::teamText("{$key}.subject_escalation", $team, $this->subjectReplacements()),
+                'headline' => __("{$key}.headline_escalation"),
+                'intro' => TicketPlugin::teamText("{$key}.intro_question", $team),
+                'actionLabel' => __('padmission-tickets::notifications.general.action_escalation'),
+                'latestReplyLabel' => TicketPlugin::teamText("{$key}.latest_reply", $team),
+            ];
+        }
+
         $originals = EscalationSummary::originalsOf($this->ticket);
         $open = $originals->whereNull('closed_at')->values();
         $replace = ['originals' => EscalationSummary::originals($originals)];
@@ -458,7 +525,9 @@ class TicketNotification extends Notification
             ...($actor === null ? [] : ['actor' => $actor]),
             'originals' => EscalationSummary::forEscalation($this->ticket),
         ];
-        $intro = ($handedToThem ? "{$key}.intro" : "{$key}.intro_taken").($actor === null ? '_unnamed' : '');
+        $intro = ($handedToThem ? "{$key}.intro" : "{$key}.intro_taken")
+            .($this->ticket->isDirectQuestion() ? '_question' : '')
+            .($actor === null ? '_unnamed' : '');
 
         if ($handedToThem) {
             return [
@@ -558,6 +627,10 @@ class TicketNotification extends Notification
 
     public function activityContent(TicketActivity $activity, mixed $notifiable = null): string
     {
+        if ($activity->type === ActivityType::OpenedFor) {
+            return $activity->openedForNote($notifiable?->getKey());
+        }
+
         if ($activity->type !== ActivityType::AssigneeChanged) {
             return (string) $activity->content;
         }
@@ -649,6 +722,12 @@ class TicketNotification extends Notification
      */
     protected function openingActivities($notifiable, Collection $activities): Collection
     {
+        $openedWith = $this->isSubmitter($notifiable) ? $this->openedFor()['message'] : null;
+
+        if ($openedWith !== null) {
+            return $activities->filter(fn (TicketActivity $activity): bool => $activity->getKey() <= $openedWith->getKey())->values();
+        }
+
         return $activities->takeUntil(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message
             && $activity->sender !== ActivitySender::System
             && (string) $activity->user_id !== (string) $notifiable->getKey());
@@ -665,9 +744,13 @@ class TicketNotification extends Notification
     protected function reportedActivities($notifiable, Collection $activities): Collection
     {
         $closedStatusId = $this->ticket->isClosed ? (string) $this->ticket->status_id : null;
+        $toldWhenCreated = $this->notificationType !== 'created' && $this->isSubmitter($notifiable)
+            ? array_filter([$this->openedFor()['note']?->getKey(), $this->openedFor()['message']?->getKey()])
+            : [];
 
         return $activities
             ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
+                || in_array($activity->getKey(), $toldWhenCreated, false)
                 || ($closedStatusId !== null && $activity->type === ActivityType::Closed)
                 || ($closedStatusId !== null && $activity->type === ActivityType::StatusChanged && (string) ($activity->data['to'] ?? '') === $closedStatusId))
             ->values();
