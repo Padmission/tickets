@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Filament\Resources\Tickets;
 
 use Carbon\CarbonImmutable;
 use Exception;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\HtmlString;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\DeleteTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
@@ -424,11 +426,13 @@ class TicketResource extends Resource
             ->emptyStateDescription(fn (ListTickets $livewire): ?string => static::tabText($livewire, 'description'))
             ->recordActions([
                 ViewAction::make(),
-                ReassignTicketAction::make()
-                    ->link()
-                    ->authorize(fn (Ticket $record): bool => static::canEdit($record)),
                 HandOverEscalationAction::make()
                     ->link(),
+                ActionGroup::make([
+                    ReassignTicketAction::make()
+                        ->authorize(fn (Ticket $record): bool => static::canEdit($record)),
+                    DeleteTicketAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

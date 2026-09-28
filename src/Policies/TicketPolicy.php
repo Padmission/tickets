@@ -91,13 +91,13 @@ class TicketPolicy
         return true;
     }
 
+    /*
+     * Each side deletes the tickets that live in its own panel, and a
+     * requester never does.
+     */
     public function delete($user, Ticket $ticket): bool
     {
-        if ($ticket->isSubmittedBy($user)) {
-            return true;
-        }
-
-        return $this->isSupporter($user, $ticket);
+        return $ticket->isInCurrentPanel() && $this->manage($user, $ticket);
     }
 
     /*

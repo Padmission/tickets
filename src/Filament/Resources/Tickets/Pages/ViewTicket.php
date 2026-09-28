@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
@@ -41,6 +42,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\DeleteTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
@@ -483,6 +485,9 @@ class ViewTicket extends EditRecord
             CloseTicketAction::make()->authorize($this->authorizesEdit(...)),
             CloseEscalationAction::make(),
             EditTicketAction::make()->authorize($this->authorizesEdit(...)),
+            ActionGroup::make([
+                DeleteTicketAction::make(),
+            ]),
         ];
     }
 

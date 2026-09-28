@@ -50,6 +50,15 @@ return [
             'success' => 'Escalation closed',
         ],
 
+        'delete' => [
+            'label' => 'Delete',
+            'modal_heading' => 'Delete this ticket?',
+            'modal_description' => 'It is removed from every list with its conversation, and the requester can no longer open it.',
+            'modal_description_escalation' => 'It is removed from every list with its conversation, and the team that escalated it can no longer open it. The original tickets stay open and can be escalated again.',
+            'submit' => 'Delete ticket',
+            'success' => 'Ticket deleted',
+        ],
+
         'reassign' => [
             'label' => 'Reassign',
             'label_unassigned' => 'Assign',
