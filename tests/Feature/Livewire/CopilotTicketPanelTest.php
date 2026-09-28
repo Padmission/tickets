@@ -65,13 +65,13 @@ it('resolves the ticket once confirmed', function () {
     expect($this->ticket->refresh()->isClosed)->toBeTrue();
 });
 
-it('tells its chat the ticket closed when it is resolved, so the reply box goes at once', function () {
+it('tells its chat when the ticket is resolved, so it shows it closed at once', function () {
     (new TicketStatusSeeder)->run();
 
     Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
         ->assertSeeHtml("window.addEventListener('ticket-chat-changed'")
         ->call('resolveTicket')
-        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: false);
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: true);
 });
 
 it('says a ticket support already closed has nothing to resolve, and leaves its close alone', function () {

@@ -32,6 +32,18 @@ return [
         'enter_key' => 'Enter-Key',
         'lock_turn' => 'We still owe a reply',
         'lock_turn_help' => 'Tick this if your team still needs to follow up. Otherwise the ticket waits on the requester after you send.',
+        'closed_on' => 'This ticket was closed on :date.',
+        'reopen_dialog' => [
+            'heading_same_problem' => 'This ticket is closed. Is this the same problem?',
+            'body_same_problem' => 'Reopen it to send your message, or start a new ticket with it that links back to this one.',
+            'heading_too_old' => 'This ticket closed more than :days days ago.',
+            'body_too_old' => 'Your message starts a new ticket that links back to this one.',
+            'heading_staff' => 'This ticket is closed.',
+            'body_staff' => 'Sending your message reopens it.',
+            'reopen' => 'Reopen and send',
+            'new_ticket' => 'Start a new ticket',
+            'cancel' => 'Cancel',
+        ],
         'send_keep_waiting' => 'Send as update',
         'send_keep_waiting_help' => 'Sends your reply as an update and keeps Waiting on with your team, since you still owe the answer.',
 

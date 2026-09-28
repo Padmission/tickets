@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\CopilotTicketService;
+use Padmission\Tickets\Services\TicketAuth;
 
 class CopilotTicketPanel extends Component
 {
@@ -122,8 +123,8 @@ class CopilotTicketPanel extends Component
 
         $this->selectTicket($ticket->getKey());
 
-        // The chat keeps its own state, so it drops its reply box now rather than at its next poll.
-        $this->dispatch('ticket-chat-changed', ticketId: $ticket->getKey(), canReply: false);
+        // The chat keeps its own state, so it shows the ticket closed now rather than at its next poll.
+        $this->dispatch('ticket-chat-changed', ticketId: $ticket->getKey(), canReply: resolve(TicketAuth::class)->canReply($ticket, $this->user()));
     }
 
     protected function requireActiveTicket(): Ticket

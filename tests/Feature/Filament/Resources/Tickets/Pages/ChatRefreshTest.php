@@ -49,23 +49,23 @@ it('listens for the page on the chat', function () {
         ->assertSeeHtml("window.addEventListener('ticket-chat-changed'");
 });
 
-it('tells the chat after Close that the viewer may no longer reply', function () {
+it('tells the chat after Close, which reloads to show the ticket closed', function () {
     Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
         ->callAction(CloseTicketAction::class, ['disposition' => TicketDisposition::factory()->create()->id])
         ->assertHasNoActionErrors()
-        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: false);
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: true);
 
     expect($this->ticket->refresh()->isClosed)->toBeTrue();
 });
 
-it('tells the chat after a status change through Edit closes the ticket that the viewer may no longer reply', function () {
+it('tells the chat after a status change through Edit closes the ticket', function () {
     Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
         ->callAction(EditTicketAction::class, [
             'status_id' => TicketStatus::getClosedStatus()->id,
             'priority_id' => TicketPriority::query()->value('id'),
         ])
         ->assertHasNoActionErrors()
-        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: false);
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: true);
 
     expect($this->ticket->refresh()->isClosed)->toBeTrue();
 });

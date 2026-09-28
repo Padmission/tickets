@@ -14,6 +14,7 @@ import escapeHtml from "./helpers/escape-html.js";
 import lockScrollWhileOpen from "./helpers/scroll-lock.js";
 import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
 import isComposerShown from "./helpers/composer-shown.js";
+import reopenDialog, { NEW_TICKET, REOPEN, closedTicketLine } from "./helpers/reopen-dialog.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -34,6 +35,10 @@ customElements.define(
 			this.ticket = null;
 			this.seenOpen = false;
 			this.loadedSubject = null;
+
+			this.reopenChoices = [];
+			this.reopenWindowDays = 30;
+			this.followsUp = null;
 
 			this.messages = [];
 			this.attachments = [];
@@ -222,8 +227,10 @@ customElements.define(
 					);
 				}
 
-				this.rootNode().querySelector("[data-composer]").style.display =
-					isComposerShown(this.canReply, ticket.is_closed) ? "" : "none";
+				this.ticket = ticket;
+				this.reopenChoices = ticket.reopen_choices ?? [];
+				this.reopenWindowDays = ticket.reopen_window_days ?? this.reopenWindowDays;
+				this.showTicketState(ticket);
 
 				if (ticket.is_closed) {
 					// Closed by someone else while this chat was open, so the page around it can catch up.
@@ -364,6 +371,81 @@ customElements.define(
 
 			this.observeMessages();
 			this.hideMessagesCutOffAtTop();
+		}
+
+		showTicketState(ticket) {
+			this.rootNode().querySelector("[data-composer]").style.display =
+				isComposerShown(this.canReply, ticket?.is_closed ?? false, this.reopenChoices) ? "" : "none";
+
+			const line = this.rootNode().querySelector("[data-chat-closed-line]");
+			const text = ticket?.is_closed ? closedTicketLine(ticket.closed_at, undefined, this.timezone || undefined) : "";
+
+			line.textContent = text;
+			line.hidden = text === "";
+		}
+
+		// Send on a closed ticket asks first what it should do: reopen the ticket, start a new
+		// one that links back, or neither, keeping the typed message.
+		askBeforeSendingOnClosedTicket(keepWaiting) {
+			const model = reopenDialog(this.reopenChoices, this.reopenWindowDays);
+
+			if (!model) {
+				return;
+			}
+
+			const dialog = this.rootNode().querySelector("[data-reopen-dialog]");
+
+			dialog.querySelector("[data-reopen-heading]").textContent = model.heading;
+			dialog.querySelector("[data-reopen-body]").textContent = model.body;
+
+			const actions = dialog.querySelector("[data-reopen-actions]");
+
+			actions.replaceChildren(
+				...model.buttons.map((button) => {
+					const element = document.createElement("button");
+
+					element.type = "button";
+					element.textContent = button.label;
+					element.dataset.reopenChoice = button.choice;
+					element.className = button.primary ? "reopen__button reopen__button--primary" : "reopen__button";
+					element.addEventListener("click", () => {
+						dialog.close();
+
+						if (button.choice === REOPEN) {
+							this.sendMessage(keepWaiting, { reopen: true });
+						} else if (button.choice === NEW_TICKET) {
+							this.startNewTicket();
+						}
+					});
+
+					return element;
+				}),
+			);
+
+			dialog.showModal();
+			lockScrollWhileOpen(dialog, document.documentElement);
+		}
+
+		// The typed message opens a new ticket that follows up this one, shown in its place.
+		async startNewTicket() {
+			this.followsUp = this.ticketId;
+			this.stopPolling();
+
+			this.ticketId = null;
+			this.ticket = null;
+			this.reopenChoices = [];
+			this.messages = [];
+			this.lastMessageId = 0;
+			this.lastSeenMessageId = 0;
+			this.lastTimestamp = null;
+			this.seenOpen = false;
+			this.loadedSubject = null;
+			this.messagesElement.replaceChildren();
+			this.showTicketState(null);
+
+			await this.sendMessage();
+
+			this.followsUp = null;
 		}
 
 		// The page this chat sits on calls it after an action that can change whether the viewer
@@ -756,17 +838,19 @@ customElements.define(
 				{
 					subject,
 					url,
+					...(this.followsUp ? { follows_up: this.followsUp } : {}),
 				},
 				"POST",
 			);
 
+			this.setAttribute("ticket-id", data.id);
 			this.dispatch("ticket-created", data);
 			this.startPolling();
 
 			return data.id;
 		}
 
-		async sendMessage(keepWaiting = false) {
+		async sendMessage(keepWaiting = false, { reopen = false } = {}) {
 			const lockTurn = keepWaiting || this.lockTurnCheckbox?.checked || false;
 
 			if (!this.messageContent.trim() && this.attachments.length === 0) {
@@ -774,6 +858,12 @@ customElements.define(
 			}
 
 			if (this.isSending) {
+				return;
+			}
+
+			if (this.ticketId && this.ticket?.is_closed && !reopen) {
+				this.askBeforeSendingOnClosedTicket(keepWaiting);
+
 				return;
 			}
 
@@ -793,9 +883,14 @@ customElements.define(
 						content: this.messageContent || "",
 						lock_turn: lockTurn,
 						attachment_ids: attachment_ids,
+						...(reopen ? { reopen: true } : {}),
 					},
 					"POST",
 				);
+
+				if (reopen) {
+					await this.loadMessages();
+				}
 
 				// Clear the editor
 				this.messageContent = "";
@@ -929,6 +1024,7 @@ customElements.define(
                     </div>
 
                     <form class="composer" data-composer style="position: relative;">
+                       <p hidden class="composer__closed" data-chat-closed-line></p>
                        <div hidden class="composer__error" data-chat-error>Something went wrong</div>
 
                         <div class="composer__message">
@@ -1063,6 +1159,12 @@ customElements.define(
                     <div class="preview__inner" data-preview-popup-content>
 
                     </div>
+                </dialog>
+
+                <dialog class="reopen" closedby="any" data-reopen-dialog aria-labelledby="reopen-heading">
+                    <h2 class="reopen__heading" id="reopen-heading" data-reopen-heading></h2>
+                    <p class="reopen__body" data-reopen-body></p>
+                    <div class="reopen__actions" data-reopen-actions></div>
                 </dialog>
             `);
 		}
