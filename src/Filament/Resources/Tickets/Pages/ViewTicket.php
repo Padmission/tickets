@@ -783,7 +783,7 @@ class ViewTicket extends EditRecord
                                 ->multiple()
                                 ->nullable()
                                 ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0)
-                                ->disabled(fn (Ticket $record) => ! static::canEdit($record))
+                                ->disabled(fn (Ticket $record) => $record->isClosed || ! static::canEdit($record))
                                 ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
                                 ->placeholder(__('padmission-tickets::tickets.resources.tickets.child_tickets_placeholder'))
                                 ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {

@@ -234,6 +234,23 @@ describe('Originals on an escalated ticket', function () {
             ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalRemoved)->exists())->toBeTrue();
     });
 
+    it('leaves a closed escalation\'s originals as they were, and offers no Link existing on it', function () {
+        $escalation = Ticket::factory()->closed()->create(['panel' => 'test']);
+        $linked = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+        $free = Ticket::factory()->create(['panel' => 'test2']);
+
+        expect(resolve(TicketEscalationLinks::class)->syncOriginals($escalation, [$free->id]))->toBeFalse()
+            ->and($linked->refresh()->linked_ticket_id)->toBe($escalation->id)
+            ->and($free->refresh()->linked_ticket_id)->toBeNull();
+
+        TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+        $picker = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->instance()->getSchema('form')->getComponentByStatePath('childTickets', withHidden: true);
+
+        expect($picker?->isDisabled())->toBeTrue();
+    });
+
     it('ignores repeated ids and still refuses an original linked elsewhere', function () {
         $escalation = Ticket::factory()->open()->create();
         $free = Ticket::factory()->create(['panel' => 'test2']);

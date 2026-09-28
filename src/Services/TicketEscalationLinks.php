@@ -170,6 +170,13 @@ class TicketEscalationLinks
         $selectedIds = array_values(array_unique(array_map('intval', $selectedIds)));
 
         return DB::transaction(function () use ($escalation, $selectedIds): bool {
+            // Nobody writes on a closed escalation, so its originals stay as they were.
+            $current = static::query()->withoutGlobalScopes()->find($escalation->getKey());
+
+            if ($current === null || $current->isClosed) {
+                return false;
+            }
+
             // Removals come from the escalation's actual links, not from the
             // picker's rules, so a link those rules would no longer offer (such
             // as one made before they tightened) can still be cleared.
