@@ -28,7 +28,7 @@ function menuNames(ActionGroup $menu): array
     return collect($menu->getActions())->map(fn ($action): string => $action->getName())->values()->all();
 }
 
-it('keeps View on the row and puts Reassign and Delete in its unlabelled ⋯ menu', function () {
+it('keeps View on the row and puts Reassign, Reopen and Delete in its unlabelled ⋯ menu', function () {
     $this->login();
     $ticket = Ticket::factory()->open()->create();
 
@@ -39,7 +39,7 @@ it('keeps View on the row and puts Reassign and Delete in its unlabelled ⋯ men
 
     $menu = moreMenu($component->instance()->getTable()->getRecordActions());
 
-    expect(menuNames($menu))->toBe(['reassign-ticket', 'delete-ticket'])
+    expect(menuNames($menu))->toBe(['reassign-ticket', 'reopen-ticket', 'delete-ticket'])
         ->and($menu->isIconButton())->toBeTrue();
 });
 

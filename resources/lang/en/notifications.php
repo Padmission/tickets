@@ -55,7 +55,7 @@ return [
         'subject' => 'Ticket closed #:ticket_id – :subject',
         'headline' => 'Ticket Closed',
         'intro' => 'Your ticket has been closed.',
-        'outro' => 'If you need further assistance, please create a new ticket.',
+        'outro' => 'If you need more help with this, reply to the ticket and you\'ll be asked whether to reopen it.',
         'latest_reply' => 'Latest reply from support:',
         'latest_reply_to' => 'Latest reply from :team:',
         'subject_escalation_to' => ':team closed your escalation #:ticket_id – :subject',

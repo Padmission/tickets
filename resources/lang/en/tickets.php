@@ -24,14 +24,14 @@ return [
         'close' => [
             'label' => 'Close',
             'modal_heading' => 'Close this ticket?',
-            'modal_description' => 'The requester is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
+            'modal_description' => 'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             'modal_description_escalated_original' => 'Its escalation stays open. :handler can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_to' => 'Its escalation to :team stays open. :handler can close it from the escalation when :team\'s part is done.',
             'modal_description_escalated_original_you' => 'Its escalation stays open. You can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_you_to' => 'Its escalation to :team stays open. You can close it from the escalation when :team\'s part is done.',
             'modal_description_escalated_original_unnamed' => 'Its escalation stays open. Your team can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_unnamed_to' => 'Its escalation to :team stays open. Your team can close it from the escalation when :team\'s part is done.',
-            'modal_description_received' => '{0} :Contact is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.|{1} :Contact is told it was closed. The original ticket stays open; :name updates the requester. Nobody can reply to it after that, and it can\'t be reopened.|[2,*] :Contact is told it was closed. The :count original tickets stay open; :name updates the requesters. Nobody can reply to it after that, and it can\'t be reopened.',
+            'modal_description_received' => '{0} :Contact is told it was closed. Anyone who replies to it later is asked whether to reopen it.|{1} :Contact is told it was closed. The original ticket stays open; :name updates the requester. Anyone who replies to it later is asked whether to reopen it.|[2,*] :Contact is told it was closed. The :count original tickets stay open; :name updates the requesters. Anyone who replies to it later is asked whether to reopen it.',
             'contact_at' => ':name at :organization',
             'the_contact' => 'the contact',
             'submit' => 'Close ticket',
@@ -43,11 +43,20 @@ return [
         'close_escalation' => [
             'label' => 'Close escalation',
             'modal_heading' => 'Close this escalation?',
-            'modal_description' => 'The team you escalated to is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
-            'modal_description_to' => ':team is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
+            'modal_description' => 'The team you escalated to is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
+            'modal_description_to' => ':team is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             'originals_stay_open' => '{0}|{1} The original ticket stays open.|[2,*] The :count original tickets stay open.',
             'submit' => 'Close escalation',
             'success' => 'Escalation closed',
+        ],
+
+        'reopen' => [
+            'label' => 'Reopen',
+            'modal_heading' => 'Reopen this ticket?',
+            'modal_description' => 'It goes back to its first open status, and the requester can reply to it again.',
+            'modal_description_escalation' => 'It goes back to its first open status, and both teams can write on it again.',
+            'submit' => 'Reopen ticket',
+            'success' => 'Ticket reopened',
         ],
 
         'bulk_close' => [
@@ -275,7 +284,7 @@ return [
         'already_closed' => 'This ticket was already closed, so there is nothing to resolve.',
         'resolve_confirm' => [
             'heading' => 'Resolve this ticket?',
-            'description' => 'This closes the ticket and lets support know. Nobody can reply to it after that, and it can\'t be reopened.',
+            'description' => 'This closes the ticket and lets support know. If you reply to it later, you\'re asked whether to reopen it.',
             'submit' => 'Resolve ticket',
         ],
         'reply' => 'Reply',

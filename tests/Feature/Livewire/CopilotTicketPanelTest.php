@@ -51,7 +51,7 @@ it('asks before resolving, and only the dialog\'s button resolves', function () 
                         type="button"
                         wire:click="resolveTicket"')
         ->assertSee('Resolve this ticket?')
-        ->assertSee('This closes the ticket and lets support know. Nobody can reply to it after that, and it can\'t be reopened.')
+        ->assertSee('This closes the ticket and lets support know. If you reply to it later, you\'re asked whether to reopen it.')
         ->assertSee('Resolve ticket');
 });
 

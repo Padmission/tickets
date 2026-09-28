@@ -28,6 +28,7 @@ use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\DeleteTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReopenTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
@@ -432,6 +433,7 @@ class TicketResource extends Resource
                 ActionGroup::make([
                     ReassignTicketAction::make()
                         ->authorize(fn (Ticket $record): bool => static::canEdit($record)),
+                    ReopenTicketAction::make(),
                     DeleteTicketAction::make(),
                 ]),
             ])

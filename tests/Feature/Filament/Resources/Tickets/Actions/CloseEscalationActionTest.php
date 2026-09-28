@@ -44,7 +44,7 @@ it('lets the owner close the escalation with a centred confirm and no dispositio
         ->mountAction(CloseEscalationAction::class)
         ->assertMountedActionModalSee([
             'Close this escalation?',
-            'Padmission is told it was closed. Nobody can reply to it after that, and it can\'t be reopened. The original ticket stays open.',
+            'Padmission is told it was closed. Anyone who replies to it later is asked whether to reopen it. The original ticket stays open.',
             'Close escalation',
         ])
         ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))

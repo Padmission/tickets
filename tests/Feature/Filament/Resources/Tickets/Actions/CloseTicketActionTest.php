@@ -59,7 +59,7 @@ it('says what closing does before it closes', function () {
         ->mountAction(CloseTicketAction::class)
         ->assertMountedActionModalSee([
             'Close this ticket?',
-            'The requester is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
+            'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             'Close ticket',
         ]);
 
@@ -105,7 +105,7 @@ it('says an open escalation stays open when its original closes', function (bool
     Livewire::test(ViewTicket::class, ['record' => $original->id])
         ->mountAction(CloseTicketAction::class)
         ->assertMountedActionModalSee([
-            'The requester is told it was closed. Nobody can reply to it after that, and it can\'t be reopened.',
+            'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             $sentence,
         ]);
 
@@ -133,7 +133,7 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Nobody can reply to it after that, and it can't be reopened.")
+        ->assertMountedActionModalSee("{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it.")
         ->assertMountedActionModalDontSee('The requester is told it was closed.');
 
     Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);

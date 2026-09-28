@@ -47,6 +47,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\RemoveFromEscalationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReopenTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -482,6 +483,7 @@ class ViewTicket extends EditRecord
                 ->action(fn () => $this->linkedTicketId === null
                     ? $this->showLinked($this->linkedTickets()->first()->getKey())
                     : $this->closeLinked()),
+            ReopenTicketAction::make(),
             CloseTicketAction::make()->authorize($this->authorizesEdit(...)),
             CloseEscalationAction::make(),
             EditTicketAction::make()->authorize($this->authorizesEdit(...)),
