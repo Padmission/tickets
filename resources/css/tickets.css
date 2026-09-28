@@ -667,3 +667,17 @@
 .dark .pad-ti-start-email {
 	color: var(--gray-400);
 }
+
+/*
+ * A sidebar field that can be changed has a pencil right after its label
+ * (ViewTicket::editBesideLabel()). It sits in Filament's slot before the
+ * label, so it is moved after the label here, ahead of the hints.
+ */
+.pad-ti-edit-entry .fi-in-entry-label-ctn > :first-child:not(.fi-in-entry-label) {
+	order: 1;
+	margin-inline-start: calc(var(--spacing) * -1);
+}
+
+.pad-ti-edit-entry .fi-in-entry-label-ctn > .fi-in-entry-label ~ * {
+	order: 2;
+}

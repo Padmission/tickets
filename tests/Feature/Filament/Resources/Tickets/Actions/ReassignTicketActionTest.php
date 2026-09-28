@@ -1,6 +1,7 @@
 <?php
 
 use Filament\Actions\Testing\TestAction;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
@@ -212,3 +213,17 @@ class ReadOnlyReassignPolicy
         return false;
     }
 }
+
+it('is a pencil right after the Assigned to label, named by its tooltip', function (?string $assignee, string $name) {
+    $this->login();
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => $assignee === null ? null : User::factory()->create()->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionExists(inlineReassign(), fn (ReassignTicketAction $action): bool => $action->isIconButton()
+            && $action->getIcon() === Heroicon::OutlinedPencilSquare
+            && $action->getTooltip() === $name)
+        ->assertSeeHtml('pad-ti-edit-entry');
+})->with([
+    'assigned' => ['someone', 'Change'],
+    'unassigned' => [null, 'Assign'],
+]);

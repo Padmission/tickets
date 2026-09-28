@@ -664,13 +664,8 @@ class ViewTicket extends EditRecord
 
                         FieldHelp::apply(
                             SubmitterEntry::make('submitter')
-                                ->hintAction(
-                                    HandOverEscalationAction::make()
-                                        ->icon(null)
-                                        ->color('primary')
-                                        ->link()
-                                        ->size('sm'),
-                                )
+                                ->beforeLabel(static::editBesideLabel(HandOverEscalationAction::make()))
+                                ->extraEntryWrapperAttributes(['class' => 'pad-ti-edit-entry'])
                                 ->hintActions($this->personActionSlots(fn (Ticket $record): ?Model => $record->submitter)),
                             fn (Ticket $record): string => match (true) {
                                 $this->isEscalatedHere($record) => __('padmission-tickets::tickets.resources.tickets.contact'),
@@ -692,17 +687,14 @@ class ViewTicket extends EditRecord
                                 ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere', TicketPlugin::find($record->panel)?->getSupportTeamName())
                                 : __('padmission-tickets::tickets.resources.tickets.hints.assignee'),
                         )
-                            ->hintAction(
+                            ->extraEntryWrapperAttributes(['class' => 'pad-ti-edit-entry'])
+                            ->beforeLabel(static::editBesideLabel(
                                 ReassignTicketAction::make()
                                     ->label(fn (Ticket $record): string => $record->assignee_id
                                         ? __('padmission-tickets::tickets.actions.reassign.inline_label')
                                         : __('padmission-tickets::tickets.actions.reassign.label_unassigned'))
-                                    ->icon(null)
-                                    ->color('primary')
-                                    ->link()
-                                    ->size('sm')
                                     ->authorize($this->authorizesEdit(...)),
-                            )
+                            ))
                             ->columnSpanFull(),
 
                         FieldHelp::apply(
@@ -823,6 +815,24 @@ class ViewTicket extends EditRecord
                         ]),
                 ]),
             ]);
+    }
+
+    /*
+     * A field that can be changed from the sidebar has a pencil right after
+     * its label, named by its tooltip, rather than a link at the far edge
+     * where it read as belonging to the host's person actions. Filament's
+     * slot after the label holds the hints at that far edge, so the pencil
+     * goes in the slot before it and tickets.css draws it after the label.
+     */
+    protected static function editBesideLabel(Action $action): Action
+    {
+        return $action
+            ->iconButton()
+            ->icon(Heroicon::OutlinedPencilSquare)
+            ->iconSize('sm')
+            ->color('gray')
+            ->tooltip(fn (Action $action): string => $action->getLabel())
+            ->extraAttributes(['class' => 'pad-ti-edit-beside-label']);
     }
 
     /*
