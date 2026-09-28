@@ -101,3 +101,10 @@ it('allows HtmlString in placeholder and introMessage', function () {
         ->placeholder->toBe('<span>HTML placeholder</span>')
         ->introMessage->toBe('<span>HTML intro message</span>');
 });
+
+it('labels the send that keeps the turn as an update, and says what it does', function () {
+    $lang = json_decode(ChatWidgetConfig::make()->toJs(), true)['lang'];
+
+    expect($lang['chat.send_keep_waiting'])->toBe('Send as update')
+        ->and($lang['chat.send_keep_waiting_help'])->toBe('Sends your reply as an update and keeps Waiting on with your team, since you still owe the answer.');
+});

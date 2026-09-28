@@ -32,8 +32,8 @@ return [
         'enter_key' => 'Enter-Key',
         'lock_turn' => 'We still owe a reply',
         'lock_turn_help' => 'Tick this if your team still needs to follow up. Otherwise the ticket waits on the requester after you send.',
-        'send_keep_waiting' => 'Send, still working on it',
-        'send_keep_waiting_help' => 'Sends your message and keeps the ticket waiting on your side.',
+        'send_keep_waiting' => 'Send as update',
+        'send_keep_waiting_help' => 'Sends your reply as an update and keeps Waiting on with your team, since you still owe the answer.',
 
         'screenshot' => [
             'capture' => 'Capture screenshot',
