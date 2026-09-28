@@ -236,6 +236,21 @@ it('offers Take over in the status line when the other team replied to a colleag
     expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id);
 });
 
+it('says nothing changed when a Take over left open meets an escalation that was closed meanwhile', function () {
+    $this->escalation->ticketActivities()->create(['type' => ActivityType::Message, 'sender' => ActivitySender::Supporter, 'user_id' => $this->padmission->id, 'content' => 'Which household?']);
+    $this->login($this->colleague);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $this->original->id])
+        ->mountAction('takeOver');
+
+    $this->escalation->close(closedById: $this->padmission->id);
+
+    $page->callMountedAction()
+        ->assertNotified(__('padmission-tickets::tickets.actions.hand_over.refused'));
+
+    expect($this->escalation->refresh()->submitter_id)->toBe($this->owner->id);
+});
+
 it('shows Hand over or Take over on the Escalations tab rows', function () {
     $this->login($this->colleague);
 

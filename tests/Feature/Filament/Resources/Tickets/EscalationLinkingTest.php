@@ -1,6 +1,7 @@
 <?php
 
 use Filament\Actions\Testing\TestAction;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -312,4 +313,27 @@ describe('Escalated tabs in a cross-tenant panel', function () {
         expect($tab->modifyQuery(CustomTicket::query()->withoutGlobalScope('viewer-tenant'))->pluck('id'))
             ->toContain($escalation->id);
     });
+});
+
+describe('A dialog left open while the ticket was escalated elsewhere', function () {
+    it('says the ticket is already escalated instead of doing nothing', function (string $action, array $data) {
+        $ticket = Ticket::factory()->open()->create(['linked_ticket_id' => null]);
+        $target = escalationFrom();
+
+        $page = Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+            ->mountAction(escalationAction($action))
+            ->fillForm($action === AddToEscalationAction::class ? ['escalation' => $target->id] : $data);
+
+        $ticket->forceFill(['linked_ticket_id' => escalationFrom()->id])->saveQuietly();
+
+        // As the browser does: Filament's own test helper stops at an action it can no longer find.
+        $page->call('callMountedAction')
+            ->assertNotified(Notification::make()
+                ->danger()
+                ->title(__('padmission-tickets::tickets.resources.tickets.link_refused.title'))
+                ->body(__('padmission-tickets::tickets.resources.tickets.link_refused.already_escalated')));
+    })->with([
+        'Escalate' => [CreateLinkedTicketAction::class, ['subject' => 'Rent is wrong', 'message' => '<p>Please check.</p>']],
+        'Add to an existing escalation' => [AddToEscalationAction::class, []],
+    ]);
 });

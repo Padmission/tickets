@@ -46,6 +46,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationActi
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\RemoveFromEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
@@ -61,6 +62,8 @@ use Padmission\Tickets\TicketPlugin;
 
 class ViewTicket extends EditRecord
 {
+    use ExplainsStaleEscalationActions;
+
     protected static string $resource = TicketResource::class;
 
     protected $listeners = ['refresh' => '$refresh'];

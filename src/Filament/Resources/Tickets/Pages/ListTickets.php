@@ -8,6 +8,7 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Lang;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
@@ -21,6 +22,8 @@ use Padmission\Tickets\TicketPlugin;
 
 class ListTickets extends ListRecords
 {
+    use ExplainsStaleEscalationActions;
+
     public function updatedActiveTab(): void
     {
         // Refresh the page so that showing/hiding filters works properly.
