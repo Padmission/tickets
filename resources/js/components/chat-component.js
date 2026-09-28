@@ -11,6 +11,7 @@ import isCutOffAtTop from "./helpers/cut-off-at-top.js";
 import formatMessageTime from "./helpers/format-message-time.js";
 import ticketSubject from "./helpers/ticket-subject.js";
 import escapeHtml from "./helpers/escape-html.js";
+import lockScrollWhileOpen from "./helpers/scroll-lock.js";
 import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
 import isComposerShown from "./helpers/composer-shown.js";
 import config from "./helpers/config.js";
@@ -94,12 +95,6 @@ customElements.define(
 				"[data-chat-scroll-to-bottom]",
 			);
 			this.lockTurnCheckbox = node.querySelector("[data-chat-lock-turn]");
-
-			node
-				.querySelector('[formmethod="dialog"]')
-				.addEventListener("click", (event) =>
-					document.documentElement.classList.remove("has-dialog-open"),
-				);
 
 			this.initNearBottomTracking();
 
@@ -359,7 +354,7 @@ customElements.define(
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
-						document.documentElement.classList.add("has-open-dialog");
+						lockScrollWhileOpen(dialog, document.documentElement);
 					}),
 				);
 
