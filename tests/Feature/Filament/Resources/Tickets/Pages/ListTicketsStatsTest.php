@@ -80,7 +80,7 @@ describe('Stat cards', function () {
         expect($stat(OpenSupporterTickets::class, 'all'))
             ->getLabel()->toBe('Needs You')
             ->getColor()->toBe('warning')
-            ->getDescription()->toBe('Waiting on you, unassigned, or Platform Support replied')
+            ->getDescription()->toBe('Waiting on you, needs an assignee, or Platform Support replied')
             ->getValue()->toBe(2)
             ->and($stat(OpenSupporterTickets::class, 'linked'))
             ->getLabel()->toBe('Waiting on Platform Support')
@@ -145,7 +145,7 @@ describe('Stat cards', function () {
 
         expect(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all'])->instance()->getStats()[0])
             ->getLabel()->toBe('Needs You')
-            ->getDescription()->toBe('Waiting on you or unassigned');
+            ->getDescription()->toBe('Waiting on you or needs an assignee');
     });
 
     it('averages close time over the tab\'s own closed tickets', function () {

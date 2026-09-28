@@ -20,9 +20,9 @@ return [
 
     'needs_you' => [
         'label' => 'Needs You',
-        'description' => 'Waiting on you, unassigned, or the other team replied',
-        'description_to' => 'Waiting on you, unassigned, or :team replied',
-        'description_received' => 'Waiting on you or unassigned',
+        'description' => 'Waiting on you, needs an assignee, or the other team replied',
+        'description_to' => 'Waiting on you, needs an assignee, or :team replied',
+        'description_received' => 'Waiting on you or needs an assignee',
     ],
 
     'escalations_waiting' => [

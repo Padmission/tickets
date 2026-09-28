@@ -70,7 +70,8 @@ final readonly class ConversationState
         return match ($this->waitingOn) {
             null, 'closed' => null,
             'you', 'you_on_hold', 'you_requester', 'you_owner' => __('padmission-tickets::tickets.resources.tickets.waiting_on.you'),
-            'needs_assignment', 'requester', 'contact' => __("padmission-tickets::tickets.resources.tickets.waiting_on.{$this->waitingOn}"),
+            'unassigned', 'requester', 'contact' => __("padmission-tickets::tickets.resources.tickets.waiting_on.{$this->waitingOn}"),
+            'assignee_cannot_answer' => $this->assigneeName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.assignee_cannot_answer'),
             'team' => $this->teamName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.team'),
             'support' => Turn::Supporter->getLabel(),
             default => $this->colleagueName() ?? __('padmission-tickets::tickets.resources.tickets.waiting_on.colleague'),
@@ -86,7 +87,8 @@ final readonly class ConversationState
     {
         return match ($this->waitingOn) {
             'you_on_hold', 'colleague_on_hold' => 'heroicon-m-clock',
-            'needs_assignment' => 'heroicon-m-user-plus',
+            'unassigned' => 'heroicon-m-user-plus',
+            'assignee_cannot_answer' => 'heroicon-m-exclamation-triangle',
             'team' => 'heroicon-m-building-office',
             default => null,
         };
@@ -106,7 +108,8 @@ final readonly class ConversationState
             'you' => $this->requesterIsViewer()
                 ? __(self::HELP.'.you_self')
                 : __(self::HELP.'.you', ['name' => $requester]),
-            'you_on_hold', 'needs_assignment', 'requester' => __(self::HELP.".{$this->waitingOn}", ['name' => $requester]),
+            'you_on_hold', 'unassigned', 'requester' => __(self::HELP.".{$this->waitingOn}", ['name' => $requester]),
+            'assignee_cannot_answer' => __(self::HELP.'.assignee_cannot_answer'.($this->assigneeName() === null ? '_unnamed' : ''), ['name' => $requester, 'assignee' => $this->assigneeName()]),
             'colleague' => match (true) {
                 $colleague === null => __(self::HELP.'.colleague_unnamed', ['name' => $requester]),
                 $this->requesterIsAssignee() => __(self::HELP.'.colleague_self', ['colleague' => $colleague]),

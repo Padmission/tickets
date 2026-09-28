@@ -22,7 +22,7 @@ use Padmission\Tickets\TicketPlugin;
  */
 final class ConversationStateQuery
 {
-    public const WAITING_ON_CODES_RANKED_FIRST = ['you', 'you_requester', 'you_owner', 'needs_assignment'];
+    public const WAITING_ON_CODES_RANKED_FIRST = ['you', 'you_requester', 'you_owner', 'unassigned', 'assignee_cannot_answer'];
 
     public const WAITING_ON_CODES_RANKED_SECOND = ['you_on_hold', 'colleague', 'colleague_on_hold', 'owner_colleague'];
 
@@ -243,7 +243,8 @@ final class ConversationStateQuery
                 [$userTurn, $value($this->viewer->receivesEscalations ? 'contact' : 'requester')],
             ]),
             [$this->mine(), $value($onHold ? 'you_on_hold' : 'you')],
-            [$this->sql('(%s is null or not (%s))', $this->column('assignee_id'), $this->assigneeInPool()), $value('needs_assignment')],
+            [$this->sql('%s is null', $this->column('assignee_id')), $value('unassigned')],
+            [$this->sql('not (%s)', $this->assigneeInPool()), $value('assignee_cannot_answer')],
             [null, $value($onHold ? 'colleague_on_hold' : 'colleague')],
         ]);
 

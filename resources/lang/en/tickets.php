@@ -471,7 +471,8 @@ return [
 
             'waiting_on' => [
                 'you' => 'You',
-                'needs_assignment' => 'Needs assignment',
+                'unassigned' => 'Unassigned',
+                'assignee_cannot_answer' => 'Needs a new assignee',
                 'requester' => 'Requester',
                 'contact' => 'Contact',
                 'team' => 'Escalation team',
@@ -493,7 +494,9 @@ return [
                 'owner_colleague_to' => ':colleague owes :team the next reply on this escalation.',
                 'owner_colleague_unnamed' => 'A colleague owes the team you escalated to the next reply on this escalation.',
                 'owner_colleague_unnamed_to' => 'A colleague owes :team the next reply on this escalation.',
-                'needs_assignment' => 'Nobody who answers tickets here is assigned. Assign someone to answer :name.',
+                'unassigned' => 'Nobody is assigned. Assign someone to answer :name.',
+                'assignee_cannot_answer' => ':assignee can\'t answer tickets here. Reassign this ticket to someone who can answer :name.',
+                'assignee_cannot_answer_unnamed' => 'The assignee can\'t answer tickets here. Reassign this ticket to someone who can answer :name.',
                 'requester' => ':Name owes the next reply.',
                 'contact' => ':Name at :organization owes the next reply.',
                 'contact_unnamed_org' => ':Name owes the next reply.',

@@ -4,10 +4,12 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Once;
+use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
@@ -138,14 +140,14 @@ it('works out who owes the next message, the marker, the rank and New from one S
     ],
     'unassigned' => fn ($me, $colleague, $requester) => [
         'row' => conversationOriginal(['submitter_id' => $requester->id, 'assignee_id' => null]),
-        'expect' => ['waiting_on' => 'needs_assignment', 'rank' => 0],
+        'expect' => ['waiting_on' => 'unassigned', 'rank' => 0],
     ],
     'assigned outside the pool' => function ($me, $colleague, $requester) {
         TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($me->id));
 
         return [
             'row' => conversationOriginal(['submitter_id' => $requester->id, 'assignee_id' => $colleague->id]),
-            'expect' => ['waiting_on' => 'needs_assignment', 'rank' => 0],
+            'expect' => ['waiting_on' => 'assignee_cannot_answer', 'rank' => 0],
         ];
     },
     'assigned to a colleague' => fn ($me, $colleague, $requester) => [
@@ -298,7 +300,7 @@ it('works out who owes the next message, the marker, the rank and New from one S
     'received escalation unassigned' => fn ($me, $colleague) => [
         'panel' => 'test2',
         'row' => conversationEscalation(['submitter_id' => $colleague->id, 'assignee_id' => null]),
-        'expect' => ['waiting_on' => 'needs_assignment', 'rank' => 0],
+        'expect' => ['waiting_on' => 'unassigned', 'rank' => 0],
     ],
     'received escalation assigned to another account of someone in the pool' => function ($me, $colleague) {
         Schema::table('users', fn (Blueprint $table) => $table->dropUnique(['email']));
@@ -327,7 +329,7 @@ it('works out who owes the next message, the marker, the rank and New from one S
         return [
             'panel' => 'test2',
             'row' => conversationEscalation(['submitter_id' => $colleague->id, 'assignee_id' => $otherAccount->id]),
-            'expect' => ['waiting_on' => 'needs_assignment', 'rank' => 0],
+            'expect' => ['waiting_on' => 'assignee_cannot_answer', 'rank' => 0],
         ];
     },
     'a viewer who only submits, owing a reply' => function ($me, $colleague) {
@@ -434,10 +436,36 @@ it('names who owes the next message', function () {
     $escalation->refresh();
 
     expect(ConversationState::for($escalation))
-        ->label()->toBe('Needs assignment')
+        ->label()->toBe('Unassigned')
         ->color()->toBe('warning')
         ->icon()->toBe('heroicon-m-user-plus')
-        ->tooltip()->toBe('Nobody who answers tickets here is assigned. Assign someone to answer Maria Lopez.');
+        ->tooltip()->toBe('Nobody is assigned. Assign someone to answer Maria Lopez.');
+});
+
+it('names an assignee who cannot answer tickets here, and warns that the ticket needs a new one', function () {
+    $gone = User::factory()->create(['name' => 'Robert O\'Hale & <Sons>']);
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey([$this->me->id, $this->colleague->id]));
+    $ticket = conversationOriginal(['submitter_id' => $this->requester->id, 'assignee_id' => $gone->id]);
+
+    expect(ConversationState::for($ticket))
+        ->waitingOn->toBe('assignee_cannot_answer')
+        ->label()->toBe('Robert O\'Hale & <Sons>')
+        ->color()->toBe('warning')
+        ->icon()->toBe('heroicon-m-exclamation-triangle')
+        ->tooltip()->toBe('Robert O\'Hale & <Sons> can\'t answer tickets here. Reassign this ticket to someone who can answer Aisha Brooks.');
+
+    Livewire::test(ListTickets::class)
+        ->assertSeeHtml('Robert O&#039;Hale &amp; &lt;Sons&gt;')
+        ->assertSeeHtml("content: 'Robert O\\u0027Hale \\u0026 \\u003CSons\\u003E can\\u0027t answer tickets here.")
+        ->assertDontSeeHtml('<Sons>');
+
+    $gone->delete();
+
+    expect(ConversationState::for($ticket->refresh()))
+        ->waitingOn->toBe('assignee_cannot_answer')
+        ->label()->toBe('Needs a new assignee')
+        ->icon()->toBe('heroicon-m-exclamation-triangle')
+        ->tooltip()->toBe('The assignee can\'t answer tickets here. Reassign this ticket to someone who can answer Aisha Brooks.');
 });
 
 it('counts a supporter signed in on another account of someone in a pool matched by email', function () {
