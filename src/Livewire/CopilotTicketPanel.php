@@ -23,6 +23,8 @@ class CopilotTicketPanel extends Component
     public function mount(?int $initialTicketId = null): void
     {
         if (! $initialTicketId) {
+            $this->announceShownTicket();
+
             return;
         }
 
@@ -78,7 +80,8 @@ class CopilotTicketPanel extends Component
     /*
      * The assistant mounts this pane again whenever its Tickets tab comes
      * back, with the ticket it last knew of, which is the one a deep link
-     * opened unless it is told what the pane shows now.
+     * opened unless it is told what the pane shows now, from the moment it
+     * is mounted.
      */
     protected function announceShownTicket(): void
     {

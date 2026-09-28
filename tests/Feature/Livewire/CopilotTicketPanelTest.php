@@ -129,6 +129,8 @@ it('tells the assistant which ticket it shows, and when it went back to the list
         ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null)
         ->call('showCreateForm')
         ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null);
+
+    Livewire::test(CopilotTicketPanel::class)->assertDispatched('padmission-copilot-ticket-shown', ticketId: null);
 });
 
 it('tears its chat listeners down with Alpine\'s own destroy, not a $cleanup the hosts\' Livewire does not have', function () {
