@@ -92,6 +92,33 @@ it('draws the dialog it opened as, not the other one, once the escalation has mo
     'a colleague\'s take over from the Escalation box on the original' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox(), [], 'Take over this escalation?', 'Hand over this escalation'],
 ]);
 
+it('keeps the owner\'s leaving hand over from being closed or resubmitted once sent, and the page from asking again', function () {
+    Event::fake([TicketHandedOverEvent::class]);
+    $this->login($this->owner);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->mountAction(handOverHint());
+
+    expect($page->instance()->getMountedAction()->getExtraModalWindowAttributes())->toHaveKey('x-on:click.capture')
+        ->and($page->instance()->getMountedAction()->getExtraModalWindowAttributes()['x-on:click.capture'])->not->toContain('"');
+
+    $page->fillForm(['new_owner' => $this->colleague->id])->callMountedAction();
+
+    expect(json_encode($page->effects['xjs'] ?? []))
+        ->toContain('stopImmediatePropagation')
+        ->toContain('inert = true')
+        ->toContain('stopPolling');
+});
+
+it('lets a Take over and a hand over from the list close as usual, since they do not leave the page', function (string $who, Closure $page, Closure $action) {
+    $this->login($who === 'owner' ? $this->owner : $this->colleague);
+
+    expect($page()->mountAction($action())->instance()->getMountedAction()->getExtraModalWindowAttributes())->not->toHaveKey('x-on:click.capture');
+})->with([
+    'a colleague\'s take over' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox()],
+    'the owner\'s hand over from the list' => ['owner', fn () => Livewire::test(ListTickets::class, ['activeTab' => 'linked']), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->escalation)],
+]);
+
 it('lets the owner hand the escalation to a colleague from Handled by', function () {
     Event::fake([TicketHandedOverEvent::class]);
     $this->login($this->owner);

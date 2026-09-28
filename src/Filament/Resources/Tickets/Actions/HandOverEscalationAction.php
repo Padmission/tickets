@@ -94,6 +94,7 @@ class HandOverEscalationAction extends Action
             ->slideOver(fn (self $action): bool => $action->viewerIsOwner() && (bool) $action->evaluate($hostSlideOver))
             ->modalIcon(fn (self $action): ?Heroicon => $action->viewerIsOwner() ? null : Heroicon::OutlinedArrowsRightLeft)
             ->modalWidth(Width::Medium)
+            ->extraModalWindowAttributes(fn (self $action): array => $action->leavesPage() ? ['x-on:click.capture' => self::LEAVING_GUARD] : [])
             ->modalHeading(fn (self $action): string => __($action->viewerIsOwner() ? $key.'hand_over.modal_heading' : $key.'take_over.modal_heading'))
             ->modalDescription(fn (self $action): string => $action->viewerIsOwner()
                 ? TicketPlugin::teamText($key.'hand_over.modal_description', $action->teamName())
@@ -123,9 +124,40 @@ class HandOverEscalationAction extends Action
             ->action(fn (self $action, array $data, Component $livewire) => $action->handOver($data, $livewire));
     }
 
+    /*
+     * The owner's hand over leaves the page, which then refuses them. From the
+     * moment it is submitted until the answer comes back the dialog takes no
+     * Escape or clicks, since closing it would reach the page after the move;
+     * it is let go again when the answer does not leave the page.
+     */
+    protected const string LEAVING_GUARD = <<<'JS'
+        (() => {
+        if (! $event.target.closest('button[type=submit]') || window.padTiLeaving) return;
+        window.padTiLeaving = true;
+        const block = (event) => event.key === 'Escape' && event.stopImmediatePropagation();
+        const modals = [...document.querySelectorAll('.fi-modal')];
+        const release = () => { window.padTiLeaving = false; document.removeEventListener('keydown', block, true); modals.forEach((modal) => modal.inert = false); };
+        document.addEventListener('keydown', block, true);
+        setTimeout(() => modals.forEach((modal) => modal.inert = true));
+        const stop = Livewire.hook('request', ({ succeed, fail }) => {
+            succeed(({ json }) => { if (! (json?.components ?? []).some((component) => component.effects?.redirect)) release(); stop?.(); });
+            fail(() => { release(); stop?.(); });
+        });
+        })()
+        JS;
+
     public function getModalSubmitAction(): ?Action
     {
-        return $this->viewerIsOwner() && $this->choices() === [] ? null : parent::getModalSubmitAction();
+        if ($this->viewerIsOwner() && $this->choices() === []) {
+            return null;
+        }
+
+        return parent::getModalSubmitAction();
+    }
+
+    protected function leavesPage(): bool
+    {
+        return $this->viewerIsOwner() && ! $this->getLivewire() instanceof ListTickets;
     }
 
     /*
@@ -186,7 +218,15 @@ class HandOverEscalationAction extends Action
 
             // Unmounting the dialog would empty its owner field, which then asks
             // this page for a label before the browser leaves, as someone the
-            // page now refuses. The hand over is already done and kept.
+            // page now refuses. The hand over is already done and kept. Closing
+            // the dialog, by Escape or its buttons, is another such request, so
+            // until the browser leaves the dialog takes no input at all.
+            $livewire->js(<<<'JS'
+                document.addEventListener('keydown', (event) => event.key === 'Escape' && event.stopImmediatePropagation(), true);
+                document.querySelectorAll('.fi-modal').forEach((modal) => modal.inert = true);
+                document.querySelectorAll('chat-component').forEach((chat) => chat.stopPolling?.());
+                JS);
+
             $this->halt();
         }
     }
