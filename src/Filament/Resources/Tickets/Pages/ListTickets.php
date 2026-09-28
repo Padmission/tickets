@@ -238,8 +238,9 @@ class ListTickets extends ListRecords
                 )),
         ];
 
-        // Only a panel that escalates has tickets of its own linked elsewhere.
-        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0) {
+        // Only a panel that escalates has tickets of its own linked elsewhere, and
+        // escalating is the organization's business, never its requesters'.
+        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0 || ! ConversationViewer::current()->isSupporter) {
             return $tabs;
         }
 

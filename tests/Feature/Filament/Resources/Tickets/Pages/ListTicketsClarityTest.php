@@ -47,6 +47,20 @@ it('only offers escalated tabs in a panel that escalates', function () {
         ->and($tabs)->not->toHaveKeys(['linked', 'my_linked']);
 });
 
+it('keeps the escalated tabs from someone who only submits tickets', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    $supporter = User::factory()->create();
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($supporter->id));
+
+    $this->login(User::factory()->create());
+
+    expect(Livewire::test(ListTickets::class)->instance()->getTabs())->not->toHaveKeys(['linked', 'my_linked']);
+
+    $this->login($supporter);
+
+    expect(Livewire::test(ListTickets::class)->instance()->getTabs())->toHaveKeys(['linked', 'my_linked']);
+});
+
 it('explains the active tab', function (string $tab, string $key) {
     $this->login();
 
