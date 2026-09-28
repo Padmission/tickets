@@ -563,3 +563,44 @@ test('the closed email quotes support\'s last reply to whoever asked, never to s
     expect($mail($requester)->viewData['lastSupporterMessage'])->toBe('The rent is fixed.')
         ->and($mail($supporter)->viewData['lastSupporterMessage'])->toBeNull();
 });
+
+test('the one email a reassignment and the requester\'s messages share tells the new assignee it is theirs, whichever goes first', function (bool $activityFirst) {
+    Queue::fake();
+    $requester = User::factory()->create();
+    $admin = User::factory()->create(['name' => 'Test Admin']);
+    $maria = User::factory()->create(['name' => 'Maria Lopez']);
+    $ticket = Ticket::factory()->create(['subject' => 'Rent question', 'submitter_id' => $requester->id, 'assignee_id' => $maria->id]);
+
+    TicketActivity::factory()->create(['ticket_id' => $ticket->id, 'user_id' => $requester->id, 'sender' => ActivitySender::User, 'type' => ActivityType::Message, 'content' => 'The rent is wrong.']);
+    $ticket->addTicketActivity(ActivityType::AssigneeChanged, ActivitySender::System, $admin->id, ['from' => $maria->id, 'to' => $admin->id]);
+    $ticket->addTicketActivity(ActivityType::AssigneeChanged, ActivitySender::System, $admin->id, ['from' => $admin->id, 'to' => $maria->id]);
+
+    $notifications = [
+        new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message, null, $requester)),
+        new TicketNotification($ticket, new TicketAssignedEvent($ticket, $admin)),
+    ];
+
+    // As their jobs run: each decides and sends before the next.
+    $sent = [];
+
+    foreach ($activityFirst ? $notifications : array_reverse($notifications) as $notification) {
+        if ($notification->shouldSend($maria)) {
+            $sent[] = $notification->toMail($maria)->subject;
+        }
+    }
+
+    expect($sent)->toBe(["Ticket assigned to you #{$ticket->id} – Rent question"]);
+})->with(['the messages\' notice first' => true, 'the assignment\'s first' => false]);
+
+test('an activity email about someone else\'s assignment keeps its own wording', function () {
+    Queue::fake();
+    $admin = User::factory()->create();
+    $maria = User::factory()->create();
+    $colleague = User::factory()->create();
+    $ticket = Ticket::factory()->create(['subject' => 'Rent question', 'submitter_id' => $this->user->id, 'assignee_id' => $maria->id]);
+
+    $ticket->addTicketActivity(ActivityType::AssigneeChanged, ActivitySender::System, $admin->id, ['from' => $colleague->id, 'to' => $maria->id]);
+
+    expect((new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message, null, $admin)))->toMail($colleague)->subject)
+        ->toBe("Ticket updated #{$ticket->id} – Rent question");
+});

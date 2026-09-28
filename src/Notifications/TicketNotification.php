@@ -170,6 +170,24 @@ class TicketNotification extends Notification
             && (string) $this->ticket->closed_by !== (string) $notifiable->getKey();
     }
 
+    /*
+     * An assignment and other activity can fall due together. Whichever
+     * notice goes first carries every unread activity and leaves the other
+     * nothing to send, so one carrying their assignment reads as it.
+     */
+    protected function wordingType($notifiable): string
+    {
+        if ($this->notificationType !== 'activity') {
+            return $this->notificationType;
+        }
+
+        $assignedToThem = $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable))
+            ->contains(fn (TicketActivity $activity): bool => $activity->type === ActivityType::AssigneeChanged
+                && (string) ($activity->data['to'] ?? '') === (string) $notifiable->getKey());
+
+        return $assignedToThem ? 'assigned' : $this->notificationType;
+    }
+
     protected function isActor($notifiable): bool
     {
         $actor = $this->event->actor ?? null;
@@ -312,7 +330,7 @@ class TicketNotification extends Notification
      */
     protected function wording($notifiable): array
     {
-        $key = "padmission-tickets::notifications.ticket-{$this->notificationType}";
+        $key = "padmission-tickets::notifications.ticket-{$this->wordingType($notifiable)}";
 
         $wording = [
             'subject' => $this->subjectLine("{$key}.subject"),
