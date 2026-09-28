@@ -277,8 +277,9 @@ class TicketNotification extends Notification
         };
 
         return FilamentNotification::make()
-            ->title($wording['subject'])
-            ->body($body)
+            // Filament renders these as HTML; a subject, message or name is plain text.
+            ->title(e($wording['subject']))
+            ->body(e($body))
             ->actions($wording['actionUrl'] === null ? [] : [
                 Action::make('view')
                     ->label($wording['actionLabel'])

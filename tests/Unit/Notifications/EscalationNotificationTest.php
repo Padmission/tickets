@@ -234,8 +234,9 @@ it('tells the previous owner the escalation was taken over and links a ticket th
         ->and($mail->viewData['intro'])->toBe("Maria Lopez took over the escalation to Padmission about Aisha Brooks's ticket. Padmission's replies now go to them.")
         ->and($mail->viewData['actionLabel'])->toBe("Open Aisha Brooks's ticket")
         ->and($mail->viewData['actionUrl'])->toBe(url("/test/tickets/{$this->original->id}/view"))
-        ->and($bell['title'])->toBe($mail->subject)
-        ->and($bell['body'])->toBe($mail->viewData['intro'])
+        // The bell renders its text as HTML, so it holds the same words escaped.
+        ->and($bell['title'])->toBe(e($mail->subject))
+        ->and($bell['body'])->toBe(e($mail->viewData['intro']))
         ->and($bell['actions'][0]['url'])->toBe($mail->viewData['actionUrl']);
 });
 

@@ -492,3 +492,24 @@ test('the email history says a ticket was taken from someone, reading the recipi
     expect($rendered)->toContain('Breya Birdsong took this ticket from you')
         ->not->toContain('Assigned to Breya Birdsong');
 });
+
+test('the bell shows a subject, a message and a name as the text they are, not as markup', function () {
+    $user = User::factory()->create();
+    $writer = User::factory()->create(['name' => '<b>Kevin</b>']);
+    $ticket = Ticket::factory()->create(['subject' => 'Rent <b>x</b> & "Co" <img src=x onerror=a>', 'submitter_id' => $user->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+        'user_id' => $writer->id,
+        'content' => '<p>Try &lt;b&gt;this&lt;/b&gt; &amp; rent &lt; 200</p>',
+    ]);
+
+    $bell = (new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message)))->toDatabase($user);
+
+    expect($bell['title'])->toContain('Rent &lt;b&gt;x&lt;/b&gt; &amp; &quot;Co&quot; &lt;img src=x onerror=a&gt;')
+        ->not->toContain('<b>')
+        ->and($bell['body'])->toBe('Try &lt;b&gt;this&lt;/b&gt; &amp; rent &lt; 200')
+        ->and(str($bell['body'])->sanitizeHtml()->toString())->toBe($bell['body']);
+});

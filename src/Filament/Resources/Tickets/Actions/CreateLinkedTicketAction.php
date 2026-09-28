@@ -161,7 +161,7 @@ class CreateLinkedTicketAction extends Action
                         ? TicketPlugin::teamText(
                             'padmission-tickets::tickets.actions.create_linked_ticket.notifications.success.body_told',
                             TicketPlugin::get()->getEscalationTargetName(),
-                            ['name' => $record->requesterName()],
+                            ['name' => e($record->requesterName())],
                         )
                         : static::translate('notifications.success.body'))
                     ->actions([

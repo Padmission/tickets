@@ -208,7 +208,7 @@ class HandOverEscalationAction extends Action
         Notification::make()
             ->success()
             ->title($isOwner
-                ? __('padmission-tickets::tickets.actions.hand_over.success', ['name' => $toName])
+                ? __('padmission-tickets::tickets.actions.hand_over.success', ['name' => e($toName)])
                 : __('padmission-tickets::tickets.actions.take_over.success'))
             ->send();
 
