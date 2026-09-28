@@ -59,7 +59,7 @@
             Livewire.dispatch('message-sent');
         })
 
-        window.addEventListener('ticket-chat-changed', (event) => chat.refreshTicket?.(event.detail.canReply))
+        window.addEventListener('ticket-chat-changed', (event) => String(event.detail?.ticketId) === chat.getAttribute('ticket-id') && chat.refreshTicket?.(event.detail.canReply))
     </script>
 
     <script

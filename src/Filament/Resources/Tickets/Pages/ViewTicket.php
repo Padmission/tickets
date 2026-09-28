@@ -203,7 +203,7 @@ class ViewTicket extends EditRecord
 
         // The chat keeps its own state, so it is told when an action closed or reopened the
         // ticket, changed who may reply or wrote to the requester.
-        $this->dispatch('ticket-chat-changed', canReply: $record->isOpen && resolve(TicketAuth::class)->canReply($record, Filament::auth()->user()));
+        $this->dispatch('ticket-chat-changed', ticketId: $record->getKey(), canReply: $record->isOpen && resolve(TicketAuth::class)->canReply($record, Filament::auth()->user()));
     }
 
     /*

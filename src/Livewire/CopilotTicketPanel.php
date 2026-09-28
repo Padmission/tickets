@@ -105,6 +105,9 @@ class CopilotTicketPanel extends Component
         $this->tickets()->resolveTicket($this->user(), $ticket);
 
         $this->selectTicket($ticket->getKey());
+
+        // The chat keeps its own state, so it drops its reply box now rather than at its next poll.
+        $this->dispatch('ticket-chat-changed', ticketId: $ticket->getKey(), canReply: false);
     }
 
     protected function requireActiveTicket(): Ticket

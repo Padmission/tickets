@@ -53,7 +53,7 @@ it('tells the chat after Close that the viewer may no longer reply', function ()
     Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
         ->callAction(CloseTicketAction::class, ['disposition' => TicketDisposition::factory()->create()->id])
         ->assertHasNoActionErrors()
-        ->assertDispatched('ticket-chat-changed', canReply: false);
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: false);
 
     expect($this->ticket->refresh()->isClosed)->toBeTrue();
 });
@@ -65,7 +65,7 @@ it('tells the chat after a status change through Edit closes the ticket that the
             'priority_id' => TicketPriority::query()->value('id'),
         ])
         ->assertHasNoActionErrors()
-        ->assertDispatched('ticket-chat-changed', canReply: false);
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: false);
 
     expect($this->ticket->refresh()->isClosed)->toBeTrue();
 });
@@ -74,7 +74,7 @@ it('tells the chat after an action that changes who it waits on or writes to the
     Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
         ->callAction($action(), $data())
         ->assertHasNoActionErrors()
-        ->assertDispatched('ticket-chat-changed', canReply: true);
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: true);
 })->with([
     'Reassign away from the viewer' => [fn () => TestAction::make(ReassignTicketAction::class)->schemaComponent('assignee', schema: 'form'), fn () => ['assignee_id' => test()->colleague->id]],
     'Escalate' => [fn () => TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'), fn () => ['subject' => 'Rent is wrong', 'message' => '<p>Please check the rent.</p>']],
