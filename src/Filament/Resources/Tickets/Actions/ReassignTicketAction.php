@@ -38,6 +38,7 @@ class ReassignTicketAction extends Action
             ->modalSubmitAction(fn (Action $action, Ticket $record) => static::choices($record) === [] ? false : $action)
             ->icon(Heroicon::OutlinedUserPlus)
             ->color('gray')
+            ->slideOver(false)
             ->modalWidth(Width::Medium)
             ->hidden(fn (Ticket $record): bool => $record->isNotInCurrentPanel() || $record->isClosed)
             ->schema([

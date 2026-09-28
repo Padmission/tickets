@@ -29,6 +29,7 @@ class ReopenTicketAction extends Action
             ->label(__($key.'label'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->requiresConfirmation()
+            ->slideOver(false)
             ->modalHeading(__($key.'modal_heading'))
             ->modalDescription(fn (Ticket $record): string => __($record->isEscalation() ? $key.'modal_description_escalation' : $key.'modal_description'))
             ->modalSubmitActionLabel(__($key.'submit'))

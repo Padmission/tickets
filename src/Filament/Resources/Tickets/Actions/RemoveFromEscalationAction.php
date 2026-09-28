@@ -26,6 +26,7 @@ class RemoveFromEscalationAction extends Action
             ->modalDescription(__('padmission-tickets::tickets.actions.remove_from_escalation.modal_description'))
             ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.remove_from_escalation.submit'))
             ->requiresConfirmation()
+            ->slideOver(false)
             ->icon(Heroicon::OutlinedLinkSlash)
             ->color('gray')
             ->link()

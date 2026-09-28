@@ -13,6 +13,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -442,6 +443,8 @@ class TicketResource extends Resource
                     BulkAction::make('assign')
                         ->label(__('padmission-tickets::tickets.resources.tickets.assign_to_supporter'))
                         ->icon('heroicon-o-user-plus')
+                        ->slideOver(false)
+                        ->modalWidth(Width::Medium)
                         ->form([
                             Select::make('assignee_id')
                                 ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
@@ -524,6 +527,7 @@ class TicketResource extends Resource
             ->label(__($key.'label'))
             ->icon('heroicon-o-check-circle')
             ->requiresConfirmation()
+            ->slideOver(false)
             ->modalHeading(__($key.'modal_heading'))
             ->modalDescription(fn (): string => __(count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0 ? $key.'modal_description_received' : $key.'modal_description'))
             ->modalSubmitActionLabel(__($key.'submit'))
