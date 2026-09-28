@@ -17,15 +17,18 @@ class TicketAuth
 
     public function authorizeTicketAccess(Ticket $ticket, ?Authenticatable $user): void
     {
+        abort_unless($this->canAccess($ticket, $user), 403);
+    }
+
+    public function canAccess(Ticket $ticket, ?Authenticatable $user): bool
+    {
         if ($user?->getAuthIdentifier() === $ticket->submitter_id) {
-            return;
+            return true;
         }
 
-        $isAuthorized = $user !== null
+        return $user !== null
             && Gate::forUser($user)->allows('view', $ticket)
             && Gate::forUser($user)->allows('manage', $ticket);
-
-        abort_unless($isAuthorized, 403);
     }
 
     public function authorizeReply(Ticket $ticket, ?Authenticatable $user): void

@@ -7,8 +7,8 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
-use Padmission\Tickets\TicketPlugin;
 
 class TemporaryAttachmentUrlController
 {
@@ -21,14 +21,7 @@ class TemporaryAttachmentUrlController
             'filepath' => ['required', 'string', 'max:255'],
         ]);
 
-        // Remove global scopes to find the ticket and get its panel
-        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-        $tempTicket = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
-
-        // Get the plugin for this ticket's panel and verify against custom query
-        $panelPlugin = TicketPlugin::get($tempTicket->panel);
-        /** @var Ticket $ticketRecord */
-        $ticketRecord = $panelPlugin->getTicketQuery()->findOrFail($ticket);
+        $ticketRecord = resolve(ApiTicketResolver::class)->resolve($ticket, $request->user());
 
         app(TicketAuth::class)->authorizeTicketAccess($ticketRecord, $request->user());
 
