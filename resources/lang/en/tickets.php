@@ -269,10 +269,10 @@ return [
         'no_disposition' => 'No disposition',
         'save_metadata' => 'Save metadata',
         'no_messages' => 'No messages yet',
-        'closed_ticket_reply_error' => 'This ticket is already resolved.',
+        'closed_ticket_reply_error' => 'This ticket is already closed.',
         'filters' => [
             'open' => 'Open',
-            'closed' => 'Resolved',
+            'closed' => 'Closed',
             'all' => 'All',
         ],
     ],

@@ -138,3 +138,9 @@ it('tears its chat listeners down with Alpine\'s own destroy, not a $cleanup the
     Livewire::test(CopilotTicketPanel::class)->call('showCreateForm')->assertDontSeeHtml('$cleanup')->assertSeeHtml('destroy()');
     Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])->assertDontSeeHtml('$cleanup')->assertSeeHtml('destroy()');
 });
+
+it('names the tab of closed tickets as their status reads, Closed', function () {
+    Livewire::test(CopilotTicketPanel::class)
+        ->assertSeeText('Closed')
+        ->assertDontSeeText('Resolved');
+});

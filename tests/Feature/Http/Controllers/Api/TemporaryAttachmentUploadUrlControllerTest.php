@@ -251,7 +251,7 @@ it('refuses upload urls on a closed ticket', function () {
             'content_length' => '1024',
         ])
         ->assertUnprocessable()
-        ->assertExactJson(['message' => 'This ticket is already resolved.']);
+        ->assertExactJson(['message' => 'This ticket is already closed.']);
 
     $this->assertDatabaseCount(TicketAttachment::class, 0);
 });

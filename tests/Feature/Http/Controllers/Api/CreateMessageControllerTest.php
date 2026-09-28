@@ -180,7 +180,7 @@ it('refuses a reply to a closed ticket', function () {
             'content' => 'Is anyone there?',
         ])
         ->assertUnprocessable()
-        ->assertExactJson(['message' => 'This ticket is already resolved.']);
+        ->assertExactJson(['message' => 'This ticket is already closed.']);
 
     expect($ticket->ticketActivities()->where('type', ActivityType::Message)->exists())->toBeFalse();
 });
