@@ -182,7 +182,8 @@ it('forbids listing messages when the user cannot view the ticket even when mana
 });
 
 it('names the people an escalation\'s history mentions through the ticket\'s own panel, whatever panel reads it', function (array $headers) {
-    [$owner, $colleague] = User::factory()->count(2)->create();
+    $owner = User::factory()->create(['name' => 'Maria Lopez']);
+    $colleague = User::factory()->create(['name' => 'Tess Support']);
     $staff = User::factory()->create(['name' => 'Kevin McKee']);
     $stranger = User::factory()->create(['name' => 'Someone Else']);
 
