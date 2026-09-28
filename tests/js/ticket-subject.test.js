@@ -9,11 +9,47 @@ test("keeps a first message that fits whole", () => {
 
 test("cuts a longer message at the last whole word that fits, with an ellipsis", () => {
 	const subject = ticketSubject(
-		"<p>Recert rent is wrong for household 14. The rent after the 10/1 recert is $200 too high.</p>",
+		"<p>Recert rent is wrong for the household in unit 14 after the 10/1 recert.</p>",
 	);
 
-	assert.equal(subject, "Recert rent is wrong for household 14…");
+	assert.equal(subject, "Recert rent is wrong for the household…");
 	assert.ok(subject.length <= 40);
+});
+
+test("keeps a whole first sentence that fits, with its period and no ellipsis", () => {
+	assert.equal(
+		ticketSubject(
+			"<p>Recert rent is wrong for household 14. The rent after the 10/1 recert is $200 too high.</p>",
+		),
+		"Recert rent is wrong for household 14.",
+	);
+	assert.equal(
+		ticketSubject(
+			"<p>Why is the recert rent this high now? Nothing changed.</p>",
+		),
+		"Why is the recert rent this high now?",
+	);
+});
+
+test("keeps a sentence that ends exactly at the budget", () => {
+	assert.equal(
+		ticketSubject(`<p>${"a".repeat(35)} bbb. More text follows here.</p>`),
+		`${"a".repeat(35)} bbb.`,
+	);
+});
+
+test("keeps a last word that ends exactly at the budget", () => {
+	assert.equal(
+		ticketSubject(`<p>${"a".repeat(35)} bbbb more</p>`),
+		`${"a".repeat(35)} bbbb…`,
+	);
+});
+
+test("treats a trailing-off ellipsis as a cut, not a sentence end", () => {
+	assert.equal(
+		ticketSubject("<p>So the rent is... wrong again this month</p>", 20),
+		"So the rent is…",
+	);
 });
 
 test("keeps words in separate paragraphs apart", () => {
