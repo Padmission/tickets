@@ -1,5 +1,7 @@
 <?php
 
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Http\DataMappers\TicketMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
@@ -41,4 +43,14 @@ it('returns the latest message preview as plain text', function () {
 
     expect(TicketMapper::map($ticket->fresh())['latest_message'])
         ->toBe('Tom & Jerry <img src=x onerror=alert(1)>');
+});
+
+it('does not flag a closed ticket as needing the requester', function () {
+    (new TicketStatusSeeder)->run();
+
+    $waiting = Ticket::factory()->open()->create(['turn' => Turn::User]);
+    $closed = Ticket::factory()->closed()->create(['turn' => Turn::User]);
+
+    expect(TicketMapper::map($waiting)['needs_attention'])->toBeTrue()
+        ->and(TicketMapper::map($closed)['needs_attention'])->toBeFalse();
 });

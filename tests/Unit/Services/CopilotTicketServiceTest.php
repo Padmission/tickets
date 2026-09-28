@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Event;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -145,4 +146,49 @@ test('mark ticket seen never moves the pointer backwards', function () {
 
     expect($ticket->ticketUserStates()->where('user_id', $user->id)->first())
         ->last_seen_activity_id->toBe($hiddenActivity->id);
+});
+
+test('an escalation the user opened stays out of their pane list, unread count and lookup', function () {
+    Event::fake();
+
+    $user = User::factory()->create();
+    $padmission = User::factory()->create();
+    (new TicketStatusSeeder)->run();
+    $escalation = escalationFrom(attributes: ['submitter_id' => $user->id]);
+    Ticket::factory()->open()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $escalation->id,
+        'user_id' => $padmission->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+    ]);
+
+    $service = app(CopilotTicketService::class);
+
+    expect($service->visibleTickets($user, 'all'))->toBeEmpty()
+        ->and($service->unreadResponseTicketCount($user))->toBe(0)
+        ->and(fn () => $service->findVisibleTicket($user, $escalation->id))->toThrow(ModelNotFoundException::class);
+});
+
+test('a widget ticket filed into another panel stays in the pane list, unread count and lookup', function () {
+    Event::fake();
+
+    $user = User::factory()->create();
+    $supporter = User::factory()->create();
+    (new TicketStatusSeeder)->run();
+    $ticket = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $user->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $supporter->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+    ]);
+
+    $service = app(CopilotTicketService::class);
+
+    expect($service->visibleTickets($user)->modelKeys())->toBe([$ticket->id])
+        ->and($service->unreadResponseTicketCount($user))->toBe(1)
+        ->and($service->findVisibleTicket($user, $ticket->id)->is($ticket))->toBeTrue();
 });

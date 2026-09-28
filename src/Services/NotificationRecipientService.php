@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Services;
 
-use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -13,7 +12,9 @@ use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Events\TicketPriorityChangedEvent;
+use Padmission\Tickets\Events\TicketReopenedEvent;
 use Padmission\Tickets\Events\TicketStatusChangedEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -21,8 +22,12 @@ use Padmission\Tickets\TicketPlugin;
 class NotificationRecipientService
 {
     public function getNotificationRecipients(
-        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
+        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent|TicketReopenedEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
     ): Collection {
+        if ($event instanceof TicketHandedOverEvent) {
+            return $this->getHandOverRecipients($event);
+        }
+
         $eventName = $event::class;
         $triggerType = $this->determineTriggerType($event);
 
@@ -33,11 +38,8 @@ class NotificationRecipientService
 
         $recipients = collect();
 
-        if (
-            $event->ticket->submitter
-            && ($recipientFlag & NotificationRecipient::User->value) === NotificationRecipient::User->value
-        ) {
-            $recipients->push($event->ticket->submitter);
+        if (($recipientFlag & NotificationRecipient::User->value) === NotificationRecipient::User->value) {
+            $recipients->push($this->getSubmitter($event->ticket));
         }
         if (($recipientFlag & NotificationRecipient::Supporter->value) === NotificationRecipient::Supporter->value) {
             $assignee = $this->getAssignee($event->ticket);
@@ -53,43 +55,58 @@ class NotificationRecipientService
     }
 
     /*
-     * The assignee relation carries the acting panel's scopes. A ticket linked
-     * into another panel can be assigned to someone only that panel's scopes
-     * reveal (a cross-tenant support panel, say); seen from the acting panel
-     * the assignee vanishes and every fallback supporter is notified instead.
+     * Only the two people the escalation moved between hear about it; the
+     * other team learns of it from the history note like any other activity.
      */
-    private function getAssignee(Ticket $ticket): ?Authenticatable
+    private function getHandOverRecipients(TicketHandedOverEvent $event): Collection
     {
-        if (! $ticket->assignee_id) {
-            return null;
+        $ids = collect([$event->toId, $event->fromId])
+            ->filter()
+            ->reject(fn (int|string $id): bool => $event->actor !== null && (string) $id === (string) $event->actor->getAuthIdentifier())
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return collect();
         }
 
-        $relation = $ticket->assignee();
-        $modifier = $ticket->isNotInCurrentPanel()
-            ? $this->getPluginForPanel($ticket->panel)?->getRelationshipScopeModifier()
-            : null;
-
-        if ($modifier) {
-            $relation = app()->call($modifier, ['relation' => $relation, 'model' => 'assignee']);
-        }
-
-        return $relation->first();
+        return TicketPlugin::resolveUserModelClass()::query()
+            ->withoutGlobalScopes()
+            ->whereKey($ids->all())
+            ->get()
+            ->values();
     }
 
     /*
-     * A host may leave a panel's plugin unregistered in some processes, such as
-     * queue workers, and ticket events can fire there too.
+     * Found through the ticket's own panel, as the assignee is: a reply can
+     * come through the chat's API, where no panel lifts the sender's tenant
+     * scope from someone who escalated from another tenant.
      */
-    private function getPluginForPanel(?string $panelId): ?TicketPlugin
+    private function getSubmitter(Ticket $ticket): ?Authenticatable
     {
-        $panel = Filament::getPanels()[$panelId] ?? null;
-
-        if (! $panel?->hasPlugin(TicketPlugin::$id)) {
+        if (blank($ticket->submitter_id)) {
             return null;
         }
 
-        /** @var TicketPlugin */
-        return $panel->getPlugin(TicketPlugin::$id);
+        $relation = $ticket->submitter();
+        $modifier = $ticket->isNotInCurrentPanel()
+            ? TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier()
+            : null;
+
+        if ($modifier !== null) {
+            app()->call($modifier, ['relation' => $relation, 'model' => 'submitter']);
+        }
+
+        $submitter = $relation->first();
+
+        return $submitter instanceof Authenticatable ? $submitter : null;
+    }
+
+    private function getAssignee(Ticket $ticket): ?Authenticatable
+    {
+        $assignee = TicketAssignee::for($ticket);
+
+        return $assignee instanceof Authenticatable ? $assignee : null;
     }
 
     private function getFallbackSupporters(Ticket $ticket, ?Authenticatable $actor): Collection

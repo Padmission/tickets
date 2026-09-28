@@ -6,9 +6,10 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
-use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Services\TicketReopening;
 use Padmission\Tickets\TicketPlugin;
 
 class ListMessagesController
@@ -18,14 +19,7 @@ class ListMessagesController
 
     public function __invoke(Request $request, $ticket)
     {
-        // Remove global scopes to find the ticket and get its panel
-        $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
-
-        // Get the plugin for this ticket's panel and verify against custom query
-        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
-        /** @var Ticket $ticket */
-        $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
+        $ticket = resolve(ApiTicketResolver::class)->resolve($ticket, $request->user());
 
         resolve(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
 
@@ -35,8 +29,12 @@ class ListMessagesController
 
         return [
             'ticket' => [
+                'subject' => $ticket->subject,
                 'status' => $ticket->status->display_name,
                 'is_closed' => $ticket->isClosed,
+                'closed_at' => $ticket->closed_at?->toIso8601String(),
+                'reopen_choices' => resolve(TicketReopening::class)->choicesFor($ticket, $request->user()),
+                'reopen_window_days' => TicketPlugin::find($ticket->panel)?->getReopenWindowDays() ?? TicketPlugin::DEFAULT_REOPEN_WINDOW_DAYS,
             ],
             'messages' => $messages->values()->map(fn ($message) => TicketActivityMapper::map($message)),
         ];

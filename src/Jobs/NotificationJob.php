@@ -10,8 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Mpbarlow\LaravelQueueDebouncer\Traits\Debounceable;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
@@ -67,7 +69,7 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
 
         $record = $this->resolveModel();
 
-        if (! $record) {
+        if (! $record || ! $this->stillConcerns($user, $record)) {
             return;
         }
 
@@ -86,6 +88,25 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
         $model = $this->ticketClass;
 
         return $model::find($this->ticketKey);
+    }
+
+    /*
+     * Recipients were chosen when the event happened, and a debounced send
+     * comes minutes later: by then the ticket may be someone else's, or no
+     * longer theirs to see. A hand over decides for itself, since it goes to
+     * the person it was taken from.
+     */
+    protected function stillConcerns(Model $user, Ticket $record): bool
+    {
+        if ($this->event instanceof TicketHandedOverEvent || $record->isSubmittedBy($user)) {
+            return true;
+        }
+
+        if (filled($record->assignee_id) && (string) $record->assignee_id !== (string) $user->getKey()) {
+            return false;
+        }
+
+        return Gate::forUser($user)->allows('view', $record);
     }
 
     protected function sendNotification(Model $user, Ticket $record, string $notificationClass): void
@@ -115,7 +136,14 @@ class NotificationJob implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
-        return "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}-{$this->notificationType}";
+        $id = "notification-{$this->ticketClass}-{$this->ticketKey}-{$this->userId}-{$this->notificationType}";
+
+        // A take over and a hand back tell the same person different things, so neither may replace the other.
+        if ($this->event instanceof TicketHandedOverEvent) {
+            $id .= "-{$this->event->fromId}-{$this->event->toId}";
+        }
+
+        return $id;
     }
 
     public function getUserId(): string|int

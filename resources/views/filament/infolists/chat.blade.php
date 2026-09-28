@@ -1,6 +1,7 @@
 @php
     use Filament\Facades\Filament;
     use Filament\Support\Facades\FilamentAsset;
+    use Padmission\Tickets\Services\TicketAuth;
     use Padmission\Tickets\TicketPlugin;
 
     $config = TicketPlugin::get()->getChatWidgetConfig();
@@ -9,6 +10,9 @@
     $config->allowScreenshots(false);
 
     $primaryColor = $config->getPrimaryColor();
+
+    $canReply = resolve(TicketAuth::class)->canReply($this->record, Filament::auth()->user());
+    $isSubmitter = Filament::auth()->id() === $this->record->submitter_id;
 @endphp
 <div
     class="pad-ti-chat-wrapper"
@@ -40,15 +44,22 @@
         config="{{ $config->toJs() }}"
         scroll-threshold="100"
         polling-interval="10000"
-        has-elevated-rights="true"
+        has-elevated-rights="{{ $isSubmitter ? 'false' : 'true' }}"
+        placeholder="{{ $placeholder ?? __('padmission-tickets::chat.chat.placeholder') }}"
+        closed-empty-message="{{ $closedEmptyMessage ?? '' }}"
+        can-reply="{{ $canReply ? 'true' : 'false' }}"
+        keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
+        timezone="{{ TicketPlugin::get()->getDisplayTimezone() }}"
     ></chat-component>
 
     <script>
         const chat = document.getElementById('supporter-chat')
 
         chat.addEventListener('message-sent', (event) => {
-            Livewire.dispatch('message-sent');
+            Livewire.dispatch('message-sent', { reopened: event.detail?.reopened === true });
         })
+
+        window.addEventListener('ticket-chat-changed', (event) => String(event.detail?.ticketId) === chat.getAttribute('ticket-id') && chat.refreshTicket?.(event.detail.canReply))
     </script>
 
     <script

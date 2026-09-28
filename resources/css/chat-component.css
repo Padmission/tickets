@@ -56,8 +56,14 @@
 	height: 100%;
 }
 
+/* A dialog stays opaque where a host makes the chat's surface transparent. */
+:host {
+	--dialog-bg: #ffffff;
+}
+
 /* Dark mode - Filament uses .dark class */
 :host(.dark) {
+	--dialog-bg: #1e293b;
 	--message-supporter-bg: var(--color-primary);
 	--message-supporter-text: white;
 	--message-user-bg: #334155;
@@ -147,6 +153,14 @@
 
 	&::-webkit-scrollbar-thumb:hover {
 		background-color: var(--scrollbar-thumb-hover-bg);
+	}
+
+	& > * {
+		transition: opacity 150ms ease-out;
+	}
+
+	& > [data-cut-off] {
+		opacity: 0;
 	}
 }
 
@@ -452,7 +466,9 @@
 		}
 
 		@container (max-width: 400px) {
-			&:nth-child(n + 3):not([data-chat-submit]) {
+			&:nth-child(n + 3):not([data-chat-submit]):not(
+					[data-chat-submit-keep-waiting]
+				) {
 				display: none;
 			}
 		}
@@ -477,6 +493,32 @@
 			background-color: var(--color-gray-200);
 			transform: translateY(-1px);
 		}
+	}
+
+	/* Secondary to Send: outlined and quiet, so plain Send stays the obvious choice. */
+	[data-chat-submit-keep-waiting] {
+		--button-bg: transparent;
+
+		margin-left: auto;
+		white-space: nowrap;
+		font-weight: 500;
+		color: var(--color-text-secondary);
+		box-shadow: inset 0 0 0 1px var(--color-border);
+
+		&:focus-visible,
+		&:hover {
+			background-color: rgba(127, 127, 127, 0.12);
+			color: var(--color-text-primary);
+			box-shadow: inset 0 0 0 1px var(--color-border);
+		}
+
+		& > span {
+			padding-inline: 0.375rem;
+		}
+	}
+
+	[data-chat-submit-keep-waiting] + [data-chat-submit] {
+		margin-left: 0.5rem;
 	}
 
 	[data-chat-submit] {
@@ -785,5 +827,62 @@ dialog.preview {
 
 	blockquote {
 		border-left-color: var(--color-gray-600);
+	}
+}
+
+.composer__closed {
+	margin: -0.25em 0 0.75em;
+	color: var(--color-text-secondary);
+	font-size: 0.875em;
+}
+
+dialog.reopen {
+	max-width: min(28rem, calc(100vw - 2em));
+	padding: 1.25em;
+	border: 1px solid var(--color-border);
+	border-radius: 0.75em;
+	background-color: var(--dialog-bg);
+	color: var(--color-text-primary);
+	box-shadow: 0 10px 25px rgba(0 0 0 / 0.15);
+
+	&::backdrop {
+		background-color: rgba(0 0 0 / 0.4);
+	}
+
+	.reopen__heading {
+		margin: 0 0 0.5em;
+		font-size: 1em;
+		font-weight: 600;
+	}
+
+	.reopen__body {
+		margin: 0 0 1.25em;
+		color: var(--color-text-secondary);
+		font-size: 0.875em;
+	}
+
+	.reopen__actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: end;
+		gap: 0.5em;
+	}
+
+	.reopen__button {
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		padding: 0.5em 0.875em;
+		cursor: pointer;
+		background-color: var(--dialog-bg);
+		color: var(--color-text-primary);
+		font: inherit;
+		font-size: 0.875em;
+		font-weight: 500;
+	}
+
+	.reopen__button--primary {
+		border-color: var(--color-primary);
+		background-color: var(--color-primary);
+		color: #ffffff;
 	}
 }

@@ -1,0 +1,107 @@
+<?php
+
+use Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Tests\User;
+
+it('requires login ', function () {
+    $this
+        ->postJson(route('padmission-tickets::api.store'), [
+            'subject' => 'Some subject',
+        ])
+        ->assertUnauthorized();
+});
+
+it('requires create permission', function () {
+    Gate::before(fn (User $user, string $ability) => $ability === 'create' ? false : null);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $this
+        ->postJson(route('padmission-tickets::api.store'), [
+            'subject' => 'Some subject',
+        ])
+        ->assertForbidden();
+});
+
+it('creates a new ticket', function () {
+    $user = User::factory()->create(['email' => 'test@example.com']);
+
+    $this->actingAs($user);
+
+    $status = TicketStatus::factory()->create();
+    $priority = TicketPriority::factory()->create();
+
+    $resp = $this
+        ->postJson(route('padmission-tickets::api.store'), [
+            'subject' => 'Some subject',
+        ])
+        ->assertStatus(200);
+
+    $ticketId = $resp->json('id');
+
+    $ticket = Ticket::findOrFail($ticketId);
+
+    expect($ticket)
+        ->subject->toBe('Some subject')
+        ->turn->toBe(Turn::User)
+        ->submitter_id->toBe($user->id)
+        ->status_id->toBe($status->id)
+        ->priority_id->toBe($priority->id);
+});
+
+it('stores the subject as the plain text that was typed, so it reads and searches as typed', function (string $sent, string $stored) {
+    $this->actingAs(User::factory()->create());
+    TicketStatus::factory()->create();
+    TicketPriority::factory()->create();
+
+    $id = $this
+        ->postJson(route('padmission-tickets::api.store'), ['subject' => $sent])
+        ->assertOk()
+        ->assertJsonPath('subject', $stored)
+        ->json('id');
+
+    expect(Ticket::findOrFail($id)->getRawOriginal('subject'))->toBe($stored)
+        ->and(Ticket::query()->where('subject', $stored)->pluck('id')->all())->toBe([$id]);
+})->with([
+    'an apostrophe' => ["Household 14's recert rent is too high…", "Household 14's recert rent is too high…"],
+    'an ampersand' => ['Rent & utilities', 'Rent & utilities'],
+    'angle brackets' => ['Rent < last year > this year', 'Rent < last year > this year'],
+    'double quotes' => ['The "utility" allowance', 'The "utility" allowance'],
+    'a less-than sign that starts no tag' => ['Rent <200 since March', 'Rent <200 since March'],
+    'escaped, as older widget builds send it' => ['Household 14&#039;s rent &amp; &quot;utility&quot; &lt; last year', 'Household 14\'s rent & "utility" < last year'],
+]);
+
+it('refuses a subject carrying markup, however it is sent', function (string $sent) {
+    $this->actingAs(User::factory()->create());
+    TicketStatus::factory()->create();
+    TicketPriority::factory()->create();
+
+    $this->postJson(route('padmission-tickets::api.store'), ['subject' => $sent])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['subject' => 'The subject can\'t contain HTML or code.']);
+
+    expect(Ticket::query()->count())->toBe(0);
+})->with([
+    'a tag' => ['<b>Rent</b> is wrong'],
+    'an event handler in a tag' => ['Rent <img src=x onerror=alert(1)>'],
+    'a script URL' => ['Open javascript:alert(1)'],
+    'a tag escaped, as older widget builds send it' => ['&lt;script&gt;alert(1)&lt;/script&gt;'],
+]);
+
+it('requires a subject', function () {
+    $user = User::factory()->create(['email' => 'test@example.com']);
+
+    $this->actingAs($user);
+
+    $this
+        ->postJson(route('padmission-tickets::api.store'), [
+            'subject' => '',
+        ])
+        ->assertStatus(422);
+});

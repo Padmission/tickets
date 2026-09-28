@@ -119,41 +119,57 @@ final class ChatWidgetConfig
     }
 
     /**
-     * Message that is shown to the user when he opens a chat.
+     * Message that is shown to the user when they open a chat. A closure may
+     * return null to use the package default.
      */
-    public function introMessage(string|Htmlable|Closure $message): self
+    public function introMessage(string|Htmlable|Closure|null $message): self
     {
         $this->introMessage = $message;
 
         return $this;
     }
 
-    public function getIntroMessage(): ?string
+    public function getIntroMessage(): string
     {
-        $value = value($this->introMessage);
+        return $this->resolveMessage($this->introMessage) ?? self::defaultIntroMessage();
+    }
 
-        return $value instanceof Htmlable
-            ? $value->toHtml()
-            : $value;
+    /*
+     * What the widget shows when no intro message is set, for a settings form
+     * to show as the message an empty field uses.
+     */
+    public static function defaultIntroMessage(): string
+    {
+        return __('padmission-tickets::chat.defaults.intro_message');
     }
 
     /**
-     * Message that is sent after users send their first message.
+     * Message that is sent after users send their first message. A closure
+     * may return null to use the package default.
      */
-    public function autoResponse(string|Htmlable|Closure $response): self
+    public function autoResponse(string|Htmlable|Closure|null $response): self
     {
         $this->autoResponse = $response;
 
         return $this;
     }
 
-    public function getAutoResponse(): ?string
+    public function getAutoResponse(): string
     {
-        $value = value($this->autoResponse);
+        return $this->resolveMessage($this->autoResponse) ?? self::defaultAutoResponse();
+    }
 
-        return $value instanceof Htmlable
-            ? $value->toHtml()
-            : $value;
+    public static function defaultAutoResponse(): string
+    {
+        return __('padmission-tickets::chat.defaults.auto_response');
+    }
+
+    protected function resolveMessage(string|Htmlable|Closure|null $message): ?string
+    {
+        $value = value($message);
+        $value = $value instanceof Htmlable ? $value->toHtml() : $value;
+
+        return filled($value) ? $value : null;
     }
 
     public function primaryColor(string|array|Closure $color): self

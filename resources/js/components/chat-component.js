@@ -7,6 +7,18 @@ import fetchJson from "./helpers/fetch-json";
 import BaseElement from "./helpers/base-element";
 import render from "./helpers/render";
 import humanFileSize from "./helpers/human-file-size.js";
+import isCutOffAtTop from "./helpers/cut-off-at-top.js";
+import formatMessageTime from "./helpers/format-message-time.js";
+import ticketSubject from "./helpers/ticket-subject.js";
+import escapeHtml from "./helpers/escape-html.js";
+import lockScrollWhileOpen from "./helpers/scroll-lock.js";
+import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
+import isComposerShown from "./helpers/composer-shown.js";
+import reopenDialog, {
+	NEW_TICKET,
+	REOPEN,
+	closedTicketLine,
+} from "./helpers/reopen-dialog.js";
 import config from "./helpers/config.js";
 import __ from "./helpers/trans.js";
 
@@ -25,6 +37,12 @@ customElements.define(
 
 			this.ticketId = null;
 			this.ticket = null;
+			this.seenOpen = false;
+			this.loadedSubject = null;
+
+			this.reopenChoices = [];
+			this.reopenWindowDays = 30;
+			this.followsUp = null;
 
 			this.messages = [];
 			this.attachments = [];
@@ -37,6 +55,7 @@ customElements.define(
 			this.messageContent = "";
 			this.messageObserver = null;
 			this.messageListObserver = null;
+			this.messageListResizeObserver = null;
 
 			this.isNearBottom = true;
 			this.dropIndex = 0;
@@ -66,6 +85,10 @@ customElements.define(
 				this.messageListObserver.disconnect();
 			}
 
+			if (this.messageListResizeObserver) {
+				this.messageListResizeObserver.disconnect();
+			}
+
 			// Flush pending mark-seen call before disconnecting
 			if (this.markSeenDebounceTimer) {
 				clearTimeout(this.markSeenDebounceTimer);
@@ -82,12 +105,6 @@ customElements.define(
 			);
 			this.lockTurnCheckbox = node.querySelector("[data-chat-lock-turn]");
 
-			node
-				.querySelector('[formmethod="dialog"]')
-				.addEventListener("click", (event) =>
-					document.documentElement.classList.remove("has-dialog-open"),
-				);
-
 			this.initNearBottomTracking();
 
 			// Event listeners
@@ -95,10 +112,17 @@ customElements.define(
 				this.scrollToBottom(),
 			);
 
+			if (this.canReply === "false") {
+				node.querySelector("[data-composer]").style.display = "none";
+			}
+
 			node
 				.querySelector("[data-composer]")
 				.addEventListener("submit", (event) => {
-					this.sendMessage();
+					this.sendMessage(
+						event.submitter?.hasAttribute("data-chat-submit-keep-waiting") ??
+							false,
+					);
 					event.preventDefault();
 				});
 
@@ -138,7 +162,25 @@ customElements.define(
 				this.scrollToBottomBtn.style.display = this.isNearBottom
 					? "none"
 					: "flex";
+
+				this.hideMessagesCutOffAtTop();
 			});
+
+			this.messageListResizeObserver = new ResizeObserver(() =>
+				this.hideMessagesCutOffAtTop(),
+			);
+			this.messageListResizeObserver.observe(this.messagesElement);
+		}
+
+		hideMessagesCutOffAtTop() {
+			const list = this.messagesElement.getBoundingClientRect();
+
+			for (const item of this.messagesElement.children) {
+				item.toggleAttribute(
+					"data-cut-off",
+					isCutOffAtTop(item.getBoundingClientRect(), list.top, list.height),
+				);
+			}
 		}
 
 		initTipTapEditor() {
@@ -149,7 +191,7 @@ customElements.define(
 				extensions: [
 					StarterKit,
 					Placeholder.configure({
-						placeholder: "Start typing …",
+						placeholder: this.placeholder || __("chat.placeholder"),
 					}),
 					Link.configure({
 						openOnClick: false,
@@ -181,7 +223,47 @@ customElements.define(
 				const ticket = data.ticket;
 				const messages = data.messages;
 
+				if (ticket.subject && ticket.subject !== this.loadedSubject) {
+					this.loadedSubject = ticket.subject;
+					this.dispatchEvent(
+						new CustomEvent("ticket-loaded", {
+							detail: { subject: ticket.subject },
+						}),
+					);
+				}
+
+				this.ticket = ticket;
+				this.reopenChoices = ticket.reopen_choices ?? [];
+				this.reopenWindowDays =
+					ticket.reopen_window_days ?? this.reopenWindowDays;
+				this.showTicketState(ticket);
+
+				if (ticket.is_closed) {
+					// Closed by someone else while this chat was open, so the page around it can catch up.
+					if (this.seenOpen) {
+						this.seenOpen = false;
+						this.dispatchEvent(new CustomEvent("ticket-closed"));
+					}
+				} else {
+					this.seenOpen = true;
+				}
+
 				if (messages.length === 0) {
+					if (
+						ticket.is_closed &&
+						this.closedEmptyMessage &&
+						this.messages.length === 0
+					) {
+						this.renderMessages([
+							{
+								id: "closed-empty",
+								content: this.closedEmptyMessage,
+								side: "system",
+								created_at: null,
+							},
+						]);
+					}
+
 					return;
 				}
 
@@ -196,11 +278,6 @@ customElements.define(
 
 				if (this.lastSeenMessageId === 0) {
 					this.lastSeenMessageId = newestMessageId;
-				}
-
-				if (ticket.is_closed) {
-					this.rootNode().querySelector("[data-composer]").style.display =
-						"none";
 				}
 
 				this.ticket = ticket;
@@ -254,61 +331,16 @@ customElements.define(
 
 				const messageDate = new Date(message.created_at);
 				const hasDateChanged =
-					lastDate === true || formatter(lastDate) !== formatter(messageDate);
-				const absoluteDate = messageDate.toLocaleTimeString([], {
-					hour: "2-digit",
-					minute: "2-digit",
-				});
+					Boolean(message.created_at) &&
+					(lastDate === true || formatter(lastDate) !== formatter(messageDate));
+				const absoluteDate = formatMessageTime(messageDate, this.timezone);
 
-				// biome-ignore format: preserve template formatting
-				const renderedHtml = render(`
-                    ${
-                        hasDateChanged
-                            ? ` <time datetime="${absoluteDate}" class="message-date">${absoluteDate}</time>`
-                            : ""
-                    }
-
-                    <div
-                        class="message"
-                        data-side="${message.side}"
-                        data-message-id="${message.id}"
-                    >
-                        <div class="message__content">
-                            <div class="markdown">
-                                ${message.content || ''}
-                            </div>
-
-                            ${message.attachments ? `
-                                <div class="message__attachments">
-                                    ${message.attachments?.map((attachment) =>
-                                        `
-                                            <button
-                                                class="attachment"
-                                                data-preview="${attachment.filepath}"
-                                                data-preview-type="${attachment.type}"
-                                                target="_blank"
-                                            >
-                                                ${
-                                                    attachment.type === 'file'
-                                                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>'
-                                                        : ''
-                                                }
-                                                ${
-                                                    attachment.type === 'image'
-                                                        ? `<img src="${attachment.preview_url}">`
-                                                        : `<span>${attachment.filename}</span>`
-                                                }
-                                            </button>
-                                        `
-                                        ).join('') ?? ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div class="message__sender">
-                            ${message.user_name}
-                        </div>
-                    </div>
-                `);
+				const renderedHtml = render(
+					messageHtml(message, {
+						dateChanged: hasDateChanged,
+						date: absoluteDate,
+					}),
+				);
 
 				renderedHtml.querySelectorAll("[data-preview]").forEach((el) =>
 					el.addEventListener("click", async (event) => {
@@ -337,12 +369,14 @@ customElements.define(
 
 						const previewEl =
 							type === "image"
-								? render(`<img src="${temporaryUrl.url}" alt="">`)
-								: render(`<video src="${temporaryUrl.url}" controls>`);
+								? render(`<img src="${escapeHtml(temporaryUrl.url)}" alt="">`)
+								: render(
+										`<video src="${escapeHtml(temporaryUrl.url)}" controls>`,
+									);
 
 						dialogContent.replaceChildren(previewEl);
 						dialog.showModal();
-						document.documentElement.classList.add("has-open-dialog");
+						lockScrollWhileOpen(dialog, document.documentElement);
 					}),
 				);
 
@@ -351,6 +385,114 @@ customElements.define(
 			});
 
 			this.observeMessages();
+			this.hideMessagesCutOffAtTop();
+		}
+
+		showTicketState(ticket) {
+			this.rootNode().querySelector("[data-composer]").style.display =
+				isComposerShown(
+					this.canReply,
+					ticket?.is_closed ?? false,
+					this.reopenChoices,
+				)
+					? ""
+					: "none";
+
+			const line = this.rootNode().querySelector("[data-chat-closed-line]");
+			const text = ticket?.is_closed
+				? closedTicketLine(
+						ticket.closed_at,
+						undefined,
+						this.timezone || undefined,
+					)
+				: "";
+
+			line.textContent = text;
+			line.hidden = text === "";
+		}
+
+		// Send on a closed ticket asks first what it should do: reopen the ticket, start a new
+		// one that links back, or neither, keeping the typed message.
+		askBeforeSendingOnClosedTicket(keepWaiting) {
+			const model = reopenDialog(this.reopenChoices, this.reopenWindowDays);
+
+			if (!model) {
+				return;
+			}
+
+			const dialog = this.rootNode().querySelector("[data-reopen-dialog]");
+
+			dialog.querySelector("[data-reopen-heading]").textContent = model.heading;
+			dialog.querySelector("[data-reopen-body]").textContent = model.body;
+
+			const actions = dialog.querySelector("[data-reopen-actions]");
+
+			actions.replaceChildren(
+				...model.buttons.map((button) => {
+					const element = document.createElement("button");
+
+					element.type = "button";
+					element.textContent = button.label;
+					element.dataset.reopenChoice = button.choice;
+					element.className = button.primary
+						? "reopen__button reopen__button--primary"
+						: "reopen__button";
+					element.addEventListener("click", () => {
+						dialog.close();
+
+						if (button.choice === REOPEN) {
+							this.sendMessage(keepWaiting, { reopen: true });
+						} else if (button.choice === NEW_TICKET) {
+							this.startNewTicket();
+						}
+					});
+
+					return element;
+				}),
+			);
+
+			dialog.showModal();
+			lockScrollWhileOpen(dialog, document.documentElement);
+		}
+
+		// The typed message opens a new ticket that follows up this one, shown in its place.
+		async startNewTicket() {
+			this.followsUp = this.ticketId;
+			this.stopPolling();
+
+			this.ticketId = null;
+			this.ticket = null;
+			this.reopenChoices = [];
+			this.messages = [];
+			this.lastMessageId = 0;
+			this.lastSeenMessageId = 0;
+			this.lastTimestamp = null;
+			this.seenOpen = false;
+			this.loadedSubject = null;
+			this.messagesElement.replaceChildren();
+			this.showTicketState(null);
+
+			await this.sendMessage();
+
+			this.followsUp = null;
+
+			// The new ticket opens with its link back and intro, written before the message, so its
+			// whole history is read rather than only what the send returned.
+			if (this.ticketId) {
+				this.messages = [];
+				this.lastMessageId = 0;
+				this.messagesElement.replaceChildren();
+				await this.loadMessages();
+				this.scrollToBottom();
+			}
+		}
+
+		// The page this chat sits on calls it after an action that can change whether the viewer
+		// may reply or what the conversation holds, rather than leave it to the next poll.
+		refreshTicket(canReply) {
+			this.canReply = canReply ? "true" : "false";
+
+			return this.loadMessages();
 		}
 
 		startPolling() {
@@ -636,30 +778,11 @@ customElements.define(
 			// biome-ignore format: preserve template formatting
 			const node = render(`
                 <div class="attachments">
-                    ${this.attachments.map((attachment, index) => `
-                        <div class="attachment">
-                            <button
-                                class="button-icon"
-                                @click="removeAttachment"
-                                data-index="${index}"
-                            >
-                                <span class="sr-only">Remove</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-                            </button>
-
-                            ${
-                                attachment.type === 'file'
-                                    ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>'
-                                    : ''
-                            }
-
-                            ${
-                                attachment.type.startsWith('image/')
-                                    ? `<img src="${URL.createObjectURL(attachment)}">`
-                                    : `<span>${attachment.name}</span>`
-                            }
-                        </div>
-                    `,).join("")}
+                    ${this.attachments.map((attachment, index) => pendingAttachmentHtml(
+                        attachment,
+                        index,
+                        attachment.type.startsWith('image/') ? URL.createObjectURL(attachment) : null,
+                    )).join("")}
                 </div>
             `);
 
@@ -745,10 +868,8 @@ customElements.define(
 		}
 
 		async createTicket() {
-			const subject = this.messageContent
-				.trim()
-				.replace(/(<([^>]+)>)/gi, "") // Strip HTML tags
-				.substring(0, 40);
+			const subject =
+				ticketSubject(this.messageContent) || __("chat.default_subject");
 
 			const url = window.location.origin + window.location.pathname;
 
@@ -757,24 +878,32 @@ customElements.define(
 				{
 					subject,
 					url,
+					...(this.followsUp ? { follows_up: this.followsUp } : {}),
 				},
 				"POST",
 			);
 
+			this.setAttribute("ticket-id", data.id);
 			this.dispatch("ticket-created", data);
 			this.startPolling();
 
 			return data.id;
 		}
 
-		async sendMessage() {
-			const lockTurn = this.lockTurnCheckbox?.checked || false;
+		async sendMessage(keepWaiting = false, { reopen = false } = {}) {
+			const lockTurn = keepWaiting || this.lockTurnCheckbox?.checked || false;
 
 			if (!this.messageContent.trim() && this.attachments.length === 0) {
 				return;
 			}
 
 			if (this.isSending) {
+				return;
+			}
+
+			if (this.ticketId && this.ticket?.is_closed && !reopen) {
+				this.askBeforeSendingOnClosedTicket(keepWaiting);
+
 				return;
 			}
 
@@ -794,9 +923,14 @@ customElements.define(
 						content: this.messageContent || "",
 						lock_turn: lockTurn,
 						attachment_ids: attachment_ids,
+						...(reopen ? { reopen: true } : {}),
 					},
 					"POST",
 				);
+
+				if (reopen) {
+					await this.loadMessages();
+				}
 
 				// Clear the editor
 				this.messageContent = "";
@@ -812,19 +946,35 @@ customElements.define(
 				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
-				this.dispatchEvent(new CustomEvent("message-sent"));
+				this.dispatchEvent(
+					new CustomEvent("message-sent", { detail: { reopened: reopen } }),
+				);
 			} catch (error) {
 				console.log("Sending failed", error);
-				this.setError(__("chat.error"));
+				this.setError((await this.responseMessage(error)) || __("chat.error"));
 			}
 
 			this.setIsSending(false);
 		}
 
+		async responseMessage(error) {
+			const status = error.response?.status ?? 0;
+
+			if (status < 400 || status >= 500) {
+				return null;
+			}
+
+			try {
+				return (await error.response.json())?.message || null;
+			} catch (e) {
+				return null;
+			}
+		}
+
 		setError(message) {
 			const el = this.rootNode().querySelector("[data-chat-error]");
 
-			el.innerHTML = message;
+			el.textContent = message;
 			el.removeAttribute("hidden");
 		}
 
@@ -895,7 +1045,7 @@ customElements.define(
                         data-droparea
                         @drop="handleDroppedFiles"
                     >
-                        <span>${__('chat.droparea')}</span>
+                        <span>${escapeHtml(__('chat.droparea'))}</span>
                     </div>
 
                     <div class="message-list" data-chat-messages>
@@ -907,7 +1057,7 @@ customElements.define(
                             class="scroll-to-bottom"
                             data-chat-scroll-to-bottom
                         >
-                            <span class="chat__badge">${__('chat.new_messages')}</span>
+                            <span class="chat__badge">${escapeHtml(__('chat.new_messages'))}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -916,6 +1066,7 @@ customElements.define(
                     </div>
 
                     <form class="composer" data-composer style="position: relative;">
+                       <p hidden class="composer__closed" data-chat-closed-line></p>
                        <div hidden class="composer__error" data-chat-error>Something went wrong</div>
 
                         <div class="composer__message">
@@ -940,7 +1091,7 @@ customElements.define(
                                         style="display: none;"
                                     >
 
-                                    <span class="sr-only">${__('chat.add_attachments')}</span>
+                                    <span class="sr-only">${escapeHtml(__('chat.add_attachments'))}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip"><path d="M13.234 20.252 21 12.3"/><path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486"/></svg>
                                 </label>
                             `: ''}
@@ -951,7 +1102,7 @@ customElements.define(
                                     class="button button-icon"
                                     @click="takeScreenshot"
                                 >
-                                    <span class="sr-only">${__('chat.screenshot.capture')}</span>
+                                    <span class="sr-only">${escapeHtml(__('chat.screenshot.capture'))}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
                                 </button>
                             `: ''}
@@ -961,7 +1112,7 @@ customElements.define(
                                 type="button"
                                 @click="toggleBold"
                             >
-                                <span class="sr-only">${__('chat.bold')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.bold'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bold-icon lucide-bold"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg>
                             </button>
 
@@ -970,7 +1121,7 @@ customElements.define(
                                 type="button"
                                 @click="setLink"
                             >
-                                <span class="sr-only">${__('chat.link')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.link'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                             </button>
 
@@ -979,7 +1130,7 @@ customElements.define(
                                 type="button"
                                 @click="toggleList"
                             >
-                                <span class="sr-only">${__('chat.unordered_list')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.unordered_list'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>
                             </button>
 
@@ -988,9 +1139,23 @@ customElements.define(
                                 type="button"
                                 @click="toggleOrderedList"
                             >
-                                <span class="sr-only">${__('chat.ordered_list')}</span>
+                                <span class="sr-only">${escapeHtml(__('chat.ordered_list'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><path d="M10 12h11"></path><path d="M10 18h11"></path><path d="M10 6h11"></path><path d="M4 10h2"></path><path d="M4 6h1v4"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
                             </button>
+
+                            ${
+                                this.hasElevatedRights === "true" && this.keepWaitingStyle === "button"
+                                    ? `
+                                        <button
+                                            type="submit"
+                                            data-chat-submit-keep-waiting
+                                            title="${escapeHtml(__('chat.send_keep_waiting_help'))}"
+                                        >
+                                            <span>${escapeHtml(__('chat.send_keep_waiting'))}</span>
+                                        </button>
+                                    `
+                                    : ""
+                            }
 
                             <button type="submit" data-chat-submit>
                                 <svg class="loading-indicator" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -998,18 +1163,19 @@ customElements.define(
                                     <path d="M2 12C2 6.47715 6.47715 2 12 2V5C8.13401 5 5 8.13401 5 12H2Z" fill="currentColor"></path>
                                 </svg>
 
-                                <span>${__('chat.send')}</span>
+                                <span>${escapeHtml(__('chat.send'))}</span>
                             </button>
                         </div>
 
                         ${
-                            this.hasElevatedRights === "true"
+                            this.hasElevatedRights === "true" && this.keepWaitingStyle !== "button"
                                 ? `
                                     <div class="composer__options">
-                                        <label>
-                                            <input type="checkbox" data-chat-lock-turn />
-                                            ${__('chat.lock_turn')}
+                                        <label title="${escapeHtml(__('chat.lock_turn_help'))}">
+                                            <input type="checkbox" data-chat-lock-turn aria-describedby="chat-lock-turn-help" />
+                                            ${escapeHtml(__('chat.lock_turn'))}
                                         </label>
+                                        <span id="chat-lock-turn-help" class="sr-only">${escapeHtml(__('chat.lock_turn_help'))}</span>
                                     </div>
                                 `
                                 : ""
@@ -1027,7 +1193,7 @@ customElements.define(
                             class="button-icon"
                             formmethod="dialog"
                         >
-                            <span class="sr-only">${__('close_modal')}</span>
+                            <span class="sr-only">${escapeHtml(__('close_modal'))}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                          </button>
                     </form>
@@ -1035,6 +1201,12 @@ customElements.define(
                     <div class="preview__inner" data-preview-popup-content>
 
                     </div>
+                </dialog>
+
+                <dialog class="reopen" closedby="any" data-reopen-dialog aria-labelledby="reopen-heading">
+                    <h2 class="reopen__heading" id="reopen-heading" data-reopen-heading></h2>
+                    <p class="reopen__body" data-reopen-body></p>
+                    <div class="reopen__actions" data-reopen-actions></div>
                 </dialog>
             `);
 		}

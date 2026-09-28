@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\Enums\ActivityType;
@@ -54,6 +56,31 @@ test('notification listener correctly maps event types to notification types', f
         ->getNotificationType($createdEvent)->toBe('created')
         ->getNotificationType($assignedEvent)->toBe('assigned')
         ->getNotificationType($closedEvent)->toBe('closed');
+});
+
+test('notifications are handled after the database commit', function () {
+    expect(TicketNotificationListener::class)->toImplement(ShouldHandleEventsAfterCommit::class);
+});
+
+test('a notification raised inside a transaction waits for the commit', function () {
+    $ticket = Ticket::factory()->open()->create();
+    $handled = 0;
+
+    $this->mock(NotificationRecipientService::class)
+        ->shouldReceive('getNotificationRecipients')
+        ->andReturnUsing(function () use (&$handled) {
+            $handled++;
+
+            return collect();
+        });
+
+    DB::transaction(function () use ($ticket, &$handled) {
+        event(new TicketAssignedEvent($ticket));
+
+        expect($handled)->toBe(0);
+    });
+
+    expect($handled)->toBe(1);
 });
 
 describe('TicketNotificationListener Unit Tests', function () {

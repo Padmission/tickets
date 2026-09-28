@@ -2,19 +2,28 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Lang;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Services\TicketAssignee;
+use Padmission\Tickets\Support\ConversationStateQuery;
+use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\TicketPlugin;
 
 class ListTickets extends ListRecords
 {
+    use ExplainsStaleEscalationActions;
+
     public function updatedActiveTab(): void
     {
         // Refresh the page so that showing/hiding filters works properly.
@@ -22,6 +31,20 @@ class ListTickets extends ListRecords
     }
 
     protected static string $resource = TicketResource::class;
+
+    /*
+     * A row or bulk action can change who a ticket waits on, or remove it,
+     * which moves it between the cards above the list and can change the
+     * sidebar badge. Both are separate components, so the table redrawing
+     * leaves them as they were.
+     */
+    protected function afterActionCalled(Action $action): void
+    {
+        parent::afterActionCalled($action);
+
+        $this->dispatch('refresh-ticket-stats');
+        $this->dispatch('refresh-sidebar');
+    }
 
     public function getHeaderWidgetsColumns(): int|array
     {
@@ -36,7 +59,35 @@ class ListTickets extends ListRecords
             $query->tap(new CurrentPanelScope);
         }
 
-        return TicketResource::scopeListQueryToSupporterOrSubmitter($query);
+        $viewer = ConversationViewer::current();
+
+        return $this->withRowRelations(ConversationStateQuery::apply(TicketResource::scopeListQueryToSupporterOrSubmitter($query), $viewer), $viewer);
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected function withRowRelations(Builder $query, ConversationViewer $viewer): Builder
+    {
+        $tenant = config('padmission-tickets.tenancy.enabled') ? ',tenant_id' : '';
+
+        if (str_contains((string) $this->activeTab, 'linked') || $viewer->receivesEscalations) {
+            return $query->with([
+                "childTickets:id,linked_ticket_id,submitter_id,submitter_data,closed_at,panel{$tenant}",
+                'childTickets.submitter',
+                'submitter',
+            ]);
+        }
+
+        if (! $viewer->isSupporter) {
+            return $query;
+        }
+
+        return $query->with([
+            "parentTicket:id,panel,turn,closed_at,closed_by,submitter_id,assignee_id,deleted_at{$tenant}",
+            'parentTicket.submitter',
+        ]);
     }
 
     protected function activeTabIsInvalid(): bool
@@ -47,11 +98,119 @@ class ListTickets extends ListRecords
 
     protected function getHeaderWidgets(): array
     {
+        // The counts cover every ticket in the panel, while someone who only
+        // submits tickets is listed just their own.
+        if (! ConversationViewer::current()->isSupporter) {
+            return [];
+        }
+
         return [
             OpenTicketsWidget::class,
             OpenSupporterTickets::class,
             TicketCloseTimeWidget::class,
         ];
+    }
+
+    /**
+     * @var array{linked: int, my_linked: int}|null
+     */
+    protected ?array $openEscalatedCounts = null;
+
+    /**
+     * Both escalated tabs are counted in one query from the linked tab's own
+     * query, so the badges match the lists. The result lives on this request's
+     * component instance, so it is never stale on the next one.
+     *
+     * @return array{linked: int, my_linked: int}
+     */
+    protected function openEscalatedCounts(): array
+    {
+        if ($this->openEscalatedCounts !== null) {
+            return $this->openEscalatedCounts;
+        }
+
+        $query = $this->getCachedTabs()['linked']
+            ->modifyQuery(TicketResource::getEloquentQuery())
+            ->open();
+
+        $counts = $query
+            ->toBase()
+            ->selectRaw('count(*) as linked')
+            ->selectRaw('coalesce(sum(case when '.$query->qualifyColumn('submitter_id').' = ? then 1 else 0 end), 0) as my_linked', [Filament::auth()->id()])
+            ->first();
+
+        return $this->openEscalatedCounts = [
+            'linked' => (int) ($counts->linked ?? 0),
+            'my_linked' => (int) ($counts->my_linked ?? 0),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getWidgetData(): array
+    {
+        return ['activeTab' => $this->activeTabIsInvalid() ? 'all' : $this->activeTab];
+    }
+
+    /**
+     * @return Builder<Ticket>
+     */
+    public function ticketsInTab(string $tab): Builder
+    {
+        $tabs = $this->getCachedTabs();
+
+        return ($tabs[$tab] ?? $tabs['all'])->modifyQuery(TicketResource::getEloquentQuery());
+    }
+
+    public function openTicketCount(string $tab): int
+    {
+        return $this->ticketsInTab($tab)->open()->count();
+    }
+
+    /**
+     * An escalation stays listed after all its originals were removed, through
+     * the history note written when the first was added, so its owner does not
+     * lose it.
+     *
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected static function escalationsFromThisPanel(Builder $query): Builder
+    {
+        return $query->escalationsFrom(Filament::getCurrentOrDefaultPanel()->getId());
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected static function withEscalationAssignees(Builder $query): Builder
+    {
+        return TicketAssignee::eagerLoadForForeignPanels($query, array_keys(TicketPlugin::get()->getLinkedTicketParentPanels()));
+    }
+
+    public function getSubheading(): ?string
+    {
+        $tab = $this->activeTabIsInvalid() ? 'all' : $this->activeTab;
+
+        $viewer = ConversationViewer::current();
+
+        if ($tab === 'all' && ! $viewer->isSupporter) {
+            $tab = 'all_submitter';
+        } elseif (in_array($tab, ['all', 'my'], true) && $viewer->receivesEscalations) {
+            $tab = "{$tab}_received";
+        }
+
+        $key = "padmission-tickets::tickets.resources.tickets.tab_descriptions.{$tab}";
+
+        if (! Lang::has($key)) {
+            return null;
+        }
+
+        $team = TicketPlugin::get()->getEscalationTargetName();
+
+        return Lang::has("{$key}_to") ? TicketPlugin::teamText($key, $team) : __($key);
     }
 
     protected function getHeaderActions(): array
@@ -64,12 +223,14 @@ class ListTickets extends ListRecords
         $tabs = [
             'all' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.all'))
-                ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                    $query->tap(new CurrentPanelScope)
-                )),
+                ->badge(fn (): int => $this->openTicketCount('all'))
+                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
+                ->modifyQueryUsing(fn (Builder $query) => TicketResource::allTicketsQuery($query)),
 
             'my' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my'))
+                ->badge(fn (): int => $this->openTicketCount('my'))
+                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
                 ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                     $query
                         ->tap(new CurrentPanelScope)
@@ -77,22 +238,27 @@ class ListTickets extends ListRecords
                 )),
         ];
 
-        if (! TicketPlugin::get()->hasLinkedTickets()) {
+        // Only a panel that escalates has tickets of its own linked elsewhere, and
+        // escalating is the organization's business, never its requesters'.
+        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0 || ! ConversationViewer::current()->isSupporter) {
             return $tabs;
         }
 
         $tabs['linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.linked'))
+            ->badge(fn (): int => $this->openEscalatedCounts()['linked'])
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                $query->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
+                static::withEscalationAssignees(static::escalationsFromThisPanel($query))
             ));
 
         $tabs['my_linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'))
+            ->badge(fn (): int => $this->openEscalatedCounts()['my_linked'])
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                $query
-                    ->whereHas('childTickets', fn (Builder $query) => $query->where('panel', Filament::getCurrentOrDefaultPanel()->getId()))
-                    ->where('submitter_id', Filament::auth()->id())
+                static::withEscalationAssignees(static::escalationsFromThisPanel($query)
+                    ->where($query->qualifyColumn('submitter_id'), Filament::auth()->id()))
             ));
 
         return $tabs;

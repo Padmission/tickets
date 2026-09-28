@@ -102,3 +102,41 @@ it('does not count closed tickets with unseen supporter responses', function () 
         ->assertOk()
         ->assertJson(['unread_count' => 0]);
 });
+
+it('does not count an escalation the user opened', function () {
+    $user = User::factory()->create();
+    (new TicketStatusSeeder)->run();
+    $escalation = escalationFrom(attributes: ['submitter_id' => $user->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $escalation->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+    ]);
+
+    $this->actingAs($user);
+
+    $this
+        ->getJson(route('padmission-tickets::api.unread-count'))
+        ->assertOk()
+        ->assertJson(['unread_count' => 0]);
+});
+
+it('counts a widget ticket filed into another panel', function () {
+    $user = User::factory()->create();
+    (new TicketStatusSeeder)->run();
+    $ticket = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $user->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+    ]);
+
+    $this->actingAs($user);
+
+    $this
+        ->getJson(route('padmission-tickets::api.unread-count'))
+        ->assertOk()
+        ->assertJson(['unread_count' => 1]);
+});

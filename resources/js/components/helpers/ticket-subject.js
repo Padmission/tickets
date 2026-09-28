@@ -1,0 +1,64 @@
+const NAMED_ENTITIES = {
+	amp: "&",
+	lt: "<",
+	gt: ">",
+	quot: '"',
+	apos: "'",
+	nbsp: " ",
+};
+
+// The editor's HTML escapes what was typed, so its entities are read back as the characters
+// they stand for before anything is measured or sent: the subject is stored as plain text.
+function decodeEntities(text) {
+	return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entity, name) => {
+		if (name[0] !== "#") {
+			return NAMED_ENTITIES[name.toLowerCase()] ?? entity;
+		}
+
+		const code =
+			name[1].toLowerCase() === "x"
+				? Number.parseInt(name.slice(2), 16)
+				: Number.parseInt(name.slice(1), 10);
+
+		return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity;
+	});
+}
+
+// The subject is taken from a message, which may quote markup as text. The server refuses markup
+// in a subject, so it is removed here, as the server removes it from a subject nobody typed.
+function withoutMarkup(text) {
+	return text
+		.replace(/<[a-z!/?][^>]*>?/gi, " ")
+		.replace(/(?:java|vb)script\s*:|data\s*:\s*[a-z]+\/[\w.+-]+/gi, "");
+}
+
+// A ticket started from the widget is named after the start of its first message, cut at the
+// last whole word that fits so it never ends mid-word, with an ellipsis when anything was cut.
+// When a sentence ends within what fits, the subject stops there, whole and with no ellipsis,
+// unless that leaves under half the budget, where a short fragment such as "Dr." would.
+// A single word too long to fit is cut where the budget ends instead.
+export default function ticketSubject(html, maxLength = 40) {
+	const text = withoutMarkup(decodeEntities(html.replace(/<[^>]*>/g, " ")))
+		.replace(/\s+/g, " ")
+		.trim();
+
+	if (text.length <= maxLength) {
+		return text;
+	}
+
+	const room = text.slice(0, maxLength);
+	const lastSpace = text[maxLength] === " " ? maxLength : room.lastIndexOf(" ");
+
+	if (lastSpace <= 0) {
+		return `${room.slice(0, maxLength - 1)}…`;
+	}
+
+	const cut = room.slice(0, lastSpace);
+	const sentence = cut.match(/^.*[^.][.!?](?= |$)/);
+
+	if (sentence !== null && sentence[0].length >= maxLength / 2) {
+		return sentence[0];
+	}
+
+	return `${cut.replace(/[\s.,;:!?-]+$/, "")}…`;
+}

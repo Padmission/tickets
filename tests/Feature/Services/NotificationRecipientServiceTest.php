@@ -5,6 +5,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
@@ -214,4 +215,42 @@ test('an assignee is still notified when the ticket panel has no ticket plugin r
     $recipients = app(NotificationRecipientService::class)->getNotificationRecipients($event);
 
     expect($recipients->pluck('id')->toArray())->toBe([$assignee->id]);
+});
+
+test('a hand over tells the two people it moved between, except whoever did it', function (string $actor, array $expected) {
+    $users = [
+        'from' => User::factory()->create(),
+        'to' => User::factory()->create(),
+        'third' => User::factory()->create(),
+    ];
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $users['to']->id, 'assignee_id' => $users['third']->id]);
+
+    $event = new TicketHandedOverEvent($ticket, $users[$actor], $users['from']->id, $users['to']->id);
+    $recipients = app(NotificationRecipientService::class)->getNotificationRecipients($event);
+
+    expect($recipients->pluck('id')->sort()->values()->all())
+        ->toBe(collect($expected)->map(fn (string $key): int => $users[$key]->id)->sort()->values()->all());
+})->with([
+    'handed over by the owner' => ['from', ['to']],
+    'taken over by a colleague' => ['to', ['from']],
+    'moved by someone else' => ['third', ['from', 'to']],
+]);
+
+test('the submitter of another panel\'s ticket is found through that panel\'s scopes', function () {
+    $submitter = User::factory()->create();
+    $replier = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => $submitter->id]);
+    Gate::define('update', fn () => true);
+
+    // 'acting-tenant' stands in for the replier's tenant scope, which only the ticket's own panel lifts.
+    TicketPlugin::get('test2')->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'));
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($submitter->id));
+
+    try {
+        $recipients = app(NotificationRecipientService::class)->getNotificationRecipients(new TicketActivityEvent($ticket->fresh(), ActivityType::Message, null, $replier));
+    } finally {
+        User::clearBootedModels();
+    }
+
+    expect($recipients->map->getKey()->all())->toContain($submitter->id);
 });

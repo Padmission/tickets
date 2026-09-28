@@ -6,6 +6,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Models\Ticket;
@@ -50,6 +51,19 @@ describe('Debouncing Core Functionality', function () {
         expect($job1->uniqueId())->not->toBe($job2->uniqueId())
             ->and($job1->uniqueId())->not->toBe($job3->uniqueId())
             ->and($job2->uniqueId())->not->toBe($job3->uniqueId());
+    });
+
+    test('a take over and a hand back debounce apart, while a repeat of either replaces it', function () {
+        $maria = User::factory()->create();
+        $admin = User::factory()->create();
+        $ticket = Ticket::factory()->open()->create();
+
+        $takenOver = new NotificationJob($maria, $ticket, new TicketHandedOverEvent($ticket, $admin, $maria->id, $admin->id));
+        $handedBack = new NotificationJob($maria, $ticket, new TicketHandedOverEvent($ticket, $admin, $admin->id, $maria->id));
+        $takenAgain = new NotificationJob($maria, $ticket, new TicketHandedOverEvent($ticket, $admin, $maria->id, $admin->id));
+
+        expect($takenOver->uniqueId())->not->toBe($handedBack->uniqueId())
+            ->and($takenAgain->uniqueId())->toBe($takenOver->uniqueId());
     });
 
     test('immediate notification strategy bypasses debouncing', function () {

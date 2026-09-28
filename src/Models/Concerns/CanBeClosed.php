@@ -4,10 +4,12 @@ namespace Padmission\Tickets\Models\Concerns;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Events\TicketClosedEvent;
+use Padmission\Tickets\Events\TicketReopenedEvent;
 use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -29,7 +31,8 @@ trait CanBeClosed
 
         $closedById ??= auth()->id();
 
-        $closedStatus = TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatus();
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        $closedStatus = $statusModel::getClosedStatusFor($this) ?? throw (new ModelNotFoundException)->setModel($statusModel);
 
         $originalStatusId = $this->status_id;
         $newStatusId = $closedStatus->getKey();
@@ -66,6 +69,33 @@ trait CanBeClosed
         );
 
         event(new TicketClosedEvent($this, $this->resolveClosingActor($closedById)));
+    }
+
+    /*
+     * Back to the first status of its own panel and tenant. The observer
+     * clears the close and writes the Reopened note, as it does whenever a
+     * closed ticket moves to an open status.
+     */
+    public function reopen(?int $reopenedById = null): void
+    {
+        if ($this->closed_at === null) {
+            return;
+        }
+
+        $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
+        $openStatus = $statusModel::getOpenStatusFor($this) ?? throw (new ModelNotFoundException)->setModel($statusModel);
+
+        $this->status_id = $openStatus->getKey();
+        $this->save();
+
+        event(new TicketReopenedEvent($this, $this->resolveClosingActor($reopenedById ?? auth()->id())));
+    }
+
+    public function isWithinReopenWindow(): bool
+    {
+        $days = TicketPlugin::find($this->panel)?->getReopenWindowDays() ?? TicketPlugin::DEFAULT_REOPEN_WINDOW_DAYS;
+
+        return $this->closed_at !== null && $this->closed_at->gte(now()->subDays($days));
     }
 
     protected function resolveClosingActor(?int $closedById): ?Authenticatable

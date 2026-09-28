@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketAttachment;
+use Padmission\Tickets\Rules\PlainText;
+use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
@@ -21,20 +23,18 @@ class TemporaryAttachmentUploadUrlController
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        $this->authorize('create', $ticketModel);
+        $ticketRecord = resolve(ApiTicketResolver::class)->resolve($ticket, $request->user());
 
-        // Remove global scopes to find the ticket and get its panel
-        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+        // `create` is the chat widget's audience, so it holds the requester, never support replying.
+        if ($ticketRecord->isSubmittedBy($request->user())) {
+            $this->authorize('create', $ticketModel);
+        }
 
-        // Get the plugin for this ticket's panel and verify against custom query
-        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
-        /** @var Ticket $ticketRecord */
-        $ticketRecord = $panelPlugin->getTicketQuery()->findOrFail($ticket);
-
-        resolve(TicketAuth::class)->authorizeTicketAccess($ticketRecord, $request->user());
+        resolve(TicketAuth::class)->authorizeReply($ticketRecord, $request->user());
+        resolve(TicketAuth::class)->refuseClosedTicket($ticketRecord);
 
         $request->validate([
-            'filename' => ['required', 'string', 'max:255'],
+            'filename' => ['required', 'string', 'max:255', new PlainText],
             'content_type' => ['required', 'string', 'max:100'],
             'content_length' => ['required', 'int'],
             'thumbnail' => ['nullable', 'string'],

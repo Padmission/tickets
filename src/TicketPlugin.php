@@ -2,10 +2,15 @@
 
 namespace Padmission\Tickets;
 
+use Carbon\CarbonInterface;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Contracts\Plugin;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Filament\Schemas\Components\Component;
+use Filament\Support\Facades\FilamentTimezone;
+use Filament\Tables\Columns\Column;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +32,27 @@ class TicketPlugin implements Plugin
 {
     public static string $id = 'padmission-tickets';
 
+    public const FIELD_HELP_INLINE = 'inline';
+
+    public const FIELD_HELP_SUMMARY = 'summary';
+
+    public const FIELD_HELP_TOOLTIP = 'tooltip';
+
+    public const KEEP_WAITING_CHECKBOX = 'checkbox';
+
+    /*
+     * How the chat and everything beside it show a message's time.
+     */
+    public const MESSAGE_TIME_FORMAT = 'M j, g:i A';
+
+    public const LINKED_VIEW_MODAL = 'modal';
+
+    public const LINKED_VIEW_BESIDE = 'beside';
+
+    public const LINKED_VIEW_DRAWER = 'drawer';
+
+    public const KEEP_WAITING_BUTTON = 'button';
+
     protected ?Panel $panel = null;
 
     protected bool $shouldRegisterResources = false;
@@ -38,6 +64,34 @@ class TicketPlugin implements Plugin
     public ?array $linkTicketsToPanels = null;
 
     protected string $escalationLevel = 'default';
+
+    protected mixed $supportTeamName = null;
+
+    protected ?Closure $userDescriber = null;
+
+    protected mixed $assignableUsersDescription = null;
+
+    protected ?Closure $ticketOriginDescriber = null;
+
+    protected string $fieldHelp = self::FIELD_HELP_TOOLTIP;
+
+    protected string $keepWaitingStyle = self::KEEP_WAITING_BUTTON;
+
+    protected string $linkedConversationView = self::LINKED_VIEW_BESIDE;
+
+    protected bool $pinLinkedConversation = false;
+
+    protected bool $navigationBadgeCountsNeedsYou = false;
+
+    public const int DEFAULT_REOPEN_WINDOW_DAYS = 30;
+
+    protected ?Closure $personActions = null;
+
+    protected int|Closure $reopenWindowDays = self::DEFAULT_REOPEN_WINDOW_DAYS;
+
+    protected mixed $additionalTicketDetails = [];
+
+    protected mixed $additionalTableColumns = [];
 
     protected ?AssignmentStrategy $assignmentStrategy = null;
 
@@ -51,6 +105,8 @@ class TicketPlugin implements Plugin
 
     protected mixed $allSupportersQuery = null;
 
+    protected ?string $supporterMatchColumn = null;
+
     protected mixed $currentUserAssigneeIds = null;
 
     protected mixed $initialAssignmentSupportersQuery = null;
@@ -60,6 +116,8 @@ class TicketPlugin implements Plugin
     protected mixed $relationshipScopeModifier = null;
 
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
+
+    protected string|Closure|null $displayTimezone = null;
 
     public static function make(): self
     {
@@ -131,6 +189,22 @@ class TicketPlugin implements Plugin
         return $plugin;
     }
 
+    /*
+     * A host may leave a panel's plugin unregistered in some processes, such
+     * as queue workers, so a ticket's panel can lack one.
+     */
+    public static function find(?string $panelId): ?static
+    {
+        $panel = Filament::getPanels()[$panelId] ?? null;
+
+        if (! $panel?->hasPlugin(static::$id)) {
+            return null;
+        }
+
+        /** @var static */
+        return $panel->getPlugin(static::$id);
+    }
+
     /**
      * @template T of Model
      *
@@ -176,6 +250,33 @@ class TicketPlugin implements Plugin
     public function getDateTimeDisplayFormat(): string
     {
         return $this->dateTimeDisplayFormat;
+    }
+
+    /*
+     * The timezone every ticket time is shown in: the chat, the linked pane
+     * and the tooltips. Without it the chat followed the browser while the
+     * rest of the page followed the server.
+     */
+    public function displayTimezone(string|Closure|null $timezone): static
+    {
+        $this->displayTimezone = $timezone;
+
+        return $this;
+    }
+
+    public function getDisplayTimezone(): string
+    {
+        $timezone = $this->displayTimezone instanceof Closure ? app()->call($this->displayTimezone) : $this->displayTimezone;
+
+        return filled($timezone) ? (string) $timezone : FilamentTimezone::get();
+    }
+
+    /*
+     * A ticket time as the page shows it, in the display timezone.
+     */
+    public static function formatMessageTime(?CarbonInterface $time): ?string
+    {
+        return $time?->copy()->setTimezone(static::get()->getDisplayTimezone())->format(static::MESSAGE_TIME_FORMAT);
     }
 
     public function escalationLevel(string $level): static
@@ -285,6 +386,273 @@ class TicketPlugin implements Plugin
         // });
     }
 
+    public function supportTeamName(string|Closure|null $name): static
+    {
+        $this->supportTeamName = $name;
+
+        return $this;
+    }
+
+    public function getSupportTeamName(): ?string
+    {
+        if ($this->supportTeamName instanceof Closure) {
+            return app()->call($this->supportTeamName);
+        }
+
+        return $this->supportTeamName;
+    }
+
+    public function getEscalationTargetName(): ?string
+    {
+        $panels = $this->getLinkedTicketParentPanels();
+
+        if (count($panels) !== 1) {
+            return null;
+        }
+
+        return static::getSupportTeamNameForPanel(reset($panels));
+    }
+
+    /*
+     * Each string that names a team has a `_to` variant with a :team
+     * placeholder, used when the team has a name, so neither version needs
+     * a vague stand-in such as "the other team".
+     */
+    public static function teamText(string $key, ?string $team, array $replace = []): string
+    {
+        return $team === null
+            ? __($key, $replace)
+            : __("{$key}_to", [...$replace, 'team' => $team]);
+    }
+
+    public static function getSupportTeamNameForPanel(Panel $panel): ?string
+    {
+        if (! $panel->hasPlugin(static::$id)) {
+            return null;
+        }
+
+        /** @var static $plugin */
+        $plugin = $panel->getPlugin(static::$id);
+
+        return $plugin->getSupportTeamName();
+    }
+
+    /**
+     * @param  self::LINKED_VIEW_*  $view
+     */
+    public function linkedConversationView(string $view): static
+    {
+        $this->linkedConversationView = $view;
+
+        return $this;
+    }
+
+    public function getLinkedConversationView(): string
+    {
+        return $this->linkedConversationView;
+    }
+
+    public function pinLinkedConversation(bool $condition = true): static
+    {
+        $this->pinLinkedConversation = $condition;
+
+        return $this;
+    }
+
+    public function shouldPinLinkedConversation(): bool
+    {
+        return $this->pinLinkedConversation;
+    }
+
+    /*
+     * The sidebar badge counts what the Needs You card counts rather than the
+     * viewer's open assigned tickets. Turned on per panel: an organization's
+     * own panel wants the tickets needing them, a panel like Padmission's own
+     * the tickets it holds.
+     */
+    public function navigationBadgeCountsNeedsYou(bool $condition = true): static
+    {
+        $this->navigationBadgeCountsNeedsYou = $condition;
+
+        return $this;
+    }
+
+    public function shouldNavigationBadgeCountNeedsYou(): bool
+    {
+        return $this->navigationBadgeCountsNeedsYou;
+    }
+
+    /*
+     * How long after a ticket closes its requester may still reopen it by
+     * replying. After that a reply starts a new ticket that links back.
+     */
+    public function reopenWindowDays(int|Closure $days): static
+    {
+        $this->reopenWindowDays = $days;
+
+        return $this;
+    }
+
+    public function getReopenWindowDays(): int
+    {
+        return (int) value($this->reopenWindowDays);
+    }
+
+    /*
+     * Actions the host offers beside each person a ticket names, such as
+     * impersonating them. Their rules stay the host's.
+     */
+    public function personActionsUsing(?Closure $callback): static
+    {
+        $this->personActions = $callback;
+
+        return $this;
+    }
+
+    /**
+     * @return list<Action>
+     */
+    public function getPersonActions(Model $person, Ticket $ticket): array
+    {
+        if ($this->personActions === null) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            (array) app()->call($this->personActions, ['person' => $person, 'ticket' => $ticket]),
+            fn (mixed $action): bool => $action instanceof Action,
+        ));
+    }
+
+    /**
+     * @param  self::KEEP_WAITING_*  $style
+     */
+    public function keepWaitingStyle(string $style): static
+    {
+        $this->keepWaitingStyle = $style;
+
+        return $this;
+    }
+
+    public function getKeepWaitingStyle(): string
+    {
+        return $this->keepWaitingStyle;
+    }
+
+    /**
+     * @param  self::FIELD_HELP_*  $style
+     */
+    public function fieldHelp(string $style): static
+    {
+        $this->fieldHelp = $style;
+
+        return $this;
+    }
+
+    public function getFieldHelp(): string
+    {
+        return $this->fieldHelp;
+    }
+
+    /**
+     * @param  (Closure(Ticket $ticket): ?string)|null  $callback
+     */
+    public function describeTicketOriginUsing(?Closure $callback): static
+    {
+        $this->ticketOriginDescriber = $callback;
+
+        return $this;
+    }
+
+    public function describeTicketOrigin(Ticket $ticket): ?string
+    {
+        return $this->ticketOriginDescriber === null ? null : ($this->ticketOriginDescriber)($ticket);
+    }
+
+    public function assignableUsersDescription(string|Closure|null $description): static
+    {
+        $this->assignableUsersDescription = $description;
+
+        return $this;
+    }
+
+    public function getAssignableUsersDescription(): ?string
+    {
+        if ($this->assignableUsersDescription instanceof Closure) {
+            return app()->call($this->assignableUsersDescription);
+        }
+
+        return $this->assignableUsersDescription;
+    }
+
+    /**
+     * The callback may return one description or a list, such as role names.
+     *
+     * @param  (Closure(Model $user, Ticket $ticket): (string|list<string>|null))|null  $callback
+     */
+    public function describeUsersUsing(?Closure $callback): static
+    {
+        $this->userDescriber = $callback;
+
+        return $this;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function describeUser(?Model $user, Ticket $ticket): array
+    {
+        if ($user === null || $this->userDescriber === null) {
+            return [];
+        }
+
+        return array_values(array_filter((array) ($this->userDescriber)($user, $ticket), 'filled'));
+    }
+
+    /**
+     * @param  array<Component>|Closure(): array<Component>  $components
+     */
+    public function additionalTicketDetails(array|Closure $components): static
+    {
+        $this->additionalTicketDetails = $components;
+
+        return $this;
+    }
+
+    /**
+     * @return array<Component>
+     */
+    public function getAdditionalTicketDetails(): array
+    {
+        if ($this->additionalTicketDetails instanceof Closure) {
+            return app()->call($this->additionalTicketDetails);
+        }
+
+        return $this->additionalTicketDetails;
+    }
+
+    /**
+     * @param  array<Column>|Closure(): array<Column>  $columns
+     */
+    public function additionalTableColumns(array|Closure $columns): static
+    {
+        $this->additionalTableColumns = $columns;
+
+        return $this;
+    }
+
+    /**
+     * @return array<Column>
+     */
+    public function getAdditionalTableColumns(): array
+    {
+        if ($this->additionalTableColumns instanceof Closure) {
+            return app()->call($this->additionalTableColumns);
+        }
+
+        return $this->additionalTableColumns;
+    }
+
     public function showChatWidget(bool|Closure $shouldShow = true, ChatWidgetConfig|Closure|null $config = null): static
     {
         $this->shouldShowChatWidget = $shouldShow;
@@ -357,6 +725,22 @@ class TicketPlugin implements Plugin
         }
 
         return $this->allSupportersQuery;
+    }
+
+    /*
+     * A pool that keeps one account per person (by email, say) leaves out
+     * that person's other accounts, so an assignee is matched on this column.
+     */
+    public function matchSupportersBy(?string $column): static
+    {
+        $this->supporterMatchColumn = $column;
+
+        return $this;
+    }
+
+    public function getSupporterMatchColumn(): string
+    {
+        return $this->supporterMatchColumn ?? 'id';
     }
 
     /**

@@ -38,7 +38,35 @@ it('handles null values in toJs method', function () {
 
     expect($decoded)
         ->placeholder->toBeNull()
-        ->introMessage->toBeNull();
+        ->introMessage->toBe(__('padmission-tickets::chat.defaults.intro_message'));
+});
+
+it('uses the package defaults when no intro or auto-response is set', function (bool $configured, ?string $returned) {
+    $config = ChatWidgetConfig::make();
+
+    if ($configured) {
+        $config->introMessage(fn (): ?string => $returned)->autoResponse(fn (): ?string => $returned);
+    }
+
+    expect($config->getIntroMessage())->toStartWith('Our support team of real people is here to help.')
+        ->and($config->getAutoResponse())->toBe('Thanks for your message! We will respond soon.');
+})->with([
+    'nothing set' => [false, null],
+    'closure returning null' => [true, null],
+    'closure returning an empty string' => [true, ''],
+]);
+
+it('names the defaults an unset message falls back to, for settings forms to show', function () {
+    $config = ChatWidgetConfig::make();
+
+    expect(ChatWidgetConfig::defaultIntroMessage())->toBe($config->getIntroMessage())
+        ->toBe(__('padmission-tickets::chat.defaults.intro_message'))
+        ->and(ChatWidgetConfig::defaultAutoResponse())->toBe($config->getAutoResponse())
+        ->toBe(__('padmission-tickets::chat.defaults.auto_response'));
+});
+
+it('prefers a configured auto-response over the default', function () {
+    expect(ChatWidgetConfig::make()->autoResponse('We are on it.')->getAutoResponse())->toBe('We are on it.');
 });
 
 it('formats panel id correctly', function () {
@@ -72,4 +100,11 @@ it('allows HtmlString in placeholder and introMessage', function () {
     expect($decoded)
         ->placeholder->toBe('<span>HTML placeholder</span>')
         ->introMessage->toBe('<span>HTML intro message</span>');
+});
+
+it('labels the send that keeps the turn as an update, and says what it does', function () {
+    $lang = json_decode(ChatWidgetConfig::make()->toJs(), true)['lang'];
+
+    expect($lang['chat.send_keep_waiting'])->toBe('Send as update')
+        ->and($lang['chat.send_keep_waiting_help'])->toBe('Sends your reply as an update and keeps Waiting on with your team, since you still owe the answer.');
 });

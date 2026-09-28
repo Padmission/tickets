@@ -2,12 +2,16 @@
 
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
     Event::fake();
@@ -38,4 +42,105 @@ it('opens the ticket without marking it seen while seen tracking is skipped', fu
         ->assertSet('view', 'detail');
 
     expect($this->ticket->ticketUserStates()->where('user_id', $this->user->id)->exists())->toBeFalse();
+});
+
+it('asks before resolving, and only the dialog\'s button resolves', function () {
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
+        ->assertDontSeeHtml('<button
+                        type="button"
+                        wire:click="resolveTicket"')
+        ->assertSee('Resolve this ticket?')
+        ->assertSee('This closes the ticket and lets support know. If you reply to it later, you\'re asked whether to reopen it.')
+        ->assertSee('Resolve ticket');
+});
+
+it('resolves the ticket once confirmed', function () {
+    (new TicketStatusSeeder)->run();
+
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->call('resolveTicket')
+        ->assertDontSee('Resolve this ticket?');
+
+    expect($this->ticket->refresh()->isClosed)->toBeTrue();
+});
+
+it('tells its chat when the ticket is resolved, so it shows it closed at once', function () {
+    (new TicketStatusSeeder)->run();
+
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml("window.addEventListener('ticket-chat-changed'")
+        ->call('resolveTicket')
+        ->assertDispatched('ticket-chat-changed', ticketId: $this->ticket->id, canReply: true);
+});
+
+it('says a ticket support already closed has nothing to resolve, and leaves its close alone', function () {
+    (new TicketStatusSeeder)->run();
+
+    $panel = Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id]);
+
+    $supporter = User::factory()->create();
+    $this->ticket->close(closedById: $supporter->id);
+
+    $panel->call('resolveTicket')
+        ->assertNotified(__('padmission-tickets::tickets.copilot.already_closed'))
+        ->assertDontSee('Resolve this ticket?');
+
+    expect($this->ticket->refresh()->closed_by)->toBe($supporter->id);
+});
+
+it('redraws the header as closed, without Resolve, when the chat sees the ticket close', function () {
+    $open = TicketStatus::factory()->create(['panel' => $this->ticket->panel, 'display_name' => 'Waiting on support', 'order' => 1]);
+    TicketStatus::factory()->create([
+        'panel' => $this->ticket->panel,
+        'display_name' => 'All done',
+        'order' => TicketStatus::query()->withoutGlobalScopes()->where('panel', $this->ticket->panel)->max('order') + 1,
+    ]);
+    $this->ticket->update(['status_id' => $open->id]);
+
+    $panel = Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml('this.handleTicketClosed = () => this.$wire.$refresh()')
+        ->assertSeeHtml("addEventListener('ticket-closed', this.handleTicketClosed)")
+        ->assertSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
+        ->assertSeeInOrder([$this->ticket->subject, 'Waiting on support']);
+
+    $this->ticket->close(closedById: User::factory()->create()->id);
+
+    $panel->call('$refresh')
+        ->assertDontSeeHtml('x-on:click="$refs.resolveDialog.showModal()"')
+        ->assertDontSee('Resolve this ticket?')
+        ->assertDontSee('Waiting on support')
+        ->assertSeeInOrder([$this->ticket->subject, 'All done']);
+});
+
+it('gives its chat the display timezone, so its times match the ticket page', function () {
+    TicketPlugin::get()->displayTimezone(fn (): string => 'America/Phoenix');
+
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertSeeHtml('timezone="America/Phoenix"')
+        ->call('showCreateForm')
+        ->assertSeeHtml('timezone="America/Phoenix"');
+});
+
+it('tells the assistant which ticket it shows, and when it went back to the list', function () {
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+        ->assertDispatched('padmission-copilot-ticket-shown', ticketId: $this->ticket->id)
+        ->call('showList')
+        ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null)
+        ->call('showCreateForm')
+        ->assertDispatched('padmission-copilot-ticket-shown', ticketId: null);
+
+    Livewire::test(CopilotTicketPanel::class)->assertDispatched('padmission-copilot-ticket-shown', ticketId: null);
+});
+
+it('tears its chat listeners down with Alpine\'s own destroy, not a $cleanup the hosts\' Livewire does not have', function () {
+    Livewire::test(CopilotTicketPanel::class)->assertDontSeeHtml('$cleanup');
+    Livewire::test(CopilotTicketPanel::class)->call('showCreateForm')->assertDontSeeHtml('$cleanup')->assertSeeHtml('destroy()');
+    Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])->assertDontSeeHtml('$cleanup')->assertSeeHtml('destroy()');
+});
+
+it('names the tab of closed tickets as their status reads, Closed', function () {
+    Livewire::test(CopilotTicketPanel::class)
+        ->assertSeeText('Closed')
+        ->assertDontSeeText('Resolved');
 });

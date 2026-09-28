@@ -1,5 +1,7 @@
 @php
     use Filament\Facades\Filament;
+    use Padmission\Tickets\Filament\Infolists\UserDescription;
+    use Padmission\Tickets\TicketPlugin;
 
     $ticket = $getRecord();
 @endphp
@@ -9,6 +11,8 @@
             @php
                 $avatarUrl = Filament::getUserAvatarUrl($ticket->submitter);
                 $name = Filament::getUserName($ticket->submitter);
+                $isViewer = $ticket->submitter_id === Filament::auth()->id();
+                $description = $isViewer ? null : UserDescription::render(TicketPlugin::get()->describeUser($ticket->submitter, $ticket));
             @endphp
 
             <x-filament::avatar
@@ -17,9 +21,15 @@
                 size="sm"
             />
 
-            <span>
-                {{ $name }}
-            </span>
+            <div>
+                {{ $isViewer ? __('padmission-tickets::tickets.side_you') : $name }}
+
+                @if (filled($description))
+                    <div class="avatar-entry__description">
+                        {{ $description }}
+                    </div>
+                @endif
+            </div>
         @elseif($ticket->submitter_data)
             {{ $ticket->submitter_data->name }}
 

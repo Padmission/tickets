@@ -9,9 +9,11 @@ use Carbon\CarbonPeriod;
 use Exception;
 use Filament\Facades\Filament;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketMetricsService
@@ -93,19 +95,27 @@ class TicketMetricsService
                 $query->where('created_at', '>=', Carbon::now()->subDays($days));
             }
 
-            $result = $query->select([
-                DB::raw('COUNT(*) as total_tickets'),
-                DB::raw($this->getDurationExpression($query->getConnection(), 'created_at', 'closed_at')),
-            ])->first();
-
-            $totalClosedTickets = $result->total_tickets ?? 0;
-            $avgSeconds = $result->avg_seconds ?? 0;
-
-            return [
-                'averageSeconds' => (int) $avgSeconds,
-                'totalClosed' => $totalClosedTickets,
-            ];
+            return $this->averageCloseTimeFor($query);
         });
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return array{averageSeconds: int, totalClosed: int}
+     */
+    public function averageCloseTimeFor(Builder $query): array
+    {
+        $query = (clone $query)->whereNotNull($query->qualifyColumn('closed_at'));
+
+        $result = $query->toBase()->select([
+            DB::raw('COUNT(*) as total_tickets'),
+            DB::raw($this->getDurationExpression($query->getConnection(), $query->qualifyColumn('created_at'), $query->qualifyColumn('closed_at'))),
+        ])->first();
+
+        return [
+            'averageSeconds' => (int) ($result->avg_seconds ?? 0),
+            'totalClosed' => (int) ($result->total_tickets ?? 0),
+        ];
     }
 
     /**

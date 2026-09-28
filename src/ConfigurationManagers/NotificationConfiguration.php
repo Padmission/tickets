@@ -9,6 +9,7 @@ use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketReopenedEvent;
 
 final class NotificationConfiguration
 {
@@ -35,6 +36,12 @@ final class NotificationConfiguration
                 fn (NotificationTrigger $trigger) => match ($trigger) {
                     NotificationTrigger::User => NotificationRecipient::Supporter,
                     NotificationTrigger::Supporter => NotificationRecipient::User,
+                }
+            )
+            ->on(
+                TicketReopenedEvent::class,
+                fn (NotificationTrigger $trigger) => match ($trigger) {
+                    default => NotificationRecipient::Supporter,
                 }
             )
             ->on(

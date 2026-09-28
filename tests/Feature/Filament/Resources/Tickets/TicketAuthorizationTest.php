@@ -7,9 +7,11 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
+use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Policies\TicketPolicy;
+use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\Tests\User;
 
 beforeEach(function () {
@@ -267,3 +269,108 @@ it('reassigns only the selected tickets the user may manage', function () {
     expect($mine->fresh()->assignee_id)->toBe($supporter->id)
         ->and($theirs->fresh()->assignee_id)->toBeNull();
 });
+
+describe('another panel\'s ticket', function () {
+    it('sends the team an original was escalated to to its escalation, with the original beside it', function () {
+        (new TicketStatusSeeder)->run();
+        $this->login();
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test']);
+        $original = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+
+        $this->get(TicketResource::getUrl('view', ['record' => $original]))
+            ->assertRedirect(TicketResource::getUrl('view', ['record' => $escalation, 'linked' => $original->id]));
+    });
+
+    it('refuses a ticket that is not escalated to this panel', function (?string $escalationPanel) {
+        (new TicketStatusSeeder)->run();
+        $this->login();
+
+        $escalation = $escalationPanel === null ? null : Ticket::factory()->open()->create(['panel' => $escalationPanel]);
+        $original = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation?->id]);
+
+        $this->get(TicketResource::getUrl('view', ['record' => $original]))->assertForbidden();
+    })->with([
+        'not escalated' => [null],
+        'escalated elsewhere' => ['test3'],
+    ]);
+
+    it('refuses rather than reveals an escalation here that the viewer cannot open', function () {
+        (new TicketStatusSeeder)->run();
+        $this->login();
+        Gate::policy(Ticket::class, OpensOnlyOtherPanelsPolicy::class);
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test']);
+        $original = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+
+        $this->get(TicketResource::getUrl('view', ['record' => $original]))->assertForbidden();
+    });
+
+    it('refuses a ticket whose escalation here was deleted', function () {
+        (new TicketStatusSeeder)->run();
+        $this->login();
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test']);
+        $original = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+        $escalation->delete();
+
+        $this->get(TicketResource::getUrl('view', ['record' => $original]))->assertForbidden();
+    });
+
+    it('still opens for its submitter', function () {
+        (new TicketStatusSeeder)->run();
+        $submitter = $this->login();
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => $submitter->id]);
+
+        $this->get(TicketResource::getUrl('view', ['record' => $escalation]))->assertOk();
+    });
+});
+
+it('lets the submitter reply under the package policy, which refuses them manage', function () {
+    (new TicketStatusSeeder)->run();
+
+    $submitter = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $submitter->id]);
+
+    $this->actingAs($submitter);
+
+    expect(Gate::allows('manage', $ticket))->toBeFalse()
+        ->and(Gate::allows('reply', $ticket))->toBeFalse();
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'Any news?',
+        ])
+        ->assertOk();
+});
+
+it('lets a supporter reply under the package policy', function () {
+    (new TicketStatusSeeder)->run();
+
+    [$submitter, $supporter] = User::factory()->count(2)->create();
+
+    $this->modifyPlugin(function ($plugin) use ($supporter) {
+        $plugin->allSupportersQuery(fn () => User::query()->whereKey($supporter->id));
+    });
+
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $submitter->id]);
+
+    $this->actingAs($supporter);
+
+    expect(Gate::allows('reply', $ticket))->toBeTrue();
+
+    $this
+        ->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+            'content' => 'On it',
+        ])
+        ->assertOk();
+});
+
+class OpensOnlyOtherPanelsPolicy extends TestTicketPolicy
+{
+    public function view(User $user, Ticket $ticket): bool
+    {
+        return $ticket->panel !== 'test';
+    }
+}

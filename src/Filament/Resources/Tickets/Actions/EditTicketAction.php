@@ -4,16 +4,17 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Blade;
 use Livewire\Component;
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;
 
 class EditTicketAction extends EditAction
 {
+    use ScopesLookupsToTicket;
+
     public static function getDefaultName(): ?string
     {
         return 'edit-ticket';
@@ -38,7 +39,7 @@ class EditTicketAction extends EditAction
                 $livewire->dispatch('refresh-sidebar');
             })
             ->schema([
-                TextInput::make('subject')
+                TicketSubjectInput::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
                     ->disabled()
                     ->required(),
@@ -47,7 +48,7 @@ class EditTicketAction extends EditAction
                     ->label(__('padmission-tickets::tickets.resources.tickets.status'))
                     ->allowHtml()
                     ->native(false)
-                    ->relationship('status', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
+                    ->relationship('status', 'display_name', fn ($query) => $this->scopeLookupToTicket($query, $this->getRecord()))
                     ->getOptionLabelFromRecordUsing(function ($record) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
@@ -68,7 +69,7 @@ class EditTicketAction extends EditAction
                     ->label(__('padmission-tickets::tickets.resources.tickets.priority'))
                     ->allowHtml()
                     ->native(false)
-                    ->relationship('priority', 'display_name', fn ($query) => $query->tap(new CurrentPanelScope))
+                    ->relationship('priority', 'display_name', fn ($query) => $this->scopeLookupToTicket($query, $this->getRecord()))
                     ->getOptionLabelFromRecordUsing(function ($record) {
                         return Blade::render(<<<'HTML'
                             <div class="flex justify-start">
@@ -80,23 +81,6 @@ class EditTicketAction extends EditAction
                             'priority' => $record,
                         ]);
                     })
-                    ->required(),
-
-                Select::make('assignee_id')
-                    ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
-                    ->relationship('assignee', 'name', function ($query) {
-                        $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
-
-                        if ($allSupportersQuery) {
-                            $supporterIds = app()->call($allSupportersQuery)->pluck('id');
-
-                            return $query->whereIn('id', $supporterIds);
-                        }
-
-                        return $query;
-                    })
-                    ->preload()
-                    ->searchable()
                     ->required(),
             ]);
     }

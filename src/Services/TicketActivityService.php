@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Services;
 
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -13,6 +14,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketActivityService
 {
@@ -32,6 +34,20 @@ class TicketActivityService
         $this->skipSeenTracking = $callback;
     }
 
+    /*
+     * Someone outside the viewer's own scope can write on a ticket, such as a
+     * tenant user on a ticket another panel's staff answer, so senders load
+     * under the ticket panel's relationship scope rather than the viewer's.
+     */
+    protected function scopeToTicketPanel(Relation $relation, Ticket $ticket): void
+    {
+        $modifier = TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            app()->call($modifier, ['relation' => $relation, 'model' => 'user']);
+        }
+    }
+
     public function getActivities(
         Ticket $ticket,
         ?int $offsetId = null,
@@ -40,13 +56,13 @@ class TicketActivityService
     ): Collection {
         $user ??= auth()->user();
 
-        $currentSender = $user?->getKey() === $ticket->submitter_id
+        $currentSender = $ticket->isSubmittedBy($user)
             ? ActivitySender::User
             : ActivitySender::Supporter;
 
         return $ticket
             ->ticketActivities()
-            ->with('user')
+            ->with(['user' => fn (Relation $relation) => $this->scopeToTicketPanel($relation, $ticket)])
             ->whereIn('type', $this->getActivityTypesForSender($ticket, $currentSender, $user))
             ->when($offsetId, fn ($query) => $query->where('id', '>', $offsetId))
             ->when($limit, fn ($query) => $query->limit($limit))
@@ -54,16 +70,20 @@ class TicketActivityService
             ->get()
             ->reverse()
             ->values()
-            ->map(function (TicketActivity $message) use ($currentSender) {
+            ->map(function (TicketActivity $message) use ($ticket, $currentSender, $user) {
+                $message->setRelation('ticket', $ticket);
+
                 $message->side = match (true) {
                     $message->sender === ActivitySender::System => ActivitySide::System,
                     $message->sender === $currentSender => ActivitySide::Me,
                     default => ActivitySide::Other,
                 };
 
+                // Several people write on the same side, so only the viewer's own messages read "You".
+                $message->isOwn = $user !== null && $message->user_id !== null && $message->user_id == $user->getKey();
+
                 return $message;
             });
-
     }
 
     public function getUnreadActivities(
@@ -96,6 +116,9 @@ class TicketActivityService
             ActivityType::Opened,
             ActivityType::Message,
             ActivityType::Closed,
+            ActivityType::Reopened,
+            ActivityType::HandedOver,
+            ActivityType::FollowsUp,
         ];
     }
 

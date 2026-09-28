@@ -4,25 +4,32 @@ namespace Padmission\Tickets\Listeners;
 
 use Carbon\CarbonInterval;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 use Mpbarlow\LaravelQueueDebouncer\Debouncer;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketHandedOverEvent;
+use Padmission\Tickets\Events\TicketReopenedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\TicketPlugin;
 
-class TicketNotificationListener
+/*
+ * Handled after commit: an escalation's link to its original is written in
+ * the same transaction as the ticket, and the notification must see it.
+ */
+class TicketNotificationListener implements ShouldHandleEventsAfterCommit
 {
     public function __construct(
         protected NotificationRecipientService $recipientService
     ) {}
 
     public function handle(
-        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent $event
+        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent|TicketReopenedEvent $event
     ): void {
         $recipients = $this->recipientService->getNotificationRecipients($event);
 

@@ -19,7 +19,9 @@ use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
+use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Services\TicketReopening;
 use Padmission\Tickets\TicketPlugin;
 use Tiptap\Editor;
 
@@ -32,23 +34,29 @@ class CreateMessageController
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
-        $this->authorize('create', $ticketModel);
-
         $validated = $request->validate([
             'content' => ['string', 'nullable', Rule::requiredIf(fn () => blank($request->array('attachment_ids')))],
             'attachment_ids' => ['array', Rule::requiredIf(fn () => blank($request->get('content')))],
             'lock_turn' => ['boolean'],
+            'reopen' => ['boolean'],
         ]);
 
-        // Remove global scopes to find the ticket and get its panel
-        $ticketRecord = $ticketModel::withoutGlobalScopes()->findOrFail($ticket);
+        $ticket = resolve(ApiTicketResolver::class)->resolve($ticket, $request->user());
 
-        // Get the plugin for this ticket's panel and verify against custom query
-        $panelPlugin = TicketPlugin::get($ticketRecord->panel);
-        /** @var Ticket $ticket */
-        $ticket = $panelPlugin->getTicketQuery()->findOrFail($ticket);
+        // `create` is the chat widget's audience, so it holds the requester, never support replying.
+        if ($ticket->isSubmittedBy($request->user())) {
+            $this->authorize('create', $ticketModel);
+        }
 
-        resolve(TicketAuth::class)->authorizeTicketAccess($ticket, $request->user());
+        resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
+
+        // Reopened only on the writer's say-so, and only by those who may.
+        if ($ticket->isClosed && $request->boolean('reopen')
+            && in_array(TicketReopening::REOPEN, resolve(TicketReopening::class)->choicesFor($ticket, $request->user()), true)) {
+            $ticket->reopen($request->user()->getAuthIdentifier());
+        }
+
+        resolve(TicketAuth::class)->refuseClosedTicket($ticket);
 
         $attachmentIds = $validated['attachment_ids'] ?? [];
 
@@ -60,7 +68,8 @@ class CreateMessageController
             ? (new Editor)->sanitize($validated['content'])
             : null;
 
-        $isFirstActivity = ! $ticket->ticketActivities()->exists();
+        // A new ticket's link back to the one it follows up is not its opening.
+        $isFirstActivity = ! $ticket->ticketActivities()->whereNot('type', ActivityType::FollowsUp)->exists();
 
         if ($isFirstActivity) {
             $this->createFirstMessage($ticket);
@@ -79,10 +88,14 @@ class CreateMessageController
         $this->attachAttachments($activity, $ticket, $request->user(), $attachmentIds);
 
         $activity->side = ActivitySide::Me;
+        $activity->isOwn = true;
 
         $messages->push($activity);
 
-        $this->handleTurnChange($ticket, $activity, $validated['lock_turn'] ?? false);
+        // Only the answering side may keep a conversation waiting on itself.
+        $lockTurn = $activity->sender === ActivitySender::Supporter && ($validated['lock_turn'] ?? false);
+
+        $this->handleTurnChange($ticket, $activity, $lockTurn);
 
         if ($isFirstActivity) {
             $messages->push($this->createAutoResponse($ticket));

@@ -1,6 +1,7 @@
 import BaseElement from "../helpers/base-element";
 import render from "../helpers/render";
 import fetchJson from "../helpers/fetch-json.js";
+import escapeHtml from "../helpers/escape-html.js";
 import __ from "../helpers/trans.js";
 import config from "../helpers/config.js";
 
@@ -46,7 +47,7 @@ customElements.define(
                             @click="back"
                         >
                             <span class="sr-only">
-                                ${__('view.back')}
+                                ${escapeHtml(__('view.back'))}
                             </span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left-icon lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
                         </button>
@@ -58,19 +59,19 @@ customElements.define(
                                 data-close-dialog
                                 formmethod="dialog"
                             >
-                                <span class="sr-only">${__('close_modal')}</span>
+                                <span class="sr-only">${escapeHtml(__('close_modal'))}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                              </button>
                         </form>
                     </header>
 
                     <h2>
-                        ${__('otp_verify.heading')}
+                        ${escapeHtml(__('otp_verify.heading'))}
                     </h2>
 
                     <div class="form-container">
                         <p class="form-description">
-                            ${__('otp_verify.description')}
+                            ${escapeHtml(__('otp_verify.description'))}
                         </p>
 
                         <form
@@ -79,7 +80,7 @@ customElements.define(
                         >
                             <div class="form-field">
                                 <label for="otp" class="form-label">
-                                    ${__('otp_verify.label')}
+                                    ${escapeHtml(__('otp_verify.label'))}
                                 </label>
 
                                 <input
@@ -98,7 +99,7 @@ customElements.define(
 
                             <div class="form-actions">
                                 <button type="submit" class="button button-primary">
-                                    ${__('otp_verify.submit_button')}
+                                    ${escapeHtml(__('otp_verify.submit_button'))}
                                 </button>
                             </div>
                         </form>

@@ -3,12 +3,16 @@
 namespace Padmission\Tickets\Models;
 
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Padmission\Tickets\Database\Factories\TicketFactory;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Concerns\CanBeAssigned;
 use Padmission\Tickets\Models\Concerns\CanBeClosed;
@@ -19,6 +23,9 @@ use Padmission\Tickets\Models\Concerns\InteractsWithNotifications;
 use Padmission\Tickets\Models\Concerns\ManagesPriority;
 use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
+use Padmission\Tickets\Support\ConversationStateQuery;
+use Padmission\Tickets\Support\ConversationViewer;
+use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
 /**
@@ -49,10 +56,24 @@ class Ticket extends Model
 
     protected static string $factory = TicketFactory::class;
 
+    protected ?bool $isEscalation = null;
+
+    /*
+     * Tickets opened from the chat widget were stored with their subject
+     * HTML-escaped, so it is read back as the plain text that was typed.
+     * Every place that shows it escapes it again for its own output.
+     *
+     * @return Attribute<?string, never>
+     */
+    protected function subject(): Attribute
+    {
+        return Attribute::get(fn (?string $value): ?string => $value === null ? null : html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
     public function parentTicket(): Relations\PanelAwareBelongsTo
     {
         return $this->panelAwareBelongsTo(
-            Ticket::class,
+            TicketPlugin::resolveModelClass(Ticket::class),
             'parentTicket',
             'linked_ticket_id',
             'id'
@@ -62,7 +83,7 @@ class Ticket extends Model
     public function childTickets(): Relations\PanelAwareHasMany
     {
         return $this->panelAwareHasMany(
-            Ticket::class,
+            TicketPlugin::resolveModelClass(Ticket::class),
             'childTickets',
             'linked_ticket_id',
             'id'
@@ -79,6 +100,166 @@ class Ticket extends Model
     public function scopeClosed(Builder $query): Builder
     {
         return $query->whereNotNull('closed_at');
+    }
+
+    public function scopeWithConversationState(Builder $query, ?ConversationViewer $viewer = null): Builder
+    {
+        return ConversationStateQuery::apply($query, $viewer ?? ConversationViewer::current());
+    }
+
+    public function scopeEscalations(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $query): Builder => $this->whereEscalation($query));
+    }
+
+    public function scopeWithoutEscalations(Builder $query): Builder
+    {
+        return $query->whereNot(fn (Builder $query): Builder => $this->whereEscalation($query));
+    }
+
+    /*
+     * Twin of isEscalationFrom(). The originals are read without any scope, as
+     * there, so a host's tenant scope never hides another tenant's originals.
+     */
+    public function scopeEscalationsFrom(Builder $query, string $panelId): Builder
+    {
+        $id = $query->qualifyColumn($this->getKeyName());
+
+        return $query
+            ->whereIn($query->qualifyColumn('panel'), array_keys(TicketPlugin::find($panelId)?->getLinkedTicketParentPanels() ?? []))
+            ->where(fn (Builder $query): Builder => $query
+                ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                    ->selectRaw('1')
+                    ->from($this->getTable(), 'panel_originals')
+                    ->whereColumn('panel_originals.linked_ticket_id', $id)
+                    ->where('panel_originals.panel', $panelId))
+                ->orWhere(fn (Builder $query): Builder => $this->whereEscalation($query
+                    ->where($query->qualifyColumn('source_panel'), $panelId))));
+    }
+
+    /*
+     * Twin of isEscalation(). Comparing panel with source_panel cannot tell,
+     * because widget tickets filed into a target panel differ too.
+     */
+    protected function whereEscalation(Builder $query): Builder
+    {
+        $id = $query->qualifyColumn($this->getKeyName());
+        $activities = (new (TicketPlugin::resolveModelClass(TicketActivity::class)))->getTable();
+
+        return $query->where(fn (Builder $query): Builder => $query
+            ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                ->selectRaw('1')
+                ->from($this->getTable(), 'escalation_originals')
+                ->whereColumn('escalation_originals.linked_ticket_id', $id))
+            ->orWhereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                ->selectRaw('1')
+                ->from($activities, 'escalation_activities')
+                ->whereColumn('escalation_activities.ticket_id', $id)
+                ->where('escalation_activities.type', ActivityType::OriginalAdded->value)));
+    }
+
+    /*
+     * Closing leaves the turn as it was, so reopening picks up where the
+     * conversation stopped, but a closed ticket is not waiting on anyone.
+     */
+    public function waitingOn(): ?Turn
+    {
+        return $this->isClosed ? null : $this->turn;
+    }
+
+    /*
+     * An escalation keeps this identity after all its originals are removed,
+     * through the history note written when the first one was added.
+     */
+    public function isEscalation(): bool
+    {
+        if (! $this->exists) {
+            return false;
+        }
+
+        // A list row that already loaded its originals needs no query per row.
+        if ($this->isEscalation === null && $this->relationLoaded('childTickets') && $this->childTickets->isNotEmpty()) {
+            return $this->isEscalation = true;
+        }
+
+        if ($this->isEscalation === null && array_key_exists('conversation_is_escalation', $this->attributes)) {
+            return $this->isEscalation = (bool) $this->attributes['conversation_is_escalation'];
+        }
+
+        return $this->isEscalation ??= $this->newQueryWithoutScopes()->where('linked_ticket_id', $this->getKey())->exists()
+            || TicketPlugin::resolveModelClass(TicketActivity::class)::query()
+                ->withoutGlobalScopes()
+                ->where('ticket_id', $this->getKey())
+                ->where('type', ActivityType::OriginalAdded)
+                ->exists();
+    }
+
+    public function forgetIsEscalation(): void
+    {
+        $this->isEscalation = null;
+    }
+
+    public function refresh()
+    {
+        $this->forgetIsEscalation();
+
+        return parent::refresh();
+    }
+
+    public function isEscalationFrom(string $panelId): bool
+    {
+        if (! $this->isEscalation()) {
+            return false;
+        }
+
+        if (! array_key_exists($this->panel, TicketPlugin::find($panelId)?->getLinkedTicketParentPanels() ?? [])) {
+            return false;
+        }
+
+        return $this->source_panel === $panelId
+            || $this->newQueryWithoutScopes()
+                ->where('linked_ticket_id', $this->getKey())
+                ->where('panel', $panelId)
+                ->exists();
+    }
+
+    /*
+     * The panel whose team talks with the other team on this escalation. An
+     * escalation made before source_panel was recorded falls back to where
+     * its first original lives.
+     */
+    public function escalationSourcePanel(): ?string
+    {
+        if (filled($this->source_panel)) {
+            return $this->source_panel;
+        }
+
+        return $this->newQueryWithoutScopes()
+            ->where('linked_ticket_id', $this->getKey())
+            ->orderBy('id')
+            ->value('panel');
+    }
+
+    /*
+     * Ids compare as strings, since a driver may read the same id back as a
+     * string in one place and an integer in another.
+     */
+    public function isSubmittedBy(Model|Authenticatable|int|string|null $user): bool
+    {
+        $id = match (true) {
+            $user instanceof Model => $user->getKey(),
+            $user instanceof Authenticatable => $user->getAuthIdentifier(),
+            default => $user,
+        };
+
+        return filled($id) && filled($this->submitter_id) && (string) $id === (string) $this->submitter_id;
+    }
+
+    public function requesterName(): ?string
+    {
+        return $this->submitter !== null
+            ? Filament::getUserName($this->submitter)
+            : $this->submitter_data?->name;
     }
 
     public function isInCurrentPanel(): bool

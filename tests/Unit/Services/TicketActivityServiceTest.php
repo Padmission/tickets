@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Config;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivitySide;
@@ -9,6 +10,7 @@ use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketUserState;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
     $this->service = new TicketActivityService;
@@ -243,6 +245,30 @@ test('activities perspective comes from the provided user when no one is authent
         ->userName->toBe(__('padmission-tickets::tickets.side_you'));
 });
 
+test('a colleague\'s message on the viewer\'s side is named, not "You"', function () {
+    $submitter = User::factory()->create();
+    $supporter = User::factory()->create();
+    $colleague = User::factory()->create(['name' => 'Maria Lopez']);
+    $ticket = Ticket::factory()->create(['submitter_id' => $submitter->id, 'assignee_id' => $supporter->id]);
+
+    [$own, $colleagues] = collect([$supporter, $colleague])->map(fn (User $author) => TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'user_id' => $author->id,
+        'sender' => ActivitySender::Supporter,
+        'type' => ActivityType::Message,
+    ]))->all();
+
+    $activities = $this->service->getActivities($ticket, user: $supporter)->keyBy('id');
+
+    expect($activities[$colleagues->id])
+        ->side->toBe(ActivitySide::Me)
+        ->isOwn->toBeFalse()
+        ->userName->toBe('Maria Lopez')
+        ->and($activities[$own->id])
+        ->isOwn->toBeTrue()
+        ->userName->toBe(__('padmission-tickets::tickets.side_you'));
+});
+
 test('supporter perspective includes management activity types without auth while submitter does not', function () {
     $submitter = User::factory()->create();
     $supporter = User::factory()->create();
@@ -309,4 +335,48 @@ test('mark as seen leaves the pointer alone while seen tracking is skipped', fun
 
     expect($this->service->getUserState($this->ticket, $this->user))
         ->last_seen_activity_id->toBe($activity->id);
+});
+
+test('senders are named through the ticket panel relationship scopes, not the viewer\'s', function () {
+    $sender = User::factory()->create(['name' => 'Sender From Another Tenant']);
+
+    // Stands in for a host tenant scope that hides the sender from the viewer,
+    // which the ticket panel's relationship modifier lifts.
+    User::addGlobalScope('acting-tenant', fn ($query) => $query->whereKeyNot($sender->id));
+
+    Filament::getPanel('test2')->plugin(
+        TicketPlugin::make()
+            ->allSupportersQuery(fn () => User::query())
+            ->modifyRelationshipScopes(fn ($relation) => $relation->withoutGlobalScope('acting-tenant'))
+            ->registerResources()
+    );
+
+    $ticket = Ticket::factory()->create(['panel' => 'test2', 'submitter_id' => $sender->id]);
+
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::User,
+        'user_id' => $sender->id,
+    ]);
+
+    $activities = $this->service->getActivities($ticket, user: $this->user);
+
+    expect($activities->first()->userName)->toBe('Sender From Another Tenant');
+})->after(fn () => User::clearBootedModels());
+
+test('the submitter reads as the requester however their id is held on the ticket', function () {
+    $message = TicketActivity::factory()->create([
+        'ticket_id' => $this->ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::User,
+        'user_id' => $this->user->id,
+    ]);
+
+    // As a form select or a request hands it over: a string.
+    $this->ticket->submitter_id = (string) $this->user->id;
+
+    $activities = $this->service->getActivities($this->ticket, user: $this->user);
+
+    expect($activities->firstWhere('id', $message->id)->side)->toBe(ActivitySide::Me);
 });
