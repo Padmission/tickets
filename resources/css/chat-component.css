@@ -56,8 +56,14 @@
 	height: 100%;
 }
 
+/* A dialog stays opaque where a host makes the chat's surface transparent. */
+:host {
+	--dialog-bg: #ffffff;
+}
+
 /* Dark mode - Filament uses .dark class */
 :host(.dark) {
+	--dialog-bg: #1e293b;
 	--message-supporter-bg: var(--color-primary);
 	--message-supporter-text: white;
 	--message-user-bg: #334155;
@@ -833,8 +839,9 @@ dialog.reopen {
 	padding: 1.25em;
 	border: 1px solid var(--color-border);
 	border-radius: 0.75em;
-	background-color: var(--color-surface, #ffffff);
+	background-color: var(--dialog-bg);
 	color: var(--color-text-primary);
+	box-shadow: 0 10px 25px rgba(0 0 0 / 0.15);
 
 	&::backdrop {
 		background-color: rgba(0 0 0 / 0.4);
@@ -864,7 +871,7 @@ dialog.reopen {
 		border-radius: 0.5rem;
 		padding: 0.5em 0.875em;
 		cursor: pointer;
-		background-color: var(--color-surface, #ffffff);
+		background-color: var(--dialog-bg);
 		color: var(--color-text-primary);
 		font: inherit;
 		font-size: 0.875em;

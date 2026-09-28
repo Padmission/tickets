@@ -64,3 +64,17 @@ it('leaves reopening an escalation to the panel it lives in', function () {
         ->mountAction(ReopenTicketAction::class)
         ->assertMountedActionModalSee('It goes back to its first open status, and both teams can write on it again.');
 });
+
+it('draws the page again when a reply in its chat reopened the ticket, so Close leads the header again', function () {
+    $ticket = Ticket::factory()->closed()->create();
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertSeeHtml("mountAction('reopen-ticket'")
+        ->assertDontSeeHtml("mountAction('close-ticket'");
+
+    $ticket->reopen();
+
+    $page->dispatch('message-sent', reopened: true)
+        ->assertSeeHtml("mountAction('close-ticket'")
+        ->assertDontSeeHtml("mountAction('reopen-ticket'");
+});

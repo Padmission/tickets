@@ -500,9 +500,14 @@ class ViewTicket extends EditRecord
     }
 
     #[On('message-sent')]
-    public function rerenderAfterMessage()
+    public function rerenderAfterMessage(bool $reopened = false)
     {
         $this->forgetLinks();
+
+        // A reply that reopened the ticket changes its header and sidebar, so all of it is drawn again.
+        if ($reopened) {
+            return;
+        }
 
         $originals = $this->getSchemaComponent('form.childTickets');
 

@@ -56,7 +56,7 @@
         const chat = document.getElementById('supporter-chat')
 
         chat.addEventListener('message-sent', (event) => {
-            Livewire.dispatch('message-sent');
+            Livewire.dispatch('message-sent', { reopened: event.detail?.reopened === true });
         })
 
         window.addEventListener('ticket-chat-changed', (event) => String(event.detail?.ticketId) === chat.getAttribute('ticket-id') && chat.refreshTicket?.(event.detail.canReply))

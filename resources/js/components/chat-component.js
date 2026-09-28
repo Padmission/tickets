@@ -446,6 +446,16 @@ customElements.define(
 			await this.sendMessage();
 
 			this.followsUp = null;
+
+			// The new ticket opens with its link back and intro, written before the message, so its
+			// whole history is read rather than only what the send returned.
+			if (this.ticketId) {
+				this.messages = [];
+				this.lastMessageId = 0;
+				this.messagesElement.replaceChildren();
+				await this.loadMessages();
+				this.scrollToBottom();
+			}
 		}
 
 		// The page this chat sits on calls it after an action that can change whether the viewer
@@ -906,7 +916,7 @@ customElements.define(
 				this.clearAttachments();
 				this.renderMessages(messages);
 				this.scrollToBottom();
-				this.dispatchEvent(new CustomEvent("message-sent"));
+				this.dispatchEvent(new CustomEvent("message-sent", { detail: { reopened: reopen } }));
 			} catch (error) {
 				console.log("Sending failed", error);
 				this.setError((await this.responseMessage(error)) || __("chat.error"));
