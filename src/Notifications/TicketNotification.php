@@ -90,7 +90,7 @@ class TicketNotification extends Notification
         }
 
         // Nobody is emailed about what they did themselves.
-        if (in_array($this->notificationType, ['closed', 'assigned'], true) && $this->isActor($notifiable)) {
+        if (in_array($this->notificationType, ['closed', 'assigned', 'reopened'], true) && $this->isActor($notifiable)) {
             return false;
         }
 
@@ -181,11 +181,25 @@ class TicketNotification extends Notification
             return $this->notificationType;
         }
 
+        if ($this->reopening($notifiable) !== null) {
+            return 'reopened';
+        }
+
         $assignedToThem = $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable))
             ->contains(fn (TicketActivity $activity): bool => $activity->type === ActivityType::AssigneeChanged
                 && (string) ($activity->data['to'] ?? '') === (string) $notifiable->getKey());
 
         return $assignedToThem ? 'assigned' : $this->notificationType;
+    }
+
+    /*
+     * The reopen and the reply that came with it fall due together, so
+     * whichever notice goes first says who reopened the ticket.
+     */
+    protected function reopening($notifiable): ?TicketActivity
+    {
+        return $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable))
+            ->last(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Reopened);
     }
 
     protected function isActor($notifiable): bool
@@ -347,6 +361,14 @@ class TicketNotification extends Notification
 
         if ($this->notificationType === 'handedover') {
             return [...$wording, ...$this->handedOverWording($notifiable)];
+        }
+
+        if ($this->wordingType($notifiable) === 'reopened') {
+            $reopener = $this->reopening($notifiable)->senderName ?? $this->event->actor?->name;
+
+            $wording['intro'] = filled($reopener)
+                ? __("{$key}.intro", ['name' => $reopener])
+                : __("{$key}.intro_unknown");
         }
 
         if (! $this->isOwnEscalation($notifiable)) {

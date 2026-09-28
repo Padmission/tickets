@@ -21,6 +21,7 @@ use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Services\TicketReopening;
 use Padmission\Tickets\TicketPlugin;
 use Tiptap\Editor;
 
@@ -37,6 +38,7 @@ class CreateMessageController
             'content' => ['string', 'nullable', Rule::requiredIf(fn () => blank($request->array('attachment_ids')))],
             'attachment_ids' => ['array', Rule::requiredIf(fn () => blank($request->get('content')))],
             'lock_turn' => ['boolean'],
+            'reopen' => ['boolean'],
         ]);
 
         $ticket = resolve(ApiTicketResolver::class)->resolve($ticket, $request->user());
@@ -47,6 +49,13 @@ class CreateMessageController
         }
 
         resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
+
+        // Reopened only on the writer's say-so, and only by those who may.
+        if ($ticket->isClosed && $request->boolean('reopen')
+            && in_array(TicketReopening::REOPEN, resolve(TicketReopening::class)->choicesFor($ticket, $request->user()), true)) {
+            $ticket->reopen($request->user()->getAuthIdentifier());
+        }
+
         resolve(TicketAuth::class)->refuseClosedTicket($ticket);
 
         $attachmentIds = $validated['attachment_ids'] ?? [];
@@ -59,7 +68,8 @@ class CreateMessageController
             ? (new Editor)->sanitize($validated['content'])
             : null;
 
-        $isFirstActivity = ! $ticket->ticketActivities()->exists();
+        // A new ticket's link back to the one it follows up is not its opening.
+        $isFirstActivity = ! $ticket->ticketActivities()->whereNot('type', ActivityType::FollowsUp)->exists();
 
         if ($isFirstActivity) {
             $this->createFirstMessage($ticket);

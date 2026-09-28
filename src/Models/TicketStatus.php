@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -55,6 +56,25 @@ class TicketStatus extends Model
      */
     public static function getClosedStatusFor(Ticket $ticket): ?static
     {
+        /** @var ?static */
+        return static::statusesFor($ticket)->orderBy('order', 'desc')->first();
+    }
+
+    /*
+     * The first status of the ticket's own panel and tenant, which a
+     * reopened ticket takes, as a new ticket takes its panel's first.
+     */
+    public static function getOpenStatusFor(Ticket $ticket): ?static
+    {
+        /** @var ?static */
+        return static::statusesFor($ticket)->orderBy('order')->first();
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    protected static function statusesFor(Ticket $ticket): Builder
+    {
         $query = static::query()
             ->withoutGlobalScope(CurrentPanelScope::class)
             ->where('panel', $ticket->panel);
@@ -69,7 +89,6 @@ class TicketStatus extends Model
             app()->call($modifier, ['relation' => $query, 'model' => 'status']);
         }
 
-        /** @var ?static */
-        return $query->orderBy('order', 'desc')->first();
+        return $query;
     }
 }

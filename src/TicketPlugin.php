@@ -82,6 +82,10 @@ class TicketPlugin implements Plugin
 
     protected bool $navigationBadgeCountsNeedsYou = false;
 
+    public const int DEFAULT_REOPEN_WINDOW_DAYS = 30;
+
+    protected int|Closure $reopenWindowDays = self::DEFAULT_REOPEN_WINDOW_DAYS;
+
     protected mixed $additionalTicketDetails = [];
 
     protected mixed $additionalTableColumns = [];
@@ -473,6 +477,22 @@ class TicketPlugin implements Plugin
     public function shouldNavigationBadgeCountNeedsYou(): bool
     {
         return $this->navigationBadgeCountsNeedsYou;
+    }
+
+    /*
+     * How long after a ticket closes its requester may still reopen it by
+     * replying. After that a reply starts a new ticket that links back.
+     */
+    public function reopenWindowDays(int|Closure $days): static
+    {
+        $this->reopenWindowDays = $days;
+
+        return $this;
+    }
+
+    public function getReopenWindowDays(): int
+    {
+        return (int) value($this->reopenWindowDays);
     }
 
     /**

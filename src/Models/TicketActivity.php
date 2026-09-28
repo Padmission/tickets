@@ -22,6 +22,7 @@ use Padmission\Tickets\Models\Concerns\HasPanelAwareRelationships;
 use Padmission\Tickets\Models\Concerns\HasTicketAttachments;
 use Padmission\Tickets\Models\Observers\TicketActivityObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Services\TicketUrlService;
 use Padmission\Tickets\TicketPlugin;
 
 /**
@@ -141,8 +142,25 @@ class TicketActivity extends Model
             ActivityType::OriginalAdded => $this->originalNote('original_added'),
             ActivityType::OriginalRemoved => $this->originalNote('original_removed'),
             ActivityType::HandedOver => $this->handOverNote(),
+            ActivityType::FollowsUp => $this->followsUpNote(),
             default => $value
         });
+    }
+
+    /*
+     * The earlier ticket is linked where its reader can open it: a requester
+     * in their tickets, a supporter on its page.
+     */
+    protected function followsUpNote(): string
+    {
+        $number = '#'.e((string) $this->activityData('ticket'));
+        $earlier = TicketPlugin::resolveModelClass(Ticket::class)::query()->withoutGlobalScopes()->find($this->activityData('ticket'));
+        $viewer = auth()->user();
+        $url = $earlier instanceof Ticket && $viewer instanceof Model ? resolve(TicketUrlService::class)->getActionUrlFor($earlier, $viewer) : null;
+
+        return __('padmission-tickets::activities.follows_up', [
+            'ticket' => $url === null ? $number : '<a href="'.e($url).'">'.$number.'</a>',
+        ]);
     }
 
     /**

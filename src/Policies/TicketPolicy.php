@@ -92,6 +92,24 @@ class TicketPolicy
     }
 
     /*
+     * Whoever may reply may reopen by replying: the requester for a while
+     * after the close, the person handling an escalation, and the supporters
+     * of the ticket's own panel.
+     */
+    public function reopen($user, Ticket $ticket): bool
+    {
+        if (! $ticket->isClosed) {
+            return false;
+        }
+
+        if ($ticket->isSubmittedBy($user)) {
+            return $ticket->isEscalation() || $ticket->isWithinReopenWindow();
+        }
+
+        return $this->manage($user, $ticket);
+    }
+
+    /*
      * Each side deletes the tickets that live in its own panel, and a
      * requester never does.
      */

@@ -118,6 +118,7 @@ class TicketActivityService
             ActivityType::Closed,
             ActivityType::Reopened,
             ActivityType::HandedOver,
+            ActivityType::FollowsUp,
         ];
     }
 

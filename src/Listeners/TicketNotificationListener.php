@@ -12,6 +12,7 @@ use Padmission\Tickets\Events\TicketAssignedEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Events\TicketHandedOverEvent;
+use Padmission\Tickets\Events\TicketReopenedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\NotificationRecipientService;
@@ -28,7 +29,7 @@ class TicketNotificationListener implements ShouldHandleEventsAfterCommit
     ) {}
 
     public function handle(
-        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent $event
+        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent|TicketReopenedEvent $event
     ): void {
         $recipients = $this->recipientService->getNotificationRecipients($event);
 

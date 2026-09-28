@@ -33,4 +33,6 @@ enum ActivityType: string
     case OriginalRemoved = 'original-removed';
 
     case HandedOver = 'handed-over';
+
+    case FollowsUp = 'follows-up';
 }

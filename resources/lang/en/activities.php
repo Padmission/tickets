@@ -5,6 +5,7 @@ return [
     'closed' => 'Conversation closed',
     'reopened' => 'Conversation reopened by :name',
     'reopened_unknown' => 'Conversation reopened',
+    'follows_up' => 'Follows up on :ticket',
     'status_changed' => 'Status changed from :from to :to',
     'priority_changed' => 'Priority changed from :from to :to',
     'turn_changed' => '"Waiting on" changed from :from to :to',

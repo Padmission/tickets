@@ -14,6 +14,7 @@ use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Events\TicketHandedOverEvent;
 use Padmission\Tickets\Events\TicketPriorityChangedEvent;
+use Padmission\Tickets\Events\TicketReopenedEvent;
 use Padmission\Tickets\Events\TicketStatusChangedEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\TicketPlugin;
@@ -21,7 +22,7 @@ use Padmission\Tickets\TicketPlugin;
 class NotificationRecipientService
 {
     public function getNotificationRecipients(
-        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
+        TicketActivityEvent|TicketAssignedEvent|TicketClosedEvent|TicketCreatedEvent|TicketHandedOverEvent|TicketReopenedEvent|TicketPriorityChangedEvent|TicketStatusChangedEvent $event
     ): Collection {
         if ($event instanceof TicketHandedOverEvent) {
             return $this->getHandOverRecipients($event);

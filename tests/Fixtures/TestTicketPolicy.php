@@ -46,6 +46,11 @@ class TestTicketPolicy
     /**
      * Determine whether the user can delete the model.
      */
+    public function reopen(User $user, Ticket $ticket): bool
+    {
+        return $ticket->isClosed;
+    }
+
     public function delete(User $user, Ticket $ticket): bool
     {
         return true;

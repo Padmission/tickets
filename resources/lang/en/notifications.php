@@ -16,6 +16,13 @@ return [
         'action_escalations' => 'View your team\'s escalations',
     ],
 
+    'ticket-reopened' => [
+        'subject' => 'Ticket reopened #:ticket_id – :subject',
+        'headline' => 'Ticket reopened',
+        'intro' => ':name reopened this ticket.',
+        'intro_unknown' => 'This ticket was reopened.',
+    ],
+
     'ticket-created' => [
         'subject' => 'New ticket #:ticket_id – :subject',
         'headline' => 'New Ticket',
