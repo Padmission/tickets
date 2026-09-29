@@ -552,34 +552,38 @@
 .fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label {
 	position: relative;
 	display: block;
-	padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 12) calc(var(--spacing) * 3.5) calc(var(--spacing) * 15.5);
+	padding: calc(var(--spacing) * 3.5) calc(var(--spacing) * 12)
+		calc(var(--spacing) * 3.5) calc(var(--spacing) * 15.5);
 	border-radius: var(--radius-xl);
 	background-color: var(--color-white);
-	box-shadow:
-		0 0 0 1px color-mix(in oklab, var(--gray-950) 10%, transparent),
-		0 1px 2px 0 rgb(0 0 0 / 0.05);
+	box-shadow: 0 0 0 1px color-mix(in oklab, var(--gray-950) 10%, transparent), 0
+		1px 2px 0 rgb(0 0 0 / 0.05);
 	cursor: pointer;
 }
 
 .fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label:hover {
-	box-shadow:
-		0 0 0 1px color-mix(in oklab, var(--gray-950) 20%, transparent),
-		0 1px 2px 0 rgb(0 0 0 / 0.05);
+	box-shadow: 0 0 0 1px color-mix(in oklab, var(--gray-950) 20%, transparent), 0
+		1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-.fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label:has(:checked) {
+.fi-fo-radio.pad-ti-start-choice:not(.fi-inline)
+	> .fi-fo-radio-label:has(:checked) {
 	background-color: color-mix(in oklab, var(--primary-50) 70%, white);
 	box-shadow: 0 0 0 2px var(--primary-600);
 }
 
-.fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label > .fi-radio-input {
+.fi-fo-radio.pad-ti-start-choice:not(.fi-inline)
+	> .fi-fo-radio-label
+	> .fi-radio-input {
 	position: absolute;
 	top: 50%;
 	right: calc(var(--spacing) * 4);
 	margin: calc(var(--spacing) * -2) 0 0;
 }
 
-.fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label > .fi-fo-radio-label-text {
+.fi-fo-radio.pad-ti-start-choice:not(.fi-inline)
+	> .fi-fo-radio-label
+	> .fi-fo-radio-label-text {
 	display: block;
 }
 
@@ -602,7 +606,9 @@
 	height: calc(var(--spacing) * 5);
 }
 
-.pad-ti-start-choice .fi-fo-radio-label:has(:checked) .pad-ti-start-choice__icon {
+.pad-ti-start-choice
+	.fi-fo-radio-label:has(:checked)
+	.pad-ti-start-choice__icon {
 	background-color: var(--primary-100);
 	color: var(--primary-700);
 }
@@ -625,11 +631,15 @@
 	box-shadow: 0 0 0 1px color-mix(in oklab, white 10%, transparent);
 }
 
-.dark .fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label:hover {
+.dark
+	.fi-fo-radio.pad-ti-start-choice:not(.fi-inline)
+	> .fi-fo-radio-label:hover {
 	box-shadow: 0 0 0 1px color-mix(in oklab, white 20%, transparent);
 }
 
-.dark .fi-fo-radio.pad-ti-start-choice:not(.fi-inline) > .fi-fo-radio-label:has(:checked) {
+.dark
+	.fi-fo-radio.pad-ti-start-choice:not(.fi-inline)
+	> .fi-fo-radio-label:has(:checked) {
 	background-color: color-mix(in oklab, var(--primary-500) 10%, transparent);
 	box-shadow: 0 0 0 2px var(--primary-500);
 }
@@ -639,7 +649,10 @@
 	color: var(--gray-400);
 }
 
-.dark .pad-ti-start-choice .fi-fo-radio-label:has(:checked) .pad-ti-start-choice__icon {
+.dark
+	.pad-ti-start-choice
+	.fi-fo-radio-label:has(:checked)
+	.pad-ti-start-choice__icon {
 	background-color: color-mix(in oklab, var(--primary-500) 20%, transparent);
 	color: var(--primary-400);
 }
@@ -673,7 +686,9 @@
  * (ViewTicket::editBesideLabel()). It sits in Filament's slot before the
  * label, so it is moved after the label here, ahead of the hints.
  */
-.pad-ti-edit-entry .fi-in-entry-label-ctn > :first-child:not(.fi-in-entry-label) {
+.pad-ti-edit-entry
+	.fi-in-entry-label-ctn
+	> :first-child:not(.fi-in-entry-label) {
 	order: 1;
 	margin-inline-start: calc(var(--spacing) * -1);
 }
