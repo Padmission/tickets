@@ -91,7 +91,9 @@ class TicketNotification extends Notification
          * escalated needs no "New ticket" email about their own escalation.
          */
         if ($this->notificationType === 'created') {
-            return ! $this->isOwnEscalation($notifiable) && ($this->isSubmitter($notifiable) || ! $this->isActor($notifiable));
+            return $this->isSubmitter($notifiable)
+                ? ! ($this->ticket->isEscalation() && $this->isActor($notifiable))
+                : ! $this->isActor($notifiable);
         }
 
         // Nobody is emailed about what they did themselves.
@@ -288,7 +290,10 @@ class TicketNotification extends Notification
                 'ticket' => $this->ticket,
                 'assigneeName' => $this->assigneeName(),
                 'openingMessage' => $opening?->plainTextContent(),
-                'openingMessageLabel' => $opening === null ? null : __('padmission-tickets::notifications.ticket-created.message_from', ['name' => $this->senderName($opening)]),
+                'openingMessageLabel' => $opening === null ? null : __('padmission-tickets::notifications.ticket-created.message_from', [
+                    // The other team's people go by their team's name, as in its replies.
+                    'name' => (($this->openedFor()['note']?->data['by_team'] ?? false) ? $this->escalationTeamName() : null) ?? $this->senderName($opening),
+                ]),
             ]);
     }
 
@@ -406,6 +411,12 @@ class TicketNotification extends Notification
 
         $user = $this->findUser($note->user_id);
         $opener = $user === null ? __('padmission-tickets::notifications.general.sender-support') : resolve(GetUserDisplayName::class)->forUser($user);
+
+        if ($note->data['by_team'] ?? false) {
+            return $this->isSubmitter($notifiable)
+                ? TicketPlugin::teamText("{$key}.intro_opened_for_you_team", $this->escalationTeamName())
+                : TicketPlugin::teamText("{$key}.intro_opened_for_team", $this->escalationTeamName(), ['requester' => $this->ticket->requesterName() ?? __('padmission-tickets::tickets.actions.close.the_contact')]);
+        }
 
         return $this->isSubmitter($notifiable)
             ? __("{$key}.intro_opened_for_you", ['name' => $opener])

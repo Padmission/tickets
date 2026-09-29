@@ -120,6 +120,8 @@ class TicketPlugin implements Plugin
 
     protected bool|Closure|null $startsTickets = null;
 
+    protected ?Closure $ticketTenantsQuery = null;
+
     protected string $dateTimeDisplayFormat = 'd.m.Y H:i:s';
 
     protected string|Closure|null $displayTimezone = null;
@@ -855,6 +857,26 @@ class TicketPlugin implements Plugin
         }
 
         return (bool) value($this->startsTickets);
+    }
+
+    /*
+     * The organizations a panel that receives other teams' escalations may
+     * open a ticket for, when tickets belong to a tenant. That panel sees
+     * every tenant, so the host says which of them take tickets.
+     */
+    public function ticketTenantsQuery(?Closure $query): static
+    {
+        $this->ticketTenantsQuery = $query;
+
+        return $this;
+    }
+
+    /**
+     * @return Builder<Model>|null
+     */
+    public function getTicketTenantsQuery(): ?Builder
+    {
+        return $this->ticketTenantsQuery === null ? null : app()->call($this->ticketTenantsQuery);
     }
 
     /*

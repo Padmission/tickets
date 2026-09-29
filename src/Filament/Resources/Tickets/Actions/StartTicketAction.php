@@ -2,10 +2,8 @@
 
 namespace Padmission\Tickets\Filament\Resources\Tickets\Actions;
 
-use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -23,9 +21,9 @@ use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\StartsTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Rules\PlainText;
 use Padmission\Tickets\Services\TicketStarter;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
@@ -40,6 +38,8 @@ use function Filament\Support\generate_icon_html;
  */
 class StartTicketAction extends Action
 {
+    use StartsTickets;
+
     public const ORGANIZATION = 'organization';
 
     public const ESCALATION = 'escalation';
@@ -59,7 +59,8 @@ class StartTicketAction extends Action
             ->label(__(self::KEY.'label'))
             ->icon(Heroicon::Plus)
             ->modalHeading(__(self::KEY.'label'))
-            ->visible(fn (): bool => TicketPlugin::get()->canStartTickets())
+            // A panel that receives escalations opens its tickets through OpenTicketForContactAction.
+            ->visible(fn (): bool => TicketPlugin::get()->canStartTickets() && count(TicketPlugin::get()->getLinkedTicketChildPanels()) === 0)
             ->authorize('openTicketFromList')
             // Whatever a host makes actions default to, this is a slide-over, as Escalate is.
             ->slideOver()
@@ -108,17 +109,7 @@ class StartTicketAction extends Action
                         ->required()
                         ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
 
-                    FileUpload::make('attachments')
-                        ->label(__(self::KEY.'attachments'))
-                        ->multiple()
-                        ->storeFiles(false)
-                        ->maxSize(fn (): int => intdiv(TicketPlugin::get()->getChatWidgetConfig()->getMaxUploadFileSize(), 1024))
-                        ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
-                            if ($value instanceof TemporaryUploadedFile && PlainText::hasMarkup($value->getClientOriginalName())) {
-                                $fail('padmission-tickets::validation.plain_text')->translate();
-                            }
-                        })
-                        ->visible(fn (): bool => TicketPlugin::get()->getChatWidgetConfig()->getAllowFileUploads()),
+                    static::attachmentsField(),
 
                     Text::make(__(self::KEY.'escalate_instead'))
                         ->color('gray')
@@ -128,7 +119,7 @@ class StartTicketAction extends Action
                     ->visible(fn (Get $get): bool => static::kind($get('kind')) !== null),
             ])
             ->action(function (array $data, Component $livewire): void {
-                $attachments = array_values(array_filter($data['attachments'] ?? [], fn (mixed $file): bool => $file instanceof TemporaryUploadedFile));
+                $attachments = static::uploadedFiles($data);
 
                 try {
                     $ticket = static::kind($data['kind'] ?? null) === self::ESCALATION
@@ -240,7 +231,7 @@ class StartTicketAction extends Action
                 ->label(__(self::KEY.'requester'))
                 ->searchable()
                 ->getSearchResultsUsing(fn (string $search): array => static::searchRequesters($search))
-                ->getOptionLabelUsing(fn (mixed $value): ?string => static::requesterOption(static::findRequester($value)))
+                ->getOptionLabelUsing(fn (mixed $value): ?string => static::personOption(static::findRequester($value)))
                 ->allowHtml()
                 ->helperText(fn (Get $get): ?string => ($name = static::requesterName($get('requester_id'))) === null ? null : __(self::KEY.'requester_helper', ['name' => $name]))
                 ->required()
@@ -380,7 +371,7 @@ class StartTicketAction extends Action
             ->orderBy($query->qualifyColumn('name'))
             ->limit(50)
             ->get()
-            ->mapWithKeys(fn (Model $user): array => [$user->getKey() => static::requesterOption($user)])
+            ->mapWithKeys(fn (Model $user): array => [$user->getKey() => static::personOption($user)])
             ->all();
     }
 
@@ -398,16 +389,5 @@ class StartTicketAction extends Action
         $requester = static::findRequester($id);
 
         return $requester === null ? null : Filament::getUserName($requester);
-    }
-
-    protected static function requesterOption(?Model $user): ?string
-    {
-        if ($user === null) {
-            return null;
-        }
-
-        $email = $user->getAttribute('email');
-
-        return e(Filament::getUserName($user)).(blank($email) ? '' : ' <span class="pad-ti-start-email">'.e($email).'</span>');
     }
 }

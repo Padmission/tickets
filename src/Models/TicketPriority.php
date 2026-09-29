@@ -10,6 +10,7 @@ use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
 use Padmission\Tickets\Models\Concerns\HasColor;
 use Padmission\Tickets\Models\Observers\TicketPriorityObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketPriorityObserver::class)]
 class TicketPriority extends Model
@@ -27,5 +28,30 @@ class TicketPriority extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new CurrentPanelScope);
+    }
+
+    /*
+     * The first priority of the ticket's own panel and tenant, for a ticket
+     * opened where neither is the viewer's own, as TicketStatus finds its
+     * open status.
+     */
+    public static function getDefaultFor(Ticket $ticket): ?static
+    {
+        $query = static::query()
+            ->withoutGlobalScope(CurrentPanelScope::class)
+            ->where('panel', $ticket->panel);
+
+        if (config('padmission-tickets.tenancy.enabled')) {
+            $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
+        }
+
+        $modifier = TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier();
+
+        if ($modifier) {
+            app()->call($modifier, ['relation' => $query, 'model' => 'priority']);
+        }
+
+        /** @var ?static */
+        return $query->orderBy('order')->first();
     }
 }

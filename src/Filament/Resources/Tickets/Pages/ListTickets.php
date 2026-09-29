@@ -8,6 +8,7 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Lang;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\OpenTicketForContactAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\StartTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -218,6 +219,7 @@ class ListTickets extends ListRecords
     {
         return [
             StartTicketAction::make(),
+            OpenTicketForContactAction::make(),
         ];
     }
 

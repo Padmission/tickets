@@ -15,8 +15,11 @@ use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
+use RuntimeException;
 
 /*
  * A supporter starts a ticket from the ticket list, for someone in their
@@ -79,6 +82,51 @@ class TicketStarter
             $ticket->addTicketActivity(ActivityType::AskedDirectly, ActivitySender::System);
 
             $this->writeMessage($ticket, ActivitySender::User, $message, $attachments);
+
+            return $ticket;
+        });
+    }
+
+    /**
+     * The other team opens, for a supporter of an organization who contacted
+     * it some other way, the question that supporter could have asked from
+     * their own list. The person who opened it has it, and owes the answer.
+     *
+     * @param  list<UploadedFile>  $attachments
+     */
+    public function askFor(Model $contact, int|string|null $tenantId, string $sourcePanelId, string $subject, string $message, array $attachments = []): Ticket
+    {
+        $model = TicketPlugin::resolveModelClass(Ticket::class);
+        $draft = (new $model)->forceFill(['panel' => Filament::getCurrentOrDefaultPanel()->getId(), 'tenant_id' => $tenantId]);
+        $status = TicketPlugin::resolveModelClass(TicketStatus::class)::getOpenStatusFor($draft);
+        $priority = TicketPlugin::resolveModelClass(TicketPriority::class)::getDefaultFor($draft);
+
+        if ($status === null || $priority === null) {
+            throw new RuntimeException(sprintf('No ticket status or priority found for panel "%s" and this organization.', $draft->panel));
+        }
+
+        return DB::transaction(function () use ($model, $draft, $contact, $tenantId, $sourcePanelId, $subject, $message, $attachments, $status, $priority): Ticket {
+            $ticket = $model::create([
+                'panel' => $draft->panel,
+                'source_panel' => $sourcePanelId,
+                'subject' => $subject,
+                'submitter_id' => $contact->getKey(),
+                'assignee_id' => Filament::auth()->id(),
+                'turn' => Turn::Supporter,
+                'status_id' => $status->getKey(),
+                'priority_id' => $priority->getKey(),
+                ...(config('padmission-tickets.tenancy.enabled') ? ['tenant_id' => $tenantId] : []),
+            ]);
+
+            // A host may set a new row's tenant from whoever is signed in, which here is the other team's.
+            if (config('padmission-tickets.tenancy.enabled') && (string) $ticket->getAttribute('tenant_id') !== (string) $tenantId) {
+                $ticket->forceFill(['tenant_id' => $tenantId])->saveQuietly();
+            }
+
+            $ticket->addTicketActivity(ActivityType::AskedDirectly, ActivitySender::System);
+            $ticket->addTicketActivity(ActivityType::OpenedFor, ActivitySender::System, data: ['requester' => $contact->getKey(), 'by_team' => true]);
+
+            $this->writeMessage($ticket, ActivitySender::Supporter, $message, $attachments);
 
             return $ticket;
         });

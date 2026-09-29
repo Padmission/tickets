@@ -161,9 +161,17 @@ class TicketActivity extends Model
         $requesterId = $this->activityData('requester');
         $key = 'padmission-tickets::activities.opened_for';
 
+        // The other team opened it for someone on the team that escalates, who reads it by the other team's name.
+        $team = $this->activityData('by_team') ? TicketPlugin::find($this->ticketPanelId())?->getSupportTeamName() : null;
+
         return match (true) {
-            filled($viewerId) && (string) $viewerId === (string) $requesterId => __("{$key}_you", ['name' => e($this->actorName())]),
             filled($viewerId) && (string) $viewerId === (string) $this->user_id => __("{$key}_by_you", ['requester' => e($this->nameOf($requesterId))]),
+            (bool) $this->activityData('by_team') => TicketPlugin::teamText(
+                filled($viewerId) && (string) $viewerId === (string) $requesterId ? "{$key}_team_you" : "{$key}_team",
+                $team === null ? null : e($team),
+                ['requester' => e($this->nameOf($requesterId))],
+            ),
+            filled($viewerId) && (string) $viewerId === (string) $requesterId => __("{$key}_you", ['name' => e($this->actorName())]),
             default => __($key, ['name' => e($this->actorName()), 'requester' => e($this->nameOf($requesterId))]),
         };
     }

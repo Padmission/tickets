@@ -21,6 +21,21 @@ return [
     ],
 
     'actions' => [
+        'open_ticket_for_contact' => [
+            'modal_description' => 'For someone at an organization who answers its tickets and asked you directly, such as by phone or email. It\'s listed as their question, and you handle it.',
+            'organization' => 'Organization',
+            'contact' => 'Person',
+            'nobody' => 'Nobody at this organization answers tickets yet.',
+            'regular_users' => 'For a regular user\'s problem, their organization\'s support team opens the ticket.',
+            'submit' => 'Open ticket',
+            'invalid_contact' => 'Choose someone who answers tickets at that organization.',
+            'not_configured' => 'Ticket statuses or priorities aren\'t set up for that organization yet.',
+            'created' => [
+                'title' => 'Ticket opened',
+                'body' => ':name gets an email saying you opened it for them. It\'s assigned to you.',
+            ],
+        ],
+
         'start_ticket' => [
             'label' => 'New ticket',
             'kind' => [

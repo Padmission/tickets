@@ -19,6 +19,7 @@ use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\OpenTicketForContactAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\StartTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
@@ -104,11 +105,13 @@ describe('Who may start one', function () {
         Livewire::test(ListTickets::class)->assertActionHidden(startTicket());
     });
 
-    it('is offered there when the host asks for it', function () {
+    it('leaves that panel\'s New ticket to the form for its own side when the host asks for one', function () {
         Filament::setCurrentPanel('test2');
         TicketPlugin::get('test2')->startsTickets();
 
-        Livewire::test(ListTickets::class)->assertActionVisible(startTicket());
+        Livewire::test(ListTickets::class)
+            ->assertActionHidden(startTicket())
+            ->assertActionVisible(TestAction::make(OpenTicketForContactAction::class));
     });
 });
 
