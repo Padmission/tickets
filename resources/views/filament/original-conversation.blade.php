@@ -9,7 +9,7 @@
     $plugin = TicketPlugin::get();
     $titleRow ??= 'full';
     $lastSeenId ??= null;
-    $submitterActions ??= null;
+    $showPeople ??= true;
     $viewer = Filament::auth()->user();
 @endphp
 
@@ -41,6 +41,7 @@
         @endphp
 
         <section class="pad-ti-transcript__ticket">
+            @if ($titleRow !== 'none' || $showPeople)
             <header class="pad-ti-transcript__header">
                 @if ($titleRow !== 'none')
                     <div class="pad-ti-transcript__title">
@@ -56,14 +57,12 @@
                     </div>
                 @endif
 
+                @if ($showPeople)
                 <dl class="pad-ti-transcript__people">
                     <div>
                         <dt>{{ $submitterLabel }}</dt>
                         <dd>
                             {{ $submitterName ?? '-' }}
-                            @if ($submitterActions)
-                                <span class="pad-ti-transcript__person-actions">{{ $submitterActions }}</span>
-                            @endif
                             @if (filled($submitterDescription))
                                 <span class="pad-ti-transcript__muted">({{ $submitterDescription }})</span>
                             @endif
@@ -75,7 +74,9 @@
                         <dd>{{ $assigneeName ?? __('padmission-tickets::tickets.resources.tickets.unassigned') }}</dd>
                     </div>
                 </dl>
+                @endif
             </header>
+            @endif
 
             @php
                 $activities = $activityService->getActivities($ticket, user: $viewer);

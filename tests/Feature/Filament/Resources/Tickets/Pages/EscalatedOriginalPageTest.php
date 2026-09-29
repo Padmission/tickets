@@ -135,7 +135,7 @@ it('calls the viewer You in the pane: on the original\'s card and on their own m
 
     Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
         ->call('showLinked', $this->original->id)
-        ->assertSeeHtml('<dd>You</dd>');
+        ->assertSeeInOrder([__('padmission-tickets::tickets.actions.view_original_conversation.assigned_to'), 'You', __('padmission-tickets::tickets.resources.tickets.turn')]);
 });
 
 it('calls the viewer You under Handled by when adding to an escalation', function () {

@@ -663,7 +663,7 @@ describe('Escalation page on the side that escalated', function () {
     });
 });
 
-it('links each original card on an escalation sent here to this page with the original beside it', function () {
+it('opens each original on an escalation sent here beside it, from its row', function () {
     (new TicketStatusSeeder)->run();
     TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
@@ -672,7 +672,9 @@ it('links each original card on an escalation sent here to this page with the or
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->call('closeLinked')
-        ->assertSeeHtml('href="'.e(ViewTicket::getUrl(['record' => $escalation, 'linked' => $original->id])).'"');
+        ->assertSeeHtml('wire:click="showLinked('.$original->id.')"')
+        ->call('showLinked', $original->id)
+        ->assertSet('linkedTicketId', $original->id);
 });
 
 it('reads who owes the next message again after a message is sent', function () {

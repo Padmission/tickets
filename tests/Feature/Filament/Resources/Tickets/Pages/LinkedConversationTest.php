@@ -66,7 +66,7 @@ describe('on an escalation sent to this panel', function () {
             ->assertSee(['The rent looks wrong', $requester])
             ->assertSee('Conversation with Test Admin, Acme Housing')
             ->assertSee("About {$requester}'s ticket. {$requester} never sees this conversation; Test Admin passes your answers on.")
-            ->assertSee("{$requester}'s original ticket")
+            ->assertSee("Original ticket #{$original->id}")
             ->assertSee(__('padmission-tickets::tickets.linked_view.read_only'))
             ->assertDontSeeHtml('pad-ti-linked__header-link')
             ->assertDontSeeHtml('pad-ti-transcript__title')
@@ -83,9 +83,8 @@ describe('on an escalation sent to this panel', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
             ->call('showLinked', $second->id)
-            ->assertSeeHtml('<span class="pad-ti-linked__tab-number">· #'.$first->id.'</span>')
-            ->assertSeeHtml('<span class="pad-ti-linked__tab-number">· #'.$second->id.'</span>')
-            ->assertSeeHtml("content: '{$second->subject}'")
+            ->assertSee('2 of 2')
+            ->assertSeeHtml('wire:click="showLinked('.$first->id.')"')
             ->assertSee('Second original message')
             ->assertDontSee('First original message')
             ->call('showLinked', $first->id)
@@ -208,7 +207,7 @@ describe('on the side that escalated', function () {
             ->assertActionHasLabel('show-linked', 'Show original ticket')
             ->callAction('show-linked')
             ->assertSet('linkedTicketId', $original->id)
-            ->assertSee(['The rent is too high', "Aisha Brooks's original ticket"])
+            ->assertSee(['The rent is too high', "Original ticket #{$original->id}"])
             ->assertSee('Answer Aisha Brooks')
             ->assertSeeHtml('href="'.e(ViewTicket::getUrl(['record' => $original, 'linked' => $escalation->id])).'"');
     });

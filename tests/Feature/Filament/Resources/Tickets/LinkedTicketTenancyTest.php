@@ -92,7 +92,7 @@ describe('with tenancy enabled', function () {
         $otherTenant = Ticket::factory()->open()->create(['panel' => 'test2', 'tenant_id' => 2]);
 
         Livewire::test(ViewTicket::class, ['record' => $escalated->id])
-            ->fillForm(['childTickets' => [$otherTenant->id]])
+            ->callAction('linkOriginals', ['originals' => [$otherTenant->id]])
             ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 
         expect($otherTenant->refresh()->linked_ticket_id)->toBeNull();
@@ -235,7 +235,7 @@ it('links original tickets submitted more than once', function () {
     $original = Ticket::factory()->open()->create(['panel' => 'test2']);
 
     Livewire::test(ViewTicket::class, ['record' => $escalated->id])
-        ->fillForm(['childTickets' => [$original->id, $original->id]])
+        ->callAction('linkOriginals', ['originals' => [$original->id, $original->id]])
         ->assertNotNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 
     expect($original->refresh()->linked_ticket_id)->toBe($escalated->id);
@@ -255,7 +255,7 @@ it('refuses an original another request links elsewhere before this one saves', 
     });
 
     $page
-        ->fillForm(['childTickets' => [$original->id]])
+        ->callAction('linkOriginals', ['originals' => [$original->id]])
         ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 
     expect($original->refresh()->linked_ticket_id)->toBe($otherEscalation->id);
@@ -298,7 +298,7 @@ it('refuses an original that is already linked to another escalation', function 
     linkedTicketPicker($escalated, 'childTickets')->assertCanNotSeeTableRecords([$original]);
 
     Livewire::test(ViewTicket::class, ['record' => $escalated->id])
-        ->fillForm(['childTickets' => [$original->id]])
+        ->callAction('linkOriginals', ['originals' => [$original->id]])
         ->assertNotified(__('padmission-tickets::tickets.resources.tickets.link_refused.title'));
 
     expect($original->refresh()->linked_ticket_id)->toBe($otherEscalation->id);

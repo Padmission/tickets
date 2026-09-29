@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\TableSelect;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Notifications\Notification;
@@ -34,7 +35,6 @@ use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Filament\Forms\Components\LinkedTicketModalSelect;
 use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
 use Padmission\Tickets\Filament\Infolists\FieldHelp;
@@ -61,6 +61,7 @@ use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Support\ConversationState;
+use Padmission\Tickets\Support\OriginalTicketSummary;
 use Padmission\Tickets\TicketPlugin;
 
 class ViewTicket extends EditRecord
@@ -70,6 +71,9 @@ class ViewTicket extends EditRecord
     protected static string $resource = TicketResource::class;
 
     protected $listeners = ['refresh' => '$refresh'];
+
+    // Open originals shown in the Escalation box before "Show N more".
+    protected const int ORIGINALS_SHOWN = 3;
 
     #[Url(as: 'linked')]
     public ?int $linkedTicketId = null;
@@ -509,12 +513,6 @@ class ViewTicket extends EditRecord
             return;
         }
 
-        $originals = $this->getSchemaComponent('form.childTickets');
-
-        if ($originals instanceof LinkedTicketModalSelect) {
-            $originals->forgetRelayPending();
-        }
-
         /** @var Ticket $record */
         $record = $this->getRecord();
 
@@ -787,30 +785,11 @@ class ViewTicket extends EditRecord
                                 ->color('gray')
                                 ->visible(fn (Ticket $record): bool => AddToEscalationAction::isAvailableFor($record) && static::canEdit($record)),
 
-                            LinkedTicketModalSelect::make('childTickets')
-                                ->relationship(
-                                    name: 'childTickets',
-                                    titleAttribute: 'subject'
-                                )
-                                ->tableConfiguration(ChildTicketsTable::class)
-                                ->multiple()
-                                ->nullable()
-                                ->visible(fn (Ticket $record) => count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0)
-                                ->disabled(fn (Ticket $record) => $record->isClosed || ! static::canEdit($record))
-                                ->label(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
-                                ->placeholder(__('padmission-tickets::tickets.resources.tickets.child_tickets_placeholder'))
-                                ->afterStateUpdated(function (Ticket $record, $state, LinkedTicketModalSelect $component) {
-                                    $selectedIds = $state === null ? [] : array_values((array) $state);
-
-                                    $synced = resolve(TicketEscalationLinks::class)->syncOriginals($record, $selectedIds);
-
-                                    $this->forgetLinks();
-
-                                    if (! $synced) {
-                                        $component->state($record->childTickets()->pluck($record->qualifyColumn('id'))->all());
-                                        static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
-                                    }
-                                }),
+                            // The originals as quiet rows: open one beside the escalation, link another, or take one out.
+                            View::make('padmission-tickets::filament.escalation-originals')
+                                ->key('originals')
+                                ->viewData(fn (): array => $this->originalsBoxData())
+                                ->visible(fn (Ticket $record): bool => count(TicketPlugin::get($record->panel)->getLinkedTicketChildPanels()) > 0),
                         ]),
                 ]),
             ]);
@@ -877,11 +856,22 @@ class ViewTicket extends EditRecord
     protected function linkedViewData(bool $drawer): array
     {
         $linked = $this->linkedTicket();
+        $linkedTickets = $this->linkedTickets();
+        $index = $linked === null ? false : $linkedTickets->search(fn (Ticket $ticket): bool => $ticket->is($linked));
+        $isOriginal = $linked !== null && $this->isShowingOriginals();
+        $summary = OriginalTicketSummary::for($isOriginal ? collect([$linked]) : collect());
 
         return [
             'record' => $this->getRecord(),
             'linked' => $linked,
-            'linkedTickets' => $this->linkedTickets(),
+            'linkedTickets' => $linkedTickets,
+            'isOriginal' => $isOriginal,
+            'position' => $index === false ? null : $index + 1,
+            'previousId' => $index === false || $index === 0 ? null : $linkedTickets[$index - 1]->getKey(),
+            'nextId' => $index === false ? null : $linkedTickets->get($index + 1)?->getKey(),
+            'summary' => $summary,
+            'handler' => $isOriginal ? $summary->handler($linked) : null,
+            'waitingOn' => $isOriginal ? $summary->waitingOn($linked) : null,
             'drawer' => $drawer,
             'headings' => $this->linkedTickets()->mapWithKeys(fn (Ticket $ticket): array => [$ticket->getKey() => $this->linkedTicketHeading($ticket)]),
             'headerLink' => $linked === null ? null : $this->linkedHeaderLink($linked),
@@ -963,6 +953,175 @@ class ViewTicket extends EditRecord
                 : __('padmission-tickets::tickets.linked_view.answer_requester_unnamed'),
             'url' => static::getResource()::getUrl('view', ['record' => $linked, 'linked' => $record->getKey()]),
         ];
+    }
+
+    /*
+     * Linking and removing originals change the escalation, so they take
+     * the hold its Edit needs, while it is open.
+     */
+    protected function canChangeOriginals(Ticket $record): bool
+    {
+        return $record->isOpen && static::canEdit($record);
+    }
+
+    public function linkOriginalsAction(): Action
+    {
+        $label = __('padmission-tickets::tickets.resources.tickets.originals_box.link_another');
+
+        return Action::make('linkOriginals')
+            ->label($label)
+            ->tooltip($label)
+            ->iconButton()
+            ->icon(Heroicon::OutlinedPlus)
+            ->iconSize('sm')
+            ->color('gray')
+            ->record(fn (): Model => $this->getRecord())
+            ->authorize(fn (Ticket $record): bool => $record->isOpen && $this->authorizesEdit($record))
+            ->modalHeading(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
+            ->modalSubmitActionLabel(__('padmission-tickets::tickets.resources.tickets.originals_box.link_submit'))
+            ->slideOver()
+            ->modalWidth(Width::FourExtraLarge)
+            ->fillForm(fn (Ticket $record): array => ['originals' => $this->originals()->map(fn (Ticket $original): int|string => $original->getKey())->all()])
+            ->schema([
+                TableSelect::make('originals')
+                    ->hiddenLabel()
+                    ->relationshipName('childTickets')
+                    ->tableConfiguration(ChildTicketsTable::class)
+                    ->multiple(),
+            ])
+            ->action(function (Ticket $record, array $data, Action $action): void {
+                $synced = resolve(TicketEscalationLinks::class)->syncOriginals($record, array_values((array) ($data['originals'] ?? [])));
+
+                $this->forgetLinks();
+
+                if (! $synced) {
+                    static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
+
+                    $action->halt();
+                }
+            });
+    }
+
+    /*
+     * Takes one original out, as unticking it in the picker does.
+     */
+    public function removeOriginalAction(): Action
+    {
+        $key = 'padmission-tickets::tickets.resources.tickets.originals_box.remove.';
+
+        return Action::make('removeOriginal')
+            ->label(__('padmission-tickets::tickets.actions.remove_from_escalation.label'))
+            ->tooltip(__('padmission-tickets::tickets.actions.remove_from_escalation.label'))
+            ->iconButton()
+            ->icon(Heroicon::OutlinedXMark)
+            ->iconSize('sm')
+            ->color('gray')
+            ->record(fn (): Model => $this->getRecord())
+            ->authorize(fn (Ticket $record): bool => $record->isOpen && $this->authorizesEdit($record))
+            ->requiresConfirmation()
+            ->slideOver(false)
+            ->modalHeading(__('padmission-tickets::tickets.actions.remove_from_escalation.label'))
+            ->modalDescription(function (array $arguments) use ($key): string {
+                $name = $this->originals()->firstWhere(fn (Ticket $original): bool => (string) $original->getKey() === (string) ($arguments['original'] ?? ''))?->requesterName();
+
+                return filled($name) ? __($key.'description', ['name' => $name]) : __($key.'description_unnamed');
+            })
+            ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.remove_from_escalation.submit'))
+            ->action(function (Ticket $record, array $arguments, Action $action): void {
+                $remaining = $this->originals()->map(fn (Ticket $original): int|string => $original->getKey())->all();
+                $ids = array_values(array_filter($remaining, fn (int|string $id): bool => (string) $id !== (string) ($arguments['original'] ?? '')));
+
+                if (count($ids) === count($remaining) || ! resolve(TicketEscalationLinks::class)->syncOriginals($record, $ids)) {
+                    $this->forgetLinks();
+                    static::refuseLink(__('padmission-tickets::tickets.resources.tickets.link_refused.not_linkable'));
+
+                    $action->halt();
+
+                    return;
+                }
+
+                if ((string) $this->linkedTicketId === (string) ($arguments['original'] ?? '')) {
+                    $this->closeLinked();
+                }
+
+                $this->forgetLinks();
+            });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function originalsBoxData(): array
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+        $originals = $this->originals();
+        $summary = OriginalTicketSummary::for($originals);
+        $relaying = $this->relayingOriginalIds($record, $originals);
+
+        $rows = $originals->map(fn (Ticket $original): array => [
+            'id' => $original->getKey(),
+            'subject' => $original->subject,
+            'status' => $original->status,
+            'meta' => implode(' · ', array_filter(['#'.$original->getKey(), $original->requesterName()])),
+            'line' => $summary->line($original),
+            'handler' => $original->isClosed ? null : $summary->handler($original),
+            'closed' => $original->isClosed,
+            'relay' => in_array($original->getKey(), $relaying, false)
+                ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.relay_pending', TicketPlugin::find($record->panel)?->getSupportTeamName(), [
+                    'name' => $original->requesterName() ?? __('padmission-tickets::tickets.resources.tickets.the_requester'),
+                ])
+                : null,
+            'open' => $this->originalRowTarget($record, $original),
+        ]);
+
+        return [
+            'open' => $rows->where('closed', false)->values(),
+            'closed' => $rows->where('closed', true)->values(),
+            'visible' => self::ORIGINALS_SHOWN,
+            'canChange' => $this->canChangeOriginals($record),
+        ];
+    }
+
+    /*
+     * Each side opens an original where it reads it today: the team the
+     * escalation went to beside it, the team that escalated it on the
+     * original's own page, where it answers the requester.
+     *
+     * @return array{showLinked: ?int, url: ?string}
+     */
+    protected function originalRowTarget(Ticket $record, Ticket $original): array
+    {
+        if ($record->isInCurrentPanel() && $this->usesPane()) {
+            return ['showLinked' => (int) $original->getKey(), 'url' => null];
+        }
+
+        $url = $record->isInCurrentPanel()
+            ? static::getResource()::getUrl('view', ['record' => $record, 'linked' => $original->getKey()])
+            : (static::getResource()::canView($original) ? static::getResource()::getUrl('view', ['record' => $original, 'linked' => $record->getKey()]) : null);
+
+        return ['showLinked' => null, 'url' => $url];
+    }
+
+    /*
+     * On the escalation's own page, the team that escalated it sees which
+     * requester still waits for the other team's reply to be passed on.
+     *
+     * @param  Collection<int, Ticket>  $originals
+     * @return array<int, int|string>
+     */
+    protected function relayingOriginalIds(Ticket $record, Collection $originals): array
+    {
+        if ($record->isInCurrentPanel() || $originals->isEmpty()) {
+            return [];
+        }
+
+        return TicketResource::getEloquentQuery()
+            ->withConversationState()
+            ->where('linked_ticket_id', $record->getKey())
+            ->get()
+            ->filter(fn (Ticket $row): bool => $row->getAttribute('conversation_marker') === 'replied')
+            ->modelKeys();
     }
 
     protected function chatHeading(): ?string
@@ -1301,8 +1460,10 @@ class ViewTicket extends EditRecord
         }
 
         // The organization side needs no sentence: the membership line or the two
-        // escalate choices already say where the ticket stands.
-        if (filled($record->linked_ticket_id) || ! $this->hasOriginals()) {
+        // escalate choices already say where the ticket stands. The team it was
+        // sent to reads who escalated it, and that the requesters never see it, in
+        // the chat's header, so its box repeats neither.
+        if (filled($record->linked_ticket_id) || ! $this->hasOriginals() || $record->isInCurrentPanel()) {
             return null;
         }
 

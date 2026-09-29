@@ -188,7 +188,7 @@ describe('Originals on an escalated ticket', function () {
         TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
     });
 
-    it('shows each original with its origin and requester', function () {
+    it('shows each original by number and requester, without repeating the organization the chat header names', function () {
         TicketPlugin::get()->describeTicketOriginUsing(fn (Ticket $ticket): string => "Org of {$ticket->id}");
 
         $requester = User::factory()->create(['name' => 'Rita Requester']);
@@ -197,8 +197,8 @@ describe('Originals on an escalated ticket', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $escalation->id])
             ->call('closeLinked')
-            ->assertSee("Org of {$original->id}")
-            ->assertSee('Requested by Rita Requester');
+            ->assertSee("#{$original->id} · Rita Requester")
+            ->assertDontSee("Org of {$original->id}");
     });
 
     it('lets staff choose which original conversation to read', function () {
@@ -245,10 +245,9 @@ describe('Originals on an escalated ticket', function () {
 
         TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
-        $picker = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
-            ->instance()->getSchema('form')->getComponentByStatePath('childTickets', withHidden: true);
-
-        expect($picker?->isDisabled())->toBeTrue();
+        Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+            ->assertActionHidden('linkOriginals')
+            ->assertDontSeeHtml('aria-label="'.__('padmission-tickets::tickets.actions.remove_from_escalation.label').'"');
     });
 
     it('ignores repeated ids and still refuses an original linked elsewhere', function () {

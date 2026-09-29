@@ -113,7 +113,8 @@ describe('Linked Tickets', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-            ->assertFormFieldVisible('childTickets');
+            ->assertSeeHtml('pad-ti-originals')
+            ->assertActionVisible('linkOriginals');
     });
 
     it('does not show child tickets select if no panels link to the current panel', function () {
@@ -133,10 +134,10 @@ describe('Linked Tickets', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
-            ->assertFormFieldHidden('childTickets');
+            ->assertDontSeeHtml('pad-ti-originals');
     });
 
-    it('updates child linked tickets relationship via form', function () {
+    it('links originals through the + beside Original tickets', function () {
         TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
         $parentTicket = Ticket::factory()->open()->create();
@@ -144,8 +145,8 @@ describe('Linked Tickets', function () {
         $childTicket2 = Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => null]);
 
         Livewire::test(ViewTicket::class, ['record' => $parentTicket->id])
-            ->assertFormFieldVisible('childTickets')
-            ->fillForm(['childTickets' => [$childTicket1->id, $childTicket2->id]]);
+            ->callAction('linkOriginals', ['originals' => [$childTicket1->id, $childTicket2->id]])
+            ->assertHasNoActionErrors();
 
         expect($childTicket1->refresh()->linked_ticket_id)->toBe($parentTicket->id);
         expect($childTicket2->refresh()->linked_ticket_id)->toBe($parentTicket->id);
@@ -199,13 +200,11 @@ describe('Linked Tickets', function () {
         Ticket::factory()->create(['panel' => 'test2']);
         Ticket::factory()->create(['panel' => 'test3']);
 
-        $selectAction = TestAction::make('select')->schemaComponent('childTickets');
-
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
-            ->mountAction($selectAction)
-            ->assertActionMounted($selectAction)
+            ->mountAction('linkOriginals')
+            ->assertActionMounted('linkOriginals')
             ->assertMountedActionModalSee([
                 __('padmission-tickets::tickets.resources.tickets.panel'),
                 'Test',
@@ -226,13 +225,11 @@ describe('Linked Tickets', function () {
 
         Filament::setCurrentPanel('test3');
         $ticket = Ticket::factory()->create(['panel' => 'test3', 'submitter_id' => auth()->id()]);
-        $selectAction = TestAction::make('select')->schemaComponent('childTickets');
-
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets'))
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.child_tickets'))
-            ->mountAction($selectAction)
-            ->assertActionMounted($selectAction)
+            ->mountAction('linkOriginals')
+            ->assertActionMounted('linkOriginals')
             ->assertMountedActionModalDontSee([
                 'fi-ta-header-cell-panel',
             ]);
@@ -298,7 +295,7 @@ describe('Escalation explanation', function () {
             ->assertDontSee('View escalation');
     });
 
-    it('explains where an escalated ticket came from, and who never sees it, by how many originals it has', function (array $requesters, string $sentence) {
+    it('leaves who never sees an escalated ticket to the chat\'s header, rather than repeating it in the Escalation box', function (array $requesters, string $sentence) {
         TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
 
         $ticket = Ticket::factory()->create();
@@ -314,11 +311,12 @@ describe('Escalation explanation', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $ticket->id])
             ->call('closeLinked')
-            ->assertSee("You're talking with the team that escalated this. {$sentence}");
+            ->assertSee($sentence)
+            ->assertDontSee("You're talking with the team that escalated this.");
     })->with([
-        'one named original' => [['Aisha Brooks'], 'Aisha Brooks never sees this conversation.'],
-        'one unnamed original' => [[null], 'The requester never sees this conversation.'],
-        'originals from two people' => [['Aisha Brooks', 'Felix Moreno'], 'The requesters never see this conversation.'],
+        'one named original' => [['Aisha Brooks'], 'Aisha Brooks never sees this conversation'],
+        'one unnamed original' => [[null], 'The requester never sees this conversation'],
+        'originals from two people' => [['Aisha Brooks', 'Felix Moreno'], 'The requesters never see this conversation'],
     ]);
 });
 

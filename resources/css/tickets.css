@@ -330,8 +330,7 @@
 		gap: calc(var(--spacing) * 3);
 	}
 
-	.pad-ti-linked__header-link,
-	.pad-ti-linked__person-actions {
+	.pad-ti-linked__header-link {
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
@@ -348,34 +347,6 @@
 		align-items: center;
 		gap: calc(var(--spacing) * 2);
 		font-weight: var(--font-weight-semibold);
-	}
-
-	.pad-ti-linked__tab {
-		font-size: var(--text-sm);
-		padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2.5);
-		border-radius: var(--radius-md);
-		box-shadow: inset 0 0 0 1px var(--color-gray-300);
-
-		.dark & {
-			box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
-		}
-	}
-
-	.pad-ti-linked__switcher {
-		display: flex;
-		flex-wrap: wrap;
-		gap: calc(var(--spacing) * 2);
-	}
-
-	.pad-ti-linked__tab-number {
-		opacity: 0.7;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.pad-ti-linked__tab--active {
-		background: var(--primary-600);
-		color: white;
-		box-shadow: none;
 	}
 
 	/* Who handles the ticket stays in view; only its messages scroll. */
@@ -702,4 +673,396 @@
 	display: inline-flex;
 	vertical-align: middle;
 	margin-inline-start: calc(var(--spacing) * 1);
+}
+
+/*
+ * The escalation box's originals as quiet rows (escalation-originals.blade.php).
+ * A row opens its original; its × shows on hover or focus, and always where
+ * there is no hover, so touch can reach it.
+ */
+.pad-ti-originals__label {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	margin-bottom: calc(var(--spacing) * 1);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--gray-950);
+}
+
+.dark .pad-ti-originals__label {
+	color: var(--color-white);
+}
+
+.pad-ti-originals__empty {
+	font-size: var(--text-sm);
+	color: var(--gray-500);
+}
+
+.pad-ti-originals__list {
+	display: flex;
+	flex-direction: column;
+	margin-inline: calc(var(--spacing) * -2);
+}
+
+.pad-ti-originals__row {
+	position: relative;
+	border-radius: var(--radius-lg);
+}
+
+.pad-ti-originals__row + .pad-ti-originals__row::before,
+.pad-ti-originals__fold::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: calc(var(--spacing) * 2);
+	right: calc(var(--spacing) * 2);
+	border-top: 1px solid var(--gray-100);
+}
+
+.dark .pad-ti-originals__row + .pad-ti-originals__row::before,
+.dark .pad-ti-originals__fold::before {
+	border-color: rgba(255, 255, 255, 0.07);
+}
+
+.pad-ti-originals__fold + .pad-ti-originals__row::before {
+	display: none;
+}
+
+.pad-ti-originals__open {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto calc(var(--spacing) * 4);
+	column-gap: calc(var(--spacing) * 2);
+	row-gap: 2px;
+	width: 100%;
+	padding: 10px calc(var(--spacing) * 1) 10px calc(var(--spacing) * 2);
+	border-radius: var(--radius-lg);
+	text-align: start;
+}
+
+button.pad-ti-originals__open,
+a.pad-ti-originals__open {
+	cursor: pointer;
+}
+
+.pad-ti-originals__row:hover .pad-ti-originals__open,
+.pad-ti-originals__open:focus-visible {
+	background-color: var(--gray-50);
+}
+
+.dark .pad-ti-originals__row:hover .pad-ti-originals__open,
+.dark .pad-ti-originals__open:focus-visible {
+	background-color: rgba(255, 255, 255, 0.05);
+}
+
+.pad-ti-originals__row:hover::before,
+.pad-ti-originals__row:hover + .pad-ti-originals__row::before {
+	opacity: 0;
+}
+
+.pad-ti-originals__subject {
+	font-size: var(--text-sm);
+	line-height: calc(var(--spacing) * 5);
+	font-weight: var(--font-weight-medium);
+	color: var(--gray-950);
+}
+
+.dark .pad-ti-originals__subject {
+	color: var(--color-white);
+}
+
+.pad-ti-originals__badge {
+	grid-row: 1;
+	grid-column: 2;
+	padding-top: 1px;
+}
+
+.pad-ti-originals__meta,
+.pad-ti-originals__state,
+.pad-ti-originals__relay {
+	grid-column: 1 / 3;
+	font-size: var(--text-xs);
+	line-height: calc(var(--spacing) * 4);
+	color: var(--gray-500);
+}
+
+.pad-ti-originals__state {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: calc(var(--spacing) * 1);
+	color: var(--gray-700);
+}
+
+.dark .pad-ti-originals__meta {
+	color: var(--gray-400);
+}
+
+.dark .pad-ti-originals__state {
+	color: var(--gray-300);
+}
+
+.pad-ti-originals__avatar {
+	width: calc(var(--spacing) * 4);
+	height: calc(var(--spacing) * 4);
+}
+
+.pad-ti-originals__relay {
+	margin-top: calc(var(--spacing) * 1);
+}
+
+.pad-ti-originals__chevron {
+	grid-column: 3;
+	grid-row: 1 / span 2;
+	align-self: center;
+	display: flex;
+	color: var(--gray-400);
+}
+
+.dark .pad-ti-originals__chevron {
+	color: var(--gray-500);
+}
+
+.pad-ti-originals__row.is-closed .pad-ti-originals__subject {
+	font-weight: var(--font-weight-normal);
+	color: var(--gray-500);
+}
+
+.pad-ti-originals__row.is-closed .pad-ti-originals__state {
+	margin-top: 0;
+	color: var(--gray-500);
+}
+
+.pad-ti-originals__remove {
+	position: absolute;
+	top: 34px;
+	right: calc(var(--spacing) * 5);
+	opacity: 0;
+}
+
+.pad-ti-originals__row:hover .pad-ti-originals__remove,
+.pad-ti-originals__row:focus-within .pad-ti-originals__remove {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.pad-ti-originals__remove {
+		opacity: 1;
+	}
+}
+
+.pad-ti-originals__fold {
+	position: relative;
+}
+
+.pad-ti-originals__fold button {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 2);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--gray-700);
+}
+
+.dark .pad-ti-originals__fold button {
+	color: var(--gray-300);
+}
+
+.pad-ti-originals__fold .fi-icon {
+	color: var(--gray-400);
+}
+
+/*
+ * The Original ticket panel's header: which original of how many, stepped
+ * through or picked from a list, then its title and its people.
+ */
+.pad-ti-linked__header--original {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+}
+
+.pad-ti-linked__nav {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: calc(var(--spacing) * 7);
+	font-size: var(--text-xs);
+	color: var(--gray-500);
+}
+
+.dark .pad-ti-linked__nav {
+	color: var(--gray-400);
+}
+
+.pad-ti-linked__counter-wrap {
+	position: relative;
+}
+
+.pad-ti-linked__counter {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 2px 6px;
+	margin-left: -2px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-medium);
+	color: var(--gray-700);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.pad-ti-linked__counter:hover,
+.pad-ti-linked__counter[aria-expanded='true'] {
+	background: color-mix(in oklab, var(--gray-200) 55%, transparent);
+}
+
+.dark .pad-ti-linked__counter {
+	color: var(--gray-200);
+}
+
+.dark .pad-ti-linked__counter:hover,
+.dark .pad-ti-linked__counter[aria-expanded='true'] {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.pad-ti-linked__counter .fi-icon {
+	color: var(--gray-400);
+}
+
+.pad-ti-linked__arrows {
+	display: inline-flex;
+	margin-inline: -4px 4px;
+}
+
+.pad-ti-linked__menu {
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 6px);
+	left: -2px;
+	width: 270px;
+	padding: calc(var(--spacing) * 1);
+	border-radius: var(--radius-lg);
+	background: var(--color-white);
+	color: var(--gray-950);
+	box-shadow:
+		0 10px 24px -6px rgba(0, 0, 0, 0.18),
+		0 0 0 1px var(--gray-200);
+}
+
+.dark .pad-ti-linked__menu {
+	background: var(--gray-900);
+	color: var(--color-white);
+	box-shadow:
+		0 10px 24px -6px rgba(0, 0, 0, 0.6),
+		0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.pad-ti-linked__option {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	width: 100%;
+	padding: 7px calc(var(--spacing) * 2);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+	text-align: start;
+}
+
+.pad-ti-linked__option:hover,
+.pad-ti-linked__option.is-active {
+	background: var(--gray-50);
+}
+
+.dark .pad-ti-linked__option:hover,
+.dark .pad-ti-linked__option.is-active {
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.pad-ti-linked__check {
+	display: flex;
+	width: calc(var(--spacing) * 4);
+	color: var(--primary-600);
+}
+
+.dark .pad-ti-linked__check {
+	color: var(--primary-300);
+}
+
+.pad-ti-linked__option-name {
+	flex: 1;
+	white-space: nowrap;
+}
+
+.pad-ti-linked__num,
+.pad-ti-linked__title-number {
+	font-weight: var(--font-weight-normal);
+	color: var(--gray-500);
+}
+
+.dark .pad-ti-linked__num,
+.dark .pad-ti-linked__title-number {
+	color: var(--gray-400);
+}
+
+.pad-ti-linked__readonly {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	margin-left: auto;
+	white-space: nowrap;
+}
+
+.pad-ti-linked__header--original .pad-ti-linked__title {
+	margin-top: calc(var(--spacing) * 1);
+	font-size: var(--text-base);
+	line-height: calc(var(--spacing) * 6);
+	font-weight: var(--font-weight-semibold);
+}
+
+.pad-ti-linked__people {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	column-gap: calc(var(--spacing) * 4);
+	row-gap: calc(var(--spacing) * 1);
+	margin: calc(var(--spacing) * 3) 0 0;
+}
+
+.pad-ti-linked__people dt {
+	font-size: var(--text-xs);
+	color: var(--gray-500);
+}
+
+.dark .pad-ti-linked__people dt {
+	color: var(--gray-400);
+}
+
+.pad-ti-linked__people dd {
+	display: flex;
+	align-items: center;
+	min-height: calc(var(--spacing) * 7);
+	margin: 0;
+	font-size: var(--text-sm);
+}
+
+.pad-ti-linked__person {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.pad-ti-linked__avatar {
+	width: calc(var(--spacing) * 5);
+	height: calc(var(--spacing) * 5);
+}
+
+.pad-ti-linked__header--original .pad-ti-linked__header-link {
+	margin-top: calc(var(--spacing) * 2);
+	align-self: flex-start;
 }
