@@ -2,6 +2,7 @@
 
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Gate;
@@ -320,6 +321,45 @@ describe('Where tickets belong to organizations', function () {
             ->set('mountedActions.0.data.tenant_id', $this->org->id);
 
         expect(redrawnForm($page))->toContain('Tess Support')->not->toContain('Maria Lopez');
+    });
+
+    it('lists the organizations it may open tickets for as soon as it opens, by name, without typing', function () {
+        Livewire::test(ListTickets::class)
+            ->mountAction(openForContact())
+            ->assertSchemaComponentExists('tenant_id', checkComponentUsing: fn (Select $field): bool => $field->getOptions() === [
+                $this->other->id => 'Farrell Ltd',
+                $this->org->id => 'HomeNow Indy',
+            ]);
+    });
+
+    it('lists the first 50 up front, and search narrows them and finds the rest', function () {
+        foreach (range(1, 55) as $number) {
+            Tenant::query()->create(['name' => sprintf('Agency %02d', $number)]);
+        }
+
+        Livewire::test(ListTickets::class)
+            ->mountAction(openForContact())
+            ->assertSchemaComponentExists('tenant_id', checkComponentUsing: fn (Select $field): bool => count($field->getOptions()) === 50
+                && array_values($field->getOptions())[0] === 'Agency 01'
+                && ! in_array('Agency 55', $field->getOptions(), true)
+                && array_values($field->getSearchResults('Agency 55')) === ['Agency 55']
+                && array_values($field->getSearchResults('Home')) === ['HomeNow Indy']
+                && $field->getSearchResults('Tickets Off') === []);
+
+        // One found only by search is still accepted.
+        Livewire::test(ListTickets::class)
+            ->mountAction(openForContact())
+            ->set('mountedActions.0.data.tenant_id', Tenant::query()->where('name', 'Agency 55')->value('id'))
+            ->callMountedAction()
+            ->assertHasActionErrors(['contact_id' => 'required'])
+            ->assertHasNoActionErrors(['tenant_id']);
+    });
+
+    it('lists the chosen organization\'s supporters as soon as the person select opens', function () {
+        Livewire::test(ListTickets::class)
+            ->mountAction(openForContact())
+            ->set('mountedActions.0.data.tenant_id', $this->org->id)
+            ->assertSchemaComponentExists('contact_id', checkComponentUsing: fn (Select $field): bool => array_keys($field->getOptions()) === [$this->contact->id]);
     });
 
     it('opens the question in the chosen organization, with its status and priority', function () {

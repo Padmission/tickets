@@ -59,6 +59,8 @@ class OpenTicketForContactAction extends Action
             ->schema([
                 Select::make('tenant_id')
                     ->label(__(self::KEY.'organization'))
+                    // Listed as soon as it opens; search reaches past the first ones.
+                    ->options(fn (): array => static::searchTenants(''))
                     ->searchable()
                     ->getSearchResultsUsing(fn (string $search): array => static::searchTenants($search))
                     ->getOptionLabelUsing(fn (mixed $value): ?string => static::findTenant($value)?->getAttribute('name'))
@@ -167,7 +169,7 @@ class OpenTicketForContactAction extends Action
         $query = static::tenantsQuery();
 
         return $query
-            ->where($query->qualifyColumn('name'), 'like', "%{$search}%")
+            ->when(filled($search), fn (Builder $query): Builder => $query->where($query->qualifyColumn('name'), 'like', "%{$search}%"))
             ->orderBy($query->qualifyColumn('name'))
             ->limit(50)
             ->pluck($query->qualifyColumn('name'), $query->getModel()->getQualifiedKeyName())
