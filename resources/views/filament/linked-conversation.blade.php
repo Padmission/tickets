@@ -48,12 +48,6 @@
                 {{ $headerLink['label'] }}
             </x-filament::link>
         @endif
-
-        @if (isset($getChildSchema))
-            <div class="pad-ti-linked__person-actions">
-                {{ $getChildSchema() }}
-            </div>
-        @endif
     </header>
 
     @if ($linkedTickets->count() > 1)
@@ -75,12 +69,14 @@
     @endif
 
     <div class="pad-ti-linked__body" x-ref="body">
+        {{-- The host's actions for the requester, such as Impersonate, sit right after their name. --}}
         @include('padmission-tickets::filament.original-conversation', [
             'escalatedTicket' => $record,
             'originalTickets' => collect([$linked]),
             'activityService' => $activityService,
             'titleRow' => 'none',
             'lastSeenId' => $lastSeenId,
+            'submitterActions' => ($hasPersonActions ?? false) && isset($getChildSchema) ? $getChildSchema() : null,
         ])
     </div>
 </div>

@@ -3,6 +3,7 @@
 use Filament\Actions\Action;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
@@ -64,4 +65,40 @@ it('offers them beside the requester in the original shown next to an escalation
         ->call('closeLinked')
         ->assertDontSee('Greet Aisha Brooks')
         ->assertSee("Greet Test Admin on #{$escalation->id}");
+});
+
+it('draws each one icon-only right after the label, named by its tooltip and for screen readers', function () {
+    TicketPlugin::get()->personActionsUsing(fn (Model $person, Ticket $ticket): array => [
+        Action::make('impersonate')->label('Impersonate')->icon('heroicon-o-user-circle')->action(fn () => null),
+        Action::make('greet')->label('Greet')->action(fn () => null),
+    ]);
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->assertActionExists(TestAction::make('impersonate')->schemaComponent('submitter', schema: 'form'), fn (Action $action): bool => $action->isIconButton()
+            && $action->getIcon() === 'heroicon-o-user-circle'
+            && $action->getTooltip() === 'Impersonate')
+        // An action the host gave no icon gets one, rather than an empty button.
+        ->assertActionExists(TestAction::make('greet')->schemaComponent('submitter', schema: 'form'), fn (Action $action): bool => $action->isIconButton()
+            && $action->getIcon() === Heroicon::OutlinedArrowRightEndOnRectangle
+            && $action->getTooltip() === 'Greet')
+        ->assertSeeHtml('aria-label="Impersonate"')
+        ->assertSeeHtml('pad-ti-edit-entry');
+});
+
+it('draws them icon-only right after the requester\'s name in the original shown next to an escalation', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    TicketPlugin::get('test2')->personActionsUsing(fn (Model $person, Ticket $ticket): array => [
+        Action::make('impersonate')->label('Impersonate')->icon('heroicon-o-user-circle')->action(fn () => null),
+    ]);
+    TicketPlugin::get('test2')->linkedConversationView(TicketPlugin::LINKED_VIEW_BESIDE);
+    $escalation = escalationFrom();
+    $original = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id, 'submitter_id' => $this->requester->id]);
+    Filament::setCurrentPanel('test2');
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->call('showLinked', $original->id)
+        ->assertActionExists(TestAction::make('impersonate')->schemaComponent('linkedRequesterActions', schema: 'form'), fn (Action $action): bool => $action->isIconButton()
+            && $action->getTooltip() === 'Impersonate')
+        ->assertSeeHtmlInOrder(['Requested by', 'Aisha Brooks', 'pad-ti-transcript__person-actions', 'aria-label="Impersonate"', 'Assigned to']);
 });

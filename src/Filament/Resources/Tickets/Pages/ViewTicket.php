@@ -3,7 +3,6 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Carbon\CarbonImmutable;
-use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
@@ -67,8 +66,6 @@ use Padmission\Tickets\TicketPlugin;
 class ViewTicket extends EditRecord
 {
     use ExplainsStaleEscalationActions;
-
-    protected const int PERSON_ACTION_SLOTS = 3;
 
     protected static string $resource = TicketResource::class;
 
@@ -664,9 +661,11 @@ class ViewTicket extends EditRecord
 
                         FieldHelp::apply(
                             SubmitterEntry::make('submitter')
-                                ->beforeLabel(static::editBesideLabel(HandOverEscalationAction::make()))
-                                ->extraEntryWrapperAttributes(['class' => 'pad-ti-edit-entry'])
-                                ->hintActions($this->personActionSlots(fn (Ticket $record): ?Model => $record->submitter)),
+                                ->beforeLabel(fn (Ticket $record): array => [
+                                    static::editBesideLabel(HandOverEscalationAction::make()),
+                                    ...$this->styledPersonActions($record->submitter, $record),
+                                ])
+                                ->extraEntryWrapperAttributes(['class' => 'pad-ti-edit-entry']),
                             fn (Ticket $record): string => match (true) {
                                 $this->isEscalatedHere($record) => __('padmission-tickets::tickets.resources.tickets.contact'),
                                 $this->isEscalatedElsewhere($record) => __('padmission-tickets::tickets.resources.tickets.handled_by'),
@@ -835,21 +834,6 @@ class ViewTicket extends EditRecord
             ->extraAttributes(['class' => 'pad-ti-edit-beside-label']);
     }
 
-    /*
-     * Hint actions come one to a closure, so each slot offers one of the
-     * host's person actions, styled as the sidebar's Change link.
-     *
-     * @param  Closure(Ticket): ?Model  $person
-     * @return list<Closure(Ticket): ?Action>
-     */
-    protected function personActionSlots(Closure $person): array
-    {
-        return array_map(
-            fn (int $slot): Closure => fn (Ticket $record): ?Action => $this->styledPersonActions($person($record), $record)[$slot] ?? null,
-            range(0, self::PERSON_ACTION_SLOTS - 1),
-        );
-    }
-
     /**
      * @return list<Action>
      */
@@ -859,8 +843,14 @@ class ViewTicket extends EditRecord
             return [];
         }
 
+        // Icon-only right after the label, as the sidebar's pencils are, named by their tooltip.
         return array_map(
-            fn (Action $action): Action => $action->icon(null)->color('primary')->link()->size('sm'),
+            fn (Action $action): Action => $action
+                ->iconButton()
+                ->icon($action->getIcon() ?? Heroicon::OutlinedArrowRightEndOnRectangle)
+                ->iconSize('sm')
+                ->color('gray')
+                ->tooltip(fn (Action $action): string => $action->getLabel()),
             TicketPlugin::get()->getPersonActions($person, $ticket),
         );
     }
@@ -895,6 +885,7 @@ class ViewTicket extends EditRecord
             'drawer' => $drawer,
             'headings' => $this->linkedTickets()->mapWithKeys(fn (Ticket $ticket): array => [$ticket->getKey() => $this->linkedTicketHeading($ticket)]),
             'headerLink' => $linked === null ? null : $this->linkedHeaderLink($linked),
+            'hasPersonActions' => $this->linkedRequesterActions() !== [],
             'lastSeenId' => $this->linkedLastSeenId,
             'activityService' => resolve(TicketActivityService::class),
         ];

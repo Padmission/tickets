@@ -696,3 +696,10 @@
 .pad-ti-edit-entry .fi-in-entry-label-ctn > .fi-in-entry-label ~ * {
 	order: 2;
 }
+
+/* The host's person actions, such as Impersonate, right after the original ticket's requester. */
+.pad-ti-transcript__person-actions {
+	display: inline-flex;
+	vertical-align: middle;
+	margin-inline-start: calc(var(--spacing) * 1);
+}

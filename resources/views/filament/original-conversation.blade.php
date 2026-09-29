@@ -9,6 +9,7 @@
     $plugin = TicketPlugin::get();
     $titleRow ??= 'full';
     $lastSeenId ??= null;
+    $submitterActions ??= null;
     $viewer = Filament::auth()->user();
 @endphp
 
@@ -60,6 +61,9 @@
                         <dt>{{ $submitterLabel }}</dt>
                         <dd>
                             {{ $submitterName ?? '-' }}
+                            @if ($submitterActions)
+                                <span class="pad-ti-transcript__person-actions">{{ $submitterActions }}</span>
+                            @endif
                             @if (filled($submitterDescription))
                                 <span class="pad-ti-transcript__muted">({{ $submitterDescription }})</span>
                             @endif
