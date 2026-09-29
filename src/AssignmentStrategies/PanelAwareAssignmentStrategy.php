@@ -15,7 +15,7 @@ abstract class PanelAwareAssignmentStrategy implements AssignmentStrategy
         $targetPanelId = $ticket->panel ?? Filament::getCurrentOrDefaultPanel()->getId();
         $targetPlugin = TicketPlugin::get($targetPanelId);
 
-        $query = $this->tryGetInitialAssignmentQuery()
+        $query = $this->tryGetInitialAssignmentQuery($targetPlugin)
             ?? $this->tryGetAllSupportersQuery($targetPlugin);
 
         if (! $query) {
@@ -25,10 +25,9 @@ abstract class PanelAwareAssignmentStrategy implements AssignmentStrategy
         return $query;
     }
 
-    private function tryGetInitialAssignmentQuery(): ?Builder
+    private function tryGetInitialAssignmentQuery(TicketPlugin $targetPlugin): ?Builder
     {
-        $currentPlugin = TicketPlugin::get();
-        $initialAssignmentQuery = $currentPlugin->getInitialAssignmentSupportersQuery();
+        $initialAssignmentQuery = $targetPlugin->getInitialAssignmentSupportersQuery();
 
         return $initialAssignmentQuery ? app()->call($initialAssignmentQuery) : null;
     }
