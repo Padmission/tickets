@@ -2,12 +2,12 @@
 
 [![Premium Package](https://img.shields.io/badge/package-premium-gold?style=flat-square)](https://tickets.padmission.com)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.3-blue?style=flat-square)](composer.json)
-[![Laravel Version](https://img.shields.io/badge/laravel-%3E%3D11.0-red?style=flat-square)](composer.json)
-[![Filament Version](https://img.shields.io/badge/filament-v3.x-purple?style=flat-square)](composer.json)
+[![Laravel Version](https://img.shields.io/badge/laravel-11--13-red?style=flat-square)](composer.json)
+[![Filament Version](https://img.shields.io/badge/filament-v4%20%7C%20v5-purple?style=flat-square)](composer.json)
 
 ## Introduction
 
-Tickets is a comprehensive support ticket management system for Filament applications. It provides a full-featured ticketing system with chat widget, email authentication, activity tracking, and extensive customization options.
+Tickets is a support ticket system for Filament applications. It gives each panel a ticket list and conversation view, a chat widget, email authentication for guests, activity tracking, and escalations: an organization's panel can hand a ticket to a central support panel and both sides keep talking on linked tickets.
 
 ## Development
 
@@ -62,6 +62,8 @@ public function panel(Panel $panel): Panel
 ### Multi-Panel Support System
 
 ```php
+use Padmission\Tickets\AssignmentStrategies\AssignUserWithLeastTickets;
+
 // Support Panel - Where tickets are managed
 public function panel(Panel $panel): Panel
 {
@@ -71,7 +73,6 @@ public function panel(Panel $panel): Panel
             TicketPlugin::make()
                 ->allSupportersQuery(fn () => User::role(['support', 'admin']))
                 ->initialAssignmentSupportersQuery(fn () => User::role('tier-1'))
-                ->assignmentStrategy(new AssignUserWithLeastTickets())
                 ->registerResources()
         );
 }
@@ -84,6 +85,9 @@ public function panel(Panel $panel): Panel
         ->plugin(
             TicketPlugin::make()
                 ->targetPanel('support')
+                // The strategy is read from the panel the ticket is created on,
+                // the pool of people from the panel it goes to (see Ticket Assignment).
+                ->assignmentStrategy(new AssignUserWithLeastTickets())
                 ->showChatWidget()
         );
 }
@@ -91,76 +95,67 @@ public function panel(Panel $panel): Panel
 
 ## Key Features
 
-- 🎫 **Full Ticket Management** - Create, view, assign, and close tickets
+- 🎫 **Full Ticket Management** - Create, view, assign, close, reopen and delete tickets, one at a time or in bulk
 - 💬 **Embedded Chat Widget** - Real-time support chat for your users
 - 📧 **Email Authentication** - Allow non-authenticated users to submit tickets via email verification
 - 👥 **Multi-Tenancy Support** - Built-in support for multi-tenant applications
 - 📊 **Analytics Widgets** - Track open tickets, response times, and burndown charts
 - 🔄 **Turn Management** - Track whose turn it is to respond (User or Supporter)
 - 📝 **Activity Tracking** - Comprehensive logging of all ticket changes
-- 🔔 **Flexible Notifications** - Multiple notification strategies
-- 📎 **File Attachments** - Support for file uploads via Spatie Media Library
+- 🔔 **Flexible Notifications** - Per-panel recipient rules, immediate or debounced delivery
+- 📎 **File Attachments** - Uploads go straight to an S3-compatible disk through presigned URLs
 - 🎯 **Smart Assignment** - Automatic ticket assignment with flexible strategies
 - 🏢 **Multi-Panel Support** - Route tickets from multiple panels to a central location
+- ⬆️ **Escalations** - Link an organization's tickets to a ticket for a central support team, with hand over and take over
 
 ## Prerequisites
 
 - **PHP**: 8.3 or higher
-- **Laravel**: 11.0 or higher
-- **Filament**: 3.0 or higher
+- **Laravel**: 11, 12 or 13
+- **Filament**: 4 (4.0.4 or higher) or 5
 
 ## Getting Started
 
-### Activating Your License
+### Installation
 
-For distribution we use [Satis Padmission](https://satis.padmission.com/), a private Composer repository. During the purchasing process, Lemon Squeezy will provide you with a license key that you'll need for installation.
+> **Note:** The 4.x line has no tagged release yet. The Padmission apps install it as `4.x-dev` from the private GitHub repository, which needs a GitHub account with access to `Padmission/tickets`. Licence and distribution details for outside customers are not covered here.
 
-### Configure Composer Repository
-
-Add the private repository to your `composer.json` file:
+**Step 1:** Add the repository to your `composer.json`:
 
 ```json
 {
     "repositories": [
         {
-            "type": "composer",
-            "url": "https://satis.padmission.com"
+            "type": "vcs",
+            "url": "https://github.com/Padmission/tickets.git"
         }
     ]
 }
 ```
 
-### Installation
+**Step 2:** Require the 4.x branch:
 
-**Step 1:** Install the package via Composer:
-
-```
-composer require padmission/tickets
+```bash
+composer require padmission/tickets:4.x-dev
 ```
 
-When prompted, provide your authentication details:
-- **Username**: Your email address (e.g., myname@example.com)
-- **Password**: Your license key (e.g., 9f3a2e1d-5b7c-4f86-a9d0-3e1c2b4a5f8e)
+A plain `composer require padmission/tickets` installs the latest tag, which is 3.x.
 
-**Step 2:** Run the migrations to set up the database tables:
+**Step 3:** Run the migrations to set up the database tables:
 
 ```bash
 php artisan migrate
 ```
 
-**Step 3**: Publish the assets
+The package runs its own migrations. Set `run_migrations` to `false` in the config if you'd rather publish and manage them yourself.
 
-```
+**Step 4:** Publish the Filament assets:
+
+```bash
 php artisan filament:assets
 ```
 
-**Step 4**: Publish the assets
-
-Add the following import to your custom theme:
-
-```css
-@import '../../../../vendor/padmission/tickets/resources/css/tickets.css';
-```
+`tickets.css` is registered as a Filament asset and loads on every panel page, so there's no need to also `@import` it into a custom theme. Importing it there as well just loads it twice.
 
 **Step 5:** Configure the plugin in your Filament panel:
 
@@ -215,6 +210,18 @@ The `HasTickets` trait provides:
 - `assignedTickets()` - Relationship to tickets assigned to this user
 - `submittedTickets()` - Relationship to tickets submitted by this user
 
+**Step 7 (optional):** Seed the default statuses, priorities and dispositions:
+
+```bash
+php artisan tickets:seed
+```
+
+Statuses, priorities and dispositions are kept per panel (and per tenant when tenancy is on). The command seeds every panel that has the plugin. Options:
+
+- `--tenant=ID` - seed one tenant instead of all of them
+- `--only=dispositions,priorities,statuses,tickets` - seed only some types
+- `--force` - seed even when rows already exist
+
 ## Configuration
 
 ### Publishing Configuration
@@ -226,10 +233,18 @@ php artisan vendor:publish --tag="padmission-tickets-config"
 ```
 
 This will create a `config/padmission-tickets.php` file where you can configure:
-- Model bindings
-- Multi-tenancy settings
-- Escalation levels
-- Attachment storage settings
+- `run_migrations` - whether the package runs its own migrations (default `true`)
+- `models` - model bindings, including the user model (`Authenticatable::class => User::class`)
+- `jobs` - job bindings (see [Custom Jobs](#custom-jobs))
+- `tenancy` - multi-tenancy settings
+- `attachments` - the `disk` and `preview_disk` for uploaded files
+- `notifications` - the notification class sent for each event
+- `notification-channels` - `mail` by default, add `database` for Filament's notification panel
+- `default-notification-strategy` - `NotificationStrategy::Debounced` (default) or `NotificationStrategy::Immediate`
+- `notification-debounce` - how long a debounced notification waits, 10 minutes by default
+- `notification-max-events` - the most activities one notification lists, 10 by default
+
+The `levels` key is a placeholder and isn't read by the package.
 
 ### Resources
 
@@ -252,7 +267,7 @@ This registers the following resources:
 - **DispositionResource** - Manage ticket dispositions
 - **PriorityResource** - Manage ticket priorities
 
-For each resource you can easily overwrite its label, navigation group, sort, and navigation icon:
+For each resource you can easily overwrite its label, navigation group, sort, navigation icon, parent item, sub-navigation position and cluster:
 
 ```php
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -264,11 +279,16 @@ class YourServiceProvider {
             pluralModelLabel: fn () => __('your.model'),
             navigationGroup: 'New Group',
             navigationIcon: 'heroicon-o-tag',
-            navigationSort: 10, 
+            navigationSort: 10,
+            navigationParentItem: null,
+            subNavigationPosition: null,
+            cluster: null,
         );
     }
 }
 ```
+
+The ticket list has **All Tickets** and **My Tickets** tabs. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
 
 ## Widgets
 
@@ -279,18 +299,22 @@ This package comes with multiple Filament widgets that can be added to your dash
 - **TicketCloseTimeWidget** - Displays average ticket close times
 - **TicketBurndownChartWidget** - Visualizes ticket closure trends
 
-Widgets are registered automatically when using `->registerResources()`. You can disable this by using `->registerResources(shouldRegisterWidgets: false)`.
+Widgets are not registered on the panel by default. Pass `shouldRegisterWidgets: true` to add them:
 
-By default, it will show the `TicketStatsWidget` on the `ListTickets` page.
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->registerResources(shouldRegisterWidgets: true)
+```
 
-### Authentication
+Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets` and `TicketCloseTimeWidget` in its header, to supporters only.
+
+### Authorization
 
 We define a basic policy, but you can swap it anytime with your implementation:
 
 ```php
-use Filament\Facades\Filament;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\TicketPlugin;
 use Illuminate\Support\Facades\Gate;
 
 // Define your policy, which extends from `TicketPolicy`
@@ -300,7 +324,20 @@ Gate::policy(
 );
 ```
 
-The `TicketPolicy` will affect Tickets, but also Statuses, Priorities, and Dispositions. If you want specific rules for the latter ones, you can define a Policy for those.
+Besides `viewAny`, `view`, `create`, `update` and `delete`, the ticket UI checks these abilities, so a replacement policy must answer them too:
+
+| Ability | Used for |
+|---|---|
+| `openTicketFromList` | The **New ticket** button on the ticket list |
+| `manage` | Assigning and closing, one ticket or in bulk |
+| `reply` | Replying as a supporter |
+| `handOver` | **Hand over** / **Take over** of an escalation |
+| `escalate` | Escalating a ticket |
+| `reopen` | **Reopen**, and reopening by replying |
+
+Extending `Padmission\Tickets\Policies\TicketPolicy` and overriding only what you need is the easiest way to keep them.
+
+If no policy is registered for Statuses, Priorities, or Dispositions, their resources fall back to the `viewAny` ability on tickets. If you want specific rules for them, define a policy for those models.
 
 ### Dispositions
 
@@ -313,7 +350,7 @@ Users can create tickets via a chat widget. The widget provides a modern, real-t
 - **Rich text editor** with formatting options (bold, links, lists)
 - **Auto-response messages** after first user message
 - **Turn management** - Shows whose turn it is to respond
-- **File attachments** (when configured)
+- **File attachments** and **screenshots** (when configured)
 - **Keyboard shortcuts** for power users
 
 To enable the widget in a panel, use the `->showChatWidget()` method:
@@ -332,19 +369,11 @@ TicketPlugin::make()
     );
 ```
 
-`introMessage()` and `autoResponse()` are optional. Without them, or when a closure returns `null`, the widget uses the `defaults` in the package's `chat` translations.
+`showChatWidget()` also takes a closure for `shouldShow` (and for `config`), evaluated on each request, so the widget can depend on the signed-in user.
 
-If you want to render the chat widget outside a Filament panel add the Blade component at the end of your body tag:
+`introMessage()` and `autoResponse()` are optional. Without them, or when a closure returns `null`, the widget uses the `defaults` in the package's `chat` translations. `ChatWidgetConfig::defaultIntroMessage()` and `ChatWidgetConfig::defaultAutoResponse()` return those defaults, for example to show as the placeholder of a settings field.
 
-```blade
-<x-padmission-tickets::chat-widget />
-```
-
-Make sure the CSRF token is included in your HTML head section:
-
-```blade
-<meta name="csrf-token" content="{{ csrf_token() }}">
-```
+The widget is added to the end of every page of the panel through Filament's `BODY_END` render hook. There is no standalone Blade component: the view (`padmission-tickets::filament.chat-widget`) reads its configuration from `TicketPlugin::get()`, so it needs a panel with the plugin as the current or default panel.
 
 #### Email Authentication for Non-Authenticated Users
 
@@ -383,7 +412,6 @@ TicketPlugin::make()
 You can add a button to the chat widget that opens your documentation in a new tab using `->documentationUrl()`.
 
 ```php
-use Filament\Support\Colors\Color;
 use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\TicketPlugin;
 
@@ -394,21 +422,22 @@ TicketPlugin::make()
 ```
 
 
-#### File Uploads
+#### File Uploads and Screenshots
 
-If you want to allow users to upload files you can use the `->allowFileUploads()` method on the `ChatWidgetConfig`:
-
+If you want to allow users to upload files you can use the `->allowFileUploads()` method on the `ChatWidgetConfig`. It requires `league/flysystem-aws-s3-v3` and throws an exception when that package isn't installed. The second argument is the largest file allowed, in bytes (10 MB by default):
 
 ```php
-use Filament\Support\Colors\Color;
 use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\TicketPlugin;
 
 TicketPlugin::make()
     ->showChatWidget(config: ChatWidgetConfig::make()
-        ->allowFileUploads()
+        ->allowFileUploads(maxFileSize: 20 * 1024 * 1024)
+        ->allowScreenshots()
     );
 ```
+
+`allowScreenshots()` adds a button that captures the user's screen and attaches it. It only shows when file uploads are allowed and the browser supports screen capture.
 
 ### Multi-Tenancy Support
 
@@ -429,6 +458,16 @@ The package automatically handles:
 - UUID/ULID support for tenant IDs
 - Tenant isolation for all ticket operations
 
+A panel that has to see across tenants, such as a central support panel, can lift the host's tenant scope from the ticket query and from the ticket relationships:
+
+```php
+TicketPlugin::make()
+    ->customizeTicketQuery(fn (Builder $query) => $query->withoutGlobalScope(TenantScope::class))
+    ->modifyRelationshipScopes(fn ($relation, string $model) => $relation->withoutGlobalScope(TenantScope::class))
+```
+
+`modifyRelationshipScopes()` receives the relation (or its query) as `$relation` and the relationship name as `$model`, and should return the relation.
+
 ### Turn Management
 
 The package automatically tracks whose "turn" it is to respond to a ticket:
@@ -436,6 +475,8 @@ The package automatically tracks whose "turn" it is to respond to a ticket:
 - **Supporter Turn** - Waiting for support agent response
 
 This helps support teams prioritize tickets that need attention. Turn changes are automatically logged in the activity history.
+
+By default the sidebar badge counts the viewer's open assigned tickets. `->navigationBadgeCountsNeedsYou()` makes it count the tickets that need the viewer instead.
 
 ### Ticket Assignment
 
@@ -453,9 +494,25 @@ TicketPlugin::make()
     ->registerResources()
 ```
 
+Pass a closure rather than a built `Builder`: a closure is evaluated each time, while a `Builder` built at panel registration keeps the database connection of that moment.
+
+The closure may declare an optional `?Ticket $ticket` parameter. The package passes the ticket when it looks up supporters for a specific ticket, for example to notify supporters of an unassigned ticket. That lookup can run in a queue worker or console command where the host's tenant scope isn't bound, so in a multi-tenant app the closure **must** scope by the ticket's tenant when a ticket is given:
+
+```php
+use Padmission\Tickets\Models\Ticket;
+
+TicketPlugin::make()
+    ->allSupportersQuery(fn (?Ticket $ticket = null) => User::role('support')
+        ->when($ticket, fn ($query) => $query
+            ->withoutGlobalScope(TenantScope::class)
+            ->where('tenant_id', $ticket->tenant_id)))
+```
+
+If a person has several accounts and the pool keeps only one of them, `->matchSupportersBy('email')` matches supporters on that column instead of the ID, and `->currentUserAssigneeIds(fn (): array => [...])` lists the assignee IDs that count as the signed-in user (for **My Tickets**).
+
 **Initial Assignment Query (Optional)**
 
-Define a subset of users for automatic assignment. If not specified, falls back to `allSupportersQuery()`:
+Define a subset of users for automatic assignment:
 
 ```php
 TicketPlugin::make()
@@ -464,13 +521,21 @@ TicketPlugin::make()
     ->assignmentStrategy(new AssignUserWithLeastTickets())
 ```
 
+Automatic assignment falls back to `allSupportersQuery()` only when no initial query is set. If the initial query is set but returns nobody, the ticket stays unassigned.
+
+Both pools are read from the panel the ticket belongs to (its `panel` column), which for a ticket sent elsewhere with `targetPanel()` or escalated is the receiving panel. An `initialAssignmentSupportersQuery()` on the sending panel is ignored for those tickets.
+
+The **strategy**, however, is read from the panel the ticket is created on. A sending panel without an `assignmentStrategy()` leaves its tickets unassigned.
+
 #### Assignment Strategies
 
-**DoNotAssign (Default)**
+**No strategy (Default)**
 
-Leaves tickets unassigned:
+Without `->assignmentStrategy()`, tickets are left unassigned, and **New ticket** doesn't offer "Assign automatically". `DoNotAssign` does the same explicitly:
 
 ```php
+use Padmission\Tickets\AssignmentStrategies\DoNotAssign;
+
 TicketPlugin::make()
     ->assignmentStrategy(new DoNotAssign())
 ```
@@ -501,7 +566,7 @@ TicketPlugin::make()
 
 **AssignDefaultUser**
 
-Assigns to a specific user:
+Assigns to a specific user, who must be in the target panel's `allSupportersQuery()`:
 
 ```php
 use Padmission\Tickets\AssignmentStrategies\AssignDefaultUser;
@@ -524,7 +589,7 @@ TicketPlugin::make()
 Route tickets from multiple panels to a central support panel:
 
 ```php
-// Main support panel - manages all tickets
+// Main support panel - manages all tickets and decides who gets them
 public function panel(Panel $panel): Panel
 {
     return $panel
@@ -546,13 +611,15 @@ public function panel(Panel $panel): Panel
         ->plugin(
             TicketPlugin::make()
                 ->targetPanel('support') // Route tickets to support panel
-                ->initialAssignmentSupportersQuery(fn () => User::role('customer-support'))
+                // Needed for tickets created here to be auto-assigned;
+                // the support panel's tier-1 pool is used.
+                ->assignmentStrategy(new AssignUserWithLeastTickets())
                 ->showChatWidget()
                 ->registerResources(false) // Don't show management UI here
         );
 }
 
-// Enterprise panel - creates tickets with different assignment
+// Enterprise panel - also routes to support, but assigns every ticket to one lead
 public function panel(Panel $panel): Panel
 {
     return $panel
@@ -560,7 +627,9 @@ public function panel(Panel $panel): Panel
         ->plugin(
             TicketPlugin::make()
                 ->targetPanel('support')
-                ->initialAssignmentSupportersQuery(fn () => User::role('enterprise-support'))
+                ->assignmentStrategy(new AssignDefaultUser(
+                    fn () => User::role('enterprise-lead')->first()->id
+                ))
                 ->showChatWidget()
                 ->registerResources(false)
         );
@@ -588,7 +657,7 @@ class AssignByWorkload extends PanelAwareAssignmentStrategy
 {
     public function assign(Ticket $ticket): void
     {
-        // Automatically uses initialAssignmentSupportersQuery or allSupportersQuery
+        // Uses the ticket's panel: its initialAssignmentSupportersQuery, or allSupportersQuery when none is set
         $user = $this->getEligibleUsersQuery($ticket)
             ->withCount([
                 'assignedTickets as today_count' => fn ($q) => 
@@ -642,9 +711,164 @@ TicketPlugin::make()
     ->assignmentStrategy(new AssignUserWithLeastTickets())
 ```
 
+### New Ticket
+
+Supporters open tickets from the ticket list with **New ticket**. It needs the `openTicketFromList` ability, which by default means being in the panel's `allSupportersQuery()`.
+
+**On an organization's panel** (`StartTicketAction`) the slide-over offers two choices:
+
+- **For someone in the organization** - pick the requester, then assign it to yourself, to a colleague, or automatically (only offered when the panel has an assignment strategy). The ticket waits on the support side.
+- **A question for the support team** - when the panel escalates (see below), this opens a ticket of the supporter's own in the team's panel.
+
+`requestersQuery()` sets who the requester may be. By default it is every user the host's own scopes let the panel see, which for a tenant panel should be the tenant's users. The search matches `name` and `email` and shows the first 50.
+
+```php
+TicketPlugin::make()
+    ->requestersQuery(fn (): Builder => User::query()->whereNull('deactivated_at'))
+```
+
+**On a panel that receives escalations** (`OpenTicketForContactAction`), **New ticket** logs a question that an organization's supporter asked some other way, such as by phone: pick the organization, then the contact from that panel's supporters. The ticket is opened as that contact's escalation, assigned to you. It's off by default on such a panel, so turn it on with `startsTickets()`, and say which organizations may be picked when tickets belong to a tenant:
+
+```php
+TicketPlugin::make()
+    ->startsTickets()
+    ->ticketTenantsQuery(fn (): Builder => Tenant::query()->where('active', true))
+```
+
+The organization list opens with the first 50, searched and sorted by the tenant's `name` column. Without `ticketTenantsQuery()` it is empty. `startsTickets(false)` hides **New ticket** on any panel.
+
+### Escalations
+
+An organization's panel can escalate a ticket to a central support panel. The escalation is a new ticket in the support panel, linked to the organization's ticket (the "original"). The organization's supporter talks to the support team on the escalation, and to their requester on the original.
+
+```php
+// Organization's panel
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->registerResources()
+    ->allowLinkedTicketsTo(['support'])
+    // Escalations are created here, so this strategy assigns them,
+    // drawing from the support panel's pool.
+    ->assignmentStrategy(new AssignUserWithLeastTickets())
+
+// Support panel
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('padmission-staff'))
+    ->initialAssignmentSupportersQuery(fn () => User::role('tier-1-support'))
+    ->registerResources()
+    ->supportTeamName('Padmission')
+```
+
+`allowLinkedTicketsTo()` takes the IDs of the panels this panel may escalate to. With more than one, the supporter picks the team. `supportTeamName()` (a string or closure) names that team in the UI, for example "Escalate to Padmission", instead of generic wording.
+
+What the organization's panel gets:
+
+- **Escalate Ticket** (or **Escalate to _team_**) on an open ticket, which opens the escalation with a subject and message for the other team. Once the escalation closes, the same action escalates again.
+- **Add to escalation** on an open ticket, to link it to an escalation the organization already has open instead of opening another. It only shows when there is one.
+- **Remove from escalation** on an original, to unlink it.
+- **Escalations** and **My Escalations** tabs, listing the organization's escalations and the viewer's own.
+- On an escalation, a list of its originals that says who owes whom a reply, with `+` to link another and `×` to take one out.
+- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies, access to the escalation and **My Escalations** all follow the new owner. Only the two people it moved between are notified.
+- **Close escalation** on the viewer's own escalation, without a disposition, once the other team's part is done.
+
+What the support panel gets:
+
+- The escalation in its list, assigned from its own pool by the organization panel's strategy (see [Ticket Assignment](#ticket-assignment)).
+- An **Original ticket** panel beside the escalation, showing the original's conversation, its title and its people. With several originals, it says which one of how many is showing, and they can be stepped through or picked from a list.
+
+How the original is shown beside an escalation is set on the viewing panel:
+
+```php
+TicketPlugin::make()
+    ->linkedConversationView(TicketPlugin::LINKED_VIEW_DRAWER) // LINKED_VIEW_BESIDE (default), LINKED_VIEW_MODAL or LINKED_VIEW_DRAWER
+    ->pinLinkedConversation()
+```
+
+### Reopen
+
+A closed ticket reopens in two ways:
+
+- **Reopen** (`ReopenTicketAction`) lets staff of the ticket's own panel reopen it at any time without writing to it.
+- **Replying** reopens it. The requester can do this within the reopen window, the person handling an escalation at any time. After the window, a requester's reply starts a new ticket that links back to the old one.
+
+The window is 30 days by default:
+
+```php
+TicketPlugin::make()
+    ->reopenWindowDays(14)
+```
+
+A reopen notifies the supporter by default (`TicketReopenedEvent`).
+
+### Bulk Actions
+
+The ticket list's bulk actions are:
+
+- **Assign** - assign the selected tickets to someone from `allSupportersQuery()`. Tickets the viewer may not `manage` are skipped.
+- **Close** - close each selected ticket as its own Close dialog would, skipping those already closed or that the viewer may not close. The disposition is picked by name, since the selection can span organizations that each keep their own.
+- **Delete** - soft-deletes the tickets the viewer may `delete`.
+
+They're hidden on the Escalations tabs.
+
+A single open ticket on its own panel also has **Edit** (subject, assignee, status and priority), **Assign** / **Reassign**, **Close** and **Delete** (a soft delete).
+
+### Person Actions
+
+`personActionsUsing()` adds your own actions, such as Impersonate, beside each person a ticket names: beside **Requested by** in the sidebar, and beside the people in the **Original ticket** panel. They're drawn as small icon buttons right after the name, with the action's label as the tooltip. An action without an icon gets a sign-in arrow.
+
+The closure receives `$person` and `$ticket` and returns a list of Filament actions. Anything else in the list is dropped. The visibility and authorization rules stay yours:
+
+```php
+use Filament\Actions\Action;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Models\Ticket;
+
+TicketPlugin::make()
+    ->personActionsUsing(fn (Model $person, Ticket $ticket): array => $person instanceof User ? [
+        Action::make('impersonate')
+            ->label('Impersonate')
+            ->icon(Heroicon::OutlinedFingerPrint)
+            ->url(fn (): string => route('impersonate', $person))
+            ->visible(fn (): bool => auth()->user()->can('impersonate', $person)),
+    ] : [])
+```
+
+### Display and UI Options
+
+```php
+use Filament\Infolists\Components\TextEntry;
+use Filament\Tables\Columns\TextColumn;
+
+TicketPlugin::make()
+    // Ticket times: timezone (defaults to Filament's) and the date-time format
+    ->displayTimezone(fn (): string => auth()->user()->timezone)
+    ->dateTimeDisplayFormat('d.m.Y H:i:s')
+
+    // Extra lines under a person's name, e.g. their roles (a string or a list)
+    ->describeUsersUsing(fn (Model $user, Ticket $ticket): array => $user->roles->pluck('name')->all())
+    // Where a ticket came from, shown on the ticket
+    ->describeTicketOriginUsing(fn (Ticket $ticket): ?string => $ticket->tenant?->name)
+    // Help text for who can be assigned
+    ->assignableUsersDescription('Anyone with the Support role')
+
+    // Extra infolist components in the ticket's details, and extra list columns
+    ->additionalTicketDetails(fn (): array => [TextEntry::make('tenant.name')])
+    ->additionalTableColumns(fn (): array => [TextColumn::make('tenant.name')])
+
+    // How field help shows: FIELD_HELP_TOOLTIP (default), FIELD_HELP_INLINE or FIELD_HELP_SUMMARY
+    ->fieldHelp(TicketPlugin::FIELD_HELP_INLINE)
+    // "Send as update" in the chat: KEEP_WAITING_BUTTON (default) or KEEP_WAITING_CHECKBOX
+    ->keepWaitingStyle(TicketPlugin::KEEP_WAITING_CHECKBOX)
+```
+
+`TicketPlugin::get()` returns the plugin of the current (or given) panel. `TicketPlugin::find($panelId)` returns `null` instead of failing when that panel doesn't have the plugin, for example in a queue worker that doesn't register it.
+
 ### Notification Configuration Per Panel
 
 The package supports granular control over who receives notifications based on event type and actor role. You can configure different notification rules for each Filament panel using a fluent API.
+
+`NotificationConfiguration::make()` starts with the defaults below, and each `->on()` replaces the rule for one event.
 
 ```php
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
@@ -702,11 +926,13 @@ The notification system uses two key enums:
 
 **NotificationRecipient** - Who should be notified:
 - `NotificationRecipient::User` - Notify the ticket submitter only
-- `NotificationRecipient::Supporter` - Notify the assigned supporter only
+- `NotificationRecipient::Supporter` - Notify the assigned supporter only. On an unassigned ticket, everyone in the ticket panel's `allSupportersQuery()` is notified instead, apart from the actor and the submitter.
 - `NotificationRecipient::Both` - Notify both user and supporter
 - `NotificationRecipient::None` - Don't send any notifications
 
 For each event type, you define a closure that receives the trigger type and returns who should be notified. This allows for flexible notification rules based on who initiated the action.
+
+When a debounced notification is finally sent, the job checks that the ticket still concerns the recipient. If the ticket is now someone else's, or the recipient can no longer view it, nothing is sent.
 
 #### Default Behavior
 
@@ -717,8 +943,7 @@ The package provides sensible defaults if no configuration is provided:
 - Supporter-triggered: Notifies both user and supporter
 
 **Ticket Assigned**
-- Supporter-triggered: Notifies supporter only
-- User-triggered: No notifications (users cannot assign tickets)
+- Either trigger: Notifies supporter
 
 **Ticket Activity** (messages, comments)
 - User-triggered: Notifies supporter only
@@ -727,6 +952,14 @@ The package provides sensible defaults if no configuration is provided:
 **Ticket Closed**
 - User-triggered: Notifies supporter only
 - Supporter-triggered: Notifies user only
+
+**Ticket Reopened**
+- Either trigger: Notifies supporter
+
+**Ticket Handed Over** (`TicketHandedOverEvent`)
+- Not configurable through `on()`. The two people the escalation moved between are notified, apart from whoever did it.
+
+The notification class sent for each event is set in the config's `notifications` map.
 
 #### Delivery Channels
 
@@ -738,6 +971,21 @@ Notifications are emailed by default. To also show them in Filament's notificati
 ```
 
 The host needs Laravel's `notifications` table and `->databaseNotifications()` on the panels its ticket users work in. Every channel of one send carries the same batch of unread activity.
+
+#### Delivery Strategy
+
+By default notifications are debounced: activity on a ticket is gathered for `notification-debounce` seconds (10 minutes) and sent as one notification of at most `notification-max-events` activities. Change the default with `default-notification-strategy`, or per user with a `ticketNotificationStrategy()` method on the user model:
+
+```php
+use Padmission\Tickets\Enums\NotificationStrategy;
+
+public function ticketNotificationStrategy(): NotificationStrategy
+{
+    return $this->wants_instant_emails
+        ? NotificationStrategy::Immediate
+        : NotificationStrategy::Debounced;
+}
+```
 
 #### Per-Panel Configuration
 
@@ -814,15 +1062,25 @@ You can also implement complex notification logic based on your business require
 
 ### Activity Tracking
 
-All ticket changes are automatically tracked in the activity log:
+All ticket changes are automatically tracked in the activity log (`Padmission\Tickets\Enums\ActivityType`):
 
 - **Message** - Regular ticket messages
 - **Internal Message** - Internal notes not visible to end users
 - **Opened** - Ticket creation
+- **Opened For** - A supporter opened the ticket for someone else
+- **Asked Directly** - The support team logged a question an organization's supporter asked some other way
 - **Priority Changed** - Priority modifications
 - **Status Changed** - Status updates
+- **Subject Changed** - Subject edits
+- **Assignee Changed** - Assignment changes
 - **Turn Changed** - Turn ownership changes
 - **Closed** - Ticket closure with disposition
+- **Reopened** - Ticket reopened
+- **Follows Up** - A new ticket that follows up a closed one
+- **Escalated** - The ticket was escalated
+- **Added To Escalation** / **Removed From Escalation** - On the original, when it's linked to or unlinked from an escalation
+- **Original Added** / **Original Removed** - The same change, recorded on the escalation
+- **Handed Over** - An escalation moved to another person
 
 Activities include:
 - User who made the change
@@ -832,16 +1090,25 @@ Activities include:
 
 ### File Attachments
 
-The package supports file attachments via Spatie Media Library. Configure the storage disk in your configuration:
+Attachments are stored directly on a filesystem disk, not through a media library. The browser uploads each file straight to the disk through a presigned URL, so the disk must be S3-compatible (`league/flysystem-aws-s3-v3`). Configure the disks in your configuration:
 
 ```php
 // config/padmission-tickets.php
 'attachments' => [
-    'storage' => env('MEDIA_DISK', 's3'),
+    'disk' => env('MEDIA_DISK', 's3'),
+    'preview_disk' => env('MEDIA_DISK', 's3'),
 ],
 ```
 
-Files can be attached to ticket messages through the chat widget or API.
+`disk` holds the files and `preview_disk` the image previews made from them. Files can be attached to messages through the chat widget and **New ticket**. Subjects and attachment names are checked with the `Padmission\Tickets\Rules\PlainText` rule, which refuses HTML tags and script or data URLs.
+
+### Copilot Panel
+
+The package registers a Livewire component, `padmission-tickets-copilot-panel`, with a compact ticket list, conversation and new-ticket form for embedding in another UI, such as an AI assistant's side panel:
+
+```blade
+<livewire:padmission-tickets-copilot-panel :initial-ticket-id="$ticketId" />
+```
 
 ## Customization
 
@@ -852,13 +1119,14 @@ You can extend the package models with your own:
 ```php
 // config/padmission-tickets.php
 'models' => [
+    Illuminate\Contracts\Auth\Authenticatable::class => App\Models\User::class,
     Padmission\Tickets\Models\Ticket::class => App\Models\Ticket::class,
     Padmission\Tickets\Models\TicketActivity::class => App\Models\TicketActivity::class,
     // ... other models
 ],
 ```
 
-Your custom models should extend the package models to ensure compatibility.
+The `Authenticatable::class` entry is the user model the package resolves requesters, supporters and notification recipients from. Your custom models should extend the package models to ensure compatibility.
 
 ## Custom Models & Jobs
 
@@ -944,7 +1212,14 @@ To use custom job classes, you need to:
 
 #### Extending NotificationJob
 
-To add custom properties like `tenantId` to the notification job:
+`NotificationJob` offers these override points:
+
+- `initializeJob(Authenticatable $user, Ticket $model): void` - called at the end of the constructor
+- `stillConcerns(Model $user, Ticket $record): bool` - the check made just before sending
+- `sendNotification(Model $user, Ticket $record, string $notificationClass): void` - the send itself
+- `uniqueId(): string` - the key debounced jobs are coalesced on
+
+`getUserId()`, `getTicketClass()` and `getTicketKey()` return what the job was queued for. For example, to add a tenant to the job:
 
 ```php
 <?php
@@ -952,64 +1227,43 @@ To add custom properties like `tenantId` to the notification job:
 namespace App\Jobs;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models\Ticket;
+use Throwable;
 
 class CustomNotificationJob extends NotificationJob
 {
-    public ?int $tenantId = null;
+    public int|string|null $tenantId = null;
 
-    /**
-     * Override to add custom initialization
-     */
     protected function initializeJob(Authenticatable $user, Ticket $model): void
     {
-        // Add your custom logic here
-        $this->tenantId = $user->tenant_id ?? null;
-        
+        $this->tenantId = $model->tenant_id;
+
         // Set custom queue, delay, etc.
-        $this->onQueue('tenant-' . $this->tenantId);
+        $this->onQueue('notifications');
     }
 
-    /**
-     * Override unique ID generation to include tenant
-     */
-    protected function buildUniqueId(): string
+    public function uniqueId(): string
     {
-        return parent::buildUniqueId() . '-tenant-' . $this->tenantId;
+        return parent::uniqueId().'-tenant-'.$this->tenantId;
     }
 
-    /**
-     * Override notification sending for tenant-specific logic
-     */
-    protected function sendNotification(Authenticatable $user, Ticket $record, string $notificationClass): void
+    protected function stillConcerns(Model $user, Ticket $record): bool
     {
-        // Add tenant-specific notification logic
-        if ($this->shouldSendNotification($user, $record)) {
-            parent::sendNotification($user, $record, $notificationClass);
-        }
+        return parent::stillConcerns($user, $record)
+            && $user->tenant_id === $record->tenant_id;
     }
 
-    /**
-     * Custom logic to determine if notification should be sent
-     */
-    protected function shouldSendNotification(Authenticatable $user, Ticket $record): bool
+    // Laravel's own hook for a failed queued job
+    public function failed(Throwable $exception): void
     {
-        // Add your business logic here
-        return $user->tenant_id === $record->tenant_id;
-    }
-
-    /**
-     * Override error handling
-     */
-    protected function handleException(\Exception $e): void
-    {
-        // Log errors with tenant context
-        \Log::error('Notification job failed', [
+        Log::error('Notification job failed', [
             'tenant_id' => $this->tenantId,
-            'ticket_id' => $this->ticketKey,
-            'user_id' => $this->userId,
-            'error' => $e->getMessage(),
+            'ticket_id' => $this->getTicketKey(),
+            'user_id' => $this->getUserId(),
+            'error' => $exception->getMessage(),
         ]);
     }
 }
@@ -1039,17 +1293,19 @@ TicketPlugin::make()
 
 ### No Users Being Assigned
 
-Debug your queries to see what users are being returned:
+Debug your queries to see what users are being returned. Check the panel the ticket goes to, not the one it was sent from:
 
 ```php
 // Test all supporters query
-$query = app()->call(TicketPlugin::get()->getAllSupportersQuery());
+$query = app()->call(TicketPlugin::get('support')->getAllSupportersQuery());
 dd($query->count(), $query->pluck('name', 'id'));
 
 // Test initial assignment query
-$query = app()->call(TicketPlugin::get()->getInitialAssignmentSupportersQuery());
+$query = app()->call(TicketPlugin::get('support')->getInitialAssignmentSupportersQuery());
 dd($query->count(), $query->pluck('name', 'id'));
 ```
+
+If the initial assignment query is set and returns nobody, tickets stay unassigned: there's no fall-back to `allSupportersQuery()` in that case.
 
 ### Tickets Going to Wrong Panel
 
@@ -1064,7 +1320,7 @@ Ensure your target panel ID matches exactly:
 
 1. Ensure the User model has the `HasTickets` trait
 2. Check that your queries return users
-3. Verify the assignment strategy is configured
+3. Verify the assignment strategy is configured on the panel the ticket is **created** on
 4. Check Laravel logs for exceptions
 
 ## Support
