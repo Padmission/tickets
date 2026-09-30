@@ -15,8 +15,10 @@ use Padmission\Tickets\Seeding\TicketScenarios;
 use Padmission\Tickets\TicketPlugin;
 
 /*
- * A panel that only receives escalations is skipped: its tickets come from
- * the panels that escalate to it.
+ * A panel another panel escalates to is skipped: its tickets come from the
+ * panels that escalate to it. Whether it may start tickets says nothing
+ * here, since a host turns that on for its escalation target so staff can
+ * open tickets for contacts.
  */
 class TicketScenarioSeeder extends Seeder
 {
@@ -39,7 +41,7 @@ class TicketScenarioSeeder extends Seeder
 
         foreach ($this->getTenants($tenantId) as $tenant) {
             foreach ($this->getPanels() as $panel) {
-                if (($this->panelId !== null && $panel->getId() !== $this->panelId) || ! $this->pluginOf($panel)->canStartTickets()) {
+                if (($this->panelId !== null && $panel->getId() !== $this->panelId) || $this->pluginOf($panel)->getLinkedTicketChildPanels() !== []) {
                     continue;
                 }
 

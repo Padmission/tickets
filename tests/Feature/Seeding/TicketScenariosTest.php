@@ -28,6 +28,7 @@ use Padmission\Tickets\Policies\TicketPolicy;
 use Padmission\Tickets\Seeding\TicketScenarios;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketEscalationLinks;
+use Padmission\Tickets\Services\TicketReassignment;
 use Padmission\Tickets\Services\TicketStarter;
 use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\Tests\User;
@@ -360,6 +361,44 @@ it('writes the history rows the live flows write', function (Closure $seeded, Cl
     ],
 ]);
 
+it('reassigns as the live Reassign does', function (string $by, string $note) {
+    $scenarios = new class('test', null, [$this->requester], [$this->supporter], [$this->colleague]) extends TicketScenarios
+    {
+        public function reassigned(User $by, User $to): Ticket
+        {
+            return $this->seedOnce('reassigned', function () use ($by, $to): Ticket {
+                $this->startAt(days: 1);
+                $ticket = $this->openFromChat($this->requester(0), 'Reassigned', '<p>Hi</p>', $this->supporter(0));
+                $this->later(hours: 1);
+                $this->reassign($ticket, $to, $by);
+                $this->reassign($ticket, $to, $by);
+
+                return $ticket;
+            });
+        }
+    };
+
+    $assignees = fn (Ticket $ticket): array => TicketActivity::query()->where('ticket_id', $ticket->id)->where('type', ActivityType::AssigneeChanged)->get()
+        ->map(fn (TicketActivity $activity): array => [$activity->sender->value, $activity->user_id, $activity->data, $activity->assigneeNote(null)])->all();
+
+    $seeded = $scenarios->reassigned($this->{$by}, $this->colleague)->refresh();
+
+    $this->actingAs($this->{$by});
+    $live = Ticket::factory()->open()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->supporter->id]);
+    expect(resolve(TicketReassignment::class)->assign($live, $this->colleague->id))->toBeTrue();
+
+    expect($assignees($seeded))->toBe($assignees($live))
+        ->and($assignees($seeded))->toHaveCount(1)
+        ->and($assignees($seeded)[0][3])->toContain($note)
+        ->and($seeded->assignee_id)->toBe($this->colleague->id)
+        ->and($seeded->updated_at->isPast())->toBeTrue();
+
+    viewAs($this->colleague, $seeded);
+})->with([
+    'handed by the assignee' => ['supporter', 'Maria Lopez'],
+    'taken by the new assignee' => ['colleague', 'Dev Patel'],
+]);
+
 it('marks each writer as having read up to their own last word', function () {
     $ticket = $this->scenarios->waitingOnRequester();
     $lastSeen = fn (User $user): ?int => TicketUserState::query()->where('ticket_id', $ticket->id)->where('user_id', $user->id)->value('last_seen_activity_id');
@@ -434,6 +473,16 @@ describe('tickets:seed --only=scenarios', function () {
         $this->artisan('tickets:seed', ['--only' => 'scenarios'])->assertSuccessful();
 
         expect(Ticket::query()->withoutGlobalScopes()->count())->toBe($count);
+    });
+
+    it('leaves out a panel others escalate to, even one that starts tickets', function () {
+        TicketPlugin::get('test2')->startsTickets();
+
+        $this->artisan('tickets:seed', ['--only' => 'scenarios'])->assertSuccessful();
+
+        expect(Ticket::query()->withoutGlobalScopes()->where('source_panel', 'test2')->exists())->toBeFalse()
+            ->and(Ticket::query()->withoutGlobalScopes()->where('source_panel', 'test')->where('panel', 'test2')->exists())->toBeTrue()
+            ->and(Ticket::query()->withoutGlobalScopes()->where('source_panel', 'test3')->exists())->toBeTrue();
     });
 
     it('seeds only the panel asked for', function () {
