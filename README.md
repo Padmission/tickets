@@ -219,7 +219,8 @@ php artisan tickets:seed
 Statuses, priorities and dispositions are kept per panel (and per tenant when tenancy is on). The command seeds every panel that has the plugin. Options:
 
 - `--tenant=ID` - seed one tenant instead of all of them
-- `--only=dispositions,priorities,statuses,tickets` - seed only some types
+- `--only=dispositions,priorities,statuses,tickets,scenarios` - seed only some types. `scenarios` runs only when named (see [Seeding Demo Scenarios](#seeding-demo-scenarios))
+- `--panel=ID` - with `scenarios`, seed that panel only
 - `--force` - seed even when rows already exist
 
 ## Configuration
@@ -1109,6 +1110,46 @@ The package registers a Livewire component, `padmission-tickets-copilot-panel`, 
 ```blade
 <livewire:padmission-tickets-copilot-panel :initial-ticket-id="$ticketId" />
 ```
+
+### Seeding Demo Scenarios
+
+`Padmission\Tickets\Seeding\TicketScenarios` fills a preview or QA environment with tickets worth opening: a real back-and-forth, closed and reopened tickets, escalations and so on. Its rows are the ones the live flows write (history, turn, status, assignee, seen pointers), backdated over the past days, and it notifies nobody.
+
+```php
+use Padmission\Tickets\Seeding\TicketScenarios;
+
+$scenarios = TicketScenarios::make(
+    panelId: 'app',
+    tenant: $organization,            // a model, a key, or null without tenancy
+    requesters: [$alice, $bob],       // people who ask from the chat, none of them supporters
+    supporters: [$maria],             // the panel's supporter pool; the first owns escalations
+    colleagues: [$dev],               // optional: someone on the same team, to hand an escalation to
+)->escalatesTo('admin', [$kevin]);    // optional: the escalation target and who answers there
+
+$scenarios->all();                    // every scenario once, keyed by name
+
+$scenarios->conversation();           // or one at a time; each returns its Ticket
+$scenarios->escalation(originals: 3, closedOriginals: 1);
+```
+
+| Method | Leaves |
+|--------|--------|
+| `conversation()` | Five messages from both sides and an internal note, waiting on support |
+| `waitingOnRequester()` | Support replied last, waiting on the requester |
+| `closed()` | Closed with the panel's first disposition |
+| `reopened()` | Closed, then reopened by the requester's reply |
+| `unassigned()` | A new question nobody has |
+| `assignedToNonSupporter(?Model $assignee = null)` | Assigned outside the supporter pool, so it asks for a new assignee |
+| `openedFor()` | Opened by a supporter for a requester with New ticket |
+| `escalation(int $originals = 2, int $closedOriginals = 0, bool $answered = false)` | An escalation linking its originals (as `childTickets`), the last `closedOriginals` closed; `answered` leaves the other team's answer as the last word |
+| `directQuestion()` | A question asked straight of the other team, with no originals |
+| `handedOver()` | An escalation handed from the first supporter to a colleague |
+
+Each scenario is marked in `data.seeded_scenario` and found again by it, so seeding twice returns the first run's tickets instead of adding more. Every method takes an optional `key:` to seed a second one. The escalation scenarios need `escalatesTo()`, and `handedOver()` a colleague or a second supporter; `all()` skips what it can't seed. Statuses, priorities and dispositions must exist first (`php artisan tickets:seed --only=statuses,priorities,dispositions`); the command below seeds them itself.
+
+To add scenarios of your own, extend the class and build them from its protected steps (`seedOnce()`, `openFromChat()`, `message()`, `note()`, `close()`, `reopenByReply()`, `escalate()`, `addOriginal()`, `handOver()`, `startAt()`, `later()`).
+
+Without a host seeder, `php artisan tickets:seed --only=scenarios` seeds them for each panel that starts tickets, from its own `allSupportersQuery()` and the users of its `requestersQuery()` outside it, escalating to the panel's first `allowLinkedTicketsTo()` panel.
 
 ## Customization
 
