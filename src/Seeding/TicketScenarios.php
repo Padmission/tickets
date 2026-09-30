@@ -302,12 +302,33 @@ class TicketScenarios
         return $this->withOriginals($this->seedOnce($key, function () use ($key, $originals, $closedOriginals, $answered): Ticket {
             $owner = $this->supporter(0);
             $team = $this->targetSupporter();
-            $subjects = [
-                'Data import stuck on "processing"',
-                'Imported records are missing their notes',
-                'Import finished but the totals look wrong',
-                'Import has been running since yesterday',
-                'Nightly import did not run',
+            // Subject, the requester's opening message and support's reply when it finishes, one per original.
+            $stories = [
+                [
+                    'Data import stuck on "processing"',
+                    '<p>I started an import of our client list at 8 this morning and it still says "processing". Nothing new has appeared in our account.</p>',
+                    '<p>Your client list import has now finished and all the new clients are in your account. Please let us know if any are missing.</p>',
+                ],
+                [
+                    'Imported records are missing their notes',
+                    '<p>Our import says it is still running, and the records that did come through are missing the notes column from the spreadsheet.</p>',
+                    '<p>The import has finished and the notes are now on every record, including the ones that came through earlier without them.</p>',
+                ],
+                [
+                    'Import finished but the totals look wrong',
+                    '<p>The dashboard shows 212 records from today\'s import, but the file had 480 rows. The import page still has a spinner next to it.</p>',
+                    '<p>The rest of your import has come through, so the dashboard now shows all 480 records from the file.</p>',
+                ],
+                [
+                    'Import has been running since yesterday',
+                    '<p>We uploaded a file yesterday afternoon and the import is still running. Should we cancel it and try again?</p>',
+                    '<p>No need to upload it again: yesterday\'s import has finished, and nothing was added twice.</p>',
+                ],
+                [
+                    'Nightly import did not run',
+                    '<p>Our scheduled nightly import did not bring anything in last night, and today\'s shows as queued.</p>',
+                    '<p>Last night\'s scheduled import has now run, and tonight\'s is back on its usual schedule.</p>',
+                ],
             ];
 
             $this->startAt(days: 6, hour: 8, minute: 40);
@@ -315,10 +336,12 @@ class TicketScenarios
             $linked = [];
 
             foreach (range(0, $originals - 1) as $index) {
+                [$subject, $opening] = $stories[$index % count($stories)];
+
                 $linked[] = $this->withMarker("{$key}:original:{$index}", fn (): Ticket => $this->openFromChat(
                     $this->requester($index),
-                    $subjects[$index % count($subjects)],
-                    '<p>I started an import this morning and it still says "processing". Nothing new has appeared in our account.</p>',
+                    $subject,
+                    $opening,
                     $this->supporter($index),
                 ));
 
@@ -330,7 +353,7 @@ class TicketScenarios
                 $owner,
                 'Imports stuck in processing for several customers',
                 '<p>Several of our customers have imports that never leave "processing" since this morning. Could you check the import queue? The customers\' tickets are linked.</p>',
-                '<p>Thanks for your patience. I have asked our platform team to look into the stuck import and will update you here.</p>',
+                '<p>Thanks for your patience. I have asked our platform team to look into your import and will update you here.</p>',
             );
 
             foreach (array_slice($linked, 1) as $original) {
@@ -346,9 +369,9 @@ class TicketScenarios
                 $this->message($escalation, $owner, '<p>The earliest one we know of started at 7:10 this morning.</p>');
             }
 
-            foreach (array_slice($linked, $originals - $closedOriginals) as $original) {
+            foreach (array_slice($linked, $originals - $closedOriginals, preserve_keys: true) as $index => $original) {
                 $this->later(hours: 3);
-                $this->message($original, $this->assigneeOf($original) ?? $owner, '<p>Your import has now finished. Please let us know if anything looks off.</p>');
+                $this->message($original, $this->assigneeOf($original) ?? $owner, $stories[$index % count($stories)][2]);
                 $this->later(hours: 1);
                 $this->close($original, $this->assigneeOf($original) ?? $owner);
             }

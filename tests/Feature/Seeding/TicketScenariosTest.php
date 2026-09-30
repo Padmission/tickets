@@ -222,6 +222,29 @@ it('seeds an escalation that links its originals, some closed', function () {
     expect(chatOf($this->platform, $escalation))->toContain('The earliest one we know of started');
 });
 
+it('gives each original of an escalation its own opening message and reply', function (int $originals) {
+    $escalation = $this->scenarios->escalation(originals: $originals, closedOriginals: $originals);
+    $words = fn (ActivitySender $sender) => $escalation->childTickets->map(fn (Ticket $original): ?string => TicketActivity::query()
+        ->where('ticket_id', $original->id)
+        ->where('type', ActivityType::Message)
+        ->where('sender', $sender)
+        ->orderBy('id')
+        ->value('content'));
+
+    expect($words(ActivitySender::User)->unique())->toHaveCount($originals)
+        ->and($escalation->childTickets->pluck('subject')->unique())->toHaveCount($originals)
+        ->and(TicketActivity::query()->whereIn('ticket_id', $escalation->childTickets->modelKeys())->where('type', ActivityType::Closed)->count())->toBe($originals);
+
+    $closingReplies = $escalation->childTickets->map(fn (Ticket $original): ?string => TicketActivity::query()
+        ->where('ticket_id', $original->id)
+        ->where('type', ActivityType::Message)
+        ->where('sender', ActivitySender::Supporter)
+        ->orderByDesc('id')
+        ->value('content'));
+
+    expect($closingReplies->unique())->toHaveCount($originals);
+})->with([2, 3, 5]);
+
 it('leaves an answered escalation waiting on the team that escalated', function () {
     $escalation = $this->scenarios->escalation(answered: true)->refresh();
 
