@@ -1134,7 +1134,7 @@ $scenarios->escalation(originals: 3, closedOriginals: 1);
 
 | Method | Leaves |
 |--------|--------|
-| `conversation()` | Five messages from both sides and an internal note, waiting on support |
+| `conversation()` | Five messages from both sides, waiting on support |
 | `waitingOnRequester()` | Support replied last, waiting on the requester |
 | `closed()` | Closed with the panel's first disposition |
 | `reopened()` | Closed, then reopened by the requester's reply |
@@ -1147,7 +1147,7 @@ $scenarios->escalation(originals: 3, closedOriginals: 1);
 
 Each scenario is marked in `data.seeded_scenario` and found again by it, so seeding twice returns the first run's tickets instead of adding more. Every method takes an optional `key:` to seed a second one. The escalation scenarios need `escalatesTo()`, and `handedOver()` a colleague or a second supporter; `all()` skips what it can't seed. Statuses, priorities and dispositions must exist first (`php artisan tickets:seed --only=statuses,priorities,dispositions`); the command below seeds them itself.
 
-To add scenarios of your own, extend the class and build them from its protected steps (`seedOnce()`, `openFromChat()`, `message()`, `note()`, `close()`, `reopenByReply()`, `reassign()`, `escalate()`, `addOriginal()`, `handOver()`, `startAt()`, `later()`).
+To add scenarios of your own, extend the class and build them from its protected steps (`seedOnce()`, `openFromChat()`, `message()`, `close()`, `reopenByReply()`, `reassign()`, `escalate()`, `addOriginal()`, `handOver()`, `startAt()`, `later()`).
 
 Without a host seeder, `php artisan tickets:seed --only=scenarios` seeds them for each panel that no other panel escalates to, from its own `allSupportersQuery()` and the users of its `requestersQuery()` outside it, escalating to the panel's first `allowLinkedTicketsTo()` panel.
 

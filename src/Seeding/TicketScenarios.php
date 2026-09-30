@@ -143,10 +143,7 @@ class TicketScenarios
             $this->later(hours: 20);
             $this->message($ticket, $requester, '<p>About 14,000 rows for the full month. A single week exports without any trouble.</p>');
 
-            $this->later(minutes: 40);
-            $this->note($ticket, $supporter, '<p>Looks like the export timeout on large reports again. Asked engineering whether the fix for this is out yet.</p>');
-
-            $this->later(days: 1, hours: 2);
+            $this->later(days: 1, hours: 3);
             $this->message($ticket, $supporter, '<p>Large exports are running into a time limit. As a workaround, please export the month in two halves while we raise the limit. I will let you know once it is done.</p>');
 
             $this->later(hours: 5);
@@ -543,11 +540,6 @@ class TicketScenarios
         return $activity;
     }
 
-    protected function note(Ticket $ticket, Model $supporter, string $content): TicketActivity
-    {
-        return $this->write($ticket, ActivityType::InternalMessage, ActivitySender::Supporter, $supporter, $content);
-    }
-
     protected function close(Ticket $ticket, Model $closer): void
     {
         $from = $ticket->status_id;
@@ -661,7 +653,7 @@ class TicketScenarios
             'type' => $type,
             'sender' => $sender,
             'content' => $content,
-            'data' => in_array($type, [ActivityType::Message, ActivityType::InternalMessage], true) ? null : $data,
+            'data' => $type === ActivityType::Message ? null : $data,
             'created_at' => $this->at,
             'updated_at' => $this->at,
         ]);

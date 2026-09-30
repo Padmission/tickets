@@ -95,7 +95,7 @@ function viewAs(User $user, Ticket $ticket, string $panel = 'test'): Testable
     return Livewire::test(ViewTicket::class, ['record' => $ticket->id])->assertOk();
 }
 
-it('seeds a conversation with both sides, an internal note and the requester\'s last word waiting on support', function () {
+it('seeds a conversation with both sides and the requester\'s last word waiting on support', function () {
     $ticket = $this->scenarios->conversation();
 
     $messages = TicketActivity::query()->where('ticket_id', $ticket->id)->where('type', ActivityType::Message)->where('sender', '<>', ActivitySender::System)->get();
@@ -106,14 +106,13 @@ it('seeds a conversation with both sides, an internal note and the requester\'s 
         ->and($messages)->toHaveCount(5)
         ->and($messages->pluck('sender')->unique()->values()->all())->toEqualCanonicalizing([ActivitySender::User, ActivitySender::Supporter])
         ->and($messages->last()->sender)->toBe(ActivitySender::User)
-        ->and(TicketActivity::query()->where('ticket_id', $ticket->id)->where('type', ActivityType::InternalMessage)->count())->toBe(1)
         ->and($ticket->created_at->isPast())->toBeTrue()
         ->and(TicketActivity::query()->where('ticket_id', $ticket->id)->max('created_at'))->toBeLessThan(now()->toDateTimeString());
 
     viewAs($this->supporter, $ticket)->assertSee('Monthly report export stops at 80%');
 
-    expect(chatOf($this->supporter, $ticket))->toContain('Two halves worked')->toContain('export timeout on large reports')
-        ->and(chatOf($this->requester, $ticket))->toContain('Two halves worked')->not->toContain('export timeout on large reports');
+    expect(chatOf($this->supporter, $ticket))->toContain('Two halves worked')
+        ->and(chatOf($this->requester, $ticket))->toContain('Two halves worked');
 
     $this->actingAs($this->supporter);
 
@@ -406,6 +405,16 @@ it('marks each writer as having read up to their own last word', function () {
     expect($lastSeen($this->supporter))->toBe($ticket->latestMessage->id)
         ->and($ticket->hasUnreadMessagesFor($this->otherRequester))->toBeTrue()
         ->and($ticket->hasUnreadMessagesFor($this->supporter))->toBeFalse();
+});
+
+/*
+ * No live flow writes an internal note any more, and the chat would show one
+ * as a public reply.
+ */
+it('writes no internal notes', function () {
+    $this->scenarios->all();
+
+    expect(TicketActivity::query()->where('type', ActivityType::InternalMessage)->exists())->toBeFalse();
 });
 
 it('notifies nobody', function () {
