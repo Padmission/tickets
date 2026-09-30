@@ -7,6 +7,7 @@ use Filament\Facades\Filament;
 use Illuminate\Console\Command;
 use Padmission\Tickets\Database\Seeders\TicketDispositionSeeder;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
+use Padmission\Tickets\Database\Seeders\TicketScenarioSeeder;
 use Padmission\Tickets\Database\Seeders\TicketSeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\TicketPlugin;
@@ -15,7 +16,8 @@ class SeedTicketsCommand extends Command
 {
     protected $signature = 'tickets:seed
                             {--tenant= : Specific tenant ID to seed for (optional)}
-                            {--only= : Seed only specific types (comma-separated): dispositions,priorities,statuses,tickets}
+                            {--only= : Seed only specific types (comma-separated): dispositions,priorities,statuses,tickets,scenarios}
+                            {--panel= : Seed scenarios for this panel only}
                             {--force : Force seeding even if data already exists}';
 
     protected $description = 'Seed ticket data for all tenants or a specific tenant';
@@ -73,7 +75,16 @@ class SeedTicketsCommand extends Command
                 }
 
                 $seeder = new $seederClass;
+
+                if ($seeder instanceof TicketScenarioSeeder) {
+                    $seeder->panelId = $this->option('panel');
+                }
+
                 $seeder->run($tenantId ? (int) $tenantId : null);
+
+                if ($seeder instanceof TicketScenarioSeeder && $seeder->skipped !== []) {
+                    $this->warn('No supporters or requesters found, so no scenarios for: '.implode(', ', $seeder->skipped));
+                }
 
                 $this->line("✅ {$seederName} completed successfully");
 
@@ -103,9 +114,12 @@ class SeedTicketsCommand extends Command
             'tickets' => TicketSeeder::class,
         ];
 
+        // Scenarios are demo conversations for preview and QA environments, so only on request.
         if (! $only) {
             return $allSeeders;
         }
+
+        $allSeeders['scenarios'] = TicketScenarioSeeder::class;
 
         $requestedTypes = array_map(trim(...), explode(',', $only));
 

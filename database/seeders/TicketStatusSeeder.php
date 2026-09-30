@@ -14,7 +14,7 @@ class TicketStatusSeeder extends Seeder
     use SeedForPanels;
     use SeedForTenants;
 
-    public function run(?int $tenantId = null): void
+    public function run(int|string|null $tenantId = null): void
     {
         $statusModel = TicketPlugin::resolveModelClass(TicketStatus::class);
 
