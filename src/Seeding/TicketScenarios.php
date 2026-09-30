@@ -617,6 +617,22 @@ class TicketScenarios
         $escalation->forgetIsEscalation();
     }
 
+    /*
+     * TicketReassignment::assign(), through the observer. Who moved it decides
+     * the note: taken, handed or reassigned by someone else.
+     */
+    protected function reassign(Ticket $ticket, ?Model $to, Model $by): void
+    {
+        $from = $ticket->assignee_id;
+
+        if ((string) $from === (string) $to?->getKey()) {
+            return;
+        }
+
+        $this->write($ticket, ActivityType::AssigneeChanged, ActivitySender::System, $by, data: ['from' => $from, 'to' => $to?->getKey()]);
+        $this->updateTicket($ticket, ['assignee_id' => $to?->getKey()]);
+    }
+
     // Written by the owner it reads as handed over; by the new owner, as taken over.
     protected function handOver(Ticket $escalation, Model $to, Model $by): void
     {
