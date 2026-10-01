@@ -128,7 +128,7 @@ customElements.define(
 				});
 
 			this.initTipTapEditor();
-			this.applyReplyBox();
+			this.applyReplyBox(node);
 			this.initIntersectionObserver();
 
 			if (!this.ticketId) {
@@ -194,6 +194,8 @@ customElements.define(
 					StarterKit,
 					Placeholder.configure({
 						placeholder: () => chat.replyBoxState().placeholder,
+						// A disabled reply box shows its reason here.
+						showOnlyWhenEditable: false,
 					}),
 					Link.configure({
 						openOnClick: false,
@@ -397,9 +399,10 @@ customElements.define(
 			);
 		}
 
-		applyReplyBox() {
+		// Given the rendered node on first render, which is attached only afterwards.
+		applyReplyBox(root = this.rootNode()) {
 			const { disabled } = this.replyBoxState();
-			const composer = this.rootNode().querySelector("[data-composer]");
+			const composer = root.querySelector("[data-composer]");
 
 			composer.classList.toggle("composer--disabled", disabled);
 			composer.setAttribute("aria-disabled", disabled ? "true" : "false");

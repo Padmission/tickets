@@ -887,13 +887,18 @@ dialog.reopen {
 	}
 }
 
-/* The host has said the viewer may not reply here, and the placeholder says why. */
+/* The host has said the viewer may not reply here, and the placeholder says why, so it stays legible while the controls fade. */
 .composer--disabled {
-	opacity: 0.6;
 	cursor: not-allowed;
+	border-style: dashed;
 
 	* {
 		cursor: not-allowed;
+	}
+
+	.composer__toolbar {
+		opacity: 0.35;
+		filter: grayscale(1);
 	}
 
 	.composer__toolbar :is(button, [role="button"]) {
