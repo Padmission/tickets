@@ -25,9 +25,13 @@ class CloseTicketAction extends Action
 
         $this
             ->label(__('padmission-tickets::tickets.actions.close.label'))
-            ->modalHeading(__('padmission-tickets::tickets.actions.close.modal_heading'))
+            ->modalHeading(fn (Ticket $record): string => static::isReceivedEscalation($record)
+                ? __('padmission-tickets::tickets.actions.close.modal_heading_escalation')
+                : __('padmission-tickets::tickets.actions.close.modal_heading'))
             ->modalDescription(fn (Ticket $record): string => $this->describe($record))
-            ->modalSubmitActionLabel(__('padmission-tickets::tickets.actions.close.submit'))
+            ->modalSubmitActionLabel(fn (Ticket $record): string => static::isReceivedEscalation($record)
+                ? __('padmission-tickets::tickets.actions.close.submit_escalation')
+                : __('padmission-tickets::tickets.actions.close.submit'))
             ->button()
             ->color('gray')
             ->hidden(function ($record): bool {
@@ -65,7 +69,7 @@ class CloseTicketAction extends Action
     {
         $key = 'padmission-tickets::tickets.actions.close.';
 
-        if (count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0 && $record->isEscalation()) {
+        if (static::isReceivedEscalation($record)) {
             $originals = resolve(TicketEscalationLinks::class)->linkedOriginalsQuery($record->getKey())->count();
 
             // Named in full once, then by name alone.
@@ -102,6 +106,11 @@ class CloseTicketAction extends Action
             $escalation->submitter === null => TicketPlugin::teamText("{$key}_unnamed", $team),
             default => TicketPlugin::teamText($key, $team, ['handler' => resolve(GetUserDisplayName::class)->forUser($escalation->submitter)]),
         };
+    }
+
+    protected static function isReceivedEscalation(Ticket $record): bool
+    {
+        return count(TicketPlugin::get()->getLinkedTicketChildPanels()) > 0 && $record->isEscalation();
     }
 
     protected function contactOf(Ticket $escalation): string

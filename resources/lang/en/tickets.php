@@ -86,6 +86,7 @@ return [
         'close' => [
             'label' => 'Close',
             'modal_heading' => 'Close this ticket?',
+            'modal_heading_escalation' => 'Close escalation?',
             'modal_description' => 'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             'modal_description_escalated_original' => 'Its escalation stays open. :handler can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_to' => 'Its escalation to :team stays open. :handler can close it from the escalation when :team\'s part is done.',
@@ -97,6 +98,7 @@ return [
             'contact_at' => ':name at :organization',
             'the_contact' => 'the contact',
             'submit' => 'Close ticket',
+            'submit_escalation' => 'Close escalation',
             'disposition' => [
                 'label' => 'Disposition',
             ],

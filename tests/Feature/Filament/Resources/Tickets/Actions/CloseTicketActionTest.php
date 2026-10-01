@@ -131,10 +131,12 @@ it('tells the team receiving an escalation who is told and what stays open', fun
     ]);
     Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
 
-    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+    $page = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it.")
-        ->assertMountedActionModalDontSee('The requester is told it was closed.');
+        ->assertMountedActionModalSee(['Close escalation?', "{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it."])
+        ->assertMountedActionModalDontSee(['The requester is told it was closed.', 'Close this ticket?']);
+
+    expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Close escalation');
 
     Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
 
