@@ -106,7 +106,7 @@ return [
 
         'close_escalation' => [
             'label' => 'Close escalation',
-            'modal_heading' => 'Close this escalation?',
+            'modal_heading' => 'Close escalation?',
             'modal_description' => 'The team you escalated to is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             'modal_description_to' => ':team is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
             'originals_stay_open' => '{0}|{1} The original ticket stays open.|[2,*] The :count original tickets stay open.',

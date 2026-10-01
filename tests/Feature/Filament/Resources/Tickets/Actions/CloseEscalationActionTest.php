@@ -43,11 +43,11 @@ it('lets the owner close the escalation with a centred confirm and no dispositio
         ->assertActionExists(CloseEscalationAction::class, fn (CloseEscalationAction $action): bool => ! $action->isModalSlideOver())
         ->mountAction(CloseEscalationAction::class)
         ->assertMountedActionModalSee([
-            'Close this escalation?',
+            'Close escalation?',
             'Padmission is told it was closed. Anyone who replies to it later is asked whether to reopen it. The original ticket stays open.',
             'Close escalation',
         ])
-        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))
+        ->assertMountedActionModalDontSee([__('padmission-tickets::tickets.actions.close.disposition.label'), 'Close this escalation?'])
         ->callMountedAction()
         ->assertNotified('Escalation closed')
         ->assertRedirect(TicketResource::getUrl('view', ['record' => $this->escalation]));
