@@ -40,9 +40,9 @@ class ReassignTicketAction extends Action
             ->label(fn (Ticket $record): string => $record->assignee_id
                 ? __($key.'label')
                 : __($key.'label_unassigned'))
-            ->modalHeading(fn (Ticket $record): string => match (static::situation($record)) {
-                self::NOBODY => __($key.'modal_heading_nobody'),
-                self::REASSIGN => __($key.'modal_heading'),
+            ->modalHeading(fn (Ticket $record): string => match (true) {
+                static::situation($record) === self::NOBODY => __($key.'modal_heading_nobody'),
+                filled($record->assignee_id) => __($key.'modal_heading'),
                 default => __($key.'modal_heading_unassigned'),
             })
             ->modalDescription(fn (Ticket $record): string => static::describe($record))
@@ -60,7 +60,7 @@ class ReassignTicketAction extends Action
             ->hidden(fn (Ticket $record): bool => $record->isNotInCurrentPanel() || $record->isClosed)
             ->schema([
                 Select::make('assignee_id')
-                    ->label(__($key.'new_assignee'))
+                    ->label(fn (Ticket $record): string => filled($record->assignee_id) ? __($key.'new_assignee') : __($key.'new_assignee_unassigned'))
                     ->options(fn (Ticket $record): array => static::choices($record))
                     ->visible(fn (Ticket $record): bool => in_array(static::situation($record), [self::ASSIGN, self::REASSIGN], true))
                     ->searchable()
@@ -116,8 +116,8 @@ class ReassignTicketAction extends Action
         $sentences = [
             match (true) {
                 $record->assignee === null => __($key.'modal_description_unassigned', ['requester' => $record->requesterName() ?? __($key.'the_requester')]),
-                in_array($record->assignee_id, TicketPlugin::get()->getCurrentUserAssigneeIds()) => __($key.'modal_description_yours'),
-                default => __($key.'modal_description', ['assignee' => Filament::getUserName($record->assignee)]),
+                in_array($record->assignee_id, TicketPlugin::get()->getCurrentUserAssigneeIds()) => __($key.'currently_assigned_you'),
+                default => __($key.'currently_assigned', ['assignee' => Filament::getUserName($record->assignee)]),
             },
             static::describeEscalationOwner($record),
         ];

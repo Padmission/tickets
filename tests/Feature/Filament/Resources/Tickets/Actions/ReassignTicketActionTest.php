@@ -136,22 +136,47 @@ it('asks who answers the requester of a ticket nobody has yet', function () {
         ->assertMountedActionModalDontSee('Reassign');
 });
 
-it('hands a ticket from its assignee to a teammate', function () {
+it('says who has a ticket it reassigns', function () {
     $this->login();
     $ticket = Ticket::factory()->open()->create(['assignee_id' => User::factory()->create(['name' => 'Maria Lopez'])->id]);
 
-    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+    $page = Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->mountAction(inlineReassign())
-        ->assertMountedActionModalSee(['Reassign ticket', 'Hand this ticket from Maria Lopez to a teammate.', 'Reassign']);
+        ->assertMountedActionModalSee(['Reassign ticket', 'Currently assigned to Maria Lopez.', 'New assignee'])
+        ->assertMountedActionModalDontSee(['Assign ticket', 'Hand this ticket']);
+
+    expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Reassign');
 });
 
-it('hands the viewer\'s own ticket from them', function () {
+it('tells the viewer when the ticket they reassign is theirs', function () {
     $viewer = $this->login();
     $ticket = Ticket::factory()->open()->create(['assignee_id' => $viewer->id]);
 
-    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+    $page = Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->mountAction(inlineReassign())
-        ->assertMountedActionModalSee('Hand this ticket from you to a teammate.');
+        ->assertMountedActionModalSee(['Reassign ticket', 'Currently assigned to you.']);
+
+    expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Reassign');
+});
+
+it('reassigns to the viewer alone as Reassign ticket, with Assign to me', function () {
+    $viewer = $this->login();
+    $assignee = User::factory()->create(['name' => 'Maria Lopez']);
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => $assignee->id]);
+
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey([$viewer->id, $assignee->id]));
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(inlineReassign())
+        ->assertMountedActionModalSee(['Reassign ticket', 'Currently assigned to Maria Lopez.'])
+        ->assertMountedActionModalDontSee('Assign ticket')
+        ->assertSchemaComponentHidden('assignee_id', 'mountedActionSchema0');
+
+    expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Assign to me');
+
+    $page->callMountedAction()->assertHasNoActionErrors();
+
+    expect((string) $ticket->refresh()->assignee_id)->toBe((string) $viewer->id);
 });
 
 it('offers only Assign to me when the viewer is the one person who can be assigned', function () {
