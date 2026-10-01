@@ -32,7 +32,6 @@ class OpenTicketsWidget extends BaseWidget
                 ->description($this->isOnEscalatedTab()
                     ? __('padmission-tickets::widgets.open_tickets.description_escalations')
                     : __('padmission-tickets::widgets.open_tickets.description'))
-                ->descriptionIcon('heroicon-m-inbox')
                 ->color('gray'),
         ];
     }

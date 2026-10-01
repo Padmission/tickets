@@ -33,7 +33,6 @@ class OpenSupporterTickets extends BaseWidget
                     ->setCacheTime($this->getPollingInterval())
                     ->getOpenTicketsWaitingOnSupportCount())
                     ->description(__('padmission-tickets::widgets.open_support_tickets.description'))
-                    ->descriptionIcon('heroicon-m-inbox')
                     ->color('warning'),
             ];
         }
@@ -49,7 +48,6 @@ class OpenSupporterTickets extends BaseWidget
                     $query->open()->where($query->qualifyColumn('turn'), Turn::Supporter)->count(),
                 )
                     ->description(TicketPlugin::teamText('padmission-tickets::widgets.escalations_waiting.description', $team))
-                    ->descriptionIcon('heroicon-m-inbox')
                     ->color('gray'),
             ];
         }
@@ -58,10 +56,7 @@ class OpenSupporterTickets extends BaseWidget
 
         return [
             Stat::make(__('padmission-tickets::widgets.needs_you.label'), $needsYou)
-                ->description(TicketResource::describesReceivedTickets()
-                    ? __('padmission-tickets::widgets.needs_you.description_received')
-                    : TicketPlugin::teamText('padmission-tickets::widgets.needs_you.description', $team))
-                ->descriptionIcon('heroicon-m-inbox')
+                ->description(__('padmission-tickets::widgets.needs_you.description'))
                 ->color($needsYou > 0 ? 'warning' : 'gray'),
         ];
     }

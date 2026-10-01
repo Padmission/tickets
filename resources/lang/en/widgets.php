@@ -20,9 +20,8 @@ return [
 
     'needs_you' => [
         'label' => 'Needs You',
-        'description' => 'Waiting on you, needs an assignee, or the other team replied',
-        'description_to' => 'Waiting on you, needs an assignee, or :team replied',
-        'description_received' => 'Waiting on you or needs an assignee',
+        // One line on every card row. The count is replies owed (including a reply from the team escalated to, to pass on) and tickets needing an assignee.
+        'description' => 'Needs a reply or an assignee',
     ],
 
     'escalations_waiting' => [

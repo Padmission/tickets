@@ -80,7 +80,7 @@ describe('Stat cards', function () {
         expect($stat(OpenSupporterTickets::class, 'all'))
             ->getLabel()->toBe('Needs You')
             ->getColor()->toBe('warning')
-            ->getDescription()->toBe('Waiting on you, needs an assignee, or Platform Support replied')
+            ->getDescription()->toBe('Needs a reply or an assignee')
             ->getValue()->toBe(2)
             ->and($stat(OpenSupporterTickets::class, 'linked'))
             ->getLabel()->toBe('Waiting on Platform Support')
@@ -139,14 +139,34 @@ describe('Stat cards', function () {
         expect($needsYou->html())->toMatch('/fi-wi-stats-overview-stat-value">\s*0\s*</');
     });
 
-    it('explains Needs You without a team to pass replies on from in a panel that receives escalations', function () {
+    it('explains Needs You in the same words in a panel that receives escalations', function () {
         $this->login();
         Filament::setCurrentPanel('test2');
 
         expect(Livewire::test(OpenSupporterTickets::class, ['activeTab' => 'all'])->instance()->getStats()[0])
             ->getLabel()->toBe('Needs You')
-            ->getDescription()->toBe('Waiting on you or needs an assignee');
+            ->getDescription()->toBe('Needs a reply or an assignee');
     });
+
+    // An icon beside a description that wrapped floated to the card's far edge, so the cards have none.
+    it('draws no description icons, on any tab or panel', function (string $panel, string $tab) {
+        $this->login();
+        Filament::setCurrentPanel($panel);
+
+        foreach ([OpenTicketsWidget::class, OpenSupporterTickets::class, TicketCloseTimeWidget::class] as $widget) {
+            expect(Livewire::test($widget, ['activeTab' => $tab])->instance()->getStats()[0])
+                ->getDescription()->not->toBeEmpty()
+                ->getDescriptionIcon()->toBeNull();
+        }
+
+        expect(Livewire::test(OpenSupporterTickets::class)->instance()->getStats()[0]->getDescriptionIcon())->toBeNull();
+    })->with([
+        'all' => ['test', 'all'],
+        'my' => ['test', 'my'],
+        'escalations' => ['test', 'linked'],
+        'my escalations' => ['test', 'my_linked'],
+        'receiving panel' => ['test2', 'all'],
+    ]);
 
     it('averages close time over the tab\'s own closed tickets', function () {
         $user = $this->login();
