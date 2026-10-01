@@ -107,7 +107,7 @@ describe('Adding to an existing escalation', function () {
 
         expect($ticket->refresh()->linked_ticket_id)->toBe($escalation->id)
             ->and($ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->plainTextContent())
-            ->toBe('Added to the Platform Support escalation by Tess Support')
+            ->toBe('Added to the escalation to Platform Support by Tess Support')
             ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalAdded)->latest('id')->first()->plainTextContent())
             ->toBe('Rita Requester\'s ticket added to this escalation by Tess Support');
     });
@@ -135,9 +135,30 @@ describe('Adding to an existing escalation', function () {
 
         expect($ticket->refresh()->linked_ticket_id)->toBeNull()
             ->and($ticket->ticketActivities()->where('type', ActivityType::RemovedFromEscalation)->first()->plainTextContent())
-            ->toBe('Removed from the Platform Support escalation by Tess Support')
+            ->toBe('Removed from the escalation to Platform Support by Tess Support')
             ->and($escalation->ticketActivities()->where('type', ActivityType::OriginalRemoved)->exists())->toBeTrue();
     });
+
+    // The chat and the emails read the note's content; the original's transcript reads its plain text.
+    it('names the team a ticket was escalated to, and the escalation one was added to, wherever the note is read', function (?string $team, string $escalated, string $added) {
+        TicketPlugin::get('test2')->supportTeamName($team);
+
+        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test']);
+        [$first, $second] = Ticket::factory()->open()->count(2)->create();
+        $links = resolve(TicketEscalationLinks::class);
+        $links->linkNewEscalation($first, $escalation);
+        $links->addToEscalation($second, $escalation->id);
+
+        $note = fn (Ticket $ticket, ActivityType $type): TicketActivity => $ticket->ticketActivities()->where('type', $type)->sole();
+
+        expect(strip_tags($note($first, ActivityType::Escalated)->content))->toBe($escalated)
+            ->and($note($first, ActivityType::Escalated)->plainTextContent())->toBe($escalated)
+            ->and(strip_tags($note($second, ActivityType::AddedToEscalation)->content))->toBe($added)
+            ->and($note($second, ActivityType::AddedToEscalation)->plainTextContent())->toBe($added);
+    })->with([
+        'a named team' => ['Platform Support', 'Escalated to Platform Support by Tess Support', 'Added to the escalation to Platform Support by Tess Support'],
+        'no team name' => [null, 'Escalated to the other team by Tess Support', 'Added to the escalation by Tess Support'],
+    ]);
 
     it('links a history note to the other ticket only when the viewer can open it', function () {
         $escalation = escalationFrom();
@@ -146,11 +167,11 @@ describe('Adding to an existing escalation', function () {
 
         $note = fn (): string => $ticket->ticketActivities()->where('type', ActivityType::AddedToEscalation)->first()->content;
 
-        expect($note())->toContain('title="Ticket #'.$escalation->id.'"', '>the Platform Support escalation</a>');
+        expect($note())->toContain('title="Ticket #'.$escalation->id.'"', '>the escalation to Platform Support</a>');
 
         TicketPlugin::get()->customizeTicketQuery(fn ($query) => $query->whereKeyNot($escalation->id));
 
-        expect($note())->toBe('Added to the Platform Support escalation by Tess Support');
+        expect($note())->toBe('Added to the escalation to Platform Support by Tess Support');
     });
 
     it('escapes names in history notes', function () {

@@ -505,7 +505,7 @@ describe('Telling the requester', function () {
         expect($original->refresh()->turn)->toBe(Turn::Supporter)
             ->and($original->linked_ticket_id)->toBe($escalation->id)
             ->and($activities->pluck('type')->all())->toBe([ActivityType::Escalated, ActivityType::Message])
-            ->and($activities->first()->plainTextContent())->toBe('Escalated to the Platform Support escalation by '.$viewer->name)
+            ->and($activities->first()->plainTextContent())->toBe('Escalated to Platform Support by '.$viewer->name)
             ->and($message->sender)->toBe(ActivitySender::Supporter)
             ->and($message->user_id)->toBe($viewer->id)
             ->and($message->getRawOriginal('content'))->toContain('We are on it')->not->toContain('<script>');

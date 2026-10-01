@@ -208,7 +208,7 @@ return [
             'modal_description_to' => 'Pick one of your team\'s open escalations to :team.',
             'submit' => 'Add to escalation',
             'success' => 'Added to the escalation',
-            'success_to' => 'Added to the :team escalation',
+            'success_to' => 'Added to the escalation to :team',
             'escalated_at' => 'Escalated',
             'attached' => 'Tickets attached',
         ],
@@ -218,7 +218,7 @@ return [
             'modal_description' => 'Take this ticket out of its escalation? The escalation stays open.',
             'submit' => 'Remove',
             'success' => 'Removed from the escalation',
-            'success_to' => 'Removed from the :team escalation',
+            'success_to' => 'Removed from the escalation to :team',
         ],
 
         'create_linked_ticket' => [

@@ -239,7 +239,8 @@ class TicketActivity extends Model
         $escalation = $this->linkedTicket('escalation');
         $team = $escalation === null ? null : TicketPlugin::find($escalation->panel)?->getSupportTeamName();
 
-        $label = TicketPlugin::teamText('padmission-tickets::activities.escalation', $team);
+        // The ticket that started the escalation went to the team; any other joined the escalation.
+        $label = TicketPlugin::teamText($key === 'escalated' ? 'padmission-tickets::activities.escalation_target' : 'padmission-tickets::activities.escalation', $team);
 
         return __("padmission-tickets::activities.{$key}", [
             'escalation' => $this->ticketReference($escalation, $label, $escalation === null ? null : $this->viewUrlFor($escalation)),
