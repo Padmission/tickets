@@ -886,3 +886,17 @@ dialog.reopen {
 		color: #ffffff;
 	}
 }
+
+/* The host has said the viewer may not reply here, and the placeholder says why. */
+.composer--disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+
+	* {
+		cursor: not-allowed;
+	}
+
+	.composer__toolbar :is(button, [role="button"]) {
+		pointer-events: none;
+	}
+}

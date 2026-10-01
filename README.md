@@ -835,6 +835,21 @@ TicketPlugin::make()
     ] : [])
 ```
 
+### Disabling Replies
+
+`replyDisabledUsing()` stops someone writing in the chat for a reason of your own, such as a session that may only look. The closure receives `$ticket` and `$user` and returns `null` when they may reply, or the reason they may not:
+
+```php
+use Padmission\Tickets\Models\Ticket;
+
+TicketPlugin::make()
+    ->replyDisabledUsing(fn (Ticket $ticket, User $user): ?string => session()->has('read_only')
+        ? 'You are only viewing this ticket, so you can\'t reply.'
+        : null)
+```
+
+While it returns a reason, the chat's reply box stays in place but is greyed out, with the reason where the placeholder would be, and nothing can be typed, attached or sent. The server refuses a message or an attachment upload with a 403 whose JSON gives the reason under `message`, before a reply could reopen a closed ticket. The chat asks the panel it was opened in (its API runs outside any panel, so the chat names the panel in a header), or else the ticket's own panel, so set it on every panel where it applies. It only covers writing in the chat; the ticket page's actions keep their own authorization.
+
 ### Display and UI Options
 
 ```php

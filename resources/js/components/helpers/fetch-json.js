@@ -1,5 +1,6 @@
 import __ from "./trans.js";
 import config from "./config.js";
+import { errorMessageOf } from "./reply-box.js";
 
 class HttpError {
 	constructor(response) {
@@ -10,7 +11,7 @@ class HttpError {
 		try {
 			const json = await this.response.json();
 
-			return json.error || __("errors.unknown");
+			return errorMessageOf(json) || __("errors.unknown");
 		} catch (e) {
 			return __("errors.unknown");
 		}

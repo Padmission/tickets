@@ -6,7 +6,9 @@ use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 class TicketAuth
 {
@@ -34,6 +36,30 @@ class TicketAuth
     public function authorizeReply(Ticket $ticket, ?Authenticatable $user): void
     {
         abort_unless($this->canReply($ticket, $user), 403);
+    }
+
+    /*
+     * Asked of the panel the chat was opened in, which the chat names in a
+     * header since its API runs outside any panel, or else of the ticket's.
+     */
+    public function replyDisabledReason(Ticket $ticket, ?Authenticatable $user): ?string
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        $panelId = Str::after((string) request()->header('X-Padmission-Tickets-Panel'), 'panel-') ?: Filament::getCurrentPanel()?->getId();
+
+        return (TicketPlugin::find($panelId) ?? TicketPlugin::find($ticket->panel))?->getReplyDisabledReason($ticket, $user);
+    }
+
+    public function refuseDisabledReply(Ticket $ticket, ?Authenticatable $user): void
+    {
+        $reason = $this->replyDisabledReason($ticket, $user);
+
+        if ($reason !== null) {
+            throw new HttpResponseException(response()->json(['message' => $reason], 403));
+        }
     }
 
     public function refuseClosedTicket(Ticket $ticket): void

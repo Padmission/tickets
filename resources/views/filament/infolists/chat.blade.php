@@ -13,6 +13,7 @@
 
     $canReply = resolve(TicketAuth::class)->canReply($this->record, Filament::auth()->user());
     $isSubmitter = Filament::auth()->id() === $this->record->submitter_id;
+    $replyDisabledReason = resolve(TicketAuth::class)->replyDisabledReason($this->record, Filament::auth()->user());
 @endphp
 <div
     class="pad-ti-chat-wrapper"
@@ -48,6 +49,7 @@
         placeholder="{{ $placeholder ?? __('padmission-tickets::chat.chat.placeholder') }}"
         closed-empty-message="{{ $closedEmptyMessage ?? '' }}"
         can-reply="{{ $canReply ? 'true' : 'false' }}"
+        reply-disabled-reason="{{ $replyDisabledReason ?? '' }}"
         keep-waiting-style="{{ TicketPlugin::get()->getKeepWaitingStyle() }}"
         timezone="{{ TicketPlugin::get()->getDisplayTimezone() }}"
     ></chat-component>

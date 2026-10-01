@@ -88,6 +88,8 @@ class TicketPlugin implements Plugin
 
     protected ?Closure $personActions = null;
 
+    protected ?Closure $replyDisabledReason = null;
+
     protected int|Closure $reopenWindowDays = self::DEFAULT_REOPEN_WINDOW_DAYS;
 
     protected mixed $additionalTicketDetails = [];
@@ -529,6 +531,31 @@ class TicketPlugin implements Plugin
             (array) app()->call($this->personActions, ['person' => $person, 'ticket' => $ticket]),
             fn (mixed $action): bool => $action instanceof Action,
         ));
+    }
+
+    /*
+     * Lets a host stop someone writing in the chat for a reason of its own,
+     * such as a session that may only look. The callback is given the ticket
+     * and the user, and returns null when they may reply or the reason they
+     * may not, which the chat shows in its reply box and the server sends
+     * back when it refuses a message.
+     */
+    public function replyDisabledUsing(?Closure $callback): static
+    {
+        $this->replyDisabledReason = $callback;
+
+        return $this;
+    }
+
+    public function getReplyDisabledReason(Ticket $ticket, Authenticatable $user): ?string
+    {
+        if ($this->replyDisabledReason === null) {
+            return null;
+        }
+
+        $reason = app()->call($this->replyDisabledReason, ['ticket' => $ticket, 'user' => $user]);
+
+        return filled($reason) ? (string) $reason : null;
     }
 
     /**

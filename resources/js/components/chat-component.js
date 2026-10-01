@@ -14,6 +14,7 @@ import escapeHtml from "./helpers/escape-html.js";
 import lockScrollWhileOpen from "./helpers/scroll-lock.js";
 import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
 import isComposerShown from "./helpers/composer-shown.js";
+import replyBox, { errorMessageOf } from "./helpers/reply-box.js";
 import reopenDialog, {
 	NEW_TICKET,
 	REOPEN,
@@ -127,6 +128,7 @@ customElements.define(
 				});
 
 			this.initTipTapEditor();
+			this.applyReplyBox();
 			this.initIntersectionObserver();
 
 			if (!this.ticketId) {
@@ -191,7 +193,7 @@ customElements.define(
 				extensions: [
 					StarterKit,
 					Placeholder.configure({
-						placeholder: this.placeholder || __("chat.placeholder"),
+						placeholder: () => chat.replyBoxState().placeholder,
 					}),
 					Link.configure({
 						openOnClick: false,
@@ -388,7 +390,39 @@ customElements.define(
 			this.hideMessagesCutOffAtTop();
 		}
 
+		replyBoxState() {
+			return replyBox(
+				this.replyDisabledReason,
+				this.placeholder || __("chat.placeholder"),
+			);
+		}
+
+		applyReplyBox() {
+			const { disabled } = this.replyBoxState();
+			const composer = this.rootNode().querySelector("[data-composer]");
+
+			composer.classList.toggle("composer--disabled", disabled);
+			composer.setAttribute("aria-disabled", disabled ? "true" : "false");
+
+			for (const control of composer.querySelectorAll("button, input")) {
+				control.disabled =
+					disabled ||
+					(this.isSending && control.hasAttribute("data-chat-submit"));
+			}
+
+			if (this.editor) {
+				this.editor.setEditable(!disabled);
+				// Draws the placeholder again, which reads the reason.
+				this.editor.view.dispatch(this.editor.state.tr);
+			}
+		}
+
 		showTicketState(ticket) {
+			if (ticket && "reply_disabled_reason" in ticket) {
+				this.replyDisabledReason = ticket.reply_disabled_reason ?? "";
+				this.applyReplyBox();
+			}
+
 			this.rootNode().querySelector("[data-composer]").style.display =
 				isComposerShown(
 					this.canReply,
@@ -632,10 +666,15 @@ customElements.define(
 			} else {
 				button.classList.remove("is-sending");
 				button.removeAttribute("disabled");
+				this.applyReplyBox();
 			}
 		}
 
 		addAttachments(attachments) {
+			if (this.replyBoxState().disabled) {
+				return;
+			}
+
 			this.clearError();
 
 			for (let i in attachments) {
@@ -901,6 +940,10 @@ customElements.define(
 				return;
 			}
 
+			if (this.replyBoxState().disabled) {
+				return;
+			}
+
 			if (this.ticketId && this.ticket?.is_closed && !reopen) {
 				this.askBeforeSendingOnClosedTicket(keepWaiting);
 
@@ -965,7 +1008,7 @@ customElements.define(
 			}
 
 			try {
-				return (await error.response.json())?.message || null;
+				return errorMessageOf(await error.response.json());
 			} catch (e) {
 				return null;
 			}
@@ -989,7 +1032,7 @@ customElements.define(
 				return;
 			}
 
-			if (this.dropIndex++ === 0) {
+			if (this.dropIndex++ === 0 && !this.replyBoxState().disabled) {
 				this.rootNode()
 					.querySelector("[data-droparea]")
 					.removeAttribute("hidden");

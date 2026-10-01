@@ -31,6 +31,7 @@ class TemporaryAttachmentUploadUrlController
         }
 
         resolve(TicketAuth::class)->authorizeReply($ticketRecord, $request->user());
+        resolve(TicketAuth::class)->refuseDisabledReply($ticketRecord, $request->user());
         resolve(TicketAuth::class)->refuseClosedTicket($ticketRecord);
 
         $request->validate([

@@ -49,6 +49,7 @@ class CreateMessageController
         }
 
         resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
+        resolve(TicketAuth::class)->refuseDisabledReply($ticket, $request->user());
 
         // Reopened only on the writer's say-so, and only by those who may.
         if ($ticket->isClosed && $request->boolean('reopen')

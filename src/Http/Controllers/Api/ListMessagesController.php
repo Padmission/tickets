@@ -34,6 +34,7 @@ class ListMessagesController
                 'is_closed' => $ticket->isClosed,
                 'closed_at' => $ticket->closed_at?->toIso8601String(),
                 'reopen_choices' => resolve(TicketReopening::class)->choicesFor($ticket, $request->user()),
+                'reply_disabled_reason' => resolve(TicketAuth::class)->replyDisabledReason($ticket, $request->user()),
                 'reopen_window_days' => TicketPlugin::find($ticket->panel)?->getReopenWindowDays() ?? TicketPlugin::DEFAULT_REOPEN_WINDOW_DAYS,
             ],
             'messages' => $messages->values()->map(fn ($message) => TicketActivityMapper::map($message)),
