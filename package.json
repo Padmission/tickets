@@ -18,6 +18,7 @@
     "browser-sync": "^3.0.4",
     "dotenv": "^16.5.0",
     "esbuild": "^0.27.0",
+    "linkedom": "^0.18.13",
     "tailwindcss": "^4.1.12"
   },
   "type": "module"

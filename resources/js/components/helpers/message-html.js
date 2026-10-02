@@ -1,4 +1,5 @@
 import escapeHtml from "./escape-html.js";
+import sanitizeHtml from "./sanitize-html.js";
 
 export const FILE_ICON =
 	'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-type-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M2 13v-1h6v1"></path><path d="M5 12v6"></path><path d="M4 18h2"></path></svg>';
@@ -23,8 +24,9 @@ export function attachmentHtml(attachment) {
 	`;
 }
 
-// One chat message. Its content is the server's sanitized HTML, which already escapes the
-// names it quotes; the sender's name is whatever they set on their profile, so it is escaped.
+// One chat message. Its content is the server's sanitized HTML, cleaned again here since rows
+// stored before the server cleaned every path can hold anything; the sender's name is whatever
+// they set on their profile, so it is escaped.
 export default function messageHtml(
 	message,
 	{ dateChanged = false, date = "" } = {},
@@ -39,7 +41,7 @@ export default function messageHtml(
 		>
 			<div class="message__content">
 				<div class="markdown">
-					${message.content || ""}
+					${sanitizeHtml(message.content || "")}
 				</div>
 
 				${

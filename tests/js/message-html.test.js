@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { parseHTML } from "linkedom";
 
 import messageHtml, {
 	attachmentHtml,
 	pendingAttachmentHtml,
 } from "../../resources/js/components/helpers/message-html.js";
+
+// A message's content is cleaned through a template element, which Node lacks.
+globalThis.document = parseHTML(
+	"<!doctype html><html><body></body></html>",
+).document;
 
 const payloads = [
 	"<b>x</b>",

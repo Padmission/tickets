@@ -17,6 +17,7 @@ use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Support\MessageHtml;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
 use RuntimeException;
@@ -140,7 +141,7 @@ class TicketStarter
         $activity = $ticket->ticketActivities()->create([
             'type' => ActivityType::Message,
             'sender' => $sender,
-            'content' => $message,
+            'content' => MessageHtml::sanitize($message),
         ]);
 
         foreach ($attachments as $file) {

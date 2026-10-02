@@ -22,6 +22,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketEscalationLinks;
+use Padmission\Tickets\Support\MessageHtml;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
 
@@ -132,7 +133,7 @@ class CreateLinkedTicketAction extends Action
                     $newTicket->ticketActivities()->create([
                         'sender' => ActivitySender::User,
                         'type' => ActivityType::Message,
-                        'content' => $data['message'],
+                        'content' => MessageHtml::sanitize($data['message']),
                     ]);
 
                     $links->linkNewEscalation($record, $newTicket);

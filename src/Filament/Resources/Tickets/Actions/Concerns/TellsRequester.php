@@ -11,7 +11,7 @@ use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\TicketAuth;
-use Tiptap\Editor;
+use Padmission\Tickets\Support\MessageHtml;
 
 /*
  * The requester never hears about an escalation, so escalating offers to send
@@ -84,7 +84,7 @@ trait TellsRequester
             'type' => ActivityType::Message,
             'sender' => ActivitySender::Supporter,
             'user_id' => Filament::auth()->id(),
-            'content' => (new Editor)->sanitize($content),
+            'content' => MessageHtml::sanitize($content),
         ]);
 
         return true;

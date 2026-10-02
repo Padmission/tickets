@@ -22,8 +22,8 @@ use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\Services\TicketReopening;
+use Padmission\Tickets\Support\MessageHtml;
 use Padmission\Tickets\TicketPlugin;
-use Tiptap\Editor;
 
 class CreateMessageController
 {
@@ -66,8 +66,12 @@ class CreateMessageController
         $messages = collect();
 
         $content = ($validated['content'] ?? null) !== null
-            ? (new Editor)->sanitize($validated['content'])
+            ? MessageHtml::sanitize($validated['content'])
             : null;
+
+        if ($content === '' && blank($attachmentIds)) {
+            throw ValidationException::withMessages(['content' => __('validation.required', ['attribute' => 'content'])]);
+        }
 
         // A new ticket's link back to the one it follows up is not its opening.
         $isFirstActivity = ! $ticket->ticketActivities()->whereNot('type', ActivityType::FollowsUp)->exists();
