@@ -6,6 +6,7 @@ use Carbon\CarbonInterval;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Events;
+use Padmission\Tickets\Http\Middleware\AuthenticateChatSession;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Models;
 use Padmission\Tickets\Notifications;
@@ -172,6 +173,20 @@ return [
          * @var int
          */
         'writes_per_minute' => 60,
+
+        /**
+         * Middleware added to every chat API route after the package's own. The
+         * routes run outside any panel, so neither a panel's middleware nor any
+         * a host adds to its pages runs on them. AuthenticateChatSession is
+         * Laravel's AuthenticateSession answering 401 rather than redirecting:
+         * it ends a session a password change logged out. A host adds its own
+         * checks, such as one that a user is still active.
+         *
+         * @var list<class-string|string>
+         */
+        'middleware' => [
+            AuthenticateChatSession::class,
+        ],
     ],
 
     'scenarios' => [

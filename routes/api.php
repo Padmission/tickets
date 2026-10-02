@@ -2,6 +2,7 @@
 
 use Illuminate\Auth\Middleware\Authenticate;
 use Padmission\Tickets\Http\Controllers\Api;
+use Padmission\Tickets\Http\Middleware\AuthenticateChatSession;
 use Padmission\Tickets\Http\Middleware\AuthenticateGuests;
 use Padmission\Tickets\Http\Middleware\ReadOnlySession;
 use Padmission\Tickets\Support\EmailAuthentication;
@@ -10,7 +11,8 @@ if (EmailAuthentication::isEnabled()) {
     EmailAuthentication::routes();
 }
 
-Route::middleware(['web', AuthenticateGuests::class, Authenticate::class])
+// The host's middleware from padmission-tickets.api.middleware runs too, since no panel's does here.
+Route::middleware(['web', AuthenticateGuests::class, Authenticate::class, ...(array) config('padmission-tickets.api.middleware', [AuthenticateChatSession::class])])
     ->prefix('padmission-tickets/api/tickets')
     ->as('padmission-tickets::api.')
     ->group(function () {

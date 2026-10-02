@@ -244,6 +244,7 @@ This will create a `config/padmission-tickets.php` file where you can configure:
 - `default-notification-strategy` - `NotificationStrategy::Debounced` (default) or `NotificationStrategy::Immediate`
 - `notification-debounce` - how long a debounced notification waits, 10 minutes by default
 - `api` - `max_message_length`, the longest chat message in characters (16,000 by default), and `writes_per_minute`, how often one person may write through the chat API (60 by default; reading is not limited)
+- `api.middleware` - middleware added to every chat API route (see [Chat API Middleware](#chat-api-middleware))
 - `scenarios.environments` - where demo scenarios may be seeded (see [Seeding Demo Scenarios](#seeding-demo-scenarios))
 - `notification-max-events` - the most activities one notification lists, 10 by default
 
@@ -864,6 +865,22 @@ TicketPlugin::make()
             ->visible(fn (): bool => auth()->user()->can('impersonate', $person)),
     ] : [])
 ```
+
+### Chat API Middleware
+
+The chat's API (`/padmission-tickets/api/tickets/...`) runs outside any panel. Neither a panel's middleware nor any a host adds to its pages runs on it, so the package adds the middleware listed in `api.middleware` after its own. The default is `AuthenticateChatSession`: Laravel's `AuthenticateSession`, answering 401 instead of redirecting. It ends a session that a password change logged out elsewhere. Add your own checks, such as one that a user is still active, so a deactivated user with an open tab can't keep reading and replying:
+
+```php
+// config/padmission-tickets.php
+'api' => [
+    'middleware' => [
+        \Padmission\Tickets\Http\Middleware\AuthenticateChatSession::class,
+        \App\Http\Middleware\CheckUser::class,
+    ],
+],
+```
+
+The routes read the list when they load, so run `php artisan route:cache` again after changing it. The read endpoints still never save the session.
 
 ### Disabling Replies
 
