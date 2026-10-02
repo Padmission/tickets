@@ -12,6 +12,7 @@ use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Rules\PlainText;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Support\AttachmentName;
 use Padmission\Tickets\Support\AttachmentTypes;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
@@ -50,7 +51,7 @@ class TemporaryAttachmentUploadUrlController
         ]);
 
         $id = Uuid::uuid4()->toString();
-        $filename = $request->input('filename');
+        $filename = AttachmentName::safe((string) $request->input('filename'));
         $contentType = $request->input('content_type');
         $thumbnailData = $request->input('thumbnail');
 

@@ -139,3 +139,43 @@ it('refuses those types on a ticket started from the list too', function () {
 
     expect(Ticket::query()->where('subject', 'Pay stubs')->exists())->toBeFalse();
 });
+
+it('keeps a file name to its last part, so it can never point elsewhere on the disk', function (string $sent, string $kept) {
+    askToUpload(['filename' => $sent])->assertOk();
+
+    $attachment = TicketAttachment::query()->latest('id')->sole();
+
+    expect($attachment->filename)->toBe($kept)
+        ->and($attachment->filepath)->toMatch('#^tickets/'.$this->ticket->id.'/[0-9a-f-]{36}_'.preg_quote($kept, '#').'$#')
+        ->and(explode('/', $attachment->filepath))->toHaveCount(3)->not->toContain('..');
+})->with([
+    'parent folders' => ['../../../evil.jpg', 'evil.jpg'],
+    'folders' => ['photos/2026/scan.jpg', 'scan.jpg'],
+    'Windows folders' => ['C:\\Users\\Ann\\scan.jpg', 'scan.jpg'],
+    'only dots' => ['..', 'file'],
+    'a folder and dots' => ['photos/..', 'file'],
+    'control characters' => ["sc\x00an\x1f.jpg", 'scan.jpg'],
+    'dots inside a name' => ['rent..2026.jpg', 'rent..2026.jpg'],
+]);
+
+it('keeps a name from New ticket to its last part too', function () {
+    (new TicketPrioritySeeder)->run();
+    Storage::fake(config('padmission-tickets.attachments.disk'));
+    TicketPlugin::get()->showChatWidget(config: ChatWidgetConfig::make()->allowFileUploads());
+    $requester = User::factory()->create();
+
+    Livewire::test(ListTickets::class)
+        ->callAction(TestAction::make(StartTicketAction::class), [
+            'kind' => StartTicketAction::ORGANIZATION,
+            'requester_id' => $requester->id,
+            'assign' => 'me',
+            'subject' => 'Pay stubs',
+            'message' => '<p>Hello</p>',
+            'attachments' => [UploadedFile::fake()->create('..', 1, 'application/pdf')],
+        ])
+        ->assertHasNoActionErrors();
+
+    expect(TicketAttachment::query()->sole())
+        ->filename->toBe('file')
+        ->filepath->not->toEndWith('..');
+});

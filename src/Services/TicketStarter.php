@@ -17,6 +17,7 @@ use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Support\AttachmentName;
 use Padmission\Tickets\Support\MessageHtml;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
@@ -145,7 +146,7 @@ class TicketStarter
         ]);
 
         foreach ($attachments as $file) {
-            $filename = $file->getClientOriginalName();
+            $filename = AttachmentName::safe($file->getClientOriginalName());
             $filepath = 'tickets/'.$ticket->getKey().'/'.Uuid::uuid4()->toString().'_'.$filename;
 
             Storage::disk(config('padmission-tickets.attachments.disk'))->put($filepath, $file->get());
