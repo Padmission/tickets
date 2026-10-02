@@ -11,6 +11,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Support\AttachmentTypes;
 
 final class ChatWidgetConfig
 {
@@ -247,6 +248,7 @@ final class ChatWidgetConfig
             'allowScreenshots' => $this->getAllowScreenshots(),
             'allowFileUploads' => $this->getAllowFileUploads(),
             'maxUploadFileSize' => $this->getMaxUploadFileSize(),
+            'acceptedFileTypes' => AttachmentTypes::accept(),
             'documentationUrl' => $this->getDocumentationUrl(),
             'lang' => Arr::dot(__('padmission-tickets::chat')),
         ]);

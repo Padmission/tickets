@@ -13,6 +13,7 @@ import ticketSubject from "./helpers/ticket-subject.js";
 import escapeHtml from "./helpers/escape-html.js";
 import lockScrollWhileOpen from "./helpers/scroll-lock.js";
 import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
+import acceptAttribute from "./helpers/accept-attribute.js";
 import isComposerShown from "./helpers/composer-shown.js";
 import replyBox, { errorMessageOf } from "./helpers/reply-box.js";
 import reopenDialog, {
@@ -1132,7 +1133,7 @@ customElements.define(
                                         type="file"
                                         id="attachments"
                                         multiple
-                                        accept="video/*,image/*,.pdf"
+                                        ${acceptAttribute(config)}
                                         @change="handleFileSelect"
                                         style="display: none;"
                                     >

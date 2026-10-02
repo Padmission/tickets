@@ -2,6 +2,8 @@
 
 namespace Padmission\Tickets\Support;
 
+use Symfony\Component\Mime\MimeTypes;
+
 class AttachmentTypes
 {
     /**
@@ -10,6 +12,20 @@ class AttachmentTypes
     public static function allowed(): array
     {
         return array_values(array_map('strtolower', (array) config('padmission-tickets.attachments.allowed_mime_types', [])));
+    }
+
+    /*
+     * For a file picker's accept attribute: each type with its usual
+     * extension, since some pickers match a file by its extension alone.
+     */
+    public static function accept(): string
+    {
+        $mimeTypes = MimeTypes::getDefault();
+
+        return collect(static::allowed())
+            ->flatMap(fn (string $type): array => array_filter([$type, ($extension = $mimeTypes->getExtensions($type)[0] ?? null) === null ? null : '.'.$extension]))
+            ->unique()
+            ->implode(',');
     }
 
     public static function isAllowed(?string $mimeType): bool

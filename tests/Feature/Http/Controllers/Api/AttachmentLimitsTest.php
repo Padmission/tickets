@@ -179,3 +179,15 @@ it('keeps a name from New ticket to its last part too', function () {
         ->filename->toBe('file')
         ->filepath->not->toEndWith('..');
 });
+
+it('tells the chat\'s file picker the types the server takes, with their usual extensions', function () {
+    $accept = json_decode(ChatWidgetConfig::make()->allowFileUploads()->toJs(), true)['acceptedFileTypes'];
+
+    expect(explode(',', $accept))
+        ->toContain('application/pdf', '.pdf', 'image/jpeg', '.jpg', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx', 'text/csv', '.csv')
+        ->not->toContain('image/svg+xml', '.svg', 'text/html');
+
+    config()->set('padmission-tickets.attachments.allowed_mime_types', ['application/zip']);
+
+    expect(json_decode(ChatWidgetConfig::make()->toJs(), true)['acceptedFileTypes'])->toBe('application/zip,.zip');
+});
