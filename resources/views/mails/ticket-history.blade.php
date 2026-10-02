@@ -4,9 +4,9 @@
 
 @component('padmission-tickets::mails.layout', ['notification' => $notification])
     <x-mail::unindent-html>
-        # {{ $headline ?? __('padmission-tickets::notifications.ticket-'.$notificationType.'.headline') }}
+        # {!! \Padmission\Tickets\Support\MailText::escape($headline ?? __('padmission-tickets::notifications.ticket-'.$notificationType.'.headline')) !!}
 
-        {{ $intro ?? __('padmission-tickets::notifications.ticket-'.$notificationType.'.intro') }}
+        {!! \Padmission\Tickets\Support\MailText::escape($intro ?? __('padmission-tickets::notifications.ticket-'.$notificationType.'.intro')) !!}
 
         @if($activities->count())
             <h3 style="text-align: center; text-transform:uppercase; margin-top: 24px;">
@@ -45,13 +45,13 @@
                                         align="{{ $align === 'center' ? 'center' : 'left' }}"
                                         style="{{ $style }}"
                                     >
-                                        {!! strip_tags($notification->activityContent($activity, $notifiable ?? null)) !!}
+                                        {!! \Padmission\Tickets\Support\MailText::fromHtml($notification->activityContent($activity, $notifiable ?? null)) !!}
                                     </td>
                                 </tr>
                                 @if ($senderName)
                                     <tr>
                                         <td align="{{ $align }}" style="padding-top: 8px; font-size: 0.9em; font-style:italic;">
-                                            {{ $senderName }}
+                                            {!! \Padmission\Tickets\Support\MailText::escape($senderName) !!}
                                         </td>
                                     </tr>
                                 @endif

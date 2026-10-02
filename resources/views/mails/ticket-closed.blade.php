@@ -1,21 +1,21 @@
 @component('padmission-tickets::mails.layout', ['notification' => $notification])
     <x-mail::unindent-html>
-        # {{ $headline ?? __('padmission-tickets::notifications.ticket-closed.headline') }}
+        # {!! \Padmission\Tickets\Support\MailText::escape($headline ?? __('padmission-tickets::notifications.ticket-closed.headline')) !!}
 
-        {{ $intro ?? __('padmission-tickets::notifications.ticket-closed.intro') }}
+        {!! \Padmission\Tickets\Support\MailText::escape($intro ?? __('padmission-tickets::notifications.ticket-closed.intro')) !!}
 
         @if (filled($ticket->subject))
-            **{{ __('padmission-tickets::notifications.general.ticket_label') }}** {{ $ticket->subject }}
+            **{{ __('padmission-tickets::notifications.general.ticket_label') }}** {!! \Padmission\Tickets\Support\MailText::escape($ticket->subject) !!}
         @endif
 
         @if (filled($dispositionName ?? null))
-            **{{ __('padmission-tickets::notifications.general.disposition_label') }}** {{ $dispositionName }}
+            **{{ __('padmission-tickets::notifications.general.disposition_label') }}** {!! \Padmission\Tickets\Support\MailText::escape($dispositionName) !!}
         @endif
 
         @if (filled($lastSupporterMessage ?? null))
-            **{{ $latestReplyLabel ?? __('padmission-tickets::notifications.ticket-closed.latest_reply') }}**
+            **{!! \Padmission\Tickets\Support\MailText::escape($latestReplyLabel ?? __('padmission-tickets::notifications.ticket-closed.latest_reply')) !!}**
 
-            {{ $lastSupporterMessage }}
+            {!! \Padmission\Tickets\Support\MailText::escape($lastSupporterMessage) !!}
         @endif
 
         @if (isset($actionUrl))
