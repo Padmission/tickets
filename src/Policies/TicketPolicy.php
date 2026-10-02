@@ -131,13 +131,16 @@ class TicketPolicy
 
     /*
      * A queue worker may not register the ticket's panel, so it finds the
-     * plugin rather than requiring it.
+     * plugin rather than requiring it. The page's pool, asked without a
+     * ticket, stands in only inside a panel, whose own query loaded the
+     * ticket; outside one, as the chat's API runs, the pool is asked for the
+     * ticket itself.
      */
     private function isSupporter($user, Ticket $ticket): bool
     {
         $viewer = ConversationViewer::current();
 
-        if ($ticket->panel === $viewer->panelId && (string) $viewer->userId === (string) $user->getAuthIdentifier()) {
+        if (Filament::getCurrentPanel() !== null && $ticket->panel === $viewer->panelId && (string) $viewer->userId === (string) $user->getAuthIdentifier()) {
             return $viewer->isSupporter;
         }
 

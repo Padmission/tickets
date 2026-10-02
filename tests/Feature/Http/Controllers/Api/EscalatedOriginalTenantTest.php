@@ -65,3 +65,15 @@ it('asks the ticket\'s own supporters, not the signed-in tenant\'s, whether some
         ->and(Gate::forUser($this->aSupporter)->allows('manage', $this->original))->toBeFalse()
         ->and(Gate::forUser($this->bSupporter)->allows('manage', $this->original))->toBeTrue();
 });
+
+it('asks the ticket\'s own supporters outside any panel too, as the chat API runs', function () {
+    Filament::setCurrentPanel(null);
+    $this->actingAs($this->aSupporter);
+
+    expect(Gate::allows('manage', $this->original))->toBeFalse()
+        ->and(Gate::allows('view', $this->original))->toBeFalse();
+
+    $this->actingAs($this->bSupporter);
+
+    expect(Gate::allows('manage', $this->original))->toBeTrue();
+});
