@@ -1,10 +1,14 @@
 <?php
 
+use Filament\Forms\Components\TableSelect\Livewire\TableSelectLivewireComponent;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
+use Padmission\Tickets\Filament\Tables\ChildTicketsTable;
+use Padmission\Tickets\Filament\Tables\OpenEscalationsTable;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\TicketPlugin;
 
 /*
  * Tickets opened from the chat widget before the fix were stored with their
@@ -65,3 +69,27 @@ it('never renders a subject as markup on the ticket page, whether stored as text
     'as text' => ['<img src=x onerror=alert(1)>'],
     'escaped' => ['&lt;img src=x onerror=alert(1)&gt;'],
 ]);
+
+// A subject sent twice-encoded is stored once-encoded, and reads back as markup.
+it('never renders a subject as markup in the escalation pickers', function (string $relationship) {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    $stored = '&lt;a href=https://evil.example&gt;Session expired&lt;/a&gt;';
+
+    [$record, $listed] = $relationship === 'childTickets'
+        ? [Ticket::factory()->open()->create(['panel' => 'test2']), Ticket::factory()->open()->create(['subject' => $stored])]
+        : [Ticket::factory()->open()->create(), escalationFrom('test', ['subject' => $stored])];
+
+    expect($listed->subject)->toBe('<a href=https://evil.example>Session expired</a>');
+
+    $html = Livewire::test(TableSelectLivewireComponent::class, [
+        'model' => $record::class,
+        'record' => $record,
+        'relationshipName' => $relationship,
+        'tableConfiguration' => base64_encode($relationship === 'childTickets' ? ChildTicketsTable::class : OpenEscalationsTable::class),
+        'state' => $relationship === 'childTickets' ? [] : null,
+    ])->assertCanSeeTableRecords([$listed])->html();
+
+    expect($html)->not->toContain('<a href=https://evil.example')
+        ->not->toContain('<a href="https://evil.example"')
+        ->toContain('&lt;a href=https://evil.example&gt;Session expired&lt;/a&gt;');
+})->with(['childTickets', 'parentTicket']);

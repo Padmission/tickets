@@ -50,7 +50,6 @@ class OpenEscalationsTable
 
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
-                    ->html()
                     ->searchable(),
 
                 TextColumn::make('status.display_name')
