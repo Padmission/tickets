@@ -21,9 +21,11 @@ Route::middleware(['web', AuthenticateGuests::class, Authenticate::class])
             Route::get('/{ticket}/messages', Api\ListMessagesController::class)->name('messages.index');
         });
 
-        Route::post('/', Api\CreateTicketController::class)->name('store');
-        Route::post('/{ticket}/messages', Api\CreateMessageController::class)->name('messages.store');
-        Route::post('/{ticket}/mark-seen', Api\MarkTicketSeenController::class)->name('mark-seen');
-        Route::post('/{ticket}/upload-url', Api\TemporaryAttachmentUploadUrlController::class)->name('attachment-url');
-        Route::post('/{ticket}/temporary-url', Api\TemporaryAttachmentUrlController::class)->name('temporary-attachment-url');
+        Route::middleware('throttle:padmission-tickets-writes')->group(function () {
+            Route::post('/', Api\CreateTicketController::class)->name('store');
+            Route::post('/{ticket}/messages', Api\CreateMessageController::class)->name('messages.store');
+            Route::post('/{ticket}/mark-seen', Api\MarkTicketSeenController::class)->name('mark-seen');
+            Route::post('/{ticket}/upload-url', Api\TemporaryAttachmentUploadUrlController::class)->name('attachment-url');
+            Route::post('/{ticket}/temporary-url', Api\TemporaryAttachmentUrlController::class)->name('temporary-attachment-url');
+        });
     });

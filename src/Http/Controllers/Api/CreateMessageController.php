@@ -35,7 +35,7 @@ class CreateMessageController
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
 
         $validated = $request->validate([
-            'content' => ['string', 'nullable', Rule::requiredIf(fn () => blank($request->array('attachment_ids')))],
+            'content' => ['string', 'nullable', 'max:'.(int) config('padmission-tickets.api.max_message_length', 16000), Rule::requiredIf(fn () => blank($request->array('attachment_ids')))],
             'attachment_ids' => ['array', Rule::requiredIf(fn () => blank($request->get('content')))],
             'lock_turn' => ['boolean'],
             'reopen' => ['boolean'],

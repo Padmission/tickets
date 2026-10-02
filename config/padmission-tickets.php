@@ -154,6 +154,26 @@ return [
      */
     'notification-max-events' => 10,
 
+    'api' => [
+        /**
+         * The longest message, in characters, the chat API takes. Messages are
+         * stored in a TEXT column of 65,535 bytes, which 16,000 characters fill
+         * even at four bytes each.
+         *
+         * @var int
+         */
+        'max_message_length' => 16000,
+
+        /**
+         * How many times a minute one person (or, signed out, one address) may
+         * write through the chat API: send, start a ticket, mark seen or ask
+         * for an upload or download link. Reading is not limited.
+         *
+         * @var int
+         */
+        'writes_per_minute' => 60,
+    ],
+
     'scenarios' => [
         /**
          * The environments demo scenarios may be seeded in. They write made-up

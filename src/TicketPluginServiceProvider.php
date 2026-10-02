@@ -5,8 +5,11 @@ namespace Padmission\Tickets;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Padmission\Tickets\Console\Commands\SeedTicketsCommand;
@@ -53,6 +56,13 @@ class TicketPluginServiceProvider extends PackageServiceProvider
     {
         $this->bootEventListeners();
         $this->registerLivewireComponents();
+        $this->registerRateLimiters();
+    }
+
+    protected function registerRateLimiters(): void
+    {
+        RateLimiter::for('padmission-tickets-writes', fn (Request $request): Limit => Limit::perMinute((int) config('padmission-tickets.api.writes_per_minute', 60))
+            ->by('padmission-tickets-writes:'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
     }
 
     public function packageRegistered(): void
