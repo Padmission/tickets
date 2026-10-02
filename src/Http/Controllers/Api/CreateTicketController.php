@@ -18,6 +18,7 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Rules\PlainText;
+use Padmission\Tickets\Rules\SafeUrl;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\Services\TicketReopening;
@@ -36,6 +37,7 @@ class CreateTicketController
         $this->authorizeTicketCreation();
 
         $subject = $this->validateAndSanitizeSubject($request);
+        $request->validate(['url' => ['nullable', 'string', 'max:2048', new SafeUrl]]);
         $followedUp = $this->followedUpTicket($request);
 
         $targetPanelId = $this->resolveTargetPanelId();

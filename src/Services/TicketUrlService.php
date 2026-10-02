@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Rules\SafeUrl;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketUrlService
@@ -13,7 +14,8 @@ class TicketUrlService
     public function getActionUrl(Ticket $ticket): string
     {
         $data = (array) $ticket->data;
-        $url = $data['url'] ?? url('/');
+        // A ticket saved before the page address was checked may hold one that runs script.
+        $url = is_string($data['url'] ?? null) && SafeUrl::isSafe($data['url']) ? $data['url'] : url('/');
 
         return $url.'#'.'ticket-'.$ticket->id;
     }
