@@ -44,6 +44,8 @@ it('returns a temporary url', function () {
     $ticket = Ticket::factory()
         ->has(TicketAttachment::factory([
             'filepath' => $filepath,
+            'activity_id' => null,
+            'created_by' => $user->id,
         ]), 'attachments')
         ->create([
             'submitter_id' => $user->id,

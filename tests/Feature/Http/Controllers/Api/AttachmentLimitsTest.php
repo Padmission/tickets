@@ -103,7 +103,7 @@ it('refuses an oversized preview image', function () {
 
 it('opens an image, video or PDF in the browser, downloads a document, and downloads anything else as unknown bytes', function () {
     $served = function (string $mimeType): array {
-        $attachment = TicketAttachment::factory()->create(['ticket_id' => $this->ticket->id, 'filepath' => 'tickets/1/'.Str::uuid(), 'mime_type' => $mimeType]);
+        $attachment = TicketAttachment::factory()->create(['ticket_id' => $this->ticket->id, 'activity_id' => null, 'created_by' => $this->user->id, 'filepath' => 'tickets/1/'.Str::uuid(), 'mime_type' => $mimeType]);
 
         $this->postJson(route('padmission-tickets::api.temporary-attachment-url', ['ticket' => $this->ticket]), ['filepath' => $attachment->filepath])->assertOk();
 
