@@ -144,15 +144,14 @@ class TicketPolicy
             return $viewer->isSupporter;
         }
 
-        $supportersQuery = TicketPlugin::find($ticket->panel)?->getAllSupportersQuery();
+        $plugin = TicketPlugin::find($ticket->panel);
+        $supportersQuery = $plugin?->getAllSupportersQuery();
 
-        if ($supportersQuery === null) {
+        if ($plugin === null || $supportersQuery === null) {
             return false;
         }
 
         // The pool for this ticket, which a multi-tenant host scopes by its tenant: without one it is the signed-in tenant's.
-        return app()->call($supportersQuery, ['ticket' => $ticket])
-            ->whereKey($user->getAuthIdentifier())
-            ->exists();
+        return $plugin->poolHas(app()->call($supportersQuery, ['ticket' => $ticket]), $user);
     }
 }

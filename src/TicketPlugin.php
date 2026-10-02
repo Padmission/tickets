@@ -929,6 +929,29 @@ class TicketPlugin implements Plugin
             ->exists();
     }
 
+    /**
+     * Whether a pool holds the user, matched on matchSupportersBy()'s column as
+     * the page's viewer matches it: emails whatever their case.
+     *
+     * @param  Builder<Model>  $pool
+     */
+    public function poolHas(Builder $pool, Model $user): bool
+    {
+        $column = $this->getSupporterMatchColumn();
+
+        if ($column === $user->getKeyName()) {
+            return $pool->whereKey($user->getKey())->exists();
+        }
+
+        $value = $user->getAttribute($column);
+
+        if (blank($value)) {
+            return false;
+        }
+
+        return $pool->whereRaw('LOWER('.$pool->getQuery()->getGrammar()->wrap($pool->qualifyColumn($column)).') = ?', [mb_strtolower((string) $value)])->exists();
+    }
+
     public function modifyRelationshipScopes(Closure $callback): static
     {
         $this->relationshipScopeModifier = $callback;
