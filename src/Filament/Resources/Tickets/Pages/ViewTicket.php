@@ -12,6 +12,7 @@ use Filament\Infolists\Components\ViewEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -319,6 +320,33 @@ class ViewTicket extends EditRecord
         }
 
         abort_unless(static::getResource()::canView($record), 403);
+    }
+
+    /*
+     * The page is an edit page so its actions can write, but anyone who may
+     * view a ticket can call its save from the browser, so saving asks what
+     * the edit action asks.
+     */
+    public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void
+    {
+        $this->authorizeSave();
+
+        parent::save($shouldRedirect, $shouldSendSavedNotification);
+    }
+
+    public function saveFormComponentOnly(Component $component): void
+    {
+        $this->authorizeSave();
+
+        parent::saveFormComponentOnly($component);
+    }
+
+    protected function authorizeSave(): void
+    {
+        /** @var Ticket $record */
+        $record = $this->getRecord();
+
+        abort_unless($this->authorizesEdit($record), 403);
     }
 
     /*
