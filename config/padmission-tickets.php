@@ -72,6 +72,40 @@ return [
          */
         'preview_disk' => env('MEDIA_DISK', 's3'),
         'disk' => env('MEDIA_DISK', 's3'),
+
+        /**
+         * The types a chat attachment may have: images, videos and PDFs, which
+         * open in the browser, and everyday office and text documents, which
+         * are only ever downloaded. A file of any other type is refused, and one
+         * already stored is only ever served as a download. HTML, SVG, scripts
+         * and programs are left out on purpose, since a browser or the reader's
+         * computer runs what they carry.
+         *
+         * @var list<string>
+         */
+        'allowed_mime_types' => [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+            'image/avif',
+            'video/mp4',
+            'video/quicktime',
+            'video/webm',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.oasis.opendocument.text',
+            'application/vnd.oasis.opendocument.spreadsheet',
+            'application/rtf',
+            'text/rtf',
+            'text/csv',
+            'text/plain',
+        ],
     ],
 
     /**

@@ -6,11 +6,13 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Rules\PlainText;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Support\AttachmentTypes;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
 
@@ -18,6 +20,9 @@ class TemporaryAttachmentUploadUrlController
 {
     use AuthorizesRequests;
     use ValidatesRequests;
+
+    // The chat's preview is a small PNG it draws itself, so a megabyte of base64 is plenty.
+    protected const MAX_THUMBNAIL_LENGTH = 1024 * 1024;
 
     public function __invoke(Request $request, int $ticket): array
     {
@@ -34,11 +39,14 @@ class TemporaryAttachmentUploadUrlController
         resolve(TicketAuth::class)->refuseDisabledReply($ticketRecord, $request->user());
         resolve(TicketAuth::class)->refuseClosedTicket($ticketRecord);
 
+        $maxFileSize = (TicketPlugin::find($ticketRecord->panel) ?? TicketPlugin::get())->getChatWidgetConfig()->getMaxUploadFileSize();
+
+        // The size asked for is held to the stored file's when the message is sent, so this bounds it too.
         $request->validate([
             'filename' => ['required', 'string', 'max:255', new PlainText],
-            'content_type' => ['required', 'string', 'max:100'],
-            'content_length' => ['required', 'int'],
-            'thumbnail' => ['nullable', 'string'],
+            'content_type' => ['required', 'string', 'max:100', Rule::in(AttachmentTypes::allowed())],
+            'content_length' => ['required', 'integer', 'min:1', 'max:'.$maxFileSize],
+            'thumbnail' => ['nullable', 'string', 'max:'.self::MAX_THUMBNAIL_LENGTH],
         ]);
 
         $id = Uuid::uuid4()->toString();

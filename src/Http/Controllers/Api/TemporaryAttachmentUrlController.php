@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Support\AttachmentTypes;
 
 class TemporaryAttachmentUrlController
 {
@@ -34,7 +35,7 @@ class TemporaryAttachmentUrlController
 
         return [
             'url' => Storage::disk(config('padmission-tickets.attachments.disk'))
-                ->temporaryUrl($attachment->filepath, now()->addMinutes(5)),
+                ->temporaryUrl($attachment->filepath, now()->addMinutes(5), AttachmentTypes::downloadOptions($attachment->mime_type)),
         ];
     }
 }

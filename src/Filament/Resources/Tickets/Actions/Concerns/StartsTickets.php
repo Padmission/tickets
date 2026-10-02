@@ -8,6 +8,7 @@ use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Padmission\Tickets\Rules\PlainText;
+use Padmission\Tickets\Support\AttachmentTypes;
 use Padmission\Tickets\TicketPlugin;
 
 /*
@@ -23,6 +24,7 @@ trait StartsTickets
             ->label(__('padmission-tickets::tickets.actions.start_ticket.attachments'))
             ->multiple()
             ->storeFiles(false)
+            ->acceptedFileTypes(fn (): array => AttachmentTypes::allowed())
             ->maxSize(fn (): int => intdiv(TicketPlugin::get()->getChatWidgetConfig()->getMaxUploadFileSize(), 1024))
             ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
                 if ($value instanceof TemporaryUploadedFile && PlainText::hasMarkup($value->getClientOriginalName())) {
