@@ -5,6 +5,7 @@ use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\OpenTicketForContactAction;
@@ -62,6 +63,16 @@ describe('The sanitizer', function () {
         'a frame' => ['<p>Hi</p><iframe src="https://evil.example"></iframe>', 'Hi'],
         'a javascript link' => ['<p><a href="javascript:alert(1)">Hi</a></p>', 'Hi'],
     ]);
+
+    it('keeps a link\'s address only, with the rel and target it always gets', function () {
+        expect(MessageHtml::sanitize('<p><a href="https://example.com" class="fi-modal-close-overlay" target="_top" rel="opener" title="x" style="position:fixed">x</a></p>'))
+            ->toBe('<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://example.com">x</a></p>');
+    });
+
+    it('keeps no class on a code block', function () {
+        expect(MessageHtml::sanitize('<pre><code class="language-php fi-modal-close-overlay">echo 1;</code></pre>'))
+            ->toBe('<pre><code>echo 1;</code></pre>');
+    });
 
     it('reads a value that decodes as JSON as HTML text, not as a document', function () {
         $clean = MessageHtml::sanitize(json_encode(['content' => '<img src=x onerror=alert(1)>']));
@@ -179,4 +190,27 @@ describe('The ticket actions\' rich editors', function () {
 
         expect(latestMessageContent())->toContain('Hello')->not->toContain('<img')->not->toContain('onerror');
     });
+});
+
+it('cleans a message stored before, as the transcript beside an escalation shows it', function () {
+    $this->login();
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+
+    $escalation = Ticket::factory()->open()->create();
+    $requester = User::factory()->create();
+    $original = Ticket::factory()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id, 'submitter_id' => $requester->id]);
+    TicketActivity::factory()->create([
+        'ticket_id' => $original->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::User,
+        'user_id' => $requester->id,
+        'content' => '<p>Sign in <a href="https://evil.example/login" class="fi-modal-close-overlay" target="_top" rel="opener">here</a></p>',
+    ]);
+
+    $html = Livewire::test(ViewTicket::class, ['record' => $escalation->id])->assertSee('Sign in')->html();
+
+    expect($html)->not->toContain('fi-modal-close-overlay')
+        ->not->toContain('rel="opener"')
+        ->not->toContain('target="_top"')
+        ->toContain('rel="noopener noreferrer nofollow"');
 });

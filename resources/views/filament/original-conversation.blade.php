@@ -105,7 +105,8 @@
                             </div>
 
                             <div class="pad-ti-transcript__content">
-                                {!! str($activity->content)->sanitizeHtml() !!}
+                                {{-- A message is cleaned as it is stored, and again here for one stored before; a note is the package's own. --}}
+                                {!! in_array($activity->type, [ActivityType::Message, ActivityType::InternalMessage], true) ? \Padmission\Tickets\Support\MessageHtml::sanitize((string) $activity->content) : str($activity->content)->sanitizeHtml() !!}
                             </div>
 
                             @if ($activity->attachments->isNotEmpty())

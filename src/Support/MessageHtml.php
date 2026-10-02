@@ -7,6 +7,7 @@ use Tiptap\Core\DOMSerializer;
 use Tiptap\Core\Schema;
 use Tiptap\Extensions\StarterKit;
 use Tiptap\Marks\Link;
+use Tiptap\Nodes\CodeBlock;
 use TypeError;
 
 /*
@@ -23,7 +24,26 @@ class MessageHtml
             return '';
         }
 
-        $schema = new Schema([new StarterKit, new Link]);
+        $schema = new Schema([
+            new StarterKit(['codeBlock' => false]),
+            // A link keeps its address only and always gets the target and rel the mark adds:
+            // a class, target or rel the sender chose could cover the page or reach back into it.
+            new class extends Link
+            {
+                public function addAttributes(): array
+                {
+                    return ['href' => []];
+                }
+            },
+            // A code block keeps no class: the sender could name one of the panel's own.
+            new class extends CodeBlock
+            {
+                public function addAttributes(): array
+                {
+                    return [];
+                }
+            },
+        ]);
 
         try {
             $document = (new DOMParser($schema))->process($html);
