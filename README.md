@@ -426,6 +426,14 @@ Those accounts sign in with their password instead. The request is answered the 
 - Configurable OTP expiration time
 - Session-based authentication for verified users, with a new session ID on success; a code never stands in for someone already signed in
 
+> **Known limitation: email-code sign-in doesn't work yet, so don't turn it on.**
+>
+> - **Sessions fail after the code is verified.** Laravel's middleware priority runs `Authenticate` before `AuthenticateGuests`, so the code's user is never restored in time. Every ticket API call after verifying returns 401, while the widget wrongly shows the guest as signed in.
+> - **Code sessions are never checked again.** `AuthenticateGuests` and `TicketAuth::getUserId()` don't re-check an existing code session against `allowEmailAuthenticationFor()` (the package's `EmailAuthentication::admits()`), `canAccessPanel()`, multi-factor authentication, staff status, or whether the user still exists. Someone deactivated or made staff after signing in would keep their session until it expired.
+> - **Both must be fixed in the same change.** Fixing the middleware order alone would make the second gap live. Tests for the re-check are ready, but skipped, in `tests/Feature/Http/Middleware/CodeSessionRecheckTest.php`.
+>
+> Until then, hosts shouldn't enable `allowEmailAuthentication()`.
+
 #### Documentation URL
 
 You can add a button to the chat widget that opens your documentation in a new tab using `->documentationUrl()`.
