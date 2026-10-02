@@ -238,11 +238,12 @@ This will create a `config/padmission-tickets.php` file where you can configure:
 - `models` - model bindings, including the user model (`Authenticatable::class => User::class`)
 - `jobs` - job bindings (see [Custom Jobs](#custom-jobs))
 - `tenancy` - multi-tenancy settings
-- `attachments` - the `disk` and `preview_disk` for uploaded files
+- `attachments` - the `disk` and `preview_disk` for uploaded files, and the `allowed_mime_types` an attachment may have
 - `notifications` - the notification class sent for each event
 - `notification-channels` - `mail` by default, add `database` for Filament's notification panel
 - `default-notification-strategy` - `NotificationStrategy::Debounced` (default) or `NotificationStrategy::Immediate`
 - `notification-debounce` - how long a debounced notification waits, 10 minutes by default
+- `scenarios.environments` - where demo scenarios may be seeded (see [Seeding Demo Scenarios](#seeding-demo-scenarios))
 - `notification-max-events` - the most activities one notification lists, 10 by default
 
 The `levels` key is a placeholder and isn't read by the package.
@@ -402,11 +403,27 @@ TicketPlugin::make()
 3. User enters the OTP to verify their identity
 4. User can then submit tickets and view their ticket history
 
+The code sign-in routes (`/padmission-tickets/api/otp-request` and `otp-verify`) exist only when some panel's chat widget allows email authentication when the routes load, and answer 404 whenever none allows it at request time. With `allow` as a closure, it is evaluated at both moments.
+
+A code skips the password, its second factor and the panel's login, so it is never sent to:
+- an account with Filament multi-factor authentication set up (`HasAppAuthentication` with a secret, or `HasEmailAuthentication` turned on)
+- a supporter on any ticket panel, which covers staff and global admins whose panels list them as supporters
+- someone the panel refuses (`FilamentUser::canAccessPanel()` false, as for a deactivated user), unless `allowGuests` is on
+- anyone your own rule turns away:
+
+```php
+ChatWidgetConfig::make()
+    ->allowEmailAuthentication()
+    ->allowEmailAuthenticationFor(fn (User $user): bool => $user->is_active && ! $user->isGlobalAdmin())
+```
+
+Those accounts sign in with their password instead. The request is answered the same way for them as for an address with no account, so the form never tells anyone which emails exist.
+
 **Features:**
-- Rate limiting on OTP requests (1 per minute)
-- Rate limiting on OTP verification attempts (5 per minute)
+- Requests limited to one code a minute per email address and five a minute per client IP, counted before the address is looked up
+- Guesses limited to ten a minute per client IP; a code is thrown away after five wrong guesses
 - Configurable OTP expiration time
-- Session-based authentication for verified users
+- Session-based authentication for verified users, with a new session ID on success
 
 #### Documentation URL
 
@@ -439,6 +456,8 @@ TicketPlugin::make()
 ```
 
 `allowScreenshots()` adds a button that captures the user's screen and attaches it. It only shows when file uploads are allowed and the browser supports screen capture.
+
+The server holds uploads to the same maximum (the ticket's panel's `maxFileSize`) and to the types in the `attachments.allowed_mime_types` config: images, videos and PDFs, and everyday office and text documents (Word, Excel, OpenDocument, RTF, CSV and plain text). HTML, SVG, scripts and programs are refused. Only an image, video or PDF opens in the browser; every other file, and any file stored before with a type no longer allowed, is served as a download. **New ticket**'s attachments take the same types.
 
 ### Multi-Tenancy Support
 
@@ -497,7 +516,7 @@ TicketPlugin::make()
 
 Pass a closure rather than a built `Builder`: a closure is evaluated each time, while a `Builder` built at panel registration keeps the database connection of that moment.
 
-The closure may declare an optional `?Ticket $ticket` parameter. The package passes the ticket when it looks up supporters for a specific ticket, for example to notify supporters of an unassigned ticket. That lookup can run in a queue worker or console command where the host's tenant scope isn't bound, so in a multi-tenant app the closure **must** scope by the ticket's tenant when a ticket is given:
+The closure may declare an optional `?Ticket $ticket` parameter. The package passes the ticket when it looks up supporters for a specific ticket, for example to notify supporters of an unassigned ticket. That lookup can run in a queue worker or console command where the host's tenant scope isn't bound, so in a multi-tenant app the closure **must** scope by the ticket's tenant when a ticket is given. The package's `TicketPolicy` asks the pool for the ticket it checks, so without that scope a supporter of one tenant would count as a supporter of another tenant's tickets:
 
 ```php
 use Padmission\Tickets\Models\Ticket;
@@ -848,7 +867,7 @@ TicketPlugin::make()
         : null)
 ```
 
-While it returns a reason, the chat's reply box stays in place but is greyed out, with the reason where the placeholder would be, and nothing can be typed, attached or sent. The server refuses a message or an attachment upload with a 403 whose JSON gives the reason under `message`, before a reply could reopen a closed ticket. The chat asks the panel it was opened in (its API runs outside any panel, so the chat names the panel in a header), or else the ticket's own panel, so set it on every panel where it applies. It only covers writing in the chat; the ticket page's actions keep their own authorization.
+While it returns a reason, the chat's reply box stays in place but is greyed out, with the reason where the placeholder would be, and nothing can be typed, attached or sent. The server refuses a message or an attachment upload with a 403 whose JSON gives the reason under `message`, before a reply could reopen a closed ticket. The chat asks the panel it was opened in (its API runs outside any panel, so the chat names the panel in a header, which is ignored when it names a panel the user may not enter) and the ticket's own panel, and refuses if either gives a reason, so set it on every panel where it applies. It covers every way of writing in the chat: a message or upload, a new ticket or follow-up from the chat (asked of the panel the ticket goes to), the message Escalate and Add to escalation offer to send the requester, and Resolve in the copilot panel. The ticket page's other actions keep their own authorization.
 
 ### Display and UI Options
 
@@ -1113,10 +1132,11 @@ Attachments are stored directly on a filesystem disk, not through a media librar
 'attachments' => [
     'disk' => env('MEDIA_DISK', 's3'),
     'preview_disk' => env('MEDIA_DISK', 's3'),
+    'allowed_mime_types' => ['image/jpeg', 'image/png', /* ... */ 'application/pdf', 'text/plain'],
 ],
 ```
 
-`disk` holds the files and `preview_disk` the image previews made from them. Files can be attached to messages through the chat widget and **New ticket**. Subjects and attachment names are checked with the `Padmission\Tickets\Rules\PlainText` rule, which refuses HTML tags and script or data URLs.
+`disk` holds the files and `preview_disk` the image previews made from them. `allowed_mime_types` lists the types an attachment may have (see [File Uploads and Screenshots](#file-uploads-and-screenshots)); a presigned upload signs neither the type nor the size it is sent with, so the server checks the type and size asked for, compares the stored file's size when the message is sent, and names the type each file is served as. Files can be attached to messages through the chat widget and **New ticket**. Subjects and attachment names are checked with the `Padmission\Tickets\Rules\PlainText` rule, which refuses HTML tags and script or data URLs. A message's HTML is cleaned by `Padmission\Tickets\Support\MessageHtml::sanitize()` on every path that stores one, keeping only what the chat's composer can write (paragraphs, bold, italics, lists, quotes, code and links to safe addresses), and the chat cleans it again where it draws it, so a row stored before can't run script either. A host that writes messages of its own should pass them through it too.
 
 ### Copilot Panel
 
@@ -1165,6 +1185,15 @@ Each scenario is marked in `data.seeded_scenario` and found again by it, so seed
 To add scenarios of your own, extend the class and build them from its protected steps (`seedOnce()`, `openFromChat()`, `message()`, `close()`, `reopenByReply()`, `reassign()`, `escalate()`, `addOriginal()`, `handOver()`, `startAt()`, `later()`).
 
 Without a host seeder, `php artisan tickets:seed --only=scenarios` seeds them for each panel that no other panel escalates to, from its own `allSupportersQuery()` and the users of its `requestersQuery()` outside it, escalating to the panel's first `allowLinkedTicketsTo()` panel.
+
+Scenarios put made-up conversations under real people's names, so they are seeded only in the environments the `scenarios.environments` config lists: `local`, `testing`, `test`, `staging`, `preview` and `qa` by default. Anywhere else, production above all, `TicketScenarios::make()`, `TicketScenarioSeeder` and `tickets:seed --only=scenarios` refuse before writing anything.
+
+```php
+// config/padmission-tickets.php
+'scenarios' => [
+    'environments' => ['local', 'staging', 'demo'],
+],
+```
 
 ## Customization
 
