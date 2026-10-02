@@ -4,14 +4,11 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Padmission\Tickets\Http\Controllers\Api;
 use Padmission\Tickets\Http\Middleware\AuthenticateGuests;
 use Padmission\Tickets\Http\Middleware\ReadOnlySession;
+use Padmission\Tickets\Support\EmailAuthentication;
 
-Route::middleware(['web'])
-    ->prefix('padmission-tickets/api')
-    ->as('padmission-tickets::.')
-    ->group(function () {
-        Route::post('/otp-request', Api\RequestOtpController::class)->name('otp.request');
-        Route::post('/otp-verify', Api\VerifyOtpController::class)->name('otp.verify');
-    });
+if (EmailAuthentication::isEnabled()) {
+    EmailAuthentication::routes();
+}
 
 Route::middleware(['web', AuthenticateGuests::class, Authenticate::class])
     ->prefix('padmission-tickets/api/tickets')

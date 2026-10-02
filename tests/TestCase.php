@@ -26,7 +26,9 @@ use Livewire\LivewireServiceProvider;
 use Mpbarlow\LaravelQueueDebouncer\ServiceProvider as LaravelQueueDebounceServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
+use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Support\EmailAuthentication;
 use Padmission\Tickets\Tests\Fixtures\TestTicketPolicy;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\TicketPluginServiceProvider;
@@ -126,6 +128,19 @@ class TestCase extends \Orchestra\Testbench\TestCase
     {
         static::$registerPanels[$panel->getId()] = $panel;
         // app(PanelRegistry::class)->register($panel);
+    }
+
+    /*
+     * The code sign-in routes are registered when the routes load, so a test
+     * that turns email authentication on registers them as a host's boot would.
+     */
+    public function enableEmailAuthentication(?ChatWidgetConfig $config = null, string $panelId = 'test'): void
+    {
+        TicketPlugin::get($panelId)->showChatWidget(config: $config ?? ChatWidgetConfig::make()->allowEmailAuthentication());
+
+        EmailAuthentication::routes();
+
+        app('router')->getRoutes()->refreshNameLookups();
     }
 
     public function modifyPlugin(Closure $callback): void

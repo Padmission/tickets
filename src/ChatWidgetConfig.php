@@ -8,6 +8,7 @@ use Exception;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Padmission\Tickets\Services\TicketAuth;
 
@@ -16,6 +17,8 @@ final class ChatWidgetConfig
     public bool|Closure $allowEmailAuthentication = false;
 
     public bool|Closure $allowGuests = false;
+
+    public ?Closure $allowEmailAuthenticationFor = null;
 
     public int|Closure $otpExpiresAfterMinutes = 10;
 
@@ -55,6 +58,29 @@ final class ChatWidgetConfig
     public function getAllowEmailAuthentication(): bool
     {
         return value($this->allowEmailAuthentication);
+    }
+
+    public function getAllowGuests(): bool
+    {
+        return value($this->allowGuests);
+    }
+
+    /*
+     * The host's own say on who may sign in with an emailed code, on top of
+     * the accounts the package always sends to their password: those with
+     * multi-factor authentication and the supporters of any ticket panel.
+     */
+    public function allowEmailAuthenticationFor(?Closure $callback): self
+    {
+        $this->allowEmailAuthenticationFor = $callback;
+
+        return $this;
+    }
+
+    public function allowsEmailAuthenticationFor(Model $user): bool
+    {
+        return $this->allowEmailAuthenticationFor === null
+            || (bool) app()->call($this->allowEmailAuthenticationFor, ['user' => $user]);
     }
 
     public function getOtpExpiresAfterMinutes(): int
