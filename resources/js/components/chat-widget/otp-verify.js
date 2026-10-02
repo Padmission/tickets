@@ -1,6 +1,7 @@
 import BaseElement from "../helpers/base-element";
 import render from "../helpers/render";
 import fetchJson from "../helpers/fetch-json.js";
+import showFieldError from "../helpers/field-error.js";
 import escapeHtml from "../helpers/escape-html.js";
 import __ from "../helpers/trans.js";
 import config from "../helpers/config.js";
@@ -30,9 +31,7 @@ customElements.define(
 				this.changeView("chat-list-tickets");
 				config.userId = data.user_key;
 			} catch (e) {
-				const formField = this.querySelector(".form-field");
-				formField.classList.add("has-error");
-				formField.querySelector(".error").innerHTML = await e.error();
+				showFieldError(this.querySelector(".form-field"), await e.error());
 			}
 		}
 
