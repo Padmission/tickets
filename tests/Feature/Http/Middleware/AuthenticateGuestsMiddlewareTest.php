@@ -55,3 +55,19 @@ it('does not authenticate when session key is invalid', function () {
 
     expect(auth()->id())->toBeNull();
 });
+
+it('never replaces a user who is already signed in', function () {
+    $signedIn = User::factory()->create();
+    $codeUser = User::factory()->create();
+
+    $this->actingAs($signedIn);
+
+    $request = Request::create('/test', 'GET');
+    $session = new Store('test-session', new ArraySessionHandler(1));
+    $session->put('padmission-tickets::user_key', $codeUser->getKey());
+    $request->setLaravelSession($session);
+
+    (new AuthenticateGuests)->handle($request, function ($request) {});
+
+    expect(auth()->id())->toBe($signedIn->getKey());
+});

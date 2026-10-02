@@ -11,7 +11,8 @@ class AuthenticateGuests
     {
         $userId = $request->session()->get('padmission-tickets::user_key');
 
-        if (! $userId) {
+        // A code only signs in someone who is not signed in already, never over a real login.
+        if (! $userId || auth()->check()) {
             return $next($request);
         }
 
