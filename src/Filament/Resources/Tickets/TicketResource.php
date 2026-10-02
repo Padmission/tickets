@@ -40,6 +40,7 @@ use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\TicketCloser;
+use Padmission\Tickets\Services\TicketReassignment;
 use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\Support\ConversationStateQuery;
 use Padmission\Tickets\Support\ConversationViewer;
@@ -465,22 +466,8 @@ class TicketResource extends Resource
                         // selected while the toolbar renders.
                         ->authorize(fn (Collection $records): bool => $records->isEmpty()
                             || $records->contains(fn (Model $record): bool => Gate::allows('manage', $record)))
-                        ->action(function (Collection $records, array $data): void {
-                            $allSupportersQuery = TicketPlugin::get()->getAllSupportersQuery();
-
-                            if ($allSupportersQuery) {
-                                $validSupporterIds = app()->call($allSupportersQuery)->pluck('id')->toArray();
-
-                                if (! in_array($data['assignee_id'], $validSupporterIds)) {
-                                    Notification::make()
-                                        ->title(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'))
-                                        ->danger()
-                                        ->send();
-
-                                    return;
-                                }
-                            }
-
+                        // Each ticket asks who may be assigned it, as Reassign does, since a host scopes that pool by the ticket's tenant.
+                        ->action(function (Collection $records, array $data, BulkAction $action): void {
                             $authorized = $records->filter(fn ($record) => Gate::allows('manage', $record));
 
                             if ($authorized->count() < $records->count()) {
@@ -490,7 +477,26 @@ class TicketResource extends Resource
                                     ->send();
                             }
 
-                            $authorized->each->update([
+                            $reassignment = resolve(TicketReassignment::class);
+                            $eligible = $authorized->filter(fn (Model $record): bool => $record instanceof Ticket && $reassignment->isEligible($record, $data['assignee_id']));
+
+                            if ($eligible->isEmpty()) {
+                                Notification::make()
+                                    ->title(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'))
+                                    ->danger()
+                                    ->send();
+
+                                $action->halt();
+                            }
+
+                            if ($eligible->count() < $authorized->count()) {
+                                Notification::make()
+                                    ->title(__('padmission-tickets::tickets.resources.tickets.ineligible_assignment'))
+                                    ->warning()
+                                    ->send();
+                            }
+
+                            $eligible->each->update([
                                 'assignee_id' => $data['assignee_id'],
                             ]);
                         })

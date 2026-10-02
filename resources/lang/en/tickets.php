@@ -473,6 +473,7 @@ return [
             'assigned_successfully' => 'Tickets assigned successfully',
             'invalid_assignee' => 'Invalid assignee selected',
             'unauthorized_assignment' => 'Some tickets were skipped because you are not authorized to manage them',
+            'ineligible_assignment' => 'Some tickets were skipped because that person can\'t be assigned them',
 
             'tabs' => [
                 'all' => 'All Tickets',
