@@ -30,7 +30,8 @@ class SafeUrl implements ValidationRule
         }
 
         if (! preg_match('/^([a-z][a-z0-9+.-]*):/i', $url, $scheme)) {
-            return true;
+            // Relative to this app only: browsers read a leading // or a backslash in its place as another host.
+            return preg_match('#^[/\\\\][/\\\\]#', $url) !== 1;
         }
 
         return in_array(strtolower($scheme[1]), ['http', 'https', 'mailto'], true);

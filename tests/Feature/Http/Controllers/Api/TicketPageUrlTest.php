@@ -31,6 +31,9 @@ it('refuses a page address that would run script or load something else when fol
     'vbscript:msgbox(1)',
     'data:text/html,<script>alert(1)</script>',
     'file:///etc/passwd',
+    'another host, without a scheme' => '//evil.example/login',
+    'another host, behind a backslash' => '/\\evil.example/login',
+    'another host, behind two backslashes' => '\\\\evil.example/login',
 ]);
 
 it('links a ticket saved before with an unsafe page address to the app instead', function () {
