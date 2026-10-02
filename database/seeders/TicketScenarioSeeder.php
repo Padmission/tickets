@@ -32,6 +32,8 @@ class TicketScenarioSeeder extends Seeder
 
     public function run(int|string|null $tenantId = null): void
     {
+        TicketScenarios::refuseOutsideDemoEnvironments();
+
         // Each skips a panel and tenant that already has rows.
         (new TicketStatusSeeder)->run($tenantId);
         (new TicketPrioritySeeder)->run($tenantId);

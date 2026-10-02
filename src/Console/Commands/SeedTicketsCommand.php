@@ -10,7 +10,9 @@ use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketScenarioSeeder;
 use Padmission\Tickets\Database\Seeders\TicketSeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Seeding\TicketScenarios;
 use Padmission\Tickets\TicketPlugin;
+use RuntimeException;
 
 class SeedTicketsCommand extends Command
 {
@@ -62,6 +64,17 @@ class SeedTicketsCommand extends Command
             $this->error('No valid seeders specified.');
 
             return self::FAILURE;
+        }
+
+        // Refused before anything is seeded, so a refused run leaves nothing half done.
+        if (isset($seedersToRun['scenarios'])) {
+            try {
+                TicketScenarios::refuseOutsideDemoEnvironments();
+            } catch (RuntimeException $e) {
+                $this->error($e->getMessage());
+
+                return self::FAILURE;
+            }
         }
 
         // Run the seeders

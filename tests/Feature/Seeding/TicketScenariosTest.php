@@ -8,6 +8,7 @@ use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketDispositionSeeder;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
+use Padmission\Tickets\Database\Seeders\TicketScenarioSeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
@@ -529,5 +530,38 @@ describe('tickets:seed --only=scenarios', function () {
         $this->artisan('tickets:seed')->assertSuccessful();
 
         expect(Ticket::query()->withoutGlobalScopes()->whereNotNull('data->'.TicketScenarios::MARKER)->exists())->toBeFalse();
+    });
+});
+
+describe('Where scenarios may be seeded', function () {
+    it('refuses outside a demo environment, wherever it is asked from', function () {
+        app()->detectEnvironment(fn (): string => 'production');
+
+        expect(fn () => TicketScenarios::make('test', null, [$this->requester], [$this->supporter]))
+            ->toThrow(RuntimeException::class, 'production');
+
+        $this->artisan('tickets:seed', ['--only' => 'scenarios'])
+            ->expectsOutputToContain('production')
+            ->assertFailed();
+
+        expect(fn () => (new TicketScenarioSeeder)->run())->toThrow(RuntimeException::class);
+
+        expect(Ticket::query()->withoutGlobalScopes()->exists())->toBeFalse();
+    });
+
+    it('seeds in each demo environment the hosts use', function (string $environment) {
+        app()->detectEnvironment(fn (): string => $environment);
+
+        expect(TicketScenarios::make('test', null, [$this->requester], [$this->supporter])->conversation())->toBeInstanceOf(Ticket::class);
+    })->with(['local', 'testing', 'test', 'staging', 'preview', 'qa']);
+
+    it('lets the host name the environments', function () {
+        config()->set('padmission-tickets.scenarios.environments', ['demo']);
+
+        app()->detectEnvironment(fn (): string => 'demo');
+        expect(TicketScenarios::make('test', null, [$this->requester], [$this->supporter])->conversation())->toBeInstanceOf(Ticket::class);
+
+        app()->detectEnvironment(fn (): string => 'staging');
+        expect(fn () => TicketScenarios::make('test', null, [$this->requester], [$this->supporter]))->toThrow(RuntimeException::class);
     });
 });

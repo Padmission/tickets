@@ -58,6 +58,8 @@ class TicketScenarios
         iterable $supporters,
         iterable $colleagues = [],
     ) {
+        static::refuseOutsideDemoEnvironments();
+
         $this->requesters = array_values([...$requesters]);
         $this->supporters = array_values([...$supporters]);
         $this->colleagues = array_values([...$colleagues]);
@@ -68,6 +70,23 @@ class TicketScenarios
 
         $this->ensurePanel($panelId);
         $this->at = CarbonImmutable::now();
+    }
+
+    /*
+     * Scenarios put made-up conversations under real people's names, so they
+     * run only where the host seeds demo data, whoever asks for them.
+     */
+    public static function refuseOutsideDemoEnvironments(): void
+    {
+        $environments = (array) config('padmission-tickets.scenarios.environments', []);
+
+        if (! app()->environment($environments)) {
+            throw new RuntimeException(sprintf(
+                'Ticket scenarios are demo data and are not seeded in the "%s" environment, only in: %s (padmission-tickets.scenarios.environments).',
+                app()->environment(),
+                implode(', ', $environments),
+            ));
+        }
     }
 
     /**

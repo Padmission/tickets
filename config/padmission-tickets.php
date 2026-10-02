@@ -153,4 +153,15 @@ return [
      * @var int
      */
     'notification-max-events' => 10,
+
+    'scenarios' => [
+        /**
+         * The environments demo scenarios may be seeded in. They write made-up
+         * conversations under real people's names, so anywhere else, production
+         * above all, they refuse to run.
+         *
+         * @var list<string>
+         */
+        'environments' => ['local', 'testing', 'test', 'staging', 'preview', 'qa'],
+    ],
 ];
