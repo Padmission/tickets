@@ -176,7 +176,7 @@
                 </div>
             </div>
 
-            @if (! $activeTicket->isClosed)
+            @if (! $activeTicket->isClosed && $canResolve)
                 <div x-data class="shrink-0">
                     <button
                         type="button"

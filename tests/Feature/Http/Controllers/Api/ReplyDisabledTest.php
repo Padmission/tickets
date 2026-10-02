@@ -1,11 +1,16 @@
 <?php
 
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
+use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Tests\Fixtures\Users\DeactivatedUser;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -115,4 +120,84 @@ it('draws the ticket page\'s reply box disabled with the reason, rather than hid
     TicketPlugin::get()->replyDisabledUsing(null);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])->assertSeeHtml('reply-disabled-reason=""');
+});
+
+describe('Every path that writes in the chat', function () {
+    it('asks the ticket\'s own panel too, so the chat cannot name another panel to get past it', function () {
+        disableRepliesOn('test');
+
+        $this->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $this->ticket]), ['content' => '<p>Hi</p>'], ['X-Padmission-Tickets-Panel' => 'test2'])
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'You are only viewing this ticket.']);
+
+        $this->postJson(route('padmission-tickets::api.attachment-url', ['ticket' => $this->ticket]), [
+            'filename' => 'scan.jpg',
+            'content_type' => 'image/jpeg',
+            'content_length' => 1024,
+        ], ['X-Padmission-Tickets-Panel' => 'panel-test2'])->assertForbidden();
+
+        expect(messageCount($this->ticket))->toBe(0);
+    });
+
+    it('ignores a panel the chat names that the user may not enter', function () {
+        disableRepliesOn('test2', 'Read only in test2.');
+        $outsider = DeactivatedUser::query()->findOrFail(User::factory()->create(['name' => 'Alex Kim'])->id);
+        $ticket = Ticket::factory()->open()->create(['submitter_id' => $outsider->id]);
+        $this->actingAs($outsider);
+
+        expect($this->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $ticket]), ['X-Padmission-Tickets-Panel' => 'test2'])->json('ticket.reply_disabled_reason'))
+            ->toBeNull();
+    });
+
+    it('refuses a new ticket from someone kept from writing', function () {
+        disableRepliesOn('test');
+
+        $this->postJson(route('padmission-tickets::api.store'), ['subject' => 'Rent is wrong'])
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'You are only viewing this ticket.']);
+
+        expect(Ticket::query()->where('subject', 'Rent is wrong')->exists())->toBeFalse();
+    });
+
+    it('refuses a follow-up on a ticket they are kept from writing on', function () {
+        $closed = Ticket::factory()->closed()->create(['submitter_id' => $this->user->id]);
+        TicketPlugin::get()->replyDisabledUsing(fn (Ticket $ticket): ?string => $ticket->is($closed) ? 'That ticket is archived.' : null);
+
+        $this->postJson(route('padmission-tickets::api.store'), ['subject' => 'Rent still wrong', 'follows_up' => $closed->id])
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'That ticket is archived.']);
+
+        expect(Ticket::query()->where('subject', 'Rent still wrong')->exists())->toBeFalse();
+    });
+
+    it('does not offer Escalate\'s message to the requester, nor send one, to someone kept from writing', function () {
+        $requester = User::factory()->create(['name' => 'Aisha Brooks']);
+        $original = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'turn' => Turn::Supporter]);
+        TicketPlugin::get()->allowLinkedTicketsTo(panelIds: ['test']);
+        disableRepliesOn('test');
+
+        Livewire::test(ViewTicket::class, ['record' => $original->id])
+            ->mountAction(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'))
+            ->fillForm([
+                'subject' => 'Rent is wrong',
+                'message' => tiptapDocument('Please check'),
+                'notify_requester' => true,
+                'requester_message' => '<p>On it</p>',
+            ])
+            ->callMountedAction();
+
+        expect(messageCount($original))->toBe(0);
+    });
+
+    it('does not let someone kept from writing resolve their ticket from the assistant', function () {
+        (new TicketStatusSeeder)->run();
+        disableRepliesOn('test');
+
+        Livewire::test(CopilotTicketPanel::class, ['initialTicketId' => $this->ticket->id])
+            ->assertDontSee('Resolve this ticket?')
+            ->call('resolveTicket')
+            ->assertNotified('You are only viewing this ticket.');
+
+        expect($this->ticket->refresh()->isClosed)->toBeFalse();
+    });
 });

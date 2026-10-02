@@ -19,6 +19,7 @@ use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Rules\PlainText;
 use Padmission\Tickets\Services\ApiTicketResolver;
+use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\Services\TicketReopening;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
@@ -39,6 +40,13 @@ class CreateTicketController
 
         $targetPanelId = $this->resolveTargetPanelId();
         $this->verifyPanelExists($targetPanelId);
+
+        // Writing a new ticket is writing in the chat, and a follow-up writes on the ticket it follows.
+        resolve(TicketAuth::class)->refuseDisabledNewTicket($targetPanelId, $request->user());
+
+        if ($followedUp !== null) {
+            resolve(TicketAuth::class)->refuseDisabledReply($followedUp, $request->user());
+        }
 
         $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
         $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);

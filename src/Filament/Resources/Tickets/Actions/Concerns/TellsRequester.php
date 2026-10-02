@@ -53,8 +53,9 @@ trait TellsRequester
     }
 
     /*
-     * Only a requester with an account gets a reply, and nobody tells
-     * themselves anything.
+     * Only a requester with an account gets a reply, nobody tells themselves
+     * anything, and someone the host keeps from writing in the chat does not
+     * write there through this either.
      */
     protected static function canTellRequester(Ticket $record): bool
     {
@@ -62,7 +63,8 @@ trait TellsRequester
 
         return $record->submitter !== null
             && ! $record->isSubmittedBy($viewer)
-            && resolve(TicketAuth::class)->canReply($record, $viewer);
+            && resolve(TicketAuth::class)->canReply($record, $viewer)
+            && resolve(TicketAuth::class)->replyDisabledReason($record, $viewer) === null;
     }
 
     /**

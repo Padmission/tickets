@@ -39,6 +39,7 @@ class CopilotTicketPanel extends Component
 
         return view('padmission-tickets::livewire.copilot-ticket-panel', [
             'activeTicket' => $activeTicket,
+            'canResolve' => $activeTicket !== null && resolve(TicketAuth::class)->replyDisabledReason($activeTicket, $user) === null,
             'tickets' => $this->tickets()->visibleTickets($user, $this->filter),
         ]);
     }
@@ -115,6 +116,15 @@ class CopilotTicketPanel extends Component
                 ->send();
 
             $this->selectTicket($ticket->getKey());
+
+            return;
+        }
+
+        // Resolving writes on the ticket, so the host's rule against writing in the chat holds here too.
+        $reason = resolve(TicketAuth::class)->replyDisabledReason($ticket, $this->user());
+
+        if ($reason !== null) {
+            Notification::make()->warning()->title($reason)->send();
 
             return;
         }
