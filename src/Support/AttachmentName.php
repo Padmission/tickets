@@ -11,7 +11,9 @@ class AttachmentName
 {
     /*
      * The name ends a stored path of at most 255 characters, so a long one is
-     * shortened to its room, keeping its extension.
+     * shortened to its room. Shortening never changes the extension, which is
+     * what decides whether the file may be attached: it keeps the extension
+     * whole, or, when even that leaves no room, keeps none.
      */
     public static function safe(string $name, int $room = 255): string
     {
@@ -25,8 +27,15 @@ class AttachmentName
         }
 
         $extension = pathinfo($name, PATHINFO_EXTENSION);
-        $extension = $extension !== '' && mb_strlen($extension) < 16 ? '.'.$extension : '';
 
-        return mb_substr($name, 0, max(1, $room - mb_strlen($extension))).$extension;
+        if ($extension === '') {
+            return mb_substr($name, 0, max(1, $room));
+        }
+
+        if (mb_strlen($extension) + 2 > $room) {
+            return 'file';
+        }
+
+        return mb_substr($name, 0, $room - mb_strlen($extension) - 1).'.'.$extension;
     }
 }

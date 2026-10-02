@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Actions\GetDefaultPriorityForPanel;
 use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\ActivitySender;
@@ -19,6 +20,7 @@ use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Support\AttachmentName;
+use Padmission\Tickets\Support\AttachmentTypes;
 use Padmission\Tickets\Support\MessageHtml;
 use Padmission\Tickets\TicketPlugin;
 use Ramsey\Uuid\Uuid;
@@ -157,6 +159,11 @@ class TicketStarter
             $prefix = 'tickets/'.$ticket->getKey().'/'.Uuid::uuid4()->toString().'_';
             $filename = AttachmentName::safe($file->getClientOriginalName(), 255 - mb_strlen($prefix));
             $filepath = $prefix.$filename;
+
+            // The name as stored is the one a download keeps, so it is checked as stored too.
+            if (! AttachmentTypes::nameIsAllowed($filename)) {
+                throw ValidationException::withMessages(['attachments' => __('padmission-tickets::validation.attachment_name')]);
+            }
 
             Storage::disk(config('padmission-tickets.attachments.disk'))->put($filepath, $file->get());
 

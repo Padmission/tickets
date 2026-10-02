@@ -5,6 +5,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Padmission\Tickets\ChatWidgetConfig;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
@@ -13,6 +14,8 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\StartTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketAttachment;
+use Padmission\Tickets\Services\TicketStarter;
+use Padmission\Tickets\Support\AttachmentName;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -257,4 +260,54 @@ it('refuses a program on a ticket started from the list, whatever its content lo
         ->assertHasActionErrors();
 
     expect(TicketAttachment::query()->exists())->toBeFalse();
+});
+
+// A long name whose last extension is no allowed type, hiding an allowed one and a program's further in.
+function nameHidingACommand(): string
+{
+    return str_repeat('a', 204).'.cmd'.str_repeat('b', 43).'.pdf.'.str_repeat('c', 16);
+}
+
+it('never changes a long name\'s extension when shortening it', function () {
+    expect(AttachmentName::safe(str_repeat('a', 300).'.pdf', 50))->toEndWith('.pdf')->toHaveLength(50)
+        ->and(AttachmentName::safe(nameHidingACommand(), 255))->toEndWith('.'.str_repeat('c', 16))
+        ->and(AttachmentName::safe(nameHidingACommand(), 120))->toEndWith('.'.str_repeat('c', 16))
+        ->and(AttachmentName::safe('a.pdf.'.str_repeat('c', 300), 50))->toBe('file');
+});
+
+it('refuses a long name hiding a command behind a shortened extension, on New ticket', function () {
+    (new TicketPrioritySeeder)->run();
+    Storage::fake(config('padmission-tickets.attachments.disk'));
+    TicketPlugin::get()->showChatWidget(config: ChatWidgetConfig::make()->allowFileUploads());
+    $requester = User::factory()->create();
+
+    Livewire::test(ListTickets::class)
+        ->callAction(TestAction::make(StartTicketAction::class), [
+            'kind' => StartTicketAction::ORGANIZATION,
+            'requester_id' => $requester->id,
+            'assign' => 'me',
+            'subject' => 'Pay stubs',
+            'message' => '<p>Hello</p>',
+            'attachments' => [UploadedFile::fake()->create(nameHidingACommand(), 1, 'text/plain')],
+        ])
+        ->assertHasActionErrors();
+
+    expect(TicketAttachment::query()->exists())->toBeFalse()
+        ->and(Ticket::query()->where('subject', 'Pay stubs')->exists())->toBeFalse();
+});
+
+it('refuses it through the chat too', function () {
+    askToUpload(['filename' => nameHidingACommand(), 'content_type' => 'text/plain'])->assertUnprocessable()->assertJsonValidationErrors('filename');
+});
+
+it('checks each file\'s name as stored before New ticket writes it, leaving no ticket behind', function () {
+    (new TicketPrioritySeeder)->run();
+    Storage::fake(config('padmission-tickets.attachments.disk'));
+    $requester = User::factory()->create();
+
+    expect(fn () => resolve(TicketStarter::class)->openFor($requester, 'Pay stubs', '<p>Hello</p>', null, [UploadedFile::fake()->create('run.cmd', 1, 'text/plain')]))
+        ->toThrow(ValidationException::class);
+
+    expect(Ticket::query()->where('subject', 'Pay stubs')->exists())->toBeFalse()
+        ->and(TicketAttachment::query()->exists())->toBeFalse();
 });
