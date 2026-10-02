@@ -103,7 +103,7 @@ it('refuses an oversized preview image', function () {
 
 it('opens an image, video or PDF in the browser, downloads a document, and downloads anything else as unknown bytes', function () {
     $served = function (string $mimeType): array {
-        $attachment = TicketAttachment::factory()->create(['ticket_id' => $this->ticket->id, 'activity_id' => null, 'created_by' => $this->user->id, 'filepath' => 'tickets/1/'.Str::uuid(), 'mime_type' => $mimeType]);
+        $attachment = TicketAttachment::factory()->create(['ticket_id' => $this->ticket->id, 'activity_id' => null, 'created_by' => $this->user->id, 'filepath' => 'tickets/1/'.Str::uuid(), 'filename' => 'file', 'mime_type' => $mimeType]);
 
         $this->postJson(route('padmission-tickets::api.temporary-attachment-url', ['ticket' => $this->ticket]), ['filepath' => $attachment->filepath])->assertOk();
 
@@ -115,10 +115,10 @@ it('opens an image, video or PDF in the browser, downloads a document, and downl
         ->and($served('application/pdf'))->toBe(['ResponseContentType' => 'application/pdf'])
         ->and($served('application/vnd.openxmlformats-officedocument.wordprocessingml.document'))->toBe([
             'ResponseContentType' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'ResponseContentDisposition' => 'attachment',
+            'ResponseContentDisposition' => 'attachment; filename=file',
         ])
-        ->and($served('text/plain'))->toBe(['ResponseContentType' => 'text/plain', 'ResponseContentDisposition' => 'attachment'])
-        ->and($served('text/html'))->toBe(['ResponseContentType' => 'application/octet-stream', 'ResponseContentDisposition' => 'attachment']);
+        ->and($served('text/plain'))->toBe(['ResponseContentType' => 'text/plain', 'ResponseContentDisposition' => 'attachment; filename=file'])
+        ->and($served('text/html'))->toBe(['ResponseContentType' => 'application/octet-stream', 'ResponseContentDisposition' => 'attachment; filename=file']);
 });
 
 it('refuses those types on a ticket started from the list too', function () {
@@ -152,13 +152,13 @@ it('keeps a file name to its last part, so it can never point elsewhere on the d
     'parent folders' => ['../../../evil.jpg', 'evil.jpg'],
     'folders' => ['photos/2026/scan.jpg', 'scan.jpg'],
     'Windows folders' => ['C:\\Users\\Ann\\scan.jpg', 'scan.jpg'],
-    'only dots' => ['..', 'file'],
-    'a folder and dots' => ['photos/..', 'file'],
+    'only dots' => ['..', 'file.jpg'],
+    'a folder and dots' => ['photos/..', 'file.jpg'],
     'control characters' => ["sc\x00an\x1f.jpg", 'scan.jpg'],
     'dots inside a name' => ['rent..2026.jpg', 'rent..2026.jpg'],
 ]);
 
-it('keeps a name from New ticket to its last part too', function () {
+it('refuses a New ticket file whose name says no type', function () {
     (new TicketPrioritySeeder)->run();
     Storage::fake(config('padmission-tickets.attachments.disk'));
     TicketPlugin::get()->showChatWidget(config: ChatWidgetConfig::make()->allowFileUploads());
@@ -173,11 +173,9 @@ it('keeps a name from New ticket to its last part too', function () {
             'message' => '<p>Hello</p>',
             'attachments' => [UploadedFile::fake()->create('..', 1, 'application/pdf')],
         ])
-        ->assertHasNoActionErrors();
+        ->assertHasActionErrors();
 
-    expect(TicketAttachment::query()->sole())
-        ->filename->toBe('file')
-        ->filepath->not->toEndWith('..');
+    expect(TicketAttachment::query()->exists())->toBeFalse();
 });
 
 it('tells the chat\'s file picker the types the server takes, with their usual extensions', function () {
@@ -200,4 +198,63 @@ it('shortens a long file name so its stored path fits, keeping its extension', f
     expect(mb_strlen($attachment->filepath))->toBeLessThanOrEqual(255)
         ->and($attachment->filename)->toEndWith('.jpg')
         ->and($attachment->filepath)->toEndWith('_'.$attachment->filename);
+});
+
+it('refuses a file whose name is not a type that can be attached, whatever type it claims', function (string $filename, string $type) {
+    askToUpload(['filename' => $filename, 'content_type' => $type])->assertUnprocessable()->assertJsonValidationErrors('filename');
+
+    expect(TicketAttachment::query()->exists())->toBeFalse();
+})->with([
+    'a program sent as text' => ['Payroll Q3.exe', 'text/plain'],
+    'a script sent as a PDF' => ['run.sh', 'application/pdf'],
+    'a page sent as an image' => ['page.html', 'image/png'],
+    'a program behind a right-to-left override' => ["Payroll\u{202E}fdp.exe", 'application/pdf'],
+]);
+
+it('takes a name whose extension is an allowed type, even when the browser names another', function (string $filename, string $type) {
+    askToUpload(['filename' => $filename, 'content_type' => $type])->assertOk();
+})->with([
+    'notes' => ['notes.txt', 'text/plain'],
+    'a spreadsheet Windows calls Excel' => ['report.csv', 'application/vnd.ms-excel'],
+    'an upper-case photo' => ['IMG_0001.JPG', 'image/jpeg'],
+]);
+
+it('gives a name without an extension its type\'s usual one', function () {
+    askToUpload(['filename' => 'scan', 'content_type' => 'image/png'])->assertOk();
+
+    expect(TicketAttachment::query()->sole()->filename)->toBe('scan.png');
+});
+
+it('drops invisible formatting characters from a name', function () {
+    askToUpload(['filename' => "Pay\u{200B}roll\u{202E}.pdf", 'content_type' => 'application/pdf'])->assertOk();
+
+    expect(TicketAttachment::query()->sole()->filename)->toBe('Payroll.pdf');
+});
+
+it('names a downloaded file by its own name', function () {
+    $attachment = TicketAttachment::factory()->create(['ticket_id' => $this->ticket->id, 'activity_id' => null, 'created_by' => $this->user->id, 'filepath' => 'tickets/1/x_Rent "2026".docx', 'filename' => 'Rent "2026".docx', 'mime_type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+
+    $this->postJson(route('padmission-tickets::api.temporary-attachment-url', ['ticket' => $this->ticket]), ['filepath' => $attachment->filepath])->assertOk();
+
+    expect(array_pop($this->signed)['ResponseContentDisposition'])->toBe('attachment; filename="Rent \"2026\".docx"');
+});
+
+it('refuses a program on a ticket started from the list, whatever its content looks like', function () {
+    (new TicketPrioritySeeder)->run();
+    Storage::fake(config('padmission-tickets.attachments.disk'));
+    TicketPlugin::get()->showChatWidget(config: ChatWidgetConfig::make()->allowFileUploads());
+    $requester = User::factory()->create();
+
+    Livewire::test(ListTickets::class)
+        ->callAction(TestAction::make(StartTicketAction::class), [
+            'kind' => StartTicketAction::ORGANIZATION,
+            'requester_id' => $requester->id,
+            'assign' => 'me',
+            'subject' => 'Pay stubs',
+            'message' => '<p>Hello</p>',
+            'attachments' => [UploadedFile::fake()->create('Payroll.exe', 1, 'text/plain')],
+        ])
+        ->assertHasActionErrors();
+
+    expect(TicketAttachment::query()->exists())->toBeFalse();
 });

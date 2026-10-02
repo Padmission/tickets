@@ -15,7 +15,8 @@ class AttachmentName
      */
     public static function safe(string $name, int $room = 255): string
     {
-        $name = trim((string) preg_replace('/[\x00-\x1F\x7F]/u', '', $name));
+        // Control characters, and invisible formatting such as a right-to-left override that hides an extension.
+        $name = trim((string) preg_replace('/[\x00-\x1F\x7F\p{Cf}]/u', '', $name));
         $name = trim(basename(str_replace('\\', '/', $name)));
         $name = in_array($name, ['', '.', '..'], true) ? 'file' : $name;
 

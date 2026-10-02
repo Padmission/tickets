@@ -41,7 +41,7 @@ class TemporaryAttachmentUrlController
 
         return [
             'url' => Storage::disk(config('padmission-tickets.attachments.disk'))
-                ->temporaryUrl($attachment->filepath, now()->addMinutes(5), AttachmentTypes::downloadOptions($attachment->mime_type)),
+                ->temporaryUrl($attachment->filepath, now()->addMinutes(5), AttachmentTypes::downloadOptions($attachment->mime_type, $attachment->filename)),
         ];
     }
 

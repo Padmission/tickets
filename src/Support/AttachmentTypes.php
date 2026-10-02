@@ -2,6 +2,8 @@
 
 namespace Padmission\Tickets\Support;
 
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\Mime\MimeTypes;
 
 class AttachmentTypes
@@ -28,6 +30,23 @@ class AttachmentTypes
             ->implode(',');
     }
 
+    /*
+     * The type a file claims is only the browser's say, and a download keeps
+     * the file's name, so the name must be an allowed type too: Payroll.exe
+     * sent as text/plain would otherwise download as a program.
+     */
+    public static function nameIsAllowed(string $filename): bool
+    {
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        return $extension !== '' && array_intersect(MimeTypes::getDefault()->getMimeTypes($extension), static::allowed()) !== [];
+    }
+
+    public static function usualExtension(string $mimeType): ?string
+    {
+        return MimeTypes::getDefault()->getExtensions(strtolower($mimeType))[0] ?? null;
+    }
+
     public static function isAllowed(?string $mimeType): bool
     {
         return $mimeType !== null && in_array(strtolower($mimeType), static::allowed(), true);
@@ -42,12 +61,12 @@ class AttachmentTypes
      *
      * @return array<string, string>
      */
-    public static function downloadOptions(?string $mimeType): array
+    public static function downloadOptions(?string $mimeType, ?string $filename = null): array
     {
         if (! static::isAllowed($mimeType)) {
             return [
                 'ResponseContentType' => 'application/octet-stream',
-                'ResponseContentDisposition' => 'attachment',
+                'ResponseContentDisposition' => static::attachmentDisposition($filename),
             ];
         }
 
@@ -59,8 +78,20 @@ class AttachmentTypes
 
         return [
             'ResponseContentType' => $mimeType,
-            'ResponseContentDisposition' => 'attachment',
+            'ResponseContentDisposition' => static::attachmentDisposition($filename),
         ];
+    }
+
+    // Named by the file's own name, not the stored key it would otherwise be saved as.
+    protected static function attachmentDisposition(?string $filename): string
+    {
+        if (blank($filename)) {
+            return 'attachment';
+        }
+
+        $fallback = str_replace(['%', '/', '\\'], '_', Str::ascii($filename)) ?: 'file';
+
+        return HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $filename, $fallback);
     }
 
     protected static function opensInBrowser(string $mimeType): bool

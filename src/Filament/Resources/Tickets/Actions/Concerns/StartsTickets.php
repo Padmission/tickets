@@ -6,8 +6,10 @@ use Closure;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Padmission\Tickets\Rules\PlainText;
+use Padmission\Tickets\Support\AttachmentName;
 use Padmission\Tickets\Support\AttachmentTypes;
 use Padmission\Tickets\TicketPlugin;
 
@@ -29,6 +31,10 @@ trait StartsTickets
             ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
                 if ($value instanceof TemporaryUploadedFile && PlainText::hasMarkup($value->getClientOriginalName())) {
                     $fail('padmission-tickets::validation.plain_text')->translate();
+                }
+
+                if ($value instanceof UploadedFile && ! AttachmentTypes::nameIsAllowed(AttachmentName::safe($value->getClientOriginalName()))) {
+                    $fail('padmission-tickets::validation.attachment_name')->translate();
                 }
             })
             ->visible(fn (): bool => TicketPlugin::get()->getChatWidgetConfig()->getAllowFileUploads());

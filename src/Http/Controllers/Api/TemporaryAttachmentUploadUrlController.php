@@ -7,6 +7,7 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketAttachment;
 use Padmission\Tickets\Rules\PlainText;
@@ -53,6 +54,15 @@ class TemporaryAttachmentUploadUrlController
         $id = Uuid::uuid4()->toString();
         $prefix = 'tickets/'.$ticket.'/'.$id.'_';
         $filename = AttachmentName::safe((string) $request->input('filename'), 255 - mb_strlen($prefix));
+
+        if (pathinfo($filename, PATHINFO_EXTENSION) === '' && ($extension = AttachmentTypes::usualExtension((string) $request->input('content_type'))) !== null) {
+            $filename = AttachmentName::safe($filename.'.'.$extension, 255 - mb_strlen($prefix));
+        }
+
+        if (! AttachmentTypes::nameIsAllowed($filename)) {
+            throw ValidationException::withMessages(['filename' => __('padmission-tickets::validation.attachment_name')]);
+        }
+
         $contentType = $request->input('content_type');
         $thumbnailData = $request->input('thumbnail');
 
