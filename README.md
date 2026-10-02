@@ -243,6 +243,7 @@ This will create a `config/padmission-tickets.php` file where you can configure:
 - `notification-channels` - `mail` by default, add `database` for Filament's notification panel
 - `default-notification-strategy` - `NotificationStrategy::Debounced` (default) or `NotificationStrategy::Immediate`
 - `notification-debounce` - how long a debounced notification waits, 10 minutes by default
+- `api` - `max_message_length`, the longest chat message in characters (16,000 by default), and `writes_per_minute`, how often one person may write through the chat API (60 by default; reading is not limited)
 - `scenarios.environments` - where demo scenarios may be seeded (see [Seeding Demo Scenarios](#seeding-demo-scenarios))
 - `notification-max-events` - the most activities one notification lists, 10 by default
 
@@ -423,7 +424,7 @@ Those accounts sign in with their password instead. The request is answered the 
 - Requests limited to one code a minute per email address and five a minute per client IP, counted before the address is looked up
 - Guesses limited to ten a minute per client IP; a code is thrown away after five wrong guesses
 - Configurable OTP expiration time
-- Session-based authentication for verified users, with a new session ID on success
+- Session-based authentication for verified users, with a new session ID on success; a code never stands in for someone already signed in
 
 #### Documentation URL
 
@@ -457,7 +458,7 @@ TicketPlugin::make()
 
 `allowScreenshots()` adds a button that captures the user's screen and attaches it. It only shows when file uploads are allowed and the browser supports screen capture.
 
-The server holds uploads to the same maximum (the ticket's panel's `maxFileSize`) and to the types in the `attachments.allowed_mime_types` config: images, videos and PDFs, and everyday office and text documents (Word, Excel, OpenDocument, RTF, CSV and plain text). HTML, SVG, scripts and programs are refused. Only an image, video or PDF opens in the browser; every other file, and any file stored before with a type no longer allowed, is served as a download. **New ticket**'s attachments take the same types.
+The server holds uploads to the same maximum (the ticket's panel's `maxFileSize`) and to the types in the `attachments.allowed_mime_types` config: images, videos and PDFs, and everyday office and text documents (Word, Excel, OpenDocument, RTF, CSV and plain text). HTML, SVG, scripts and programs are refused. Only an image, video or PDF opens in the browser; every other file, and any file stored before with a type no longer allowed, is served as a download. **New ticket**'s attachments take the same types, and the chat's file picker offers them, each with its usual extension. A file's name is kept to its last part, without folders or control characters, before it names the stored file. A file's download link is signed only for someone who sees the message it was sent on, so a requester never gets one for a file on an internal note.
 
 ### Multi-Tenancy Support
 
