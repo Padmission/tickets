@@ -16,6 +16,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Component;
+use Padmission\Tickets\Exceptions\ReplyDisabledException;
 use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\StartsTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -118,6 +119,12 @@ class OpenTicketForContactAction extends Action
 
                 try {
                     $ticket = resolve(TicketStarter::class)->askFor($contact, $tenantId, (string) static::sourcePanelId(), $data['subject'], $data['message'], static::uploadedFiles($data));
+                } catch (ReplyDisabledException $exception) {
+                    Notification::make()->warning()->title($exception->getMessage())->send();
+
+                    $this->halt();
+
+                    return;
                 } catch (RuntimeException $exception) {
                     report($exception);
 

@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Padmission\Tickets\Exceptions\ReplyDisabledException;
 use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\StartsTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
@@ -125,6 +126,12 @@ class StartTicketAction extends Action
                     $ticket = static::kind($data['kind'] ?? null) === self::ESCALATION
                         ? $this->ask($data, $attachments)
                         : $this->openFor($data, $attachments);
+                } catch (ReplyDisabledException $exception) {
+                    Notification::make()->warning()->title($exception->getMessage())->send();
+
+                    $this->halt();
+
+                    return;
                 } catch (RuntimeException $exception) {
                     // Statuses or priorities were never set up for the panel: a gap the user cannot fix from here.
                     report($exception);

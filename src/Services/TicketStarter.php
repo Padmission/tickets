@@ -12,6 +12,7 @@ use Padmission\Tickets\Actions\GetDefaultStatusForPanel;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
+use Padmission\Tickets\Exceptions\ReplyDisabledException;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketAttachment;
@@ -139,6 +140,13 @@ class TicketStarter
      */
     protected function writeMessage(Ticket $ticket, ActivitySender $sender, string $message, array $attachments): TicketActivity
     {
+        // Thrown inside the transaction that made the ticket, so a refused one leaves nothing behind.
+        $reason = resolve(TicketAuth::class)->replyDisabledReason($ticket, Filament::auth()->user());
+
+        if ($reason !== null) {
+            throw new ReplyDisabledException($reason);
+        }
+
         $activity = $ticket->ticketActivities()->create([
             'type' => ActivityType::Message,
             'sender' => $sender,

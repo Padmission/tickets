@@ -3,10 +3,14 @@
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
+use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\OpenTicketForContactAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\StartTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Models\Ticket;
@@ -199,5 +203,52 @@ describe('Every path that writes in the chat', function () {
             ->assertNotified('You are only viewing this ticket.');
 
         expect($this->ticket->refresh()->isClosed)->toBeFalse();
+    });
+});
+
+describe('Starting a ticket for someone', function () {
+    beforeEach(function () {
+        (new TicketPrioritySeeder)->run();
+        TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    });
+
+    it('does not let someone kept from writing start one for a requester or ask the other team', function (string $kind) {
+        disableRepliesOn('test');
+        $requester = User::factory()->create();
+
+        Livewire::test(ListTickets::class)
+            ->callAction(TestAction::make(StartTicketAction::class), [
+                'kind' => $kind,
+                'requester_id' => $kind === StartTicketAction::ORGANIZATION ? $requester->id : null,
+                'assign' => 'me',
+                'subject' => 'Kept from writing',
+                'message' => '<p>Hello</p>',
+            ])
+            ->assertNotified('You are only viewing this ticket.');
+
+        expect(Ticket::query()->where('subject', 'Kept from writing')->exists())->toBeFalse();
+    })->with([
+        StartTicketAction::ORGANIZATION,
+        StartTicketAction::ESCALATION,
+    ]);
+
+    it('does not let someone kept from writing open one for a contact', function () {
+        $staff = User::factory()->create(['name' => 'Alex Kim']);
+        $contact = User::factory()->create();
+        TicketPlugin::get('test')->allSupportersQuery(fn () => User::query()->whereKey($contact->id));
+        TicketPlugin::get('test2')->startsTickets()->allSupportersQuery(fn () => User::query()->whereKey($staff->id));
+        disableRepliesOn('test2');
+        Filament::setCurrentPanel('test2');
+        $this->actingAs($staff);
+
+        Livewire::test(ListTickets::class)
+            ->callAction(TestAction::make(OpenTicketForContactAction::class), [
+                'contact_id' => $contact->id,
+                'subject' => 'Kept from writing',
+                'message' => '<p>Hello</p>',
+            ])
+            ->assertNotified('You are only viewing this ticket.');
+
+        expect(Ticket::query()->where('subject', 'Kept from writing')->exists())->toBeFalse();
     });
 });
