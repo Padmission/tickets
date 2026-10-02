@@ -21,6 +21,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\TellsRequeste
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Rules\MessageFitsColumn;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Support\MessageHtml;
 use Padmission\Tickets\TicketPlugin;
@@ -72,6 +73,7 @@ class CreateLinkedTicketAction extends Action
                     ->label(__('padmission-tickets::tickets.actions.create_linked_ticket.form.message'))
                     ->helperText(__('padmission-tickets::tickets.actions.create_linked_ticket.form.message_helper'))
                     ->required()
+                    ->rule(new MessageFitsColumn)
                     ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
 
                 ...static::requesterMessageFields(),
@@ -133,7 +135,7 @@ class CreateLinkedTicketAction extends Action
                     $newTicket->ticketActivities()->create([
                         'sender' => ActivitySender::User,
                         'type' => ActivityType::Message,
-                        'content' => MessageHtml::sanitize($data['message']),
+                        'content' => MessageHtml::sanitizeToFit($data['message'], 'message'),
                     ]);
 
                     $links->linkNewEscalation($record, $newTicket);

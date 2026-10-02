@@ -10,6 +10,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Rules\MessageFitsColumn;
 use Padmission\Tickets\Services\TicketAuth;
 use Padmission\Tickets\Support\MessageHtml;
 
@@ -48,6 +49,7 @@ trait TellsRequester
                 ->helperText(fn (Ticket $record): string => __($key.'requester_message_helper', ['name' => $record->requesterName()]))
                 ->visible(fn (Ticket $record, Get $get): bool => static::canTellRequester($record) && (bool) $get('notify_requester'))
                 ->required()
+                ->rule(new MessageFitsColumn)
                 ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
         ];
     }
@@ -86,7 +88,7 @@ trait TellsRequester
             'type' => ActivityType::Message,
             'sender' => ActivitySender::Supporter,
             'user_id' => Filament::auth()->id(),
-            'content' => MessageHtml::sanitize($content),
+            'content' => MessageHtml::sanitizeToFit($content, 'requester_message'),
         ]);
 
         return true;

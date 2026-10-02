@@ -21,6 +21,7 @@ use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\StartsTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Rules\MessageFitsColumn;
 use Padmission\Tickets\Services\TicketStarter;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
@@ -96,6 +97,7 @@ class OpenTicketForContactAction extends Action
                             ? null
                             : __('padmission-tickets::tickets.actions.start_ticket.message_helper', ['name' => $name]))
                         ->required()
+                        ->rule(new MessageFitsColumn)
                         ->toolbarButtons(['bold', 'link', 'bulletList', 'orderedList']),
 
                     static::attachmentsField(),

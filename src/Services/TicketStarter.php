@@ -152,7 +152,7 @@ class TicketStarter
         $activity = $ticket->ticketActivities()->create([
             'type' => ActivityType::Message,
             'sender' => $sender,
-            'content' => MessageHtml::sanitize($message),
+            'content' => MessageHtml::sanitizeToFit($message, 'message'),
         ]);
 
         foreach ($attachments as $file) {

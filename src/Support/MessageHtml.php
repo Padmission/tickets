@@ -2,6 +2,7 @@
 
 namespace Padmission\Tickets\Support;
 
+use Illuminate\Validation\ValidationException;
 use Tiptap\Core\DOMParser;
 use Tiptap\Core\DOMSerializer;
 use Tiptap\Core\Schema;
@@ -18,6 +19,25 @@ use TypeError;
  */
 class MessageHtml
 {
+    // What the content column, a MySQL TEXT, holds.
+    public const MAX_BYTES = 65535;
+
+    /*
+     * Cleaning writes characters out as entities, so cleaned HTML can run far
+     * longer than what was typed: a message is refused, under the field it
+     * came from, rather than failing to save.
+     */
+    public static function sanitizeToFit(string $html, string $field): string
+    {
+        $clean = static::sanitize($html);
+
+        if (strlen($clean) > self::MAX_BYTES) {
+            throw ValidationException::withMessages([$field => __('padmission-tickets::validation.message_too_long')]);
+        }
+
+        return $clean;
+    }
+
     public static function sanitize(string $html): string
     {
         if (trim($html) === '') {
