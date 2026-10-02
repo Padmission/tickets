@@ -147,7 +147,8 @@ class TicketPolicy
             return false;
         }
 
-        return app()->call($supportersQuery)
+        // The pool for this ticket, which a multi-tenant host scopes by its tenant: without one it is the signed-in tenant's.
+        return app()->call($supportersQuery, ['ticket' => $ticket])
             ->whereKey($user->getAuthIdentifier())
             ->exists();
     }
