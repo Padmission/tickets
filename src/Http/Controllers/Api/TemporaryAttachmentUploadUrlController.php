@@ -51,11 +51,12 @@ class TemporaryAttachmentUploadUrlController
         ]);
 
         $id = Uuid::uuid4()->toString();
-        $filename = AttachmentName::safe((string) $request->input('filename'));
+        $prefix = 'tickets/'.$ticket.'/'.$id.'_';
+        $filename = AttachmentName::safe((string) $request->input('filename'), 255 - mb_strlen($prefix));
         $contentType = $request->input('content_type');
         $thumbnailData = $request->input('thumbnail');
 
-        $filepath = 'tickets/'.$ticket.'/'.$id.'_'.$filename;
+        $filepath = $prefix.$filename;
         $previewFilePath = null;
 
         if ($thumbnailData) {

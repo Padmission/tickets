@@ -59,3 +59,12 @@ it('leaves reading alone', function () {
         $this->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $this->ticket]))->assertOk();
     }
 });
+
+it('refuses a message whose cleaned HTML would not fit its column, rather than failing to save it', function () {
+    send(str_repeat('"', 16000))->assertUnprocessable()->assertJsonValidationErrors('content');
+    send(str_repeat('&', 16000))->assertUnprocessable()->assertJsonValidationErrors('content');
+
+    expect($this->ticket->ticketActivities()->where('type', ActivityType::Message)->where('sender', '!=', 'system')->exists())->toBeFalse();
+
+    send(str_repeat('"', 10000))->assertOk();
+});

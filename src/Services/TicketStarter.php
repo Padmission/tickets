@@ -146,8 +146,9 @@ class TicketStarter
         ]);
 
         foreach ($attachments as $file) {
-            $filename = AttachmentName::safe($file->getClientOriginalName());
-            $filepath = 'tickets/'.$ticket->getKey().'/'.Uuid::uuid4()->toString().'_'.$filename;
+            $prefix = 'tickets/'.$ticket->getKey().'/'.Uuid::uuid4()->toString().'_';
+            $filename = AttachmentName::safe($file->getClientOriginalName(), 255 - mb_strlen($prefix));
+            $filepath = $prefix.$filename;
 
             Storage::disk(config('padmission-tickets.attachments.disk'))->put($filepath, $file->get());
 

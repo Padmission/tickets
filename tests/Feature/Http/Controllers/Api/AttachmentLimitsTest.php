@@ -191,3 +191,13 @@ it('tells the chat\'s file picker the types the server takes, with their usual e
 
     expect(json_decode(ChatWidgetConfig::make()->toJs(), true)['acceptedFileTypes'])->toBe('application/zip,.zip');
 });
+
+it('shortens a long file name so its stored path fits, keeping its extension', function () {
+    askToUpload(['filename' => str_repeat('a', 251).'.jpg'])->assertOk();
+
+    $attachment = TicketAttachment::query()->latest('id')->sole();
+
+    expect(mb_strlen($attachment->filepath))->toBeLessThanOrEqual(255)
+        ->and($attachment->filename)->toEndWith('.jpg')
+        ->and($attachment->filepath)->toEndWith('_'.$attachment->filename);
+});

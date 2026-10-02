@@ -30,6 +30,9 @@ class CreateMessageController
     use AuthorizesRequests;
     use ValidatesRequests;
 
+    // What the content column, a MySQL TEXT, holds.
+    protected const MAX_STORED_BYTES = 65535;
+
     public function __invoke(Request $request, int $ticket): array
     {
         $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
@@ -68,6 +71,14 @@ class CreateMessageController
         $content = ($validated['content'] ?? null) !== null
             ? MessageHtml::sanitize($validated['content'])
             : null;
+
+        // Cleaning writes characters out as entities, so the stored HTML can run longer than what was sent.
+        if ($content !== null && strlen($content) > self::MAX_STORED_BYTES) {
+            throw ValidationException::withMessages(['content' => __('validation.max.string', [
+                'attribute' => 'content',
+                'max' => (int) config('padmission-tickets.api.max_message_length', 16000),
+            ])]);
+        }
 
         if ($content === '' && blank($attachmentIds)) {
             throw ValidationException::withMessages(['content' => __('validation.required', ['attribute' => 'content'])]);
