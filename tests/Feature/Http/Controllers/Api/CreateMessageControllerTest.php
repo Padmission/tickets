@@ -263,3 +263,29 @@ class ReadsButRepliesOnlyInOwnPanelPolicy extends TestTicketPolicy
         return $ticket->panel === 'test';
     }
 }
+
+it('rejects visually empty rich text without creating a reply', function (string $content) {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->open()->create(['submitter_id' => $user->id]);
+    $this->actingAs($user);
+    $before = $ticket->ticketActivities()->count();
+
+    $this->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+        'content' => $content,
+    ])->assertUnprocessable()->assertJsonValidationErrors('content');
+
+    expect($ticket->ticketActivities()->count())->toBe($before);
+})->with(['<p></p>', '<p><br></p>', '<p>   </p>', '<p>&nbsp;</p>']);
+
+it('does not reopen a closed ticket when the reply is visually empty', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->closed()->create(['submitter_id' => $user->id]);
+    $this->actingAs($user);
+
+    $this->postJson(route('padmission-tickets::api.messages.store', ['ticket' => $ticket]), [
+        'content' => '<p></p>',
+        'reopen' => true,
+    ])->assertUnprocessable()->assertJsonValidationErrors('content');
+
+    expect($ticket->refresh()->isClosed)->toBeTrue();
+});

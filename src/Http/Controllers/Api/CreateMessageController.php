@@ -51,6 +51,18 @@ class CreateMessageController
         resolve(TicketAuth::class)->authorizeReply($ticket, $request->user());
         resolve(TicketAuth::class)->refuseDisabledReply($ticket, $request->user());
 
+        $attachmentIds = $validated['attachment_ids'] ?? [];
+
+        $content = ($validated['content'] ?? null) !== null
+            ? MessageHtml::sanitize($validated['content'])
+            : null;
+
+        $plainText = html_entity_decode(strip_tags($content ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if (preg_match('/[^\s\x{00A0}]/u', $plainText) !== 1 && blank($attachmentIds)) {
+            throw ValidationException::withMessages(['content' => __('validation.required', ['attribute' => 'content'])]);
+        }
+
         // Reopened only on the writer's say-so, and only by those who may.
         if ($ticket->isClosed && $request->boolean('reopen')
             && in_array(TicketReopening::REOPEN, resolve(TicketReopening::class)->choicesFor($ticket, $request->user()), true)) {
@@ -59,19 +71,9 @@ class CreateMessageController
 
         resolve(TicketAuth::class)->refuseClosedTicket($ticket);
 
-        $attachmentIds = $validated['attachment_ids'] ?? [];
-
         $this->validateAttachments($ticket, $request->user(), $attachmentIds);
 
         $messages = collect();
-
-        $content = ($validated['content'] ?? null) !== null
-            ? MessageHtml::sanitize($validated['content'])
-            : null;
-
-        if ($content === '' && blank($attachmentIds)) {
-            throw ValidationException::withMessages(['content' => __('validation.required', ['attribute' => 'content'])]);
-        }
 
         // A new ticket's link back to the one it follows up is not its opening.
         $isFirstActivity = ! $ticket->ticketActivities()->whereNot('type', ActivityType::FollowsUp)->exists();
