@@ -48,6 +48,10 @@ class TicketPluginServiceProvider extends PackageServiceProvider
             $this->loadRoutesFrom("{$this->package->basePath('/../routes/')}dev.php");
         }
 
+        if (config('padmission-tickets.staff_api.enabled')) {
+            $this->loadRoutesFrom("{$this->package->basePath('/../routes/')}staff-api.php");
+        }
+
         $this->registerAssets();
         $this->registerBrowserSync();
     }

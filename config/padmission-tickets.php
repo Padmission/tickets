@@ -189,6 +189,40 @@ return [
         ],
     ],
 
+    'staff_api' => [
+        /**
+         * A token API for a panel's support staff, such as a desktop client,
+         * working tickets as they would in that panel. Off until a host turns
+         * it on and names the middleware that authenticates its tokens.
+         *
+         * @var bool
+         */
+        'enabled' => false,
+
+        /**
+         * The panel whose tickets, rules and supporters the API works as. Every
+         * request runs as if inside it, so the panel's ticket query, scopes and
+         * policies apply exactly as on its pages.
+         *
+         * @var string
+         */
+        'panel' => 'admin',
+
+        /**
+         * @var string
+         */
+        'prefix' => 'api/support/v1',
+
+        /**
+         * Middleware before the package's own, which must authenticate the
+         * request, such as ['api', 'auth:sanctum']. Sign-in is the host's, since
+         * it owns its users, passwords and second factors.
+         *
+         * @var list<class-string|string>
+         */
+        'middleware' => [],
+    ],
+
     'scenarios' => [
         /**
          * The environments demo scenarios may be seeded in. They write made-up
