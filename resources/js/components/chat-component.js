@@ -936,7 +936,7 @@ customElements.define(
 		async sendMessage(keepWaiting = false, { reopen = false } = {}) {
 			const lockTurn = keepWaiting || this.lockTurnCheckbox?.checked || false;
 
-			if (!this.messageContent.trim() && this.attachments.length === 0) {
+			if (!this.editor.getText().trim() && this.attachments.length === 0) {
 				return;
 			}
 
