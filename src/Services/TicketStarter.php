@@ -42,8 +42,9 @@ class TicketStarter
     public function openFor(Model $requester, string $subject, string $message, int|string|null $assigneeId = null, array $attachments = []): Ticket
     {
         $panelId = Filament::getCurrentOrDefaultPanel()->getId();
-        $status = resolve(GetDefaultStatusForPanel::class)($panelId);
-        $priority = resolve(GetDefaultPriorityForPanel::class)($panelId);
+        $tenantId = $requester->getAttribute('tenant_id');
+        $status = resolve(GetDefaultStatusForPanel::class)($panelId, $tenantId);
+        $priority = resolve(GetDefaultPriorityForPanel::class)($panelId, $tenantId);
 
         return DB::transaction(function () use ($requester, $subject, $message, $assigneeId, $attachments, $panelId, $status, $priority): Ticket {
             $ticket = TicketPlugin::resolveModelClass(Ticket::class)::create([
@@ -70,8 +71,10 @@ class TicketStarter
      */
     public function ask(string $targetPanelId, string $subject, string $message, array $attachments = []): Ticket
     {
-        $status = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
-        $priority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
+        $asker = Filament::auth()->user();
+        $tenantId = $asker instanceof Model ? $asker->getAttribute('tenant_id') : null;
+        $status = resolve(GetDefaultStatusForPanel::class)($targetPanelId, $tenantId);
+        $priority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId, $tenantId);
 
         return DB::transaction(function () use ($targetPanelId, $subject, $message, $attachments, $status, $priority): Ticket {
             $ticket = TicketPlugin::resolveModelClass(Ticket::class)::create([

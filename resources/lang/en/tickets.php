@@ -132,6 +132,7 @@ return [
             'submit' => 'Close tickets',
             'closed' => '{0} No tickets were closed.|{1} Closed 1 ticket.|[2,*] Closed :count tickets.',
             'skipped' => '{1} 1 was skipped.|[2,*] :count were skipped.',
+            'skipped_disposition' => '{1} 1 was skipped: its organization has no disposition by that name.|[2,*] :count were skipped: their organization has no disposition by that name.',
         ],
 
         'delete' => [

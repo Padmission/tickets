@@ -594,9 +594,13 @@ class TicketResource extends Resource
                 || $records->whereInstanceOf(Ticket::class)->contains(fn (Ticket $ticket): bool => $closer()->canClose($ticket)))
             ->action(function (Collection $records, array $data) use ($key, $closer): void {
                 $closed = 0;
+                $skipped = 0;
+                $missingName = 0;
 
                 foreach ($records->whereInstanceOf(Ticket::class) as $ticket) {
                     if (! $closer()->canClose($ticket)) {
+                        $skipped++;
+
                         continue;
                     }
 
@@ -606,6 +610,10 @@ class TicketResource extends Resource
                         : null;
 
                     if ($dispositionId === null && $dispositions->exists()) {
+                        // The name was chosen, but this ticket's organization has
+                        // none by it. Leave the ticket open and say so.
+                        filled($data['disposition'] ?? null) ? $missingName++ : $skipped++;
+
                         continue;
                     }
 
@@ -613,11 +621,13 @@ class TicketResource extends Resource
                     $closed++;
                 }
 
-                $skipped = $records->count() - $closed;
-
                 Notification::make()
-                    ->title(trim(trans_choice($key.'closed', $closed).' '.($skipped > 0 ? trans_choice($key.'skipped', $skipped) : '')))
-                    ->status($skipped > 0 ? 'warning' : 'success')
+                    ->title(trim(implode(' ', array_filter([
+                        trans_choice($key.'closed', $closed),
+                        $skipped > 0 ? trans_choice($key.'skipped', $skipped) : null,
+                        $missingName > 0 ? trans_choice($key.'skipped_disposition', $missingName) : null,
+                    ]))))
+                    ->status(($skipped + $missingName) > 0 ? 'warning' : 'success')
                     ->send();
             })
             ->deselectRecordsAfterCompletion();

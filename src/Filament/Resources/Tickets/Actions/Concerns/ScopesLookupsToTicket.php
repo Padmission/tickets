@@ -9,8 +9,10 @@ use Padmission\Tickets\Models\Ticket;
 
 /*
  * Statuses, priorities and dispositions offered for a ticket come from its own
- * panel and tenant. A cross-tenant panel lifts the host's tenant scope from
- * these relations, so without this its staff would see every tenant's rows.
+ * panel and organization. A cross-tenant panel lifts the host's tenant scope
+ * from these relations, so without this its staff would see every organization's
+ * rows. The organization is the ticket's whenever it has one, whether or not
+ * the host has turned tenancy on: those lookups belong to that organization.
  */
 trait ScopesLookupsToTicket
 {
@@ -28,14 +30,15 @@ trait ScopesLookupsToTicket
             $query->where($query->getModel()->qualifyColumn('panel'), $ticket->panel);
         }
 
-        if (
-            $ticket instanceof Ticket
-            && config('padmission-tickets.tenancy.enabled')
-            && filled($ticket->getAttribute('tenant_id'))
-        ) {
-            $query->where($query->getModel()->qualifyColumn('tenant_id'), $ticket->tenant_id);
+        if ($ticket instanceof Ticket && $this->lookupBelongsToTicketsOrganization($ticket)) {
+            $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
         }
 
         return $query;
+    }
+
+    protected function lookupBelongsToTicketsOrganization(Ticket $ticket): bool
+    {
+        return filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled');
     }
 }

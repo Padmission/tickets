@@ -3,19 +3,30 @@
 namespace Padmission\Tickets\Actions;
 
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\TicketPlugin;
 use RuntimeException;
 
 class GetDefaultPriorityForPanel
 {
-    public function __invoke(string $panelId): TicketPriority
+    public function __invoke(string $panelId, mixed $tenantId = null): TicketPriority
     {
-        $defaultPriority = TicketPlugin::resolveModelClass(TicketPriority::class)::query()
-            ->withoutGlobalScope(CurrentPanelScope::class)
-            ->where('panel', $panelId)
-            ->orderBy('order', 'asc')
-            ->first();
+        $priorityModel = TicketPlugin::resolveModelClass(TicketPriority::class);
+
+        if (filled($tenantId)) {
+            $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
+            $defaultPriority = $priorityModel::getDefaultFor((new $ticketModel)->forceFill([
+                'panel' => $panelId,
+                'tenant_id' => $tenantId,
+            ]));
+        } else {
+            $defaultPriority = $priorityModel::query()
+                ->withoutGlobalScope(CurrentPanelScope::class)
+                ->where('panel', $panelId)
+                ->orderBy('order', 'asc')
+                ->first();
+        }
 
         if (! $defaultPriority) {
             throw new RuntimeException(sprintf(

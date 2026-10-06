@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Http\Controllers\Api;
 
 use Filament\Facades\Filament;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
@@ -50,8 +51,11 @@ class CreateTicketController
             resolve(TicketAuth::class)->refuseDisabledReply($followedUp, $request->user());
         }
 
-        $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
-        $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
+        $user = $request->user();
+        $tenantId = $followedUp?->getAttribute('tenant_id')
+            ?? ($user instanceof Model ? $user->getAttribute('tenant_id') : null);
+        $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId, $tenantId);
+        $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId, $tenantId);
 
         $ticket = $this->createTicket(
             $request,

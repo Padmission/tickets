@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Services;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
@@ -41,6 +42,12 @@ class TicketCloser
 
     public function close(Ticket $ticket, int|string|null $dispositionId): void
     {
+        if (filled($dispositionId) && ! $this->dispositionsFor($ticket)->whereKey($dispositionId)->exists()) {
+            throw ValidationException::withMessages([
+                'disposition' => __('validation.exists', ['attribute' => __('padmission-tickets::tickets.actions.close.disposition.label')]),
+            ]);
+        }
+
         $ticket->close(
             dispositionId: filled($dispositionId) ? (int) $dispositionId : null,
             closedById: Filament::auth()->id(),

@@ -41,7 +41,9 @@ class TicketPriority extends Model
             ->withoutGlobalScope(CurrentPanelScope::class)
             ->where('panel', $ticket->panel);
 
-        if (config('padmission-tickets.tenancy.enabled')) {
+        // The organization is the ticket's whenever it has one. The tenancy
+        // flag still limits a ticket with none to rows that have none.
+        if (filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled')) {
             $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
         }
 

@@ -83,9 +83,15 @@ class CreateLinkedTicketAction extends Action
                 $currentPanelId = Filament::getCurrentOrDefaultPanel()->getId();
                 $targetPanelId = $data['panel'] ?? array_keys(TicketPlugin::get()->getLinkedTicketParentPanels())[0];
 
+                /**
+                 * @var Ticket $record
+                 */
+                $record = $livewire->record;
+
                 try {
-                    $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId);
-                    $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId);
+                    $tenantId = $record->getAttribute('tenant_id');
+                    $defaultStatus = resolve(GetDefaultStatusForPanel::class)($targetPanelId, $tenantId);
+                    $defaultPriority = resolve(GetDefaultPriorityForPanel::class)($targetPanelId, $tenantId);
                 } catch (RuntimeException $exception) {
                     // The target panel was never given statuses or priorities for
                     // this tenant: a setup gap the user cannot fix from here.
@@ -104,11 +110,6 @@ class CreateLinkedTicketAction extends Action
 
                     return;
                 }
-
-                /**
-                 * @var Ticket $record
-                 */
-                $record = $livewire->record;
 
                 $links = resolve(TicketEscalationLinks::class);
 
