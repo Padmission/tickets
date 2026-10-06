@@ -72,7 +72,12 @@ test('ticket creation with default configuration sends notifications correctly',
                $job->notificationType === 'created';
     });
 
-    Queue::assertPushed(NotificationJob::class, 1);
+    Queue::assertPushed(NotificationJob::class, function ($job) {
+        return $job->getUserId() === $this->supporter->id &&
+               $job->notificationType === 'created';
+    });
+
+    Queue::assertPushed(NotificationJob::class, 2);
 
     Queue::fake();
 

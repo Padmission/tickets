@@ -589,7 +589,7 @@ test('the one email a reassignment and the requester\'s messages share tells the
         }
     }
 
-    expect($sent)->toBe(["Ticket assigned to you #{$ticket->id} – Rent question"]);
+    expect($sent)->toBe(["Ticket #{$ticket->id} assigned to you – Rent question"]);
 })->with(['the messages\' notice first' => true, 'the assignment\'s first' => false]);
 
 test('an activity email about someone else\'s assignment keeps its own wording', function () {

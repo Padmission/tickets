@@ -75,6 +75,19 @@ class NotificationRecipientService
             }
         }
 
+        // A requester opening a ticket notifies only them, so whoever it was
+        // given to, including by auto-assignment, would otherwise hear nothing.
+        // Someone who assigned it to themselves already knows. A host that turns
+        // the created notice off entirely is left off.
+        if ($event instanceof TicketCreatedEvent && $recipientFlag !== NotificationRecipient::None->value) {
+            $assignee = $this->getAssignee($event->ticket);
+            $actorId = $event->actor?->getAuthIdentifier();
+
+            if ($assignee !== null && ($actorId === null || (string) $actorId !== (string) $assignee->getKey())) {
+                $recipients->push($assignee);
+            }
+        }
+
         return $recipients->filter()->unique(fn ($user) => $user->getKey());
     }
 

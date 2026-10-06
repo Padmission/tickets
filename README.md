@@ -1002,7 +1002,7 @@ When a debounced notification is finally sent, the job checks that the ticket st
 The package provides sensible defaults if no configuration is provided:
 
 **Ticket Created**
-- User-triggered: Notifies user only
+- User-triggered: Notifies the user, and the assignee when the ticket has one and they did not assign it to themselves. An unassigned ticket still notifies the user only.
 - Supporter-triggered: Notifies both user and supporter
 
 **Ticket Assigned**

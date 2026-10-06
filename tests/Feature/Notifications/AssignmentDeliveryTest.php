@@ -1,0 +1,398 @@
+<?php
+
+use Filament\Actions\Testing\TestAction;
+use Filament\Facades\Filament;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
+use Padmission\Tickets\AssignmentStrategies\AssignDefaultUser;
+use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
+use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
+use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Policies\TicketPolicy;
+use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
+
+/*
+ * Delivered the way a queue worker does it: the debounce waits, then the job
+ * runs with nobody signed in and no current panel. The default panel is still
+ * what Filament answers with when nothing is current.
+ */
+beforeEach(function () {
+    Gate::policy(Ticket::class, TicketPolicy::class);
+    (new TicketStatusSeeder)->run();
+    (new TicketPrioritySeeder)->run();
+
+    config([
+        'queue.default' => 'database',
+        'padmission-tickets.notification-channels' => ['mail', 'database'],
+        'padmission-tickets.notification-debounce' => 60,
+    ]);
+
+    foreach ([
+        'jobs' => function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedSmallInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        },
+        'notifications' => function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->string('type');
+            $table->morphs('notifiable');
+            $table->text('data');
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+        },
+    ] as $name => $columns) {
+        if (! Schema::hasTable($name)) {
+            Schema::create($name, $columns);
+        }
+    }
+
+    $this->requester = User::factory()->create(['name' => 'Aisha Brooks']);
+    $this->previous = User::factory()->create(['name' => 'Tess Support']);
+    $this->colleague = User::factory()->create(['name' => 'Maria Lopez']);
+    $this->padmission = User::factory()->create(['name' => 'Kevin McKee']);
+    $this->alessa = User::factory()->create(['name' => 'Alessa Support']);
+
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey([$this->previous->id, $this->colleague->id]));
+    TicketPlugin::get('test2')->supportTeamName('Padmission');
+    TicketPlugin::get('test2')->allSupportersQuery(fn () => User::query()->whereKey([$this->padmission->id, $this->alessa->id]));
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+});
+
+function openAssignedTicket(?User $assignee = null, array $attributes = []): Ticket
+{
+    return Ticket::factory()->open()->create([
+        'subject' => 'Rent is wrong',
+        'submitter_id' => test()->requester->id,
+        'assignee_id' => $assignee?->id,
+        ...$attributes,
+    ]);
+}
+
+function forgetQueuedNotices(): void
+{
+    DB::table('jobs')->delete();
+    DB::table('notifications')->delete();
+    app('mailer')->getSymfonyTransport()->flush();
+}
+
+/*
+ * The debounced job is let fall due, then run with the panel and the session
+ * gone, which is where a worker finds the ticket.
+ */
+function deliverQueuedNotices(): int
+{
+    $queued = DB::table('jobs')->count();
+    $panel = Filament::getCurrentPanel();
+    $signedIn = auth()->user();
+
+    Filament::setCurrentPanel(null);
+    auth()->logout();
+    test()->travel((int) config('padmission-tickets.notification-debounce') + 1)->seconds();
+
+    $connection = app('queue')->connection('database');
+
+    for ($i = 0; $i < 20 && ($job = $connection->pop()); $i++) {
+        $job->fire();
+    }
+
+    if ($panel !== null) {
+        Filament::setCurrentPanel($panel);
+    }
+
+    if ($signedIn !== null) {
+        test()->actingAs($signedIn);
+    }
+
+    return $queued;
+}
+
+/**
+ * @return array{mail: list<string>, bells: list<string>}
+ */
+function noticesFor(User $user): array
+{
+    $mail = app('mailer')->getSymfonyTransport()->messages()
+        ->map(fn ($sent) => $sent->getOriginalMessage())
+        ->filter(fn ($message): bool => collect($message->getTo())->contains(
+            fn ($address): bool => $address->getAddress() === $user->email,
+        ))
+        ->map(fn ($message): string => (string) $message->getSubject())
+        ->values()
+        ->all();
+
+    $bells = $user->notifications()->get()
+        ->map(fn ($notification): string => (string) ($notification->data['title'] ?? ''))
+        ->all();
+
+    return ['mail' => $mail, 'bells' => $bells];
+}
+
+function expectTold(User $user, string $phrase, int $queued): void
+{
+    $notices = noticesFor($user);
+
+    expect($queued)->toBeGreaterThan(0)
+        ->and($notices['mail'])->not->toBeEmpty()
+        ->and(implode("\n", $notices['mail']))->toContain($phrase)
+        ->and($notices['bells'])->not->toBeEmpty()
+        ->and(implode("\n", $notices['bells']))->toContain($phrase);
+}
+
+function expectUntold(User $user): void
+{
+    $notices = noticesFor($user);
+
+    expect($notices['mail'])->toBe([])
+        ->and($notices['bells'])->toBe([]);
+}
+
+function reassignOnPage(Ticket $ticket, User $by, int|string $assigneeId): void
+{
+    test()->login($by);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->callAction(TestAction::make(ReassignTicketAction::class)->schemaComponent('assignee', schema: 'form'), [
+            'assignee_id' => $assigneeId,
+        ])
+        ->assertHasNoActionErrors();
+}
+
+it('emails and bells the person a Reassign action gives the ticket to, and not the requester or the actor', function () {
+    $ticket = openAssignedTicket($this->previous);
+    forgetQueuedNotices();
+
+    reassignOnPage($ticket, $this->previous, $this->colleague->id);
+    $queued = deliverQueuedNotices();
+
+    expectTold($this->colleague, "Ticket #{$ticket->id} assigned to you", $queued);
+    expectUntold($this->requester);
+    expectUntold($this->previous);
+});
+
+it('sends nothing when Reassign gives the ticket to the person doing it', function () {
+    $ticket = openAssignedTicket($this->previous);
+    forgetQueuedNotices();
+
+    reassignOnPage($ticket, $this->colleague, $this->colleague->id);
+
+    expect($ticket->refresh()->assignee_id)->toBe($this->colleague->id);
+    deliverQueuedNotices();
+
+    expectUntold($this->colleague);
+    expectUntold($this->requester);
+});
+
+it('emails and bells the person the edit form assigns the ticket to', function () {
+    $ticket = openAssignedTicket($this->previous);
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->callAction(EditTicketAction::class, [
+            'subject' => $ticket->subject,
+            'status_id' => $ticket->status_id,
+            'priority_id' => $ticket->priority_id,
+            'assignee_id' => $this->colleague->id,
+        ])
+        ->assertHasNoActionErrors();
+
+    $queued = deliverQueuedNotices();
+
+    expectTold($this->colleague, "Ticket #{$ticket->id} assigned to you", $queued);
+    expectUntold($this->requester);
+    expectUntold($this->previous);
+});
+
+it('sends nothing when the edit form assigns the ticket to the person editing it', function () {
+    $ticket = openAssignedTicket($this->previous);
+    forgetQueuedNotices();
+    $this->login($this->colleague);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->callAction(EditTicketAction::class, [
+            'subject' => $ticket->subject,
+            'status_id' => $ticket->status_id,
+            'priority_id' => $ticket->priority_id,
+            'assignee_id' => $this->colleague->id,
+        ])
+        ->assertHasNoActionErrors();
+
+    expect($ticket->refresh()->assignee_id)->toBe($this->colleague->id);
+    deliverQueuedNotices();
+
+    expectUntold($this->colleague);
+    expectUntold($this->requester);
+});
+
+it('emails and bells the person a bulk Assign gives the ticket to', function () {
+    $ticket = openAssignedTicket($this->previous);
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    Livewire::test(ListTickets::class)
+        ->callTableBulkAction('assign', [$ticket], ['assignee_id' => $this->colleague->id])
+        ->assertNotified();
+
+    $queued = deliverQueuedNotices();
+
+    expect($ticket->refresh()->assignee_id)->toBe($this->colleague->id);
+    expectTold($this->colleague, "Ticket #{$ticket->id} assigned to you", $queued);
+    expectUntold($this->requester);
+    expectUntold($this->previous);
+});
+
+it('sends nothing when a bulk Assign gives the ticket to the person doing it', function () {
+    $ticket = openAssignedTicket($this->colleague);
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    Livewire::test(ListTickets::class)
+        ->callTableBulkAction('assign', [$ticket], ['assignee_id' => $this->previous->id]);
+
+    expect($ticket->refresh()->assignee_id)->toBe($this->previous->id);
+    deliverQueuedNotices();
+
+    expectUntold($this->previous);
+    expectUntold($this->requester);
+});
+
+it('emails and bells the colleague an escalation is handed to, on the organization side', function () {
+    $escalation = escalationFrom(attributes: [
+        'subject' => 'Rent is wrong',
+        'submitter_id' => $this->previous->id,
+        'assignee_id' => $this->padmission->id,
+    ]);
+    $original = openAssignedTicket($this->previous, ['linked_ticket_id' => $escalation->id]);
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->callAction(TestAction::make(HandOverEscalationAction::class)->schemaComponent('submitter', schema: 'form'), [
+            'new_owner' => $this->colleague->id,
+        ])
+        ->assertHasNoActionErrors();
+
+    $queued = deliverQueuedNotices();
+
+    expect($escalation->refresh()->submitter_id)->toBe($this->colleague->id);
+    expectTold($this->colleague, "Escalation handed to you #{$escalation->id}", $queued);
+    expectUntold($this->requester);
+    expectUntold($this->previous);
+    expect(implode("\n", noticesFor($this->padmission)['mail']))->not->toContain('handed to you');
+    expect($original->refresh()->assignee_id)->toBe($this->previous->id);
+});
+
+it('sends the person taking over an escalation nothing, since they took it themselves', function () {
+    $escalation = escalationFrom(attributes: [
+        'subject' => 'Rent is wrong',
+        'submitter_id' => $this->previous->id,
+        'assignee_id' => $this->padmission->id,
+    ]);
+    $original = openAssignedTicket($this->previous, ['linked_ticket_id' => $escalation->id]);
+    forgetQueuedNotices();
+    $this->login($this->colleague);
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->callAction(TestAction::make('take-over-escalation')->schemaComponent('escalationActions', schema: 'form'))
+        ->assertHasNoActionErrors();
+
+    expect($escalation->refresh()->submitter_id)->toBe($this->colleague->id);
+    deliverQueuedNotices();
+
+    expectUntold($this->colleague);
+    expectUntold($this->requester);
+});
+
+it('emails and bells the supporter the escalation-target team reassigns to', function () {
+    $escalation = escalationFrom(attributes: [
+        'subject' => 'Rent is wrong',
+        'submitter_id' => $this->previous->id,
+        'assignee_id' => $this->padmission->id,
+    ]);
+    forgetQueuedNotices();
+    Filament::setCurrentPanel(Filament::getPanel('test2'));
+    $this->login($this->padmission);
+
+    reassignOnPage($escalation, $this->padmission, $this->alessa->id);
+    $queued = deliverQueuedNotices();
+
+    expectTold($this->alessa, "Ticket #{$escalation->id} assigned to you", $queued);
+    expectUntold($this->previous);
+    expectUntold($this->padmission);
+    expectUntold($this->requester);
+});
+
+it('sends nothing when an escalation-target supporter reassigns the escalation to themselves', function () {
+    $escalation = escalationFrom(attributes: [
+        'subject' => 'Rent is wrong',
+        'submitter_id' => $this->previous->id,
+        'assignee_id' => $this->alessa->id,
+    ]);
+    forgetQueuedNotices();
+    Filament::setCurrentPanel(Filament::getPanel('test2'));
+
+    reassignOnPage($escalation, $this->padmission, $this->padmission->id);
+
+    expect($escalation->refresh()->assignee_id)->toBe($this->padmission->id);
+    deliverQueuedNotices();
+
+    expectUntold($this->padmission);
+    expectUntold($this->previous);
+    expectUntold($this->requester);
+});
+
+it('emails and bells whoever auto-assignment gives a new ticket to', function () {
+    TicketPlugin::get()->assignmentStrategy(new AssignDefaultUser($this->colleague->id));
+    forgetQueuedNotices();
+    $this->login($this->requester);
+
+    $ticket = openAssignedTicket();
+    $queued = deliverQueuedNotices();
+
+    expect($ticket->refresh()->assignee_id)->toBe($this->colleague->id);
+    expectTold($this->colleague, "#{$ticket->id}", $queued);
+    expect($this->colleague->notifications)->not->toBeEmpty();
+});
+
+it('sends nothing when auto-assignment gives a new ticket to the person who opened it', function () {
+    TicketPlugin::get()->assignmentStrategy(new AssignDefaultUser($this->previous->id));
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    $ticket = openAssignedTicket();
+    deliverQueuedNotices();
+
+    expect($ticket->refresh()->assignee_id)->toBe($this->previous->id);
+    expectUntold($this->previous);
+});
+
+it('emails and bells whoever auto-assignment gives a ticket opened through the API', function () {
+    TicketPlugin::get()->assignmentStrategy(new AssignDefaultUser($this->colleague->id));
+    forgetQueuedNotices();
+    $this->login($this->requester);
+
+    $id = $this->postJson(route('padmission-tickets::api.store'), ['subject' => 'Rent is wrong'])
+        ->assertOk()
+        ->json('id');
+
+    $ticket = Ticket::findOrFail($id);
+    $queued = deliverQueuedNotices();
+
+    expect($ticket->assignee_id)->toBe($this->colleague->id);
+    expectTold($this->colleague, "#{$ticket->id}", $queued);
+    expect(implode("\n", noticesFor($this->requester)['mail']))->not->toContain('assigned to you');
+});

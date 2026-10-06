@@ -199,5 +199,5 @@ it('tells whoever held the escalation from the start that it was taken from them
 it('says a ticket was assigned to you once in the subject', function () {
     $mail = (new TicketNotification($this->original, new TicketAssignedEvent($this->original, $this->owner)))->toMail($this->colleague);
 
-    expect($mail->subject)->toBe("Ticket assigned to you #{$this->original->id} – {$this->original->subject}");
+    expect($mail->subject)->toBe("Ticket #{$this->original->id} assigned to you – {$this->original->subject}");
 });

@@ -54,7 +54,7 @@ return [
     ],
 
     'ticket-assigned' => [
-        'subject' => 'Ticket assigned to you #:ticket_id – :subject',
+        'subject' => 'Ticket #:ticket_id assigned to you – :subject',
         'headline' => 'Ticket Assigned',
         'intro' => 'A ticket has been assigned to you for handling.',
         'outro' => 'Please review the ticket and provide your assistance.',
