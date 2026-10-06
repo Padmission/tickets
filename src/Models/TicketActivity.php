@@ -277,9 +277,13 @@ class TicketActivity extends Model
         $to = $this->activityData('to');
 
         if ($this->ticket?->isSubmittedBy($viewerId)) {
-            return blank($to)
-                ? __('padmission-tickets::activities.unassigned_requester')
-                : __('padmission-tickets::activities.assigned_requester', ['name' => e($name($to))]);
+            $key = blank($to) ? 'unassigned_requester' : 'assigned_requester';
+
+            if ($this->ticket->isEscalation()) {
+                $key .= '_escalation';
+            }
+
+            return __("padmission-tickets::activities.{$key}", blank($to) ? [] : ['name' => e($name($to))]);
         }
 
         if (blank($to)) {

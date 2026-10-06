@@ -29,17 +29,20 @@ function assignmentHistory(Ticket $ticket, User $viewer): array
         ->where('type', ActivityType::AssigneeChanged)->pluck('content')->values()->all();
 }
 
-it('shows the requester who now handles their ticket', function (bool $escalated) {
+it('shows the requester who now handles their ticket', function (bool $escalated, string $expected) {
     $attributes = ['submitter_id' => $this->requester->id, 'assignee_id' => $this->previous->id];
     $ticket = $escalated ? escalationFrom(attributes: $attributes) : Ticket::factory()->create($attributes);
     $this->actingAs($this->previous);
     $ticket->update(['assignee_id' => $this->assignee->id]);
     $this->actingAs($this->requester);
 
-    expect(assignmentHistory($ticket, $this->requester))->toBe(['Maria Lopez is now handling your ticket.']);
+    expect(assignmentHistory($ticket, $this->requester))->toBe([$expected]);
     $this->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $ticket]))
-        ->assertOk()->assertJsonFragment(['content' => 'Maria Lopez is now handling your ticket.']);
-})->with([false, true]);
+        ->assertOk()->assertJsonFragment(['content' => $expected]);
+})->with([
+    'ordinary ticket' => [false, 'Maria Lopez is now handling your ticket.'],
+    'escalation' => [true, 'Maria Lopez is now handling your escalation.'],
+]);
 
 it('keeps the staff note while giving the requester their own wording', function () {
     $ticket = Ticket::factory()->create(['submitter_id' => $this->requester->id, 'assignee_id' => $this->previous->id]);
@@ -51,7 +54,7 @@ it('keeps the staff note while giving the requester their own wording', function
     expect(assignmentHistory($ticket, $this->requester))->toBe(['Maria Lopez is now handling your ticket.']);
 });
 
-it('shows neutral requester wording when the ticket becomes unassigned', function (bool $escalated) {
+it('shows neutral requester wording when the ticket becomes unassigned', function (bool $escalated, string $expected) {
     $attributes = ['submitter_id' => $this->requester->id, 'assignee_id' => $this->previous->id];
     $ticket = $escalated ? escalationFrom(attributes: $attributes) : Ticket::factory()->create($attributes);
     $this->actingAs($this->previous);
@@ -59,8 +62,11 @@ it('shows neutral requester wording when the ticket becomes unassigned', functio
 
     expect(assignmentHistory($ticket, $this->previous))->toBe(['Unassigned']);
     $this->actingAs($this->requester);
-    expect(assignmentHistory($ticket, $this->requester))->toBe(['Your ticket is waiting to be assigned.']);
-})->with([false, true]);
+    expect(assignmentHistory($ticket, $this->requester))->toBe([$expected]);
+})->with([
+    'ordinary ticket' => [false, 'Your ticket is waiting to be assigned.'],
+    'escalation' => [true, 'Your escalation is waiting to be assigned.'],
+]);
 
 it('never queues or sends requester notifications for an assignee change', function (bool $escalated, string $assignment) {
     $attributes = ['submitter_id' => $this->requester->id, 'assignee_id' => $this->previous->id];
