@@ -200,6 +200,10 @@ class TicketActivity extends Model
         $number = '#'.(string) $this->activityData('ticket');
         $other = $this->linkedTicket('ticket');
 
+        if ($other?->trashed()) {
+            $other = null;
+        }
+
         return __("padmission-tickets::activities.{$key}", [
             'ticket' => $this->ticketReference($other, $number, $other === null ? null : $this->viewUrlFor($other)),
         ]);

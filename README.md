@@ -824,6 +824,8 @@ The ticket closes through the normal close path, with a disposition when its org
 
 The original receives **Duplicated by #Y** in its history and lists its duplicates with links. The duplicate links back to the original and has a small **Duplicate** badge in the ticket list. Reopening by action, reply or status change clears `duplicate_of_ticket_id` and records **Duplicate link to #X cleared on reopening**. The historical notes remain.
 
+Deleting an original, softly or permanently, clears every ticket's link to it, including links on hidden or deleted duplicates. The duplicates stay closed and their history notes remain, rendered as plain text while the original is gone. Restoring the original does not relink them. The picker and root resolution exclude deleted tickets, even if the host's ticket query includes them.
+
 Tickets involved in escalations are deliberately blocked, including escalations whose originals have been removed, originals linked to a closed escalation, and any escalation found while resolving a duplicate chain. Use **Add to an existing escalation** for that workflow. The disabled action and validation message explain this restriction.
 
 Closing and reopening never notify the requester side, even when a host configures both recipients. Their system notes do not produce requester notification emails either. Actual messages continue to use the normal notification rules.

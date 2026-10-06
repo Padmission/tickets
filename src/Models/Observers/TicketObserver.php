@@ -28,6 +28,16 @@ class TicketObserver
         event(new TicketCreatedEvent($ticket, auth()->user()));
     }
 
+    public function deleted(Ticket $ticket): void
+    {
+        // Soft deletes keep the row, so the foreign key alone cannot clear
+        // these links. Include hidden and trashed duplicates, on this model's
+        // connection so cleanup joins any transaction around the deletion.
+        $ticket->newQueryWithoutScopes()
+            ->where('duplicate_of_ticket_id', $ticket->getKey())
+            ->update(['duplicate_of_ticket_id' => null]);
+    }
+
     public function updating(Ticket $ticket): void
     {
         // Skip status transition logic if close() method is being called explicitly

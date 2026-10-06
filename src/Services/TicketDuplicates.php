@@ -16,6 +16,7 @@ class TicketDuplicates
     public function ticketsFor(Ticket $ticket): Builder
     {
         $query = TicketPlugin::get()->getTicketQuery()
+            ->withoutTrashed()
             ->where('tickets.panel', $ticket->panel);
 
         // Also scope a null tenant: a cross-tenant panel must never offer all tenants.

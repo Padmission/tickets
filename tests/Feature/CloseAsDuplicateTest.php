@@ -3,6 +3,7 @@
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -337,28 +338,106 @@ it('uses the host ticket model for duplicate relationships', function () {
         ->and(CustomTicket::query()->with('duplicateOriginal')->find($duplicate->id)->duplicateOriginal->id)->toBe($original->id);
 });
 
-it('upgrades existing tickets with an idempotent migration and nulls the foreign key on deletion', function () {
-    config()->set('database.connections.duplicate-migration', [
-        'driver' => 'sqlite', 'database' => ':memory:', 'foreign_key_constraints' => true,
+it('clears every incoming duplicate link through model deletion without changing closure or history', function (bool $force) {
+    resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
+    $trashedDuplicate = Ticket::factory()->open()->state(['disposition_id' => null])->create();
+    resolve(TicketDuplicates::class)->close($trashedDuplicate, $this->original->id);
+    $trashedDuplicate->delete();
+    $otherPanel = Ticket::factory()->closed()->state(['disposition_id' => null])->create([
+        'panel' => 'test2', 'duplicate_of_ticket_id' => $this->original->id,
     ]);
-    $connection = DB::connection('duplicate-migration');
-    $schema = Schema::getFacadeRoot();
-    Schema::swap($connection->getSchemaBuilder());
+    $closedAt = $this->duplicate->closed_at;
+    $history = $this->duplicate->ticketActivities()->pluck('data', 'id')->all();
 
-    try {
-        Schema::create('tickets', fn (Blueprint $table) => $table->id());
-        $connection->table('tickets')->insert(['id' => 1]);
-        $migration = require __DIR__.'/../../database/migrations/2026_10_06_000001_add_duplicate_of_ticket_id_to_tickets_table.php';
-        $migration->up();
-        $migration->up();
-        $connection->table('tickets')->insert(['id' => 2, 'duplicate_of_ticket_id' => 1]);
-        $connection->table('tickets')->where('id', 1)->delete();
+    // Cleanup follows the deleted model, even when the viewing panel's scopes hide its duplicates.
+    Filament::setCurrentPanel('test2');
+    $force ? $this->original->forceDelete() : $this->original->delete();
 
-        expect($connection->table('tickets')->where('id', 2)->value('duplicate_of_ticket_id'))->toBeNull();
-    } finally {
-        Schema::swap($schema);
-        DB::purge('duplicate-migration');
+    foreach ([$this->duplicate, $trashedDuplicate, $otherPanel] as $duplicate) {
+        expect($duplicate->refresh()->duplicate_of_ticket_id)->toBeNull();
     }
+
+    Filament::setCurrentPanel('test');
+    expect($this->duplicate->isClosed)->toBeTrue()
+        ->and($this->duplicate->closed_at)->toEqual($closedAt)
+        ->and($this->duplicate->ticketActivities()->pluck('data', 'id')->all())->toBe($history);
+
+    Livewire::test(ViewTicket::class, ['record' => $this->duplicate->id])->assertDontSee('Duplicate of');
+    $list = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $column = $list->instance()->getTable()->getColumn('subject')->record($this->duplicate);
+    expect((string) $column->getSuffix())->not->toContain('Duplicate');
+})->with(['soft delete' => false, 'force delete' => true]);
+
+it('renders the historical duplicate note as plain text with the original gone', function () {
+    resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
+    $note = $this->duplicate->ticketActivities()->where('type', ActivityType::ClosedAsDuplicate)->sole();
+    $noteData = $note->data;
+    $this->original->delete();
+
+    // A host may include its trash in the query; a deleted original still gets no history link.
+    TicketPlugin::get()->customizeTicketQuery(fn (Builder $query): Builder => $query->withTrashed());
+
+    $text = 'Closed as duplicate of #'.$this->original->id;
+    expect($note->refresh()->content)->toBe($text)
+        ->and($note->data)->toBe($noteData);
+    $messages = $this->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $this->duplicate]))->assertOk()->json('messages');
+    expect(collect($messages)->firstWhere('id', $note->id)['content'])->toBe($text);
+});
+
+it('does not relink duplicates or restore their badge when the original is restored', function () {
+    resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
+    $this->original->delete();
+    $this->original->restore();
+
+    expect($this->duplicate->refresh()->duplicate_of_ticket_id)->toBeNull()
+        ->and($this->original->duplicates()->count())->toBe(0);
+    Livewire::test(ViewTicket::class, ['record' => $this->duplicate->id])->assertDontSee('Duplicate of');
+    $list = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $column = $list->instance()->getTable()->getColumn('subject')->record($this->duplicate);
+    expect((string) $column->getSuffix())->not->toContain('Duplicate');
+});
+
+it('uses a former duplicate as the new root after its original is soft-deleted', function () {
+    resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
+    $this->original->delete();
+    $next = Ticket::factory()->open()->state(['disposition_id' => null])->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $next->id])
+        ->callAction(duplicateAction(), ['original' => $this->duplicate->id])->assertHasNoActionErrors();
+
+    expect($next->refresh()->duplicate_of_ticket_id)->toBe($this->duplicate->id);
+});
+
+it('never offers or resolves trashed originals even when the host query includes trash', function () {
+    $this->original->delete();
+    TicketPlugin::get()->customizeTicketQuery(fn (Builder $query): Builder => $query->withTrashed());
+
+    Livewire::test(ViewTicket::class, ['record' => $this->duplicate->id])
+        ->mountAction(duplicateAction())
+        ->assertFormFieldExists('original', fn ($field): bool => ! array_key_exists($this->original->id, $field->getOptions())
+            && ! array_key_exists($this->original->id, $field->getSearchResults('original')));
+
+    expect(fn () => resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id))->toThrow(ValidationException::class);
+
+    // A stale link from before this lifecycle fix must never resolve through a trashed root.
+    $stale = Ticket::factory()->closed()->state(['disposition_id' => null])->create(['duplicate_of_ticket_id' => $this->original->id]);
+    expect(fn () => resolve(TicketDuplicates::class)->close($this->duplicate, $stale->id))->toThrow(ValidationException::class);
+    expect($this->duplicate->refresh()->isClosed)->toBeFalse()
+        ->and($this->duplicate->duplicate_of_ticket_id)->toBeNull();
+});
+
+it('rolls back model deletion and duplicate cleanup together in the caller transaction', function () {
+    resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
+
+    expect(fn () => DB::transaction(function (): void {
+        $this->original->delete();
+        expect($this->duplicate->refresh()->duplicate_of_ticket_id)->toBeNull();
+
+        throw new RuntimeException('Rollback the deletion');
+    }))->toThrow(RuntimeException::class, 'Rollback the deletion');
+
+    expect($this->original->refresh()->trashed())->toBeFalse()
+        ->and($this->duplicate->refresh()->duplicate_of_ticket_id)->toBe($this->original->id);
 });
 
 describe('with tenants', function () {
