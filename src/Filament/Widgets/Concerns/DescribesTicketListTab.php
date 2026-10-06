@@ -2,22 +2,24 @@
 
 namespace Padmission\Tickets\Filament\Widgets\Concerns;
 
+use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive;
-use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 
 /*
- * Above the ticket list, a card describes the tab it sits over, using that
- * tab's own query (the one its badge counts) rather than the whole panel.
- * Anywhere else the list page passes no tab and the card stays panel-wide.
+ * List cards use Filament's filtered page query. Without a page tab, widgets
+ * keep their panel-wide dashboard metrics.
  */
 trait DescribesTicketListTab
 {
-    #[Reactive]
-    public ?string $activeTab = null;
+    use InteractsWithPageTable;
+
+    protected function getTablePage(): string
+    {
+        return TicketResource::getPages()['index']->getPage();
+    }
 
     #[On('refresh-ticket-stats')]
     public function refreshStats(): void {}
@@ -31,10 +33,10 @@ trait DescribesTicketListTab
             return null;
         }
 
-        /** @var ListTickets $page */
-        $page = app('livewire')->new(TicketResource::getPages()['index']->getPage());
+        /** @var Builder<Ticket> $query */
+        $query = $this->getPageTableQuery();
 
-        return $page->ticketsInTab($this->activeTab);
+        return $query->reorder();
     }
 
     protected function isOnEscalatedTab(): bool

@@ -4,6 +4,7 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Pages;
 
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Pages\Concerns\ExposesTableToWidgets;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +26,7 @@ use Padmission\Tickets\TicketPlugin;
 class ListTickets extends ListRecords
 {
     use ExplainsStaleEscalationActions;
+    use ExposesTableToWidgets;
 
     public function updatedActiveTab(): void
     {
@@ -145,14 +147,6 @@ class ListTickets extends ListRecords
             'linked' => (int) ($counts->linked ?? 0),
             'my_linked' => (int) ($counts->my_linked ?? 0),
         ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function getWidgetData(): array
-    {
-        return ['activeTab' => $this->activeTabIsInvalid() ? 'all' : $this->activeTab];
     }
 
     /**

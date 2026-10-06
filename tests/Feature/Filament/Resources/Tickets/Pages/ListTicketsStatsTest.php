@@ -51,8 +51,8 @@ describe('Stat cards', function () {
     it('passes the active tab to the cards', function () {
         $this->login();
 
-        expect(Livewire::test(ListTickets::class)->instance()->getWidgetData())->toBe(['activeTab' => 'all'])
-            ->and(Livewire::test(ListTickets::class)->set('activeTab', 'my')->instance()->getWidgetData())->toBe(['activeTab' => 'my']);
+        expect(Livewire::test(ListTickets::class)->instance()->getWidgetData()['activeTab'])->toBe('all')
+            ->and(Livewire::test(ListTickets::class)->set('activeTab', 'my')->instance()->getWidgetData()['activeTab'])->toBe('my');
     });
 
     it('counts each tab\'s open tickets the same as its badge', function () {
@@ -173,7 +173,7 @@ describe('Stat cards', function () {
 
         Ticket::factory()->closed()->create(['assignee_id' => User::factory()->create()->id, 'created_at' => now()->subDays(3), 'closed_at' => now()]);
 
-        $stat = fn (string $tab) => Livewire::test(TicketCloseTimeWidget::class, ['activeTab' => $tab])->instance()->getStats()[0];
+        $stat = fn (string $tab) => Livewire::test(TicketCloseTimeWidget::class, ['activeTab' => $tab, 'tableFilters' => ['open' => ['isActive' => false]]])->instance()->getStats()[0];
 
         expect($stat('all'))
             ->getValue()->toBe('3 days')
@@ -188,7 +188,7 @@ describe('Stat cards', function () {
 
         Ticket::factory()->count(2)->closed()->create(['assignee_id' => User::factory()->create()->id, 'created_at' => now()->subDay(), 'closed_at' => now()]);
 
-        expect(Livewire::test(TicketCloseTimeWidget::class, ['activeTab' => 'all'])->instance()->getStats()[0]->getDescription())
+        expect(Livewire::test(TicketCloseTimeWidget::class, ['activeTab' => 'all', 'tableFilters' => ['open' => ['isActive' => false]]])->instance()->getStats()[0]->getDescription())
             ->toBe('2 tickets closed');
     });
 
@@ -288,4 +288,46 @@ describe('Sidebar badge', function () {
 
         expect(TicketResource::getNavigationBadge())->toBeNull();
     });
+});
+
+it('keeps every stat card in sync with the exposed tab, filters and search', function () {
+    $me = $this->login();
+    $colleague = User::factory()->create();
+    $mine = Ticket::factory()->open()->create(['assignee_id' => $me->id, 'turn' => Turn::Supporter, 'subject' => 'Find this ticket']);
+    Ticket::factory()->open()->create(['assignee_id' => $colleague->id, 'turn' => Turn::Supporter]);
+    $closed = Ticket::factory()->closed()->create(['assignee_id' => $me->id, 'created_at' => now()->subDays(3), 'closed_at' => now()]);
+    Ticket::factory()->closed()->create(['assignee_id' => $colleague->id, 'created_at' => now()->subDay(), 'closed_at' => now()]);
+
+    $page = Livewire::test(ListTickets::class)->set('activeTab', 'my');
+    $stats = function () use ($page): array {
+        $data = $page->instance()->getWidgetData();
+
+        return array_map(fn (string $widget) => Livewire::test($widget, $data)->instance()->getStats()[0], [
+            OpenTicketsWidget::class, OpenSupporterTickets::class, TicketCloseTimeWidget::class,
+        ]);
+    };
+
+    [$open, $needsReply, $closeTime] = $stats();
+    expect($open->getValue())->toBe(1)
+        ->and($needsReply->getValue())->toBe(1)
+        ->and($closeTime->getDescription())->toBe('0 tickets closed');
+
+    $page->removeTableFilter('open')->filterTable('status', [$closed->status_id]);
+    [$open, $needsReply, $closeTime] = $stats();
+    expect($open->getValue())->toBe(0)
+        ->and($needsReply->getValue())->toBe(0)
+        ->and($closeTime->getValue())->toBe('3 days')
+        ->and($closeTime->getDescription())->toBe('1 ticket closed');
+
+    $page->removeTableFilter('status')->searchTable('Find this ticket');
+    [$open, $needsReply, $closeTime] = $stats();
+    expect($open->getValue())->toBe(1)
+        ->and($needsReply->getValue())->toBe(1)
+        ->and($closeTime->getDescription())->toBe('0 tickets closed');
+
+    $page->searchTable('missing ticket');
+    [$open, $needsReply, $closeTime] = $stats();
+    expect($open->getValue())->toBe(0)
+        ->and($needsReply->getValue())->toBe(0)
+        ->and($closeTime->getDescription())->toBe('0 tickets closed');
 });
