@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
@@ -32,10 +33,12 @@ class NotificationRecipientService
         $eventName = $event::class;
         $triggerType = $this->determineTriggerType($event);
 
-        $recipientFlag = TicketPlugin::get()
-            ->getNotificationConfiguration()
-            ->getConfigurationFor($eventName, $triggerType)
-            ->value;
+        // Queue workers have no current panel; notification rules belong to
+        // the ticket's own panel, like its assignee and relationship scopes.
+        $configuration = TicketPlugin::find($event->ticket->panel)?->getNotificationConfiguration()
+            ?? NotificationConfiguration::make();
+
+        $recipientFlag = $configuration->getConfigurationFor($eventName, $triggerType)->value;
 
         $isRequesterSilent = $event instanceof TicketClosedEvent || $event instanceof TicketReopenedEvent || $event instanceof TicketAssignedEvent
             || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value, ActivityType::AssigneeChanged->value], true));

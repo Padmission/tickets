@@ -1,18 +1,22 @@
 <?php
 
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Enums\NotificationTrigger;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketReopenedEvent;
 use Padmission\Tickets\Jobs\NotificationJob;
 use Padmission\Tickets\Listeners\TicketNotificationListener;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Tests\User;
@@ -112,3 +116,80 @@ it('never resolves a requester for reopen even when configuration selects both s
 
     expect(app(NotificationRecipientService::class)->getNotificationRecipients($event)->pluck('id')->all())->toBe([$this->supporter->id]);
 });
+
+it('uses the ticket panel opt in when a queued close notification is delivered without a current panel', function (bool $enabled) {
+    $closeConfiguration = fn (bool $optIn) => NotificationConfiguration::make()->on(
+        TicketClosedEvent::class,
+        fn (NotificationTrigger $trigger) => match ($trigger) {
+            NotificationTrigger::User => NotificationRecipient::Supporter,
+            NotificationTrigger::Supporter => $optIn ? NotificationRecipient::User : NotificationRecipient::None,
+        }
+    );
+    TicketPlugin::get('test')->notificationConfiguration($closeConfiguration(! $enabled));
+    TicketPlugin::get('test2')->notificationConfiguration($closeConfiguration(true));
+    Filament::setCurrentPanel(Filament::getPanel('test2'));
+    $this->actingAs($this->supporter);
+    $ticket = Ticket::factory()->open()->create([
+        'panel' => 'test2',
+        'submitter_id' => $this->requester->id,
+        'assignee_id' => $this->supporter->id,
+    ]);
+    Queue::fake();
+    $ticket->close();
+
+    $job = Queue::pushed(NotificationJob::class, fn (NotificationJob $job): bool => $job->getUserId() === $this->requester->id && $job->notificationType === 'closed')->sole();
+    $job = unserialize(serialize($job));
+
+    // A queued job must respect the ticket panel's configuration at delivery,
+    // including an opt in withdrawn while it was waiting.
+    TicketPlugin::get('test2')->notificationConfiguration($closeConfiguration($enabled));
+    Filament::setCurrentPanel(null);
+    auth()->logout();
+    expect(Filament::getCurrentPanel())->toBeNull();
+    $job->handle();
+
+    $messages = app('mailer')->getSymfonyTransport()->messages();
+    expect($messages)->toHaveCount($enabled ? 1 : 0);
+    if ($enabled) {
+        $email = $messages->sole()->getOriginalMessage();
+        expect($email->getTo()[0]->getAddress())->toBe($this->requester->email)
+            ->and($email->getHtmlBody())->toContain('Ticket Closed');
+    }
+})->with(['opt in enabled' => true, 'opt in disabled' => false]);
+
+it('uses the ticket panel close opt in when deciding whether a queued reply is replaced by a close email', function (bool $enabled) {
+    TicketPlugin::get('test')->notificationConfiguration(NotificationConfiguration::make()->on(
+        TicketClosedEvent::class, fn () => $enabled ? NotificationRecipient::None : NotificationRecipient::User
+    ));
+    TicketPlugin::get('test2')->notificationConfiguration(NotificationConfiguration::make()->on(
+        TicketClosedEvent::class, fn () => $enabled ? NotificationRecipient::User : NotificationRecipient::None
+    ));
+    Filament::setCurrentPanel(Filament::getPanel('test2'));
+    $this->actingAs($this->supporter);
+    $ticket = Ticket::factory()->open()->create([
+        'panel' => 'test2',
+        'submitter_id' => $this->requester->id,
+        'assignee_id' => $this->supporter->id,
+    ]);
+    Queue::fake();
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::Supporter,
+        'user_id' => $this->supporter->id,
+        'content' => 'The upload is fixed.',
+    ]);
+    $ticket->close();
+    $job = Queue::pushed(NotificationJob::class, fn (NotificationJob $job): bool => $job->getUserId() === $this->requester->id && $job->notificationType === 'activity')->first();
+    $job = unserialize(serialize($job));
+
+    Filament::setCurrentPanel(null);
+    auth()->logout();
+    $job->handle();
+
+    $messages = app('mailer')->getSymfonyTransport()->messages();
+    expect($messages)->toHaveCount($enabled ? 0 : 1);
+    if (! $enabled) {
+        expect($messages->sole()->getOriginalMessage()->getHtmlBody())->toContain('The upload is fixed.');
+    }
+})->with(['opt in enabled' => true, 'opt in disabled' => false]);
