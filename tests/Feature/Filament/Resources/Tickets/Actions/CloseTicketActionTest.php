@@ -59,7 +59,7 @@ it('says what closing does before it closes', function () {
         ->mountAction(CloseTicketAction::class)
         ->assertMountedActionModalSee([
             'Close this ticket?',
-            'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
+            'Anyone who replies to it later is asked whether to reopen it.',
             'Close ticket',
         ]);
 
@@ -105,7 +105,7 @@ it('says an open escalation stays open when its original closes', function (bool
     Livewire::test(ViewTicket::class, ['record' => $original->id])
         ->mountAction(CloseTicketAction::class)
         ->assertMountedActionModalSee([
-            'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
+            'Anyone who replies to it later is asked whether to reopen it.',
             $sentence,
         ]);
 
@@ -119,7 +119,7 @@ it('says an open escalation stays open when its original closes', function (bool
     'the viewer handles it' => [true, 'Its escalation to Platform Support stays open. You can close it from the escalation when Platform Support\'s part is done.'],
 ]);
 
-it('tells the team receiving an escalation who is told and what stays open', function (?string $organization, string $contact) {
+it('tells the team receiving an escalation what stays open', function (?string $organization) {
     (new TicketStatusSeeder)->run();
     $this->login();
     TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
@@ -133,7 +133,7 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     $page = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee(['Close escalation?', "{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it."])
+        ->assertMountedActionModalSee(['Close escalation?', 'The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it.'])
         ->assertMountedActionModalDontSee(['The requester is told it was closed.', 'Close this ticket?']);
 
     expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Close escalation');
@@ -142,10 +142,10 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. The 2 original tickets stay open; Test Admin updates the requesters.");
+        ->assertMountedActionModalSee('The 2 original tickets stay open; Test Admin updates the requesters.');
 })->with([
-    'with an organization' => ['Test Organization', 'Test Admin at Test Organization'],
-    'without one' => [null, 'Test Admin'],
+    'with an organization' => ['Test Organization'],
+    'without one' => [null],
 ]);
 
 it('never offers or requires a deleted disposition', function () {

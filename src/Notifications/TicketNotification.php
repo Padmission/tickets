@@ -7,6 +7,7 @@ use Carbon\CarbonInterval;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification as FilamentNotification;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -15,6 +16,7 @@ use Padmission\Tickets\Actions\GetUserDisplayName;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketDisposition;
@@ -84,7 +86,7 @@ class TicketNotification extends Notification
          * must not be gated on unread activity: the ticket may not have any
          * activities yet at creation time (or the notification may run before
          * they are written when dispatched synchronously). A closed event
-         * likewise always deserves a distinct email, even when a debounced
+         * can send a distinct email to configured recipients, even when a debounced
          * activity notification already consumed the closing activity. A
          * hand over changes who the other team's replies go to, which both
          * people must hear about whatever they have read. Whoever just
@@ -101,8 +103,14 @@ class TicketNotification extends Notification
             return false;
         }
 
+        if ($this->notificationType === 'reopened' && $this->isSubmitter($notifiable)) {
+            return false;
+        }
+
         if ($this->notificationType === 'closed') {
-            return true;
+            return ! $this->isSubmitter($notifiable)
+                || resolve(NotificationRecipientService::class)->getNotificationRecipients($this->event)
+                    ->contains(fn ($recipient): bool => (string) $recipient->getKey() === (string) $notifiable->getKey());
         }
 
         if ($this->notificationType === 'handedover') {
@@ -171,10 +179,17 @@ class TicketNotification extends Notification
 
     protected function closeTellsThem($notifiable): bool
     {
-        return $this->ticket->isClosed
-            && $this->isSubmitter($notifiable)
-            && filled($this->ticket->closed_by)
-            && (string) $this->ticket->closed_by !== (string) $notifiable->getKey();
+        if (! $this->ticket->isClosed || ! $this->isSubmitter($notifiable)
+            || blank($this->ticket->closed_by)
+            || (string) $this->ticket->closed_by === (string) $notifiable->getKey()) {
+            return false;
+        }
+
+        $actor = TicketPlugin::resolveUserModelClass()::query()->withoutGlobalScopes()->find($this->ticket->closed_by);
+        $event = new TicketClosedEvent($this->ticket, $actor instanceof Authenticatable ? $actor : null);
+
+        return resolve(NotificationRecipientService::class)->getNotificationRecipients($event)
+            ->contains(fn ($recipient): bool => (string) $recipient->getKey() === (string) $notifiable->getKey());
     }
 
     /*
@@ -761,6 +776,7 @@ class TicketNotification extends Notification
 
         return $activities
             ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
+                || ($this->isSubmitter($notifiable) && in_array($activity->type, [ActivityType::Closed, ActivityType::Reopened], true))
                 || in_array($activity->getKey(), $toldWhenCreated, false)
                 || ($closedStatusId !== null && $activity->type === ActivityType::Closed)
                 || ($closedStatusId !== null && $activity->type === ActivityType::StatusChanged && (string) ($activity->data['to'] ?? '') === $closedStatusId))

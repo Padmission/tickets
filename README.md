@@ -1014,10 +1014,12 @@ The package provides sensible defaults if no configuration is provided:
 
 **Ticket Closed**
 - User-triggered: Notifies supporter only
-- Supporter-triggered: Notifies user only
+- Supporter-triggered: Sends no notifications
 
 **Ticket Reopened**
-- Either trigger: Notifies supporter
+- Either trigger: Notifies supporter, excluding the requester (including the organization's support person who submitted an escalation)
+
+Close/reopen activity notes remain in chat but do not notify the requester. Hosts can explicitly opt in to requester close notifications through `on(TicketClosedEvent::class, ...)`; the `ticket-closed` notification and mail template remain available.
 
 **Ticket Handed Over** (`TicketHandedOverEvent`)
 - Not configurable through `on()`. The two people the escalation moved between are notified, apart from whoever did it.

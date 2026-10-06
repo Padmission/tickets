@@ -1,7 +1,9 @@
 <?php
 
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Events\TicketActivityEvent;
 use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
@@ -10,6 +12,7 @@ use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Notifications\OtpNotification;
 use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Tests\User;
+use Padmission\Tickets\TicketPlugin;
 use Symfony\Component\Mime\Email;
 
 beforeEach(function () {
@@ -47,6 +50,12 @@ it('leaves the bare app URL out of the plain text while the HTML keeps the host\
 
         $user->notify(new TicketNotification($ticket, new TicketActivityEvent($ticket, ActivityType::Message)));
     }, 'padmission-tickets::notifications.ticket-activity.headline'],
-    'a closed ticket' => [fn (User $user, Ticket $ticket) => $user->notify(new TicketNotification($ticket, new TicketClosedEvent($ticket))), 'padmission-tickets::notifications.ticket-closed.headline'],
+    'a closed ticket' => [function (User $user, Ticket $ticket) {
+        TicketPlugin::get()->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->on(TicketClosedEvent::class, fn () => NotificationRecipient::User)
+        );
+        $user->notify(new TicketNotification($ticket, new TicketClosedEvent($ticket)));
+    }, 'padmission-tickets::notifications.ticket-closed.headline'],
     'a sign-in code' => [fn (User $user) => $user->notify(new OtpNotification($user, '123456')), 'padmission-tickets::notifications.otp-verification.subject'],
 ]);

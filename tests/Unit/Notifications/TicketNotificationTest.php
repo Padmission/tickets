@@ -263,7 +263,7 @@ test('created notification sends even when the ticket has no unread activities',
     expect((new TicketNotification($ticket, $event))->shouldSend($submitter))->toBeTrue();
 });
 
-test('closed notification sends with the closed subject even after the activity notification consumed all activities', function () {
+test('closed notification does not send to the requester after activity was consumed but keeps its template', function () {
     Queue::fake();
     $submitter = User::factory()->create();
     $supporter = User::factory()->create();
@@ -293,7 +293,7 @@ test('closed notification sends with the closed subject even after the activity 
     $closedEvent = new TicketClosedEvent($ticket, $supporter);
     $closedNotification = new TicketNotification($ticket, $closedEvent);
 
-    expect($closedNotification->shouldSend($submitter))->toBeTrue();
+    expect($closedNotification->shouldSend($submitter))->toBeFalse();
 
     $mail = $closedNotification->toMail($submitter);
 
@@ -334,7 +334,7 @@ test('closed notification renders pending activities when it fires before the ac
     $closedEvent = new TicketClosedEvent($ticket, $supporter);
     $closedNotification = new TicketNotification($ticket, $closedEvent);
 
-    expect($closedNotification->shouldSend($submitter))->toBeTrue();
+    expect($closedNotification->shouldSend($submitter))->toBeFalse();
 
     $rendered = (string) $closedNotification->toMail($submitter)->render();
 

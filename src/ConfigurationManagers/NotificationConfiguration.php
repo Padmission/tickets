@@ -48,7 +48,7 @@ final class NotificationConfiguration
                 TicketClosedEvent::class,
                 fn (NotificationTrigger $trigger) => match ($trigger) {
                     NotificationTrigger::User => NotificationRecipient::Supporter,
-                    NotificationTrigger::Supporter => NotificationRecipient::User,
+                    NotificationTrigger::Supporter => NotificationRecipient::None,
                 }
             );
     }

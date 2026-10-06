@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Enums\NotificationTrigger;
@@ -36,6 +37,15 @@ class NotificationRecipientService
             ->getConfigurationFor($eventName, $triggerType)
             ->value;
 
+        $isCloseOrReopen = $event instanceof TicketClosedEvent || $event instanceof TicketReopenedEvent
+            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value], true));
+
+        // Close/reopen history notes are for the chat, not requester notifications.
+        if ($event instanceof TicketReopenedEvent
+            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value], true))) {
+            $recipientFlag &= ~NotificationRecipient::User->value;
+        }
+
         $recipients = collect();
 
         if (($recipientFlag & NotificationRecipient::User->value) === NotificationRecipient::User->value) {
@@ -45,7 +55,11 @@ class NotificationRecipientService
             $assignee = $this->getAssignee($event->ticket);
 
             if ($assignee) {
-                $recipients->push($assignee);
+                // An escalation's requester may also be a supporter or assignee.
+                if (! $isCloseOrReopen
+                    || (string) $assignee->getKey() !== (string) $event->ticket->submitter_id) {
+                    $recipients->push($assignee);
+                }
             } else {
                 $recipients = $recipients->merge($this->getFallbackSupporters($event->ticket, $event->actor));
             }

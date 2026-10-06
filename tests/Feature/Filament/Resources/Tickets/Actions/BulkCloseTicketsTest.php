@@ -115,7 +115,7 @@ it('closes escalations in the panel that received them and leaves their original
     Livewire::test(ListTickets::class)
         ->selectTableRecords($escalations)
         ->mountAction(bulkClose())
-        ->assertMountedActionModalSee('Each escalation is closed as it would be on its own: the team that escalated it is told, and its original tickets stay open.');
+        ->assertMountedActionModalSee('Each escalation is closed as it would be on its own: its original tickets stay open.');
 
     Livewire::test(ListTickets::class)
         ->selectTableRecords($escalations)
