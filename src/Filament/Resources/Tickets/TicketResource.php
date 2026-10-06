@@ -21,6 +21,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
@@ -262,6 +263,35 @@ class TicketResource extends Resource
         ];
     }
 
+    protected static function statusFilter(): SelectFilter
+    {
+        $filter = SelectFilter::make('status')->relationship('status', 'display_name');
+
+        if (! config('padmission-tickets.tenancy.enabled')) {
+            return $filter;
+        }
+
+        // Keep the host's relationship scopes: only a query that actually sees
+        // several organizations needs names in place of organization-specific ids.
+        $statuses = Relation::noConstraints(fn () => TicketPlugin::get()->getTicketQuery()->getModel()->status())
+            ->getQuery()
+            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
+
+        if ((clone $statuses)->distinct()->count('tenant_id') < 2) {
+            return $filter;
+        }
+
+        return $filter
+            ->relationship(null, null)
+            ->options(fn (): array => (clone $statuses)->reorder()->orderBy('display_name')
+                ->distinct()->pluck('display_name', 'display_name')->all())
+            ->query(fn (Builder $query, array $data): Builder => $query->when(
+                filled($data['values'] ?? []),
+                fn (Builder $query): Builder => $query->whereHas('status', fn (Builder $statuses): Builder => $statuses
+                    ->whereIn('display_name', $data['values'])),
+            ));
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -390,8 +420,7 @@ class TicketResource extends Resource
                     ->default()
                     ->query(fn (Builder $query): Builder => $query->whereNull($query->getModel()->qualifyColumn('closed_at'))),
 
-                SelectFilter::make('status')
-                    ->relationship('status', 'display_name')
+                static::statusFilter()
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),

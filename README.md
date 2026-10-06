@@ -769,6 +769,8 @@ TicketPlugin::make()
 
 The organization list opens with the first 50, searched and sorted by the tenant's `name` column. Without `ticketTenantsQuery()` it is empty. `startsTickets(false)` hides **New ticket** on any panel.
 
+When tenancy is enabled, a status filter whose scoped options span several organizations offers each display name once and matches that status in every organization. A panel scoped to one organization keeps its status ID filter. The host's ticket and relationship scopes still control which organizations it can see.
+
 ### Escalations
 
 An organization's panel can escalate a ticket to a central support panel. The escalation is a new ticket in the support panel, linked to the organization's ticket (the "original"). The organization's supporter talks to the support team on the escalation, and to their requester on the original.
