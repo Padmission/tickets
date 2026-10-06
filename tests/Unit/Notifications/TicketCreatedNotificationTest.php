@@ -32,9 +32,13 @@ it('is not sent to the person who just escalated, but still reaches the team it 
 
     $notification = new TicketNotification($escalation, new TicketCreatedEvent($escalation, $owner));
 
+    $mail = $notification->toMail($padmission);
+
     expect($notification->shouldSend($owner))->toBeFalse()
         ->and($notification->shouldSend($padmission))->toBeTrue()
-        ->and($notification->toMail($padmission)->viewData['intro'])->toBe('A new ticket has been created.');
+        ->and($mail->subject)->toBe("Ticket #{$escalation->id} assigned to you – {$escalation->subject}")
+        ->and($mail->viewData['headline'])->toBe('Ticket Assigned')
+        ->and($mail->viewData['intro'])->toBe('A ticket has been assigned to you for handling.');
 });
 
 it('acknowledges a requester\'s own ticket, naming who it is assigned to', function () {

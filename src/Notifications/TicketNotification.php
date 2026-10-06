@@ -199,6 +199,12 @@ class TicketNotification extends Notification
      */
     protected function wordingType($notifiable): string
     {
+        // The created notice is the requester's acknowledgement. Whoever the
+        // ticket was given to reads it as an assignment.
+        if ($this->notificationType === 'created' && $this->isAssignee($notifiable) && ! $this->isSubmitter($notifiable)) {
+            return 'assigned';
+        }
+
         if ($this->notificationType !== 'activity') {
             return $this->notificationType;
         }
@@ -373,12 +379,13 @@ class TicketNotification extends Notification
      */
     protected function wording($notifiable): array
     {
-        $key = "padmission-tickets::notifications.ticket-{$this->wordingType($notifiable)}";
+        $type = $this->wordingType($notifiable);
+        $key = "padmission-tickets::notifications.ticket-{$type}";
 
         $wording = [
             'subject' => $this->subjectLine("{$key}.subject"),
             'headline' => __("{$key}.headline"),
-            'intro' => $this->notificationType === 'created' ? $this->createdIntro($notifiable) : __("{$key}.intro"),
+            'intro' => $this->notificationType === 'created' && $type === 'created' ? $this->createdIntro($notifiable) : __("{$key}.intro"),
             'actionLabel' => __('padmission-tickets::notifications.general.action'),
             'actionUrl' => resolve(TicketUrlService::class)->getActionUrlFor($this->ticket, $notifiable),
         ];
@@ -392,7 +399,7 @@ class TicketNotification extends Notification
             return [...$wording, ...$this->handedOverWording($notifiable)];
         }
 
-        if ($this->wordingType($notifiable) === 'reopened') {
+        if ($type === 'reopened') {
             $reopener = $this->reopening($notifiable)->senderName ?? $this->event->actor?->name;
 
             $wording['intro'] = filled($reopener)
@@ -700,6 +707,12 @@ class TicketNotification extends Notification
     protected function isSubmitter($notifiable): bool
     {
         return $this->ticket->isSubmittedBy($notifiable);
+    }
+
+    protected function isAssignee($notifiable): bool
+    {
+        return filled($this->ticket->assignee_id)
+            && (string) $this->ticket->assignee_id === (string) $notifiable->getKey();
     }
 
     protected function isOwnEscalation($notifiable): bool

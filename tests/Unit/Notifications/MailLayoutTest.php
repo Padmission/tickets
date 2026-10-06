@@ -38,7 +38,14 @@ it('leaves the bare app URL out of the plain text while the HTML keeps the host\
         ->toEndWith('© '.date('Y').' Padmission. All rights reserved.')
         ->and($email->getHtmlBody())->toContain('href="https://padmission.test"');
 })->with([
-    'a new ticket' => [fn (User $user, Ticket $ticket) => $user->notify(new TicketNotification($ticket, new TicketCreatedEvent($ticket))), 'padmission-tickets::notifications.ticket-created.headline'],
+    'a new ticket' => [function (User $user, Ticket $ticket) {
+        $ticket->forceFill([
+            'submitter_id' => $user->id,
+            'assignee_id' => User::factory()->create()->id,
+        ])->saveQuietly();
+
+        $user->notify(new TicketNotification($ticket, new TicketCreatedEvent($ticket, $user)));
+    }, 'padmission-tickets::notifications.ticket-created.headline'],
     'a reply' => [function (User $user, Ticket $ticket) {
         TicketActivity::factory()->create([
             'ticket_id' => $ticket->id,

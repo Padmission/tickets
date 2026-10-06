@@ -227,7 +227,7 @@ test('no notifications are sent when configuration disables them', function () {
     Queue::assertNothingPushed();
 });
 
-test('notifications handle missing assignee gracefully', function () {
+test('an unassigned ticket created by its requester notifies the requester and the supporters', function () {
     $this->modifyPlugin(
         fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
     );
@@ -246,7 +246,27 @@ test('notifications handle missing assignee gracefully', function () {
         return $job->getUserId() === $this->submitter->id;
     });
 
-    Queue::assertPushed(NotificationJob::class, 1);
+    Queue::assertPushed(NotificationJob::class, function ($job) {
+        return $job->getUserId() === $this->supporter->id;
+    });
+
+    Queue::assertPushed(NotificationJob::class, 2);
+});
+
+test('a host that leaves supporters off a created ticket does not notify the assignee', function () {
+    TicketPlugin::get()->notificationConfiguration(
+        NotificationConfiguration::make()->on(TicketCreatedEvent::class, fn () => NotificationRecipient::User)
+    );
+
+    $ticket = Ticket::factory()->create([
+        'submitter_id' => $this->submitter->id,
+        'assignee_id' => $this->supporter->id,
+    ]);
+
+    $recipients = (new NotificationRecipientService)->getNotificationRecipients(new TicketCreatedEvent($ticket, $this->submitter));
+
+    expect($recipients)->toHaveCount(1)
+        ->and($recipients->first()->id)->toBe($this->submitter->id);
 });
 
 test('actor determination works correctly without explicit actor', function () {

@@ -306,14 +306,22 @@ describe('Telling the requester', function () {
         expect($ticket->ticketActivities()->count())->toBe(2);
     });
 
-    it('tells a colleague it was given to who it was opened for', function () {
+    it('tells a colleague the ticket was assigned to them', function () {
         $colleague = User::factory()->create(['name' => 'Maria Lopez']);
 
         Livewire::test(ListTickets::class)
             ->callAction(startTicket(), forRequester($this->requester, ['assign' => 'colleague', 'assignee_id' => $colleague->id]));
 
-        Notification::assertSentTo($colleague, TicketNotification::class, fn (TicketNotification $notification): bool => $notification->notificationType === 'created'
-            && $notification->toMail($colleague)->viewData['intro'] === 'Tess Support opened this ticket for Nina Patel.');
+        $ticket = Ticket::query()->sole();
+
+        Notification::assertSentTo($colleague, TicketNotification::class, function (TicketNotification $notification) use ($colleague, $ticket): bool {
+            $mail = $notification->toMail($colleague);
+
+            return $notification->notificationType === 'created'
+                && $mail->subject === "Ticket #{$ticket->id} assigned to you – Pay stubs won't upload"
+                && $mail->viewData['headline'] === 'Ticket Assigned'
+                && $mail->viewData['intro'] === 'A ticket has been assigned to you for handling.';
+        });
     });
 
     it('puts who opened it in the bell, not the message', function () {

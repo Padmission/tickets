@@ -21,8 +21,7 @@ final class NotificationConfiguration
             ->on(
                 TicketCreatedEvent::class,
                 fn (NotificationTrigger $trigger) => match ($trigger) {
-                    NotificationTrigger::User => NotificationRecipient::User,
-                    default => NotificationRecipient::Both,
+                    NotificationTrigger::User, NotificationTrigger::Supporter => NotificationRecipient::Both,
                 }
             )
             ->on(

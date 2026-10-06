@@ -160,6 +160,40 @@ function expectUntold(User $user): void
         ->and($notices['bells'])->toBe([]);
 }
 
+/**
+ * @return list<string>
+ */
+function mailHtmlFor(User $user): array
+{
+    return app('mailer')->getSymfonyTransport()->messages()
+        ->map(fn ($sent) => $sent->getOriginalMessage())
+        ->filter(fn ($message): bool => collect($message->getTo())->contains(
+            fn ($address): bool => $address->getAddress() === $user->email,
+        ))
+        ->map(fn ($message): string => (string) $message->getHtmlBody())
+        ->values()
+        ->all();
+}
+
+function expectAssigned(User $user, Ticket $ticket, int $queued): void
+{
+    $subject = "Ticket #{$ticket->id} assigned to you – {$ticket->subject}";
+
+    expectTold($user, $subject, $queued);
+    expect(implode("\n", mailHtmlFor($user)))
+        ->toContain('Ticket Assigned')
+        ->toContain('A ticket has been assigned to you for handling.');
+}
+
+function expectOpened(User $user, Ticket $ticket): void
+{
+    $notices = noticesFor($user);
+
+    expect(implode("\n", $notices['mail']))->toContain("New ticket #{$ticket->id} – {$ticket->subject}")
+        ->and(implode("\n", $notices['mail']))->not->toContain('assigned to you')
+        ->and(implode("\n", mailHtmlFor($user)))->toContain('New Ticket');
+}
+
 function reassignOnPage(Ticket $ticket, User $by, int|string $assigneeId): void
 {
     test()->login($by);
@@ -364,8 +398,8 @@ it('emails and bells whoever auto-assignment gives a new ticket to', function ()
     $queued = deliverQueuedNotices();
 
     expect($ticket->refresh()->assignee_id)->toBe($this->colleague->id);
-    expectTold($this->colleague, "#{$ticket->id}", $queued);
-    expect($this->colleague->notifications)->not->toBeEmpty();
+    expectAssigned($this->colleague, $ticket, $queued);
+    expectOpened($this->requester, $ticket);
 });
 
 it('sends nothing when auto-assignment gives a new ticket to the person who opened it', function () {
@@ -393,6 +427,6 @@ it('emails and bells whoever auto-assignment gives a ticket opened through the A
     $queued = deliverQueuedNotices();
 
     expect($ticket->assignee_id)->toBe($this->colleague->id);
-    expectTold($this->colleague, "#{$ticket->id}", $queued);
-    expect(implode("\n", noticesFor($this->requester)['mail']))->not->toContain('assigned to you');
+    expectAssigned($this->colleague, $ticket, $queued);
+    expectOpened($this->requester, $ticket);
 });

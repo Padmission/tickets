@@ -950,8 +950,7 @@ $panel->plugin(
                 ->on(
                     TicketCreatedEvent::class,
                     fn (NotificationTrigger $trigger) => match ($trigger) {
-                        NotificationTrigger::User => NotificationRecipient::User,
-                        NotificationTrigger::Supporter => NotificationRecipient::Both,
+                        NotificationTrigger::User, NotificationTrigger::Supporter => NotificationRecipient::Both,
                     }
                 )
                 ->on(
@@ -1002,8 +1001,7 @@ When a debounced notification is finally sent, the job checks that the ticket st
 The package provides sensible defaults if no configuration is provided:
 
 **Ticket Created**
-- User-triggered: Notifies the user, and the assignee when the ticket has one and they did not assign it to themselves. An unassigned ticket still notifies the user only.
-- Supporter-triggered: Notifies both user and supporter
+- Either trigger: Notifies the user and the supporter. The supporter is whoever the ticket is assigned to, and that email says it was assigned to them. On an unassigned ticket, everyone in the panel's supporter query is notified instead, apart from the actor and the submitter. A host that returns `NotificationRecipient::User` for this event tells the requester only.
 
 **Ticket Assigned**
 - Either trigger: Notifies supporter
