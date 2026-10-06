@@ -18,6 +18,8 @@ return [
     'subject_changed' => 'Subject changed from ":from" to ":to"',
     'turn_changed' => '"Waiting on" changed from :from to :to',
     'unknown' => 'Unknown',
+    'assigned_requester' => ':name is now handling your ticket.',
+    'unassigned_requester' => 'Your ticket is waiting to be assigned.',
     'assigned_to' => 'Assigned to :name',
     'assignee_taken' => ':to took this ticket from :from',
     'assignee_handed' => ':from handed this ticket to :to',

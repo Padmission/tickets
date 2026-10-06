@@ -1137,7 +1137,7 @@ All ticket changes are automatically tracked in the activity log (`Padmission\Ti
 - **Priority Changed** - Priority modifications
 - **Status Changed** - Status updates
 - **Subject Changed** - Subject edits
-- **Assignee Changed** - Assignment changes
+- **Assignee Changed** - Assignment changes. Requesters see “:name is now handling your ticket.” or “Your ticket is waiting to be assigned.” in chat, including the organization's support person requesting an escalation. These entries send requesters no email, bell or other notification; staff keep the detailed assignment note.
 - **Turn Changed** - Turn ownership changes
 - **Closed** - Ticket closure with disposition
 - **Reopened** - Ticket reopened

@@ -115,6 +115,7 @@ class TicketActivityService
         return [
             ActivityType::Opened,
             ActivityType::OpenedFor,
+            ActivityType::AssigneeChanged,
             ActivityType::Message,
             ActivityType::Closed,
             ActivityType::Reopened,

@@ -37,12 +37,12 @@ class NotificationRecipientService
             ->getConfigurationFor($eventName, $triggerType)
             ->value;
 
-        $isCloseOrReopen = $event instanceof TicketClosedEvent || $event instanceof TicketReopenedEvent
-            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value], true));
+        $isRequesterSilent = $event instanceof TicketClosedEvent || $event instanceof TicketReopenedEvent || $event instanceof TicketAssignedEvent
+            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value, ActivityType::AssigneeChanged->value], true));
 
-        // Close/reopen history notes are for the chat, not requester notifications.
-        if ($event instanceof TicketReopenedEvent
-            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value], true))) {
+        // Close/reopen and assignment history notes stay in chat without notifying the requester.
+        if ($event instanceof TicketReopenedEvent || $event instanceof TicketAssignedEvent
+            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value, ActivityType::AssigneeChanged->value], true))) {
             $recipientFlag &= ~NotificationRecipient::User->value;
         }
 
@@ -56,12 +56,19 @@ class NotificationRecipientService
 
             if ($assignee) {
                 // An escalation's requester may also be a supporter or assignee.
-                if (! $isCloseOrReopen
+                if (! $isRequesterSilent
                     || (string) $assignee->getKey() !== (string) $event->ticket->submitter_id) {
                     $recipients->push($assignee);
                 }
             } else {
-                $recipients = $recipients->merge($this->getFallbackSupporters($event->ticket, $event->actor));
+                $fallback = $this->getFallbackSupporters($event->ticket, $event->actor);
+
+                if ($event instanceof TicketAssignedEvent
+                    || ($event instanceof TicketActivityEvent && $event->activityType === ActivityType::AssigneeChanged->value)) {
+                    $fallback = $fallback->reject(fn ($user): bool => $event->ticket->isSubmittedBy($user));
+                }
+
+                $recipients = $recipients->merge($fallback);
             }
         }
 

@@ -103,7 +103,7 @@ class TicketNotification extends Notification
             return false;
         }
 
-        if ($this->notificationType === 'reopened' && $this->isSubmitter($notifiable)) {
+        if (in_array($this->notificationType, ['reopened', 'assigned'], true) && $this->isSubmitter($notifiable)) {
             return false;
         }
 
@@ -776,7 +776,7 @@ class TicketNotification extends Notification
 
         return $activities
             ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
-                || ($this->isSubmitter($notifiable) && in_array($activity->type, [ActivityType::Closed, ActivityType::Reopened], true))
+                || ($this->isSubmitter($notifiable) && in_array($activity->type, [ActivityType::Closed, ActivityType::Reopened, ActivityType::AssigneeChanged], true))
                 || in_array($activity->getKey(), $toldWhenCreated, false)
                 || ($closedStatusId !== null && $activity->type === ActivityType::Closed)
                 || ($closedStatusId !== null && $activity->type === ActivityType::StatusChanged && (string) ($activity->data['to'] ?? '') === $closedStatusId))
