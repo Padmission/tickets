@@ -9,6 +9,7 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Lang;
+use Padmission\Tickets\Enums\Turn;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\OpenTicketForContactAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\StartTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEscalationActions;
@@ -116,16 +117,16 @@ class ListTickets extends ListRecords
     }
 
     /**
-     * @var array{linked: int, my_linked: int}|null
+     * @var array{linked: int, my_linked: int, overdue_linked: int}|null
      */
     protected ?array $openEscalatedCounts = null;
 
     /**
-     * Both escalated tabs are counted in one query from the linked tab's own
+     * The escalated tabs are counted in one query from the linked tab's own
      * query, so the badges match the lists. The result lives on this request's
      * component instance, so it is never stale on the next one.
      *
-     * @return array{linked: int, my_linked: int}
+     * @return array{linked: int, my_linked: int, overdue_linked: int}
      */
     protected function openEscalatedCounts(): array
     {
@@ -137,26 +138,71 @@ class ListTickets extends ListRecords
             ->modifyQuery(TicketResource::getEloquentQuery())
             ->open();
 
+        $overdue = (clone $query)->overdue()->select($query->qualifyColumn('id'));
         $counts = $query
+            ->leftJoinSub($overdue, 'overdue_escalations', 'overdue_escalations.id', '=', $query->qualifyColumn('id'))
             ->toBase()
             ->selectRaw('count(*) as linked')
+            ->selectRaw('count(overdue_escalations.id) as overdue_linked')
             ->selectRaw('coalesce(sum(case when '.$query->qualifyColumn('submitter_id').' = ? then 1 else 0 end), 0) as my_linked', [Filament::auth()->id()])
             ->first();
 
         return $this->openEscalatedCounts = [
             'linked' => (int) ($counts->linked ?? 0),
             'my_linked' => (int) ($counts->my_linked ?? 0),
+            'overdue_linked' => (int) ($counts->overdue_linked ?? 0),
+        ];
+    }
+
+    /** @var array<string, int>|null */
+    protected ?array $presetCounts = null;
+
+    /**
+     * The five local presets share one aggregate and an indexed overdue lookup.
+     * No tickets or activity collections are hydrated to draw the badges.
+     *
+     * @return array<string, int>
+     */
+    protected function presetCounts(): array
+    {
+        if ($this->presetCounts !== null) {
+            return $this->presetCounts;
+        }
+
+        $query = TicketResource::allTicketsQuery()->open();
+        $overdue = (clone $query)->overdue()->select($query->qualifyColumn('id'));
+        $turn = $query->qualifyColumn('turn');
+        $assignee = $query->qualifyColumn('assignee_id');
+        $ids = TicketPlugin::get()->getCurrentUserAssigneeIds() ?: [0];
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $counts = $query
+            ->leftJoinSub($overdue, 'overdue_tickets', 'overdue_tickets.id', '=', $query->qualifyColumn('id'))
+            ->toBase()
+            ->selectRaw("coalesce(sum(case when {$turn} = ? then 1 else 0 end), 0) as needs_reply", [Turn::Supporter->value])
+            ->selectRaw('count(overdue_tickets.id) as overdue')
+            ->selectRaw("coalesce(sum(case when {$assignee} is null then 1 else 0 end), 0) as unassigned")
+            ->selectRaw("coalesce(sum(case when {$turn} = ? then 1 else 0 end), 0) as waiting_on_requester", [Turn::User->value])
+            ->selectRaw("coalesce(sum(case when {$assignee} in ({$placeholders}) then 1 else 0 end), 0) as my_open", $ids)
+            ->first();
+
+        return $this->presetCounts = [
+            'needs_reply' => (int) ($counts->needs_reply ?? 0),
+            'overdue' => (int) ($counts->overdue ?? 0),
+            'unassigned' => (int) ($counts->unassigned ?? 0),
+            'waiting_on_requester' => (int) ($counts->waiting_on_requester ?? 0),
+            'my_open' => (int) ($counts->my_open ?? 0),
         ];
     }
 
     /**
+     * @param  Builder<Ticket>|null  $query
      * @return Builder<Ticket>
      */
-    public function ticketsInTab(string $tab): Builder
+    public function ticketsInTab(string $tab, ?Builder $query = null): Builder
     {
         $tabs = $this->getCachedTabs();
 
-        return ($tabs[$tab] ?? $tabs['all'])->modifyQuery(TicketResource::getEloquentQuery());
+        return ($tabs[$tab] ?? $tabs['all'])->modifyQuery($query ?? TicketResource::getEloquentQuery());
     }
 
     public function openTicketCount(string $tab): int
@@ -237,6 +283,34 @@ class ListTickets extends ListRecords
                 )),
         ];
 
+        $viewer = ConversationViewer::current();
+
+        if ($viewer->isSupporter) {
+            $presets = [
+                'needs_reply' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->open()->where($query->qualifyColumn('turn'), Turn::Supporter),
+                'overdue' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->overdue(),
+                'unassigned' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->open()->whereNull($query->qualifyColumn('assignee_id')),
+                'waiting_on_requester' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->open()->where($query->qualifyColumn('turn'), Turn::User),
+                'my_open' => fn (Builder $query): Builder => $this->ticketsInTab('my', $query)->open(),
+            ];
+
+            foreach ($presets as $name => $scope) {
+                $tabs[$name] = Tab::make()
+                    ->label(__("padmission-tickets::tickets.resources.tickets.tabs.{$name}"))
+                    ->badge(fn (): int => $this->presetCounts()[$name])
+                    ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
+                    ->modifyQueryUsing($scope);
+            }
+
+            if ($viewer->receivesEscalations) {
+                $tabs['open_escalations'] = Tab::make()
+                    ->label(__('padmission-tickets::tickets.resources.tickets.tabs.open_escalations'))
+                    ->badge(fn (): int => $this->openTicketCount('open_escalations'))
+                    ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
+                    ->modifyQueryUsing(fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->escalations()->open());
+            }
+        }
+
         // Only a panel that escalates has tickets of its own linked elsewhere, and
         // escalating is the organization's business, never its requesters'.
         if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0 || ! ConversationViewer::current()->isSupporter) {
@@ -259,6 +333,16 @@ class ListTickets extends ListRecords
                 static::withEscalationAssignees(static::escalationsFromThisPanel($query)
                     ->where($query->qualifyColumn('submitter_id'), Filament::auth()->id()))
             ));
+
+        foreach (['open_linked', 'overdue_linked'] as $name) {
+            $tabs[$name] = Tab::make()
+                ->label(__("padmission-tickets::tickets.resources.tickets.tabs.{$name}"))
+                ->badge(fn (): int => $this->openEscalatedCounts()[$name === 'open_linked' ? 'linked' : $name])
+                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
+                ->modifyQueryUsing(fn (Builder $query): Builder => $name === 'open_linked'
+                    ? $this->ticketsInTab('linked', $query)->open()
+                    : $this->ticketsInTab('linked', $query)->overdue());
+        }
 
         return $tabs;
     }

@@ -41,6 +41,6 @@ trait DescribesTicketListTab
 
     protected function isOnEscalatedTab(): bool
     {
-        return in_array($this->activeTab, ['linked', 'my_linked'], true);
+        return str_contains((string) $this->activeTab, 'linked');
     }
 }

@@ -294,6 +294,17 @@ class YourServiceProvider {
 
 The ticket list has **All Tickets** and **My Tickets** tabs. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
 
+Supporters also get these preset tabs in both the organization panel and the panel that receives escalations:
+
+- **Needs Reply** - open, waiting on support, regardless of assignee
+- **Overdue** - open, waiting on support past the reply threshold
+- **Unassigned** - open, with nobody assigned
+- **Waiting on Requester** - open, waiting on the requester
+- **My Open Tickets** - the open subset of **My Tickets**, using the same assignee resolver
+- **Open Escalations** - the open subset of sent **Escalations** on an organization panel, or received escalations on a receiving panel
+
+A panel that sends escalations also has **Overdue Escalations**, using the same overdue rule for the other team's replies. These extend the existing tabs; **All Tickets**, **My Tickets**, **Escalations** and **My Escalations** keep their history. Presets always exclude closed tickets even when "Open tickets only" is off. The existing **Waiting on** state drives the reply presets, including turns changed through `TurnChanged`. Requesters keep their existing tabs and access. Preset badges use request-local SQL aggregates rather than loading conversations.
+
 ### Overdue tickets
 
 `Ticket::query()->overdue()` finds open tickets whose current **Waiting on** is support and whose last requester message is older than the threshold. Support updates, internal notes and `TurnChanged` history do not reset that message clock. Tickets without a requester message are excluded.
