@@ -320,7 +320,7 @@ Configure it in `config/padmission-tickets.php`:
 ],
 ```
 
-With tenancy enabled, the package reads the `timezone` column on the configured `tenancy_model` and applies each organization's local cutoff, including on panels spanning organizations. A missing column, unavailable model, missing organization, empty or invalid timezone, or ticket without an organization uses `app.timezone`. This is independent of the viewer's display timezone. Host ticket and activity scopes remain in effect. The query uses the latest requester message in SQL, with an index for this lookup; it does not load tickets to calculate their ages. Run the host's migrations to add the requester-message index (publish the package migrations first if automatic package migrations are disabled).
+With tenancy enabled, the package reads the `timezone` column on the configured `tenancy_model` and applies each organization's local cutoff, including on panels spanning organizations. A missing column, unavailable model, missing organization, empty or invalid timezone, or ticket without an organization uses `app.timezone`. This is independent of the viewer's display timezone. Host ticket and activity scopes remain in effect. The query uses the latest requester message in SQL, with an index for this lookup; it does not load tickets to calculate their ages. Run the host's migrations to add the requester-message index. Hosts with `run_migrations` set to `false` need a host migration creating `ticket_activities_requester_age_index` on `(ticket_id, type, sender, created_at)`; the package migration does not run automatically there.
 
 ## Widgets
 
@@ -329,7 +329,7 @@ This package comes with multiple Filament widgets that can be added to your dash
 - **OpenTicketsWidget** - Shows count of open tickets
 - **OpenSupporterTickets** - Shows tickets assigned to supporters
 - **TicketCloseTimeWidget** - Displays average ticket close times
-- **OverdueTicketsWidget** - Counts overdue tickets and links to the Overdue preset
+- **OverdueTicketsWidget** - Counts overdue tickets and enables the Overdue filter on the current tab
 - **TicketBurndownChartWidget** - Visualizes ticket closure trends
 
 Widgets are not registered on the panel by default. Pass `shouldRegisterWidgets: true` to add them:
@@ -340,7 +340,7 @@ TicketPlugin::make()
     ->registerResources(shouldRegisterWidgets: true)
 ```
 
-Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the preset. Clicking it opens **Overdue** (or **Overdue Escalations** from a sent-escalation tab), retaining table filters and search. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
+Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the preset. Clicking it stays on the current tab and turns on the **Overdue** table filter, retaining other table filters and search so the list matches the card count. **Overdue** and **Overdue Escalations** remain available as preset tabs. On a dashboard, the card opens **All Tickets** with the **Overdue** filter enabled. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
 
 ### Authorization
 

@@ -24,14 +24,14 @@ class OverdueTicketsWidget extends BaseWidget
     {
         $query = $this->ticketsInActiveTab() ?? TicketResource::allTicketsQuery();
         $count = $query->overdue()->count();
-        $parameters = ['tab' => $this->isOnEscalatedTab() ? 'overdue_linked' : 'overdue'];
-
-        if ($this->activeTab !== null) {
-            $parameters += [
-                'filters' => $this->tableFilters,
-                'search' => $this->tableSearch,
-            ];
-        }
+        $parameters = [
+            'tab' => $this->activeTab ?? 'all',
+            'filters' => [
+                ...($this->tableFilters ?? []),
+                'overdue' => ['isActive' => true],
+            ],
+            'search' => $this->tableSearch,
+        ];
 
         return [
             Stat::make(__('padmission-tickets::widgets.overdue.label'), $count)

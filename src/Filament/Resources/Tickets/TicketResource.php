@@ -265,6 +265,15 @@ class TicketResource extends Resource
         ];
     }
 
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected static function applyOverdueFilter(Builder $query): Builder
+    {
+        return $query->overdue();
+    }
+
     protected static function statusFilter(): SelectFilter
     {
         $filter = SelectFilter::make('status')->relationship('status', 'display_name');
@@ -421,6 +430,11 @@ class TicketResource extends Resource
                     ->toggle()
                     ->default()
                     ->query(fn (Builder $query): Builder => $query->whereNull($query->getModel()->qualifyColumn('closed_at'))),
+
+                Filter::make('overdue')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.filters.overdue'))
+                    ->toggle()
+                    ->query(static::applyOverdueFilter(...)),
 
                 static::statusFilter()
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))

@@ -625,6 +625,7 @@ return [
 
             'filters' => [
                 'open_only' => 'Open tickets only',
+                'overdue' => 'Overdue',
             ],
 
             'empty' => [
