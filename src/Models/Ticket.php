@@ -25,6 +25,7 @@ use Padmission\Tickets\Models\Concerns\ManagesStatus;
 use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\Support\ConversationStateQuery;
 use Padmission\Tickets\Support\ConversationViewer;
+use Padmission\Tickets\Support\OverdueTicketsQuery;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
@@ -103,6 +104,15 @@ class Ticket extends Model
     public function scopeOpen(Builder $query): Builder
     {
         return $query->whereNull('closed_at');
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    public function scopeOverdue(Builder $query): Builder
+    {
+        return OverdueTicketsQuery::apply($query);
     }
 
     public function scopeClosed(Builder $query): Builder

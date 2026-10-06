@@ -49,6 +49,13 @@ return [
         'tenancy_model' => Tenant::class,
     ],
 
+    'overdue' => [
+        // One business day is 24 weekday hours; weekends pause the clock.
+        'business_days' => 1,
+        // Null resolves the organization's timezone, then the app timezone.
+        'timezone' => null,
+    ],
+
     'levels' => [
         // 'default' => fn () => __('padmission-tickets::tickets.levels.default'),
         // 'escalated' => fn () => __('padmission-tickets::tickets.levels.escalated'),

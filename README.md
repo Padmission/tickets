@@ -294,6 +294,23 @@ class YourServiceProvider {
 
 The ticket list has **All Tickets** and **My Tickets** tabs. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
 
+### Overdue tickets
+
+`Ticket::query()->overdue()` finds open tickets whose current **Waiting on** is support and whose last requester message is older than the threshold. Support updates, internal notes and `TurnChanged` history do not reset that message clock. Tickets without a requester message are excluded.
+
+The default is **1 business day**, meaning 24 local weekday hours. Saturday and Sunday pause the clock; holidays and office hours are not excluded. A Friday 10 a.m. message becomes overdue after Monday 10 a.m., including across daylight-saving changes. Equality at the threshold is not overdue.
+
+Configure it in `config/padmission-tickets.php`:
+
+```php
+'overdue' => [
+    'business_days' => 1, // A positive whole number
+    'timezone' => null,  // Or a timezone such as 'America/New_York' for every ticket
+],
+```
+
+With tenancy enabled, the package reads the `timezone` column on the configured `tenancy_model` and applies each organization's local cutoff, including on panels spanning organizations. A missing column, unavailable model, missing organization, empty or invalid timezone, or ticket without an organization uses `app.timezone`. This is independent of the viewer's display timezone. Host ticket and activity scopes remain in effect. The query uses the latest requester message in SQL, with an index for this lookup; it does not load tickets to calculate their ages. Run the host's migrations to add the requester-message index (publish the package migrations first if automatic package migrations are disabled).
+
 ## Widgets
 
 This package comes with multiple Filament widgets that can be added to your dashboard:
