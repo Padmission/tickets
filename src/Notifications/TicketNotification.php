@@ -18,6 +18,7 @@ use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
 use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketActivityService;
@@ -79,6 +80,11 @@ class TicketNotification extends Notification
 
     protected function decideToSend($notifiable): bool
     {
+        // Re-check at delivery, including jobs queued before the notification rule changed.
+        if ($this->isSubmitter($notifiable) && in_array($this->notificationType, ['closed', 'reopened'], true)) {
+            return false;
+        }
+
         /*
          * A created event is an acknowledgement of the ticket itself, so it
          * must not be gated on unread activity: the ticket may not have any
@@ -107,11 +113,6 @@ class TicketNotification extends Notification
 
         if ($this->notificationType === 'handedover') {
             return $this->decideHandOver($notifiable);
-        }
-
-        // The closed email tells them itself and quotes the latest reply, so a reply notice due beside it would only contradict it.
-        if ($this->notificationType === 'activity' && $this->closeTellsThem($notifiable)) {
-            return false;
         }
 
         $activities = $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable));
@@ -167,14 +168,6 @@ class TicketNotification extends Notification
         $debounce = (int) config('padmission-tickets.notification-debounce', CarbonInterval::minutes(5)->totalSeconds);
 
         return $gained->created_at->copy()->addSeconds($debounce)->lte($lost->created_at);
-    }
-
-    protected function closeTellsThem($notifiable): bool
-    {
-        return $this->ticket->isClosed
-            && $this->isSubmitter($notifiable)
-            && filled($this->ticket->closed_by)
-            && (string) $this->ticket->closed_by !== (string) $notifiable->getKey();
     }
 
     /*
@@ -745,9 +738,9 @@ class TicketNotification extends Notification
     }
 
     /**
-     * The activities worth telling this recipient about: not what they did
-     * themselves, and not the close of a closed ticket, which the closed
-     * notification tells.
+     * Leave out their own actions and closure notes. Requesters hear about
+     * messages, never about closing, reopening or changes to duplicate links.
+     * Supporters hear about closure through its own event.
      *
      * @param  Collection<int, TicketActivity>  $activities
      * @return Collection<int, TicketActivity>
@@ -755,6 +748,8 @@ class TicketNotification extends Notification
     protected function reportedActivities($notifiable, Collection $activities): Collection
     {
         $closedStatusId = $this->ticket->isClosed ? (string) $this->ticket->status_id : null;
+        $requester = $this->isSubmitter($notifiable);
+        $panelClosedStatusId = $requester ? TicketPlugin::resolveModelClass(TicketStatus::class)::getClosedStatusFor($this->ticket)?->getKey() : null;
         $toldWhenCreated = $this->notificationType !== 'created' && $this->isSubmitter($notifiable)
             ? array_filter([$this->openedFor()['note']?->getKey(), $this->openedFor()['message']?->getKey()])
             : [];
@@ -762,6 +757,9 @@ class TicketNotification extends Notification
         return $activities
             ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
                 || in_array($activity->getKey(), $toldWhenCreated, false)
+                || ($requester && in_array($activity->type, [ActivityType::Closed, ActivityType::Reopened, ActivityType::ClosedAsDuplicate, ActivityType::DuplicatedBy, ActivityType::DuplicateRemoved], true))
+                || ($requester && $panelClosedStatusId !== null && $activity->type === ActivityType::StatusChanged
+                    && in_array($panelClosedStatusId, [$activity->data['from'] ?? null, $activity->data['to'] ?? null], false))
                 || ($closedStatusId !== null && $activity->type === ActivityType::Closed)
                 || ($closedStatusId !== null && $activity->type === ActivityType::StatusChanged && (string) ($activity->data['to'] ?? '') === $closedStatusId))
             ->values();

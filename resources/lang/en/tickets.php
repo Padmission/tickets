@@ -3,6 +3,12 @@
 return [
     'side_you' => 'You',
 
+    'duplicates' => [
+        'badge' => 'Duplicate',
+        'heading' => 'Duplicates',
+        'original' => 'Duplicate of',
+    ],
+
     'enums' => [
         'turn' => [
             'user' => 'Requester',
@@ -21,6 +27,18 @@ return [
     ],
 
     'actions' => [
+        'close_as_duplicate' => [
+            'label' => 'Close as duplicate',
+            'modal_heading' => 'Close this ticket as a duplicate?',
+            'modal_description' => 'This ticket closes with a link to the original. Its messages and attachments stay here. The requester is not notified.',
+            'submit' => 'Close as duplicate',
+            'original' => 'Original ticket',
+            'original_help' => 'Search by subject or ticket number. If you choose a duplicate, its original is used.',
+            'invalid_original' => 'Choose another ticket from the same organization and panel with a valid original.',
+            'invalid_disposition' => 'Choose a disposition offered for this ticket.',
+            'escalation' => 'Tickets involved in an escalation cannot be closed as duplicates. Use Add to an existing escalation instead.',
+            'success' => 'Ticket closed as duplicate',
+        ],
         'open_ticket_for_contact' => [
             'modal_description' => 'For someone at an organization who answers its tickets and asked you directly, such as by phone or email. It\'s listed as their question, and you handle it.',
             'organization' => 'Organization',
@@ -87,14 +105,14 @@ return [
             'label' => 'Close',
             'modal_heading' => 'Close this ticket?',
             'modal_heading_escalation' => 'Close escalation?',
-            'modal_description' => 'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
+            'modal_description' => 'The requester is not notified. Anyone who replies to it later is asked whether to reopen it.',
             'modal_description_escalated_original' => 'Its escalation stays open. :handler can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_to' => 'Its escalation to :team stays open. :handler can close it from the escalation when :team\'s part is done.',
             'modal_description_escalated_original_you' => 'Its escalation stays open. You can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_you_to' => 'Its escalation to :team stays open. You can close it from the escalation when :team\'s part is done.',
             'modal_description_escalated_original_unnamed' => 'Its escalation stays open. Your team can close it from the escalation when the team you escalated to is done.',
             'modal_description_escalated_original_unnamed_to' => 'Its escalation to :team stays open. Your team can close it from the escalation when :team\'s part is done.',
-            'modal_description_received' => '{0} :Contact is told it was closed. Anyone who replies to it later is asked whether to reopen it.|{1} :Contact is told it was closed. The original ticket stays open; :name updates the requester. Anyone who replies to it later is asked whether to reopen it.|[2,*] :Contact is told it was closed. The :count original tickets stay open; :name updates the requesters. Anyone who replies to it later is asked whether to reopen it.',
+            'modal_description_received' => '{0} :Contact is not notified. Anyone who replies to it later is asked whether to reopen it.|{1} :Contact is not notified. The original ticket stays open; :name updates the requester. Anyone who replies to it later is asked whether to reopen it.|[2,*] :Contact is not notified. The :count original tickets stay open; :name updates the requesters. Anyone who replies to it later is asked whether to reopen it.',
             'contact_at' => ':name at :organization',
             'the_contact' => 'the contact',
             'submit' => 'Close ticket',
@@ -126,8 +144,8 @@ return [
         'bulk_close' => [
             'label' => 'Close',
             'modal_heading' => 'Close the selected tickets?',
-            'modal_description' => 'Each ticket is closed as it would be on its own: the requester is told, and nobody can reply to it after that. Tickets already closed, or that you can\'t close, are skipped.',
-            'modal_description_received' => 'Each escalation is closed as it would be on its own: the team that escalated it is told, and its original tickets stay open. Escalations already closed, or that you can\'t close, are skipped.',
+            'modal_description' => 'Each ticket is closed as it would be on its own, without notifying the requester. Anyone who replies later is asked whether to reopen it. Tickets already closed, or that you can\'t close, are skipped.',
+            'modal_description_received' => 'Each escalation is closed as it would be on its own, without notifying the team that escalated it. Its original tickets stay open. Escalations already closed, or that you can\'t close, are skipped.',
             'disposition_help' => 'Each ticket gets the disposition of this name from its own organization. A ticket whose organization has none by this name is skipped.',
             'submit' => 'Close tickets',
             'closed' => '{0} No tickets were closed.|{1} Closed 1 ticket.|[2,*] Closed :count tickets.',

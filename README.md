@@ -816,6 +816,20 @@ TicketPlugin::make()
     ->pinLinkedConversation()
 ```
 
+### Close as duplicate
+
+**Close as duplicate** is in the ticket page's action menu for anyone who can close that ticket. Choose an original by subject or ticket number from the same organization and panel. The ticket itself is excluded. If the selected ticket is a duplicate, the link resolves to its root original; invalid or circular chains are refused.
+
+The ticket closes through the normal close path, with a disposition when its organization and panel offer one. Choose an appropriate disposition, such as "Duplicate". Even without dispositions, the **Closed as duplicate of #X** history note records the reason. Messages and attachments stay on their own tickets; nothing is moved or merged.
+
+The original receives **Duplicated by #Y** in its history and lists its duplicates with links. The duplicate links back to the original and has a small **Duplicate** badge in the ticket list. Reopening by action, reply or status change clears `duplicate_of_ticket_id` and records **Duplicate link to #X cleared on reopening**. The historical notes remain.
+
+Tickets involved in escalations are deliberately blocked, including escalations whose originals have been removed, originals linked to a closed escalation, and any escalation found while resolving a duplicate chain. Use **Add to an existing escalation** for that workflow. The disabled action and validation message explain this restriction.
+
+Closing and reopening never notify the requester side, even when a host configures both recipients. Their system notes do not produce requester notification emails either. Actual messages continue to use the normal notification rules.
+
+The nullable `duplicate_of_ticket_id` foreign key uses `nullOnDelete`. The package ships the guarded, standalone migration `2026_10_06_000001_add_duplicate_of_ticket_id_to_tickets_table.php`, which upgrades existing tables as well as new installations. With `run_migrations` enabled, the host's normal `php artisan migrate` runs it. Hosts with `run_migrations` disabled must publish and run the new package migration, or add an equivalent guarded host migration before deploying the feature. An already-run create-table migration will not add this column.
+
 ### Reopen
 
 A closed ticket reopens in two ways:
@@ -1014,7 +1028,8 @@ The package provides sensible defaults if no configuration is provided:
 
 **Ticket Closed**
 - User-triggered: Notifies supporter only
-- Supporter-triggered: Notifies user only
+- Supporter-triggered: No requester notification
+- Closing and reopening never notify the requester, regardless of the configured recipients
 
 **Ticket Reopened**
 - Either trigger: Notifies supporter
@@ -1139,6 +1154,8 @@ All ticket changes are automatically tracked in the activity log (`Padmission\Ti
 - **Turn Changed** - Turn ownership changes
 - **Closed** - Ticket closure with disposition
 - **Reopened** - Ticket reopened
+- **Closed As Duplicate** / **Duplicated By** - Linked system notes on the duplicate and original
+- **Duplicate Removed** - Duplicate link cleared on reopening
 - **Follows Up** - A new ticket that follows up a closed one
 - **Escalated** - The ticket was escalated
 - **Added To Escalation** / **Removed From Escalation** - On the original, when it's linked to or unlinked from an escalation

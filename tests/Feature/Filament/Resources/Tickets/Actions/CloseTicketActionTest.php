@@ -59,7 +59,7 @@ it('says what closing does before it closes', function () {
         ->mountAction(CloseTicketAction::class)
         ->assertMountedActionModalSee([
             'Close this ticket?',
-            'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
+            'The requester is not notified. Anyone who replies to it later is asked whether to reopen it.',
             'Close ticket',
         ]);
 
@@ -105,7 +105,7 @@ it('says an open escalation stays open when its original closes', function (bool
     Livewire::test(ViewTicket::class, ['record' => $original->id])
         ->mountAction(CloseTicketAction::class)
         ->assertMountedActionModalSee([
-            'The requester is told it was closed. Anyone who replies to it later is asked whether to reopen it.',
+            'The requester is not notified. Anyone who replies to it later is asked whether to reopen it.',
             $sentence,
         ]);
 
@@ -133,8 +133,8 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     $page = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee(['Close escalation?', "{$contact} is told it was closed. The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it."])
-        ->assertMountedActionModalDontSee(['The requester is told it was closed.', 'Close this ticket?']);
+        ->assertMountedActionModalSee(['Close escalation?', "{$contact} is not notified. The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it."])
+        ->assertMountedActionModalDontSee(['The requester is not notified.', 'Close this ticket?']);
 
     expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Close escalation');
 
@@ -142,7 +142,7 @@ it('tells the team receiving an escalation who is told and what stays open', fun
 
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(CloseTicketAction::class)
-        ->assertMountedActionModalSee("{$contact} is told it was closed. The 2 original tickets stay open; Test Admin updates the requesters.");
+        ->assertMountedActionModalSee("{$contact} is not notified. The 2 original tickets stay open; Test Admin updates the requesters.");
 })->with([
     'with an organization' => ['Test Organization', 'Test Admin at Test Organization'],
     'without one' => [null, 'Test Admin'],

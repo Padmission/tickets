@@ -3,6 +3,9 @@
 return [
     'opened' => 'Conversation started',
     'closed' => 'Conversation closed',
+    'closed_as_duplicate' => 'Closed as duplicate of :ticket',
+    'duplicated_by' => 'Duplicated by :ticket',
+    'duplicate_removed' => 'Duplicate link to :ticket cleared on reopening',
     'reopened' => 'Conversation reopened by :name',
     'reopened_unknown' => 'Conversation reopened',
     'follows_up' => 'Follows up on :ticket',

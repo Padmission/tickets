@@ -405,16 +405,16 @@ it('keeps every escalation note out of the requester\'s email and bell, while su
         ->and($bell($this->colleague))->toBe(e(TicketActivity::plainText($this->original->ticketActivities()->latest('id')->first()->content)));
 });
 
-it('sends the owner one closed email, with the reply, when the team replies and closes before the reply notice goes out', function () {
+it('notifies the owner of the team reply without notifying them of closure', function () {
     padmissionReply($this->escalation, $this->padmission, 'Fixed the allowance table.');
     $this->escalation->close(closedById: $this->padmission->id);
 
     $reply = new TicketNotification($this->escalation->refresh(), new TicketActivityEvent($this->escalation, ActivityType::Message, null, $this->padmission));
     $closed = new TicketNotification($this->escalation, new TicketClosedEvent($this->escalation, $this->padmission));
 
-    expect($reply->shouldSend($this->owner))->toBeFalse()
-        ->and($closed->shouldSend($this->owner))->toBeTrue()
-        ->and((string) $closed->toMail($this->owner)->render())->toContain('Fixed the allowance table.');
+    expect($reply->shouldSend($this->owner))->toBeTrue()
+        ->and($closed->shouldSend($this->owner))->toBeFalse()
+        ->and((string) $reply->toMail($this->owner)->render())->toContain('Fixed the allowance table.');
 });
 
 it('still tells the owner of a reply the team sent before closing in a window of its own', function () {
@@ -423,16 +423,16 @@ it('still tells the owner of a reply the team sent before closing in a window of
     expect((new TicketNotification($this->escalation, new TicketActivityEvent($this->escalation, ActivityType::Message, null, $this->padmission)))->shouldSend($this->owner))->toBeTrue();
 });
 
-it('sends a requester one closed email, with the answer, when support answers and closes before the answer\'s notice goes out', function () {
+it('notifies the requester of the support answer without notifying them of closure', function () {
     TicketActivity::factory()->create(['ticket_id' => $this->original->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::Supporter, 'type' => ActivityType::Message, 'content' => 'Fixed on our side.']);
     $this->original->close(closedById: $this->owner->id);
 
     $answer = new TicketNotification($this->original->refresh(), new TicketActivityEvent($this->original, ActivityType::Message, null, $this->owner));
     $closed = new TicketNotification($this->original, new TicketClosedEvent($this->original, $this->owner));
 
-    expect($answer->shouldSend($this->aisha))->toBeFalse()
-        ->and($closed->shouldSend($this->aisha))->toBeTrue()
-        ->and((string) $closed->toMail($this->aisha)->render())->toContain('Fixed on our side.');
+    expect($answer->shouldSend($this->aisha))->toBeTrue()
+        ->and($closed->shouldSend($this->aisha))->toBeFalse()
+        ->and((string) $answer->toMail($this->aisha)->render())->toContain('Fixed on our side.');
 });
 
 it('labels how a ticket was closed as its disposition, which reads apart from the originals still open', function () {

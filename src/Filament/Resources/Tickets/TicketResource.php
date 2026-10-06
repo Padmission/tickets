@@ -325,7 +325,9 @@ class TicketResource extends Resource
 
                 TextColumn::make('subject')
                     ->label(__('padmission-tickets::tickets.resources.tickets.subject'))
-                    ->suffix(fn (Ticket $record): ?HtmlString => static::escalationMarker($record))
+                    ->suffix(fn (Ticket $record): ?HtmlString => filled($record->duplicate_of_ticket_id)
+                        ? new HtmlString(static::escalationMarker($record).static::badge(__('padmission-tickets::tickets.duplicates.badge'), 'gray', null))
+                        : static::escalationMarker($record))
                     ->wrap()
                     ->extraHeaderAttributes(['style' => 'min-width: 9rem'])
                     ->description(fn (Ticket $record): ?string => static::subjectDescription($record))

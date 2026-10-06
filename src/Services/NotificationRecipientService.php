@@ -5,6 +5,7 @@ namespace Padmission\Tickets\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
 use Padmission\Tickets\Enums\NotificationTrigger;
@@ -51,7 +52,18 @@ class NotificationRecipientService
             }
         }
 
-        return $recipients->filter()->unique(fn ($user) => $user->getKey());
+        $silentForRequester = $event instanceof TicketClosedEvent || $event instanceof TicketReopenedEvent
+            || ($event instanceof TicketActivityEvent && in_array($event->activityType, [
+                ActivityType::Closed->value,
+                ActivityType::Reopened->value,
+                ActivityType::ClosedAsDuplicate->value,
+                ActivityType::DuplicatedBy->value,
+                ActivityType::DuplicateRemoved->value,
+            ], true));
+
+        return $recipients->filter()
+            ->reject(fn ($user): bool => $silentForRequester && (string) $user->getKey() === (string) $event->ticket->submitter_id)
+            ->unique(fn ($user) => $user->getKey());
     }
 
     /*

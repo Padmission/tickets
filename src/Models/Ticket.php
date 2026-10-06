@@ -98,6 +98,50 @@ class Ticket extends Model
         );
     }
 
+    /** @return Relations\PanelAwareBelongsTo<Ticket, $this> */
+    public function duplicateOriginal(): Relations\PanelAwareBelongsTo
+    {
+        $relation = $this->panelAwareBelongsTo(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'duplicateOriginal',
+            'duplicate_of_ticket_id',
+        );
+
+        $this->scopeDuplicateRelation($relation->getQuery());
+
+        return $relation;
+    }
+
+    /** @return Relations\PanelAwareHasMany<Ticket, $this> */
+    public function duplicates(): Relations\PanelAwareHasMany
+    {
+        $relation = $this->panelAwareHasMany(
+            TicketPlugin::resolveModelClass(Ticket::class),
+            'duplicates',
+            'duplicate_of_ticket_id',
+        );
+
+        $this->scopeDuplicateRelation($relation->getQuery());
+
+        return $relation;
+    }
+
+    /** @param Builder<Ticket> $query */
+    protected function scopeDuplicateRelation(Builder $query): void
+    {
+        // Eager loading builds the relation on a new model; its normal host
+        // scopes apply there. Lazy loading also follows this ticket's scope.
+        if (! $this->exists) {
+            return;
+        }
+
+        $query->where($query->getModel()->qualifyColumn('panel'), $this->panel);
+
+        if (config('padmission-tickets.tenancy.enabled')) {
+            $query->where($query->getModel()->qualifyColumn('tenant_id'), $this->getAttribute('tenant_id'));
+        }
+    }
+
     /* Scopes */
 
     public function scopeOpen(Builder $query): Builder

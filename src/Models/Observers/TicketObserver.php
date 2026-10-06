@@ -60,6 +60,10 @@ class TicketObserver
         if ($ticket->isDirty('status_id') && ! $ticket->isExplicitCloseCall()) {
             $this->handleStatusClosureAttributesOnly($ticket);
         }
+
+        if ($ticket->isDirty('closed_at') && $ticket->closed_at === null && $ticket->getOriginal('closed_at') !== null) {
+            $ticket->duplicate_of_ticket_id = null;
+        }
     }
 
     public function saved(Ticket $ticket): void
@@ -83,6 +87,10 @@ class TicketObserver
         }
 
         $ticket->addTicketActivity(ActivityType::Reopened, ActivitySender::System, auth()->id());
+
+        if (filled($originalId = $ticket->getOriginal('duplicate_of_ticket_id'))) {
+            $ticket->addTicketActivity(ActivityType::DuplicateRemoved, ActivitySender::System, auth()->id(), ['ticket' => $originalId]);
+        }
     }
 
     protected function handleStatusTransition(Ticket $ticket): void

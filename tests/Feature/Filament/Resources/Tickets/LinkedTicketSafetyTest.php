@@ -118,7 +118,7 @@ it('keeps an existing escalation instead of replacing it', function () {
         ->and($ticket->refresh()->linked_ticket_id)->toBe($escalation->id);
 
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
-        ->assertDontSee(__('padmission-tickets::tickets.actions.add_to_escalation.label'));
+        ->assertActionDoesNotExist(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'));
 });
 
 describe('in a cross-tenant panel', function () {
