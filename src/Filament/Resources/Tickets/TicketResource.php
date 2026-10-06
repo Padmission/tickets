@@ -274,31 +274,39 @@ class TicketResource extends Resource
         return $query->overdue();
     }
 
-    protected static function statusFilter(): SelectFilter
+    /*
+     * Keep the host's relationship scopes: only a query that actually sees
+     * several organizations needs names in place of organization-specific ids.
+     * Filtering matches every organization that uses the name. Assigning a
+     * status or priority does not; that stays on the ticket's own rows.
+     */
+    protected static function lookupFilter(string $name): SelectFilter
     {
-        $filter = SelectFilter::make('status')->relationship('status', 'display_name');
+        $filter = SelectFilter::make($name)->relationship($name, 'display_name');
 
         if (! config('padmission-tickets.tenancy.enabled')) {
             return $filter;
         }
 
-        // Keep the host's relationship scopes: only a query that actually sees
-        // several organizations needs names in place of organization-specific ids.
-        $statuses = Relation::noConstraints(fn () => TicketPlugin::get()->getTicketQuery()->getModel()->status())
+        $lookups = Relation::noConstraints(function () use ($name): Relation {
+            $model = TicketPlugin::get()->getTicketQuery()->getModel();
+
+            return $name === 'priority' ? $model->priority() : $model->status();
+        })
             ->getQuery()
             ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
 
-        if ((clone $statuses)->distinct()->count('tenant_id') < 2) {
+        if ((clone $lookups)->distinct()->count('tenant_id') < 2) {
             return $filter;
         }
 
         return $filter
             ->relationship(null, null)
-            ->options(fn (): array => (clone $statuses)->reorder()->orderBy('display_name')
+            ->options(fn (): array => (clone $lookups)->reorder()->orderBy('display_name')
                 ->distinct()->pluck('display_name', 'display_name')->all())
             ->query(fn (Builder $query, array $data): Builder => $query->when(
                 filled($data['values'] ?? []),
-                fn (Builder $query): Builder => $query->whereHas('status', fn (Builder $statuses): Builder => $statuses
+                fn (Builder $query): Builder => $query->whereHas($name, fn (Builder $matches): Builder => $matches
                     ->whereIn('display_name', $data['values'])),
             ));
     }
@@ -436,13 +444,12 @@ class TicketResource extends Resource
                     ->toggle()
                     ->query(static::applyOverdueFilter(...)),
 
-                static::statusFilter()
+                static::lookupFilter('status')
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
 
-                SelectFilter::make('priority')
-                    ->relationship('priority', 'display_name')
+                static::lookupFilter('priority')
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
