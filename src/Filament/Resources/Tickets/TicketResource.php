@@ -35,6 +35,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OverdueTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
@@ -260,6 +261,7 @@ class TicketResource extends Resource
             OpenTicketsWidget::class,
             OpenSupporterTickets::class,
             TicketCloseTimeWidget::class,
+            OverdueTicketsWidget::class,
         ];
     }
 

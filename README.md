@@ -329,6 +329,7 @@ This package comes with multiple Filament widgets that can be added to your dash
 - **OpenTicketsWidget** - Shows count of open tickets
 - **OpenSupporterTickets** - Shows tickets assigned to supporters
 - **TicketCloseTimeWidget** - Displays average ticket close times
+- **OverdueTicketsWidget** - Counts overdue tickets and links to the Overdue preset
 - **TicketBurndownChartWidget** - Visualizes ticket closure trends
 
 Widgets are not registered on the panel by default. Pass `shouldRegisterWidgets: true` to add them:
@@ -339,7 +340,7 @@ TicketPlugin::make()
     ->registerResources(shouldRegisterWidgets: true)
 ```
 
-Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets` and `TicketCloseTimeWidget` in its header, to supporters only.
+Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the preset. Clicking it opens **Overdue** (or **Overdue Escalations** from a sent-escalation tab), retaining table filters and search. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
 
 ### Authorization
 

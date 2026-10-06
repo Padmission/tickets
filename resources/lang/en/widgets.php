@@ -31,6 +31,11 @@ return [
         'description_to' => 'Escalations :team owes a reply on',
     ],
 
+    'overdue' => [
+        'label' => 'Overdue',
+        'description' => 'Waiting on support past the reply threshold',
+    ],
+
     'close_time' => [
         'label' => 'Average Close Time',
         'description' => '{0} :count tickets closed|{1} :count ticket closed|[2,*] :count tickets closed',

@@ -16,6 +16,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\Concerns\ExplainsStaleEs
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OverdueTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
@@ -113,6 +114,7 @@ class ListTickets extends ListRecords
             OpenTicketsWidget::class,
             OpenSupporterTickets::class,
             TicketCloseTimeWidget::class,
+            OverdueTicketsWidget::class,
         ];
     }
 
