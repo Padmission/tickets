@@ -30,16 +30,29 @@ customElements.define(
 
 		async refreshTickets() {
 			const requestId = (this.listRequestId = (this.listRequestId || 0) + 1);
-			const tickets = await this.fetchTickets();
+			let data;
+			try {
+				data = await this.fetchTickets();
+			} catch (error) {
+				console.error("Failed to fetch tickets:", error);
+				return;
+			}
 
 			if (requestId !== this.listRequestId) {
 				return;
 			}
 
-			this.tickets = tickets;
-			const node = render(
-				ticketListMarkup(tickets, this.showClosed === "true"),
+			this.tickets = data.tickets || [];
+			const markup = ticketListMarkup(
+				this.tickets,
+				this.showClosed === "true",
+				data.has_closed_tickets === true,
 			);
+			if (markup === this.listMarkup) {
+				return;
+			}
+			this.listMarkup = markup;
+			const node = render(markup);
 
 			node.querySelectorAll("[data-open-ticket]").forEach((el) =>
 				el.addEventListener("click", (event) => {
@@ -51,7 +64,10 @@ customElements.define(
 				}),
 			);
 
+			const main = this.querySelector("main");
+			const scrollTop = main.scrollTop;
 			this.querySelector("[data-ticket-list]").replaceChildren(node);
+			main.scrollTop = scrollTop;
 		}
 
 		createTicket() {
@@ -71,16 +87,9 @@ customElements.define(
 		}
 
 		async fetchTickets() {
-			try {
-				const data = await fetchJson("/padmission-tickets/api/tickets", {
-					include_closed: this.showClosed === "true" ? 1 : 0,
-				});
-
-				return data.tickets || [];
-			} catch (error) {
-				console.error("Failed to fetch tickets:", error);
-				return [];
-			}
+			return fetchJson("/padmission-tickets/api/tickets", {
+				include_closed: this.showClosed === "true" ? 1 : 0,
+			});
 		}
 
 		async render() {

@@ -20,16 +20,21 @@ class ListTicketsController
 
         $this->authorize('create', $ticketModel);
 
-        $tickets = $ticketModel::query()
-            ->with(['latestMessage', 'ticketUserStates', 'ticketActivities'])
+        $query = $ticketModel::query()
             ->where('submitter_id', $request->user()->id)
-            ->withoutEscalations()
+            ->withoutEscalations();
+
+        $hasClosedTickets = (clone $query)->closed()->exists();
+
+        $tickets = $query
+            ->with(['latestMessage', 'ticketUserStates', 'ticketActivities'])
             ->when(! $request->boolean('include_closed'), fn ($query) => $query->open())
             ->orderBy('updated_at', 'desc')
             ->get();
 
         return [
             'tickets' => $tickets->map(fn ($ticket) => TicketMapper::map($ticket, $request->user())),
+            'has_closed_tickets' => $hasClosedTickets,
         ];
     }
 }

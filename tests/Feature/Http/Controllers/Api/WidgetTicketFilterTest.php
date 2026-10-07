@@ -125,3 +125,18 @@ it('opens closed escalations and their linked originals for both support teams w
             ->assertOk()->assertJsonPath('ticket.is_closed', true);
     }
 })->with(['app', 'admin']);
+
+it('reports closed tickets only from the viewers widget list', function (bool $hasClosedTickets, int $includeClosed) {
+    $user = signInWidgetAudience('app', 'requester');
+    Ticket::factory()->closed()->create(['panel' => 'app']);
+    escalationFrom('app', ['submitter_id' => $user->id], 'closed');
+
+    if ($hasClosedTickets) {
+        Ticket::factory()->closed()->create(['panel' => 'admin', 'source_panel' => 'app', 'submitter_id' => $user->id]);
+    }
+
+    $this->getJson(route('padmission-tickets::api.index', ['include_closed' => $includeClosed]))
+        ->assertOk()
+        ->assertJsonPath('has_closed_tickets', $hasClosedTickets)
+        ->assertJsonCount($hasClosedTickets && $includeClosed ? 1 : 0, 'tickets');
+})->with([false, true])->with([0, 1]);

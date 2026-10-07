@@ -140,10 +140,31 @@ customElements.define(
 			}
 		}
 
+		async pollTickets() {
+			const list = this.shadowRoot.querySelector("chat-list-tickets");
+			const dialog = this.shadowRoot.querySelector("dialog");
+
+			await Promise.all([
+				this.updateUnreadBadge(),
+				...(dialog?.open && list ? [list.refreshTickets()] : []),
+			]);
+		}
+
 		startUnreadPolling() {
-			setInterval(() => {
-				this.updateUnreadBadge();
-			}, 10_000);
+			if (this.unreadPollingInterval) {
+				return;
+			}
+
+			this.unreadPollingInterval = setInterval(
+				() => this.pollTickets(),
+				10_000,
+			);
+		}
+
+		disconnectedCallback() {
+			clearInterval(this.unreadPollingInterval);
+			this.unreadPollingInterval = null;
+			super.disconnectedCallback();
 		}
 
 		render() {

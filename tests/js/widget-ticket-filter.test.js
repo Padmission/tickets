@@ -57,8 +57,12 @@ const closed = {
 };
 let requests;
 let answerList;
+let hasClosedTickets;
+let unreadCount;
 function resetFetch() {
 	requests = [];
+	hasClosedTickets = true;
+	unreadCount = (includeClosed) => (includeClosed ? 2 : 1);
 	answerList = (includeClosed) => (includeClosed ? [open, closed] : [open]);
 	globalThis.fetch = async (url, options) => {
 		requests.push({ url, options });
@@ -68,8 +72,11 @@ function resetFetch() {
 			ok: true,
 			json: async () =>
 				parsed.pathname.endsWith("unread-count")
-					? { unread_count: includeClosed ? 2 : 1 }
-					: { tickets: answerList(includeClosed) },
+					? { unread_count: unreadCount(includeClosed) }
+					: {
+							tickets: answerList(includeClosed),
+							has_closed_tickets: hasClosedTickets,
+						},
 		};
 	};
 }
@@ -141,9 +148,9 @@ test("late responses cannot put closed tickets back after the toggle is turned o
 	list.fetchTickets = () => new Promise((resolve) => resolvers.push(resolve));
 	const show = list.toggleClosed({ currentTarget: { checked: true } });
 	const hide = list.toggleClosed({ currentTarget: { checked: false } });
-	resolvers[1]([open]);
+	resolvers[1]({ tickets: [open], has_closed_tickets: false });
 	await hide;
-	resolvers[0]([open, closed]);
+	resolvers[0]({ tickets: [open, closed], has_closed_tickets: true });
 	await show;
 	assert.equal(list.querySelector('[data-open-ticket="2"]'), null);
 	assert.deepEqual(list.tickets, [open]);
@@ -217,4 +224,106 @@ test("a hash link opens a closed ticket directly while the widget list defaults 
 		"2",
 	);
 	assert.equal(requests.length, 0);
+});
+
+test("someone with no tickets sees No tickets yet with either toggle setting", async () => {
+	resetFetch();
+	hasClosedTickets = false;
+	answerList = () => [];
+	const list = await mountList();
+	assert.match(list.textContent, /No tickets yet/);
+	assert.doesNotMatch(list.textContent, /No open tickets/);
+	await changeToggle(list, true);
+	assert.match(list.textContent, /No tickets yet/);
+});
+
+async function mountPollingWidget() {
+	const widget = document.createElement("chat-widget");
+	widget.shadowRoot.appendChild(widget.render());
+	const list = await mountList();
+	widget.shadowRoot.querySelector("[data-dialog-content]").appendChild(list);
+	widget.shadowRoot.querySelector("dialog").open = true;
+
+	const intervals = [];
+	const setIntervalBefore = globalThis.setInterval;
+	try {
+		globalThis.setInterval = (callback, delay) => {
+			intervals.push({ callback, delay });
+			return {};
+		};
+		widget.startUnreadPolling();
+	} finally {
+		globalThis.setInterval = setIntervalBefore;
+	}
+	assert.equal(intervals.length, 1);
+	assert.equal(intervals[0].delay, 10_000);
+	return { widget, list, poll: intervals[0].callback };
+}
+
+for (const change of ["closes", "reopens"]) {
+	test(`the existing badge poll refreshes the visible list when a ticket ${change}`, async () => {
+		resetFetch();
+		const other = { ...open, id: 3, subject: "Another question" };
+		let ticketIsOpen = change === "closes";
+		answerList = () => (ticketIsOpen ? [open, other] : [other]);
+		unreadCount = () => (ticketIsOpen ? 2 : 1);
+		const { widget, list, poll } = await mountPollingWidget();
+		await widget.updateUnreadBadge();
+		const main = list.querySelector("main");
+		main.scrollTop = 90;
+		const rows = list.querySelector("[data-ticket-list]");
+		const toggle = list.querySelector("[data-show-closed]");
+		const before = rows.innerHTML;
+		let finishListRequest;
+		const fetchBefore = globalThis.fetch;
+		globalThis.fetch = (url, options) =>
+			url.includes("unread-count")
+				? fetchBefore(url, options)
+				: new Promise((resolve) => {
+						finishListRequest = () => resolve(fetchBefore(url, options));
+					});
+		ticketIsOpen = !ticketIsOpen;
+		try {
+			const pending = poll();
+			// Existing rows remain visible throughout the request.
+			assert.equal(rows.innerHTML, before);
+			assert.equal(main.scrollTop, 90);
+			finishListRequest();
+			await pending;
+		} finally {
+			globalThis.fetch = fetchBefore;
+		}
+		assert.equal(
+			Boolean(list.querySelector('[data-open-ticket="1"]')),
+			ticketIsOpen,
+		);
+		assert.equal(
+			widget.shadowRoot.querySelector("[data-unread-badge]").textContent,
+			ticketIsOpen ? "2" : "1",
+		);
+		assert.equal(list.querySelector("main"), main);
+		assert.equal(main.scrollTop, 90);
+		assert.equal(list.querySelector("[data-show-closed]"), toggle);
+		const remainingRow = list.querySelector('[data-open-ticket="3"]');
+		await poll();
+		assert.equal(list.querySelector('[data-open-ticket="3"]'), remainingRow);
+		widget.disconnectedCallback();
+	});
+}
+
+test("the badge poll does not fetch rows when the dialog is closed or the conversation is shown", async () => {
+	resetFetch();
+	const { widget, list, poll } = await mountPollingWidget();
+	widget.shadowRoot.querySelector("dialog").open = false;
+	requests = [];
+	await poll();
+	assert.equal(requests.length, 1);
+	assert.match(requests[0].url, /unread-count/);
+	widget.shadowRoot.querySelector("dialog").open = true;
+	list.remove();
+	requests = [];
+	await poll();
+	assert.equal(requests.length, 1);
+	assert.match(requests[0].url, /unread-count/);
+	widget.disconnectedCallback();
 });
