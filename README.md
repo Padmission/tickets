@@ -292,18 +292,7 @@ class YourServiceProvider {
 }
 ```
 
-The ticket list has **All Tickets** and **My Tickets** tabs. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
-
-Supporters also get these preset tabs in both the organization panel and the panel that receives escalations:
-
-- **Needs Reply** - open, waiting on support, regardless of assignee
-- **Overdue** - open, waiting on support past the reply threshold
-- **Unassigned** - open, with nobody assigned
-- **Waiting on Requester** - open, waiting on the requester
-- **My Open Tickets** - the open subset of **My Tickets**, using the same assignee resolver
-- **Open Escalations** - the open subset of sent **Escalations** on an organization panel, or received escalations on a receiving panel
-
-A panel that sends escalations also has **Overdue Escalations**, using the same overdue rule for the other team's replies. These extend the existing tabs; **All Tickets**, **My Tickets**, **Escalations** and **My Escalations** keep their history. Presets always exclude closed tickets even when "Open tickets only" is off. The existing **Waiting on** state drives the reply presets, including turns changed through `TurnChanged`. Requesters keep their existing tabs and access. Preset badges use request-local SQL aggregates rather than loading conversations.
+The ticket list shows only **All Tickets** and **My Tickets** tabs, in both organization and receiving panels. Use the **Overdue** table filter to narrow either list. Existing direct links to sent escalation lists remain supported, but those lists have no entries in the tab bar.
 
 ### Overdue tickets
 
@@ -340,7 +329,7 @@ TicketPlugin::make()
     ->registerResources(shouldRegisterWidgets: true)
 ```
 
-Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the preset. Clicking it stays on the current tab and turns on the **Overdue** table filter, retaining other table filters and search so the list matches the card count. **Overdue** and **Overdue Escalations** remain available as preset tabs. On a dashboard, the card opens **All Tickets** with the **Overdue** filter enabled. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
+Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the table filter. Clicking it stays on the current tab and turns on the **Overdue** table filter, retaining other table filters and search so the list matches the card count. On a dashboard, the card opens **All Tickets** with the **Overdue** filter enabled. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
 
 ### Authorization
 
@@ -829,9 +818,9 @@ What the organization's panel gets:
 - **Escalate Ticket** (or **Escalate to _team_**) on an open ticket, which opens the escalation with a subject and message for the other team. Once the escalation closes, the same action escalates again.
 - **Add to escalation** on an open ticket, to link it to an escalation the organization already has open instead of opening another. It only shows when there is one.
 - **Remove from escalation** on an original, to unlink it.
-- **Escalations** and **My Escalations** tabs, listing the organization's escalations and the viewer's own.
+- Existing direct links to the organization's escalations and the viewer's own continue to work; only **All Tickets** and **My Tickets** appear in the tab bar.
 - On an escalation, a list of its originals that says who owes whom a reply, with `+` to link another and `×` to take one out.
-- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies, access to the escalation and **My Escalations** all follow the new owner. Only the two people it moved between are notified.
+- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies, access to the escalation and the viewer's own escalation list all follow the new owner. Only the two people it moved between are notified.
 - **Close escalation** on the viewer's own escalation, without a disposition, once the other team's part is done.
 
 What the support panel gets:
@@ -871,7 +860,7 @@ The ticket list's bulk actions are:
 - **Close** - close each selected ticket as its own Close dialog would, skipping those already closed or that the viewer may not close. The disposition is picked by name, since the selection can span organizations that each keep their own.
 - **Delete** - soft-deletes the tickets the viewer may `delete`.
 
-They're hidden on the Escalations tabs.
+They're hidden in the sent escalation lists.
 
 A single open ticket on its own panel also has **Edit** (subject, assignee, status and priority), **Assign** / **Reassign**, **Close** and **Delete** (a soft delete).
 
