@@ -60,3 +60,114 @@ it('says what closing does before it closes', function () {
         ->assertMountedActionModalSee([
             'Close this ticket?',
             'Anyone who replies to it later is asked whether to reopen it.',
+            'Close ticket',
+        ]);
+
+    expect($ticket->refresh()->isClosed)->toBeFalse();
+});
+
+it('asks for a disposition only when the ticket\'s own panel has one', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    TicketDisposition::factory()->create(['panel' => 'test2']);
+    $ticket = Ticket::factory()->open()->create(['disposition_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    expect($ticket->refresh())
+        ->isClosed->toBeTrue()
+        ->disposition_id->toBeNull();
+
+    TicketDisposition::factory()->create(['panel' => 'test']);
+    $second = Ticket::factory()->open()->create();
+
+    Livewire::test(ViewTicket::class, ['record' => $second->id])
+        ->callAction(CloseTicketAction::class)
+        ->assertHasActionErrors(['disposition' => 'required']);
+
+    expect($second->refresh()->isClosed)->toBeFalse();
+});
+
+it('says an open escalation stays open when its original closes', function (bool $viewerIsOwner, string $sentence) {
+    (new TicketStatusSeeder)->run();
+    $viewer = $this->login();
+    TicketPlugin::get('test2')->supportTeamName('Platform Support');
+
+    $owner = $viewerIsOwner ? $viewer : User::factory()->create(['name' => 'Maria Lopez']);
+    $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'submitter_id' => $owner->id]);
+    $original = Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalSee([
+            'Anyone who replies to it later is asked whether to reopen it.',
+            $sentence,
+        ]);
+
+    $escalation->close(closedById: $viewer->id);
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalDontSee('Its escalation to Platform Support');
+})->with([
+    'a colleague handles it' => [false, 'Its escalation to Platform Support stays open. Maria Lopez can close it from the escalation when Platform Support\'s part is done.'],
+    'the viewer handles it' => [true, 'Its escalation to Platform Support stays open. You can close it from the escalation when Platform Support\'s part is done.'],
+]);
+
+it('tells the team receiving an escalation what stays open', function (?string $organization) {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+    TicketPlugin::get('test2')->allowLinkedTicketsTo(['test']);
+    TicketPlugin::get()->describeTicketOriginUsing(fn (): ?string => $organization);
+
+    $escalation = Ticket::factory()->open()->create([
+        'source_panel' => 'test2',
+        'submitter_id' => User::factory()->create(['name' => 'Test Admin'])->id,
+    ]);
+    Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+
+    $page = Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalSee(['Close escalation?', 'The original ticket stays open; Test Admin updates the requester. Anyone who replies to it later is asked whether to reopen it.'])
+        ->assertMountedActionModalDontSee(['The requester is told it was closed.', 'Close this ticket?']);
+
+    expect($page->instance()->getMountedAction()->getModalSubmitAction()->getLabel())->toBe('Close escalation');
+
+    Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalSee('The 2 original tickets stay open; Test Admin updates the requesters.');
+})->with([
+    'with an organization' => ['Test Organization'],
+    'without one' => [null],
+]);
+
+it('never offers or requires a deleted disposition', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $retired = tap(TicketDisposition::factory()->create(['panel' => 'test', 'display_name' => 'Retired outcome']))->delete();
+    $ticket = Ticket::factory()->open()->create(['disposition_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $ticket->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertMountedActionModalDontSee(__('padmission-tickets::tickets.actions.close.disposition.label'))
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    expect($ticket->refresh()->isClosed)->toBeTrue();
+
+    $offered = TicketDisposition::factory()->create(['panel' => 'test', 'display_name' => 'Resolved outcome']);
+    $second = Ticket::factory()->open()->create(['disposition_id' => null]);
+
+    Livewire::test(ViewTicket::class, ['record' => $second->id])
+        ->mountAction(CloseTicketAction::class)
+        ->assertFormFieldExists('disposition', fn ($field): bool => array_key_exists($offered->id, $field->getOptions())
+            && ! array_key_exists($retired->id, $field->getOptions()));
+});

@@ -406,3 +406,41 @@ it('keeps every escalation note out of the requester\'s email and bell, while su
 });
 
 it('sends the owner the reply and no close email when the team replies and closes', function () {
+    padmissionReply($this->escalation, $this->padmission, 'Fixed the allowance table.');
+    $this->escalation->close(closedById: $this->padmission->id);
+
+    $reply = new TicketNotification($this->escalation->refresh(), new TicketActivityEvent($this->escalation, ActivityType::Message, null, $this->padmission));
+    $closed = new TicketNotification($this->escalation, new TicketClosedEvent($this->escalation, $this->padmission));
+
+    expect($reply->shouldSend($this->owner))->toBeTrue()
+        ->and($closed->shouldSend($this->owner))->toBeFalse()
+        ->and((string) $reply->toMail($this->owner)->render())->toContain('Fixed the allowance table.');
+});
+
+it('still tells the owner of a reply the team sent before closing in a window of its own', function () {
+    padmissionReply($this->escalation, $this->padmission);
+
+    expect((new TicketNotification($this->escalation, new TicketActivityEvent($this->escalation, ActivityType::Message, null, $this->padmission)))->shouldSend($this->owner))->toBeTrue();
+});
+
+it('sends the requester the answer and no close email when support answers and closes', function () {
+    TicketActivity::factory()->create(['ticket_id' => $this->original->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::Supporter, 'type' => ActivityType::Message, 'content' => 'Fixed on our side.']);
+    $this->original->close(closedById: $this->owner->id);
+
+    $answer = new TicketNotification($this->original->refresh(), new TicketActivityEvent($this->original, ActivityType::Message, null, $this->owner));
+    $closed = new TicketNotification($this->original, new TicketClosedEvent($this->original, $this->owner));
+
+    expect($answer->shouldSend($this->aisha))->toBeTrue()
+        ->and($closed->shouldSend($this->aisha))->toBeFalse()
+        ->and((string) $answer->toMail($this->aisha)->render())->toContain('Fixed on our side.');
+});
+
+it('labels how a ticket was closed as its disposition, which reads apart from the originals still open', function () {
+    $disposition = TicketDisposition::factory()->create(['display_name' => 'Resolved', 'panel' => 'test2']);
+    $this->escalation->close(dispositionId: $disposition->id, closedById: $this->padmission->id);
+
+    $html = (string) (new TicketNotification($this->escalation->refresh(), new TicketClosedEvent($this->escalation, $this->padmission)))->toMail($this->owner)->render();
+
+    expect($html)->toContain('Disposition:')
+        ->and($html)->not->toContain('Closed as:');
+});

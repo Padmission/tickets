@@ -116,3 +116,21 @@ it('closes escalations in the panel that received them and leaves their original
         ->selectTableRecords($escalations)
         ->mountAction(bulkClose())
         ->assertMountedActionModalSee('Each escalation is closed as it would be on its own: its original tickets stay open.');
+
+    Livewire::test(ListTickets::class)
+        ->selectTableRecords($escalations)
+        ->callAction(bulkClose(), ['disposition' => 'Duplicate'])
+        ->assertNotified('Closed 2 tickets.');
+
+    expect($escalations->every(fn (Ticket $escalation): bool => $escalation->refresh()->isClosed && $escalation->disposition->panel === 'test2'))->toBeTrue()
+        ->and($originals->every(fn (Ticket $original): bool => ! $original->refresh()->isClosed))->toBeTrue();
+});
+
+it('offers no bulk actions on the organization\'s escalation tabs', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+    $escalation = escalationFrom(attributes: ['submitter_id' => $this->me->id]);
+    Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
+        ->assertActionHidden(bulkClose());
+});

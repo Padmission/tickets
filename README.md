@@ -193,7 +193,7 @@ use Padmission\Tickets\Models\Contracts\HasTicketDisplayName;
 class User extends Authenticatable implements HasTicketDisplayName
 {
     use HasTickets;
-    
+
     // ... your existing code ...
 
     /**
@@ -721,12 +721,12 @@ class AssignByWorkload extends PanelAwareAssignmentStrategy
         // Uses the ticket's panel: its initialAssignmentSupportersQuery, or allSupportersQuery when none is set
         $user = $this->getEligibleUsersQuery($ticket)
             ->withCount([
-                'assignedTickets as today_count' => fn ($q) => 
+                'assignedTickets as today_count' => fn ($q) =>
                     $q->whereDate('created_at', today())
             ])
             ->orderBy('today_count')
             ->first();
-        
+
         if ($user) {
             $ticket->assignee_id = $user->id;
             // Do NOT call save() - handled automatically
@@ -754,7 +754,7 @@ TicketPlugin::make()
 TicketPlugin::make()
     ->allSupportersQuery(fn () => User::role('support'))
     ->initialAssignmentSupportersQuery(fn () => User::role('support')
-        ->whereHas('workSchedule', fn ($q) => 
+        ->whereHas('workSchedule', fn ($q) =>
             $q->where('day', now()->dayOfWeek)
               ->whereTime('start_time', '<=', now())
               ->whereTime('end_time', '>=', now())
@@ -1073,3 +1073,441 @@ With this option off, only the recipients selected by `on(TicketCreatedEvent::cl
 **Ticket Closed**
 - User-triggered: Notifies supporter only
 - Supporter-triggered: Sends no notifications
+
+**Ticket Reopened**
+- Either trigger: Notifies supporter, excluding the requester (including the organization's support person who submitted an escalation)
+
+Close/reopen activity notes remain in chat but do not notify the requester. Hosts can explicitly opt in to requester close notifications through `on(TicketClosedEvent::class, ...)`; the `ticket-closed` notification and mail template remain available.
+
+**Ticket Handed Over** (`TicketHandedOverEvent`)
+- Not configurable through `on()`. The two people the escalation moved between are notified, apart from whoever did it.
+
+The notification class sent for each event is set in the config's `notifications` map.
+
+#### Delivery Channels
+
+Notifications are emailed by default. To also show them in Filament's notification panel, add the `database` channel:
+
+```php
+// config/padmission-tickets.php
+'notification-channels' => ['mail', 'database'],
+```
+
+The host needs Laravel's `notifications` table and `->databaseNotifications()` on the panels its ticket users work in. Every channel of one send carries the same batch of unread activity.
+
+#### Delivery Strategy
+
+By default notifications are debounced: activity on a ticket is gathered for `notification-debounce` seconds (10 minutes) and sent as one notification of at most `notification-max-events` activities. Change the default with `default-notification-strategy`, or per user with a `ticketNotificationStrategy()` method on the user model:
+
+```php
+use Padmission\Tickets\Enums\NotificationStrategy;
+
+public function ticketNotificationStrategy(): NotificationStrategy
+{
+    return $this->wants_instant_emails
+        ? NotificationStrategy::Immediate
+        : NotificationStrategy::Debounced;
+}
+```
+
+#### Per-Panel Configuration
+
+Since configuration is set at the panel level, you can have different rules for different panels:
+
+```php
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
+use Padmission\Tickets\Enums\NotificationRecipient;
+use Padmission\Tickets\Enums\NotificationTrigger;
+use Padmission\Tickets\Events\TicketCreatedEvent;
+use Padmission\Tickets\Events\TicketActivityEvent;
+
+// Admin Panel - Notify all parties for everything
+$adminPanel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->on(
+                    TicketCreatedEvent::class,
+                    fn (NotificationTrigger $trigger) => NotificationRecipient::Both
+                )
+                ->on(
+                    TicketActivityEvent::class,
+                    fn (NotificationTrigger $trigger) => NotificationRecipient::Both
+                )
+        )
+);
+
+// Customer Panel - More restrictive notifications
+$customerPanel->plugin(
+    TicketPlugin::make()
+        ->notificationConfiguration(
+            NotificationConfiguration::make()
+                ->on(
+                    TicketCreatedEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::User,
+                        NotificationTrigger::Supporter => NotificationRecipient::None,
+                    }
+                )
+                ->on(
+                    TicketActivityEvent::class,
+                    fn (NotificationTrigger $trigger) => match ($trigger) {
+                        NotificationTrigger::User => NotificationRecipient::None,
+                        NotificationTrigger::Supporter => NotificationRecipient::User,
+                    }
+                )
+        )
+);
+```
+
+#### Custom Notification Logic
+
+You can also implement complex notification logic based on your business requirements:
+
+```php
+->on(
+    TicketCreatedEvent::class,
+    function (NotificationTrigger $trigger) {
+        // Custom logic based on time of day, user type, etc.
+        if ($trigger === NotificationTrigger::User) {
+            // During business hours, notify both
+            if (now()->hour >= 9 && now()->hour < 17) {
+                return NotificationRecipient::Both;
+            }
+            // Outside business hours, just notify user
+            return NotificationRecipient::User;
+        }
+
+        return NotificationRecipient::Both;
+    }
+)
+```
+
+### Activity Tracking
+
+All ticket changes are automatically tracked in the activity log (`Padmission\Tickets\Enums\ActivityType`):
+
+- **Message** - Regular ticket messages
+- **Internal Message** - Internal notes not visible to end users
+- **Opened** - Ticket creation
+- **Opened For** - A supporter opened the ticket for someone else
+- **Asked Directly** - The support team logged a question an organization's supporter asked some other way
+- **Priority Changed** - Priority modifications
+- **Status Changed** - Status updates
+- **Subject Changed** - Subject edits
+- **Assignee Changed** - Assignment changes. Requesters see “:name is now handling your ticket.” or “Your ticket is waiting to be assigned.” in chat. The organization's support person sees “your escalation” instead of “your ticket” on the escalation-side conversation. These entries send requesters no email, bell or other notification; staff keep the detailed assignment note.
+- **Turn Changed** - Turn ownership changes
+- **Closed** - Ticket closure with disposition
+- **Reopened** - Ticket reopened
+- **Closed As Duplicate** / **Duplicated By** - Linked system notes on the duplicate and original
+- **Duplicate Removed** - Duplicate link cleared on reopening
+- **Follows Up** - A new ticket that follows up a closed one
+- **Escalated** - The ticket was escalated
+- **Added To Escalation** / **Removed From Escalation** - On the original, when it's linked to or unlinked from an escalation
+- **Original Added** / **Original Removed** - The same change, recorded on the escalation
+- **Handed Over** - An escalation moved to another person
+
+Activities include:
+- User who made the change
+- Timestamp
+- Previous and new values (where applicable)
+- Soft delete support for audit trails
+
+### File Attachments
+
+Attachments are stored directly on a filesystem disk, not through a media library. The browser uploads each file straight to the disk through a presigned URL, so the disk must be S3-compatible (`league/flysystem-aws-s3-v3`). Configure the disks in your configuration:
+
+```php
+// config/padmission-tickets.php
+'attachments' => [
+    'disk' => env('MEDIA_DISK', 's3'),
+    'preview_disk' => env('MEDIA_DISK', 's3'),
+    'allowed_mime_types' => ['image/jpeg', 'image/png', /* ... */ 'application/pdf', 'text/plain'],
+],
+```
+
+`disk` holds the files and `preview_disk` the image previews made from them. `allowed_mime_types` lists the types an attachment may have (see [File Uploads and Screenshots](#file-uploads-and-screenshots)); a presigned upload signs neither the type nor the size it is sent with, so the server checks the type and size asked for, compares the stored file's size when the message is sent, and names the type each file is served as. Files can be attached to messages through the chat widget and **New ticket**. Subjects and attachment names are checked with the `Padmission\Tickets\Rules\PlainText` rule, which refuses HTML tags and script or data URLs. A message's HTML is cleaned by `Padmission\Tickets\Support\MessageHtml::sanitize()` on every path that stores one, keeping only what the chat's composer can write (paragraphs, bold, italics, lists, quotes, code and links to safe addresses), and the chat cleans it again where it draws it, so a row stored before can't run script either. A host that writes messages of its own should pass them through it too.
+
+### Copilot Panel
+
+The package registers a Livewire component, `padmission-tickets-copilot-panel`, with a compact ticket list, conversation and new-ticket form for embedding in another UI, such as an AI assistant's side panel:
+
+```blade
+<livewire:padmission-tickets-copilot-panel :initial-ticket-id="$ticketId" />
+```
+
+### Seeding Demo Scenarios
+
+`Padmission\Tickets\Seeding\TicketScenarios` fills a preview or QA environment with tickets worth opening: a real back-and-forth, closed and reopened tickets, escalations and so on. Its rows are the ones the live flows write (history, turn, status, assignee, seen pointers), backdated over the past days, and it notifies nobody.
+
+```php
+use Padmission\Tickets\Seeding\TicketScenarios;
+
+$scenarios = TicketScenarios::make(
+    panelId: 'app',
+    tenant: $organization,            // a model, a key, or null without tenancy
+    requesters: [$alice, $bob],       // people who ask from the chat, none of them supporters
+    supporters: [$maria],             // the panel's supporter pool; the first owns escalations
+    colleagues: [$dev],               // optional: someone on the same team, to hand an escalation to
+)->escalatesTo('admin', [$kevin]);    // optional: the escalation target and who answers there
+
+$scenarios->all();                    // every scenario once, keyed by name
+
+$scenarios->conversation();           // or one at a time; each returns its Ticket
+$scenarios->escalation(originals: 3, closedOriginals: 1);
+```
+
+| Method | Leaves |
+|--------|--------|
+| `conversation()` | Five messages from both sides, waiting on support |
+| `waitingOnRequester()` | Support replied last, waiting on the requester |
+| `closed()` | Closed with the panel's first disposition |
+| `reopened()` | Closed, then reopened by the requester's reply |
+| `unassigned()` | A new question nobody has |
+| `assignedToNonSupporter(?Model $assignee = null)` | Assigned outside the supporter pool, so it asks for a new assignee |
+| `openedFor()` | Opened by a supporter for a requester with New ticket |
+| `escalation(int $originals = 2, int $closedOriginals = 0, bool $answered = false)` | An escalation linking its originals (as `childTickets`), the last `closedOriginals` closed; `answered` leaves the other team's answer as the last word |
+| `directQuestion()` | A question asked straight of the other team, with no originals |
+| `handedOver()` | An escalation handed from the first supporter to a colleague |
+
+Each scenario is marked in `data.seeded_scenario` and found again by it, so seeding twice returns the first run's tickets instead of adding more. Every method takes an optional `key:` to seed a second one. The escalation scenarios need `escalatesTo()`, and `handedOver()` a colleague or a second supporter; `all()` skips what it can't seed. Statuses, priorities and dispositions must exist first (`php artisan tickets:seed --only=statuses,priorities,dispositions`); the command below seeds them itself.
+
+To add scenarios of your own, extend the class and build them from its protected steps (`seedOnce()`, `openFromChat()`, `message()`, `close()`, `reopenByReply()`, `reassign()`, `escalate()`, `addOriginal()`, `handOver()`, `startAt()`, `later()`).
+
+Without a host seeder, `php artisan tickets:seed --only=scenarios` seeds them for each panel that no other panel escalates to, from its own `allSupportersQuery()` and the users of its `requestersQuery()` outside it, escalating to the panel's first `allowLinkedTicketsTo()` panel.
+
+Scenarios put made-up conversations under real people's names, so they are seeded only in the environments the `scenarios.environments` config lists: `local`, `testing`, `test`, `staging`, `preview` and `qa` by default. Anywhere else, production above all, `TicketScenarios::make()`, `TicketScenarioSeeder` and `tickets:seed --only=scenarios` refuse before writing anything.
+
+```php
+// config/padmission-tickets.php
+'scenarios' => [
+    'environments' => ['local', 'staging', 'demo'],
+],
+```
+
+## Customization
+
+### Custom Models
+
+You can extend the package models with your own:
+
+```php
+// config/padmission-tickets.php
+'models' => [
+    Illuminate\Contracts\Auth\Authenticatable::class => App\Models\User::class,
+    Padmission\Tickets\Models\Ticket::class => App\Models\Ticket::class,
+    Padmission\Tickets\Models\TicketActivity::class => App\Models\TicketActivity::class,
+    // ... other models
+],
+```
+
+The `Authenticatable::class` entry is the user model the package resolves requesters, supporters and notification recipients from. Your custom models should extend the package models to ensure compatibility.
+
+## Custom Models & Jobs
+
+### Using Custom Models
+
+To use custom models with this package, you need to:
+
+1. **Create your custom model class** by extending the base model
+2. **Update the configuration** to map the base class to your custom class
+
+### Ticket Model Example
+
+```php
+<?php
+
+namespace App\Models;
+
+use Padmission\Tickets\Models\Ticket as BaseTicket;
+
+class CustomTicket extends BaseTicket
+{
+    // Your custom functionality
+    // The observers are automatically inherited from the base class
+
+    public function someCustomMethod()
+    {
+        // Your custom logic here
+    }
+}
+```
+
+Then update your `config/padmission-tickets.php` file:
+
+```php
+'models' => [
+    // ... other models
+    \Padmission\Tickets\Models\Ticket::class => \App\Models\CustomTicket::class,
+],
+```
+
+### Other Model Examples
+
+For other models, follow the same pattern:
+
+```php
+// Custom TicketActivity
+namespace App\Models;
+
+use Padmission\Tickets\Models\TicketActivity as BaseTicketActivity;
+
+class CustomTicketActivity extends BaseTicketActivity
+{
+    // Your custom functionality
+}
+
+// Custom TicketStatus
+namespace App\Models;
+
+use Padmission\Tickets\Models\TicketStatus as BaseTicketStatus;
+
+class CustomTicketStatus extends BaseTicketStatus
+{
+    // Your custom functionality
+}
+```
+
+Then update the config:
+
+```php
+'models' => [
+    // ... other models
+    \Padmission\Tickets\Models\TicketActivity::class => \App\Models\CustomTicketActivity::class,
+    \Padmission\Tickets\Models\TicketStatus::class => \App\Models\CustomTicketStatus::class,
+],
+```
+
+### Custom Jobs
+
+To use custom job classes, you need to:
+
+1. **Create your custom job class** by extending the base job
+2. **Update the configuration** to map the base class to your custom class
+
+#### Extending NotificationJob
+
+`NotificationJob` offers these override points:
+
+- `initializeJob(Authenticatable $user, Ticket $model): void` - called at the end of the constructor
+- `stillConcerns(Model $user, Ticket $record): bool` - the check made just before sending
+- `sendNotification(Model $user, Ticket $record, string $notificationClass): void` - the send itself
+- `uniqueId(): string` - the key debounced jobs are coalesced on
+
+`getUserId()`, `getTicketClass()` and `getTicketKey()` return what the job was queued for. For example, to add a tenant to the job:
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Padmission\Tickets\Jobs\NotificationJob;
+use Padmission\Tickets\Models\Ticket;
+use Throwable;
+
+class CustomNotificationJob extends NotificationJob
+{
+    public int|string|null $tenantId = null;
+
+    protected function initializeJob(Authenticatable $user, Ticket $model): void
+    {
+        $this->tenantId = $model->tenant_id;
+
+        // Set custom queue, delay, etc.
+        $this->onQueue('notifications');
+    }
+
+    public function uniqueId(): string
+    {
+        return parent::uniqueId().'-tenant-'.$this->tenantId;
+    }
+
+    protected function stillConcerns(Model $user, Ticket $record): bool
+    {
+        return parent::stillConcerns($user, $record)
+            && $user->tenant_id === $record->tenant_id;
+    }
+
+    // Laravel's own hook for a failed queued job
+    public function failed(Throwable $exception): void
+    {
+        Log::error('Notification job failed', [
+            'tenant_id' => $this->tenantId,
+            'ticket_id' => $this->getTicketKey(),
+            'user_id' => $this->getUserId(),
+            'error' => $exception->getMessage(),
+        ]);
+    }
+}
+```
+
+#### Register Custom Job
+
+Configure the package to use your custom job in your `config/padmission-tickets.php`:
+
+```php
+'jobs' => [
+    \Padmission\Tickets\Jobs\NotificationJob::class => \App\Jobs\CustomNotificationJob::class,
+],
+```
+
+## Troubleshooting
+
+### Exception: "requires an allSupportersQuery()"
+
+This happens when registering resources without defining who can support tickets:
+
+```php
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->registerResources()
+```
+
+### No Users Being Assigned
+
+Debug your queries to see what users are being returned. Check the panel the ticket goes to, not the one it was sent from:
+
+```php
+// Test all supporters query
+$query = app()->call(TicketPlugin::get('support')->getAllSupportersQuery());
+dd($query->count(), $query->pluck('name', 'id'));
+
+// Test initial assignment query
+$query = app()->call(TicketPlugin::get('support')->getInitialAssignmentSupportersQuery());
+dd($query->count(), $query->pluck('name', 'id'));
+```
+
+If the initial assignment query is set and returns nobody, tickets stay unassigned: there's no fall-back to `allSupportersQuery()` in that case.
+
+### Tickets Going to Wrong Panel
+
+Ensure your target panel ID matches exactly:
+
+```php
+// Panel ID must match exactly (case-sensitive)
+->targetPanel('support') // Not 'Support' or 'SUPPORT'
+```
+
+### Assignment Strategy Not Working
+
+1. Ensure the User model has the `HasTickets` trait
+2. Check that your queries return users
+3. Verify the assignment strategy is configured on the panel the ticket is **created** on
+4. Check Laravel logs for exceptions
+
+## Support
+
+For additional support:
+- Contact support at [hello@padmission.com](mailto:hello@padmission.com)
+
+## Credits
+
+- [Padmission](https://github.com/Padmission)
+- [All Contributors](../../contributors)
+
+## License
+
+The Tickets package is a private, paid package. All rights reserved. Unauthorized distribution, modification, or use is strictly prohibited.
