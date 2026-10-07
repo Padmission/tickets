@@ -28,6 +28,16 @@ class TicketObserver
         event(new TicketCreatedEvent($ticket, auth()->user()));
     }
 
+    public function deleted(Ticket $ticket): void
+    {
+        // Soft deletes keep the row, so the foreign key alone cannot clear
+        // these links. Include hidden and trashed duplicates, on this model's
+        // connection so cleanup joins any transaction around the deletion.
+        $ticket->newQueryWithoutScopes()
+            ->where('duplicate_of_ticket_id', $ticket->getKey())
+            ->update(['duplicate_of_ticket_id' => null]);
+    }
+
     public function updating(Ticket $ticket): void
     {
         // Skip status transition logic if close() method is being called explicitly
@@ -60,6 +70,10 @@ class TicketObserver
         if ($ticket->isDirty('status_id') && ! $ticket->isExplicitCloseCall()) {
             $this->handleStatusClosureAttributesOnly($ticket);
         }
+
+        if ($ticket->isDirty('closed_at') && $ticket->closed_at === null && $ticket->getOriginal('closed_at') !== null) {
+            $ticket->duplicate_of_ticket_id = null;
+        }
     }
 
     public function saved(Ticket $ticket): void
@@ -83,6 +97,10 @@ class TicketObserver
         }
 
         $ticket->addTicketActivity(ActivityType::Reopened, ActivitySender::System, auth()->id());
+
+        if (filled($originalId = $ticket->getOriginal('duplicate_of_ticket_id'))) {
+            $ticket->addTicketActivity(ActivityType::DuplicateRemoved, ActivitySender::System, auth()->id(), ['ticket' => $originalId]);
+        }
     }
 
     protected function handleStatusTransition(Ticket $ticket): void

@@ -40,6 +40,7 @@ use Padmission\Tickets\Filament\Infolists\Components\AvatarEntry;
 use Padmission\Tickets\Filament\Infolists\Components\SubmitterEntry;
 use Padmission\Tickets\Filament\Infolists\FieldHelp;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseAsDuplicateAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
@@ -60,6 +61,7 @@ use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAssignee;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Services\TicketDuplicates;
 use Padmission\Tickets\Services\TicketEscalationLinks;
 use Padmission\Tickets\Support\ConversationState;
 use Padmission\Tickets\Support\OriginalTicketSummary;
@@ -521,6 +523,7 @@ class ViewTicket extends EditRecord
             CloseEscalationAction::make(),
             EditTicketAction::make()->authorize($this->authorizesEdit(...)),
             ActionGroup::make([
+                CloseAsDuplicateAction::make()->authorize($this->authorizesEdit(...)),
                 DeleteTicketAction::make(),
             ]),
         ];
@@ -603,6 +606,20 @@ class ViewTicket extends EditRecord
                                         'titleRow' => 'status',
                                     ]),
                             ]),
+
+                        View::make('padmission-tickets::filament.duplicates')
+                            ->visible(fn (Ticket $record): bool => ! $record->isEscalation())
+                            ->viewData(function (Ticket $record): array {
+                                $query = resolve(TicketDuplicates::class)->ticketsFor($record);
+
+                                return [
+                                    'original' => filled($record->duplicate_of_ticket_id)
+                                        ? (clone $query)->whereKey($record->duplicate_of_ticket_id)->first()
+                                        : null,
+                                    'duplicates' => $query->where('duplicate_of_ticket_id', $record->getKey())->orderBy('id')->get()
+                                        ->filter(fn (Ticket $ticket): bool => static::getResource()::canView($ticket)),
+                                ];
+                            }),
 
                         ViewEntry::make('chat')
                             ->view('padmission-tickets::filament.infolists.chat')

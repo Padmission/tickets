@@ -436,7 +436,8 @@ describe('Escalating again', function () {
 
         Livewire::test(ViewTicket::class, ['record' => $original->id])
             ->assertActionVisible(TestAction::make(RemoveFromEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'))
-            ->assertDontSee(['Escalate to Platform Support', 'Add to an existing escalation']);
+            ->assertActionDoesNotExist(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'))
+            ->assertActionDoesNotExist(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'));
 
         expect(DB::transaction(fn (): bool => $links->canOpenEscalation($original)))->toBeFalse()
             ->and($links->addToEscalation($original, $other->id))->toBe(TicketEscalationLinks::ALREADY_ESCALATED)
@@ -452,7 +453,8 @@ describe('Escalating again', function () {
         expect(CreateLinkedTicketAction::isAvailableFor($closed))->toBeFalse();
 
         Livewire::test(ViewTicket::class, ['record' => $closed->id])
-            ->assertDontSee(['Escalate to Platform Support', 'Add to an existing escalation']);
+            ->assertActionDoesNotExist(TestAction::make(CreateLinkedTicketAction::class)->schemaComponent('escalationActions', schema: 'form'))
+            ->assertActionDoesNotExist(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'));
 
         Livewire::test(ViewTicket::class, ['record' => $closedAndEscalated->id])
             ->assertDontSee('Remove from escalation');

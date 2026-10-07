@@ -20,6 +20,12 @@ enum ActivityType: string
 
     case Reopened = 'reopened';
 
+    case ClosedAsDuplicate = 'closed-as-duplicate';
+
+    case DuplicatedBy = 'duplicated-by';
+
+    case DuplicateRemoved = 'duplicate-removed';
+
     case AssigneeChanged = 'assignee-changed';
 
     case Escalated = 'escalated';

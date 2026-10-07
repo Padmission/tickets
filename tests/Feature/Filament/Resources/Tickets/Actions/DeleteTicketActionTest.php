@@ -43,7 +43,7 @@ it('keeps View on the row and puts Reassign, Reopen and Delete in its unlabelled
         ->and($menu->isIconButton())->toBeTrue();
 });
 
-it('puts Delete alone in the ticket page\'s unlabelled ⋯ menu, beside the actions it keeps in view', function () {
+it('puts Close as duplicate and Delete in the ticket page\'s unlabelled ⋯ menu', function () {
     $this->login();
     $ticket = Ticket::factory()->open()->create();
 
@@ -53,7 +53,7 @@ it('puts Delete alone in the ticket page\'s unlabelled ⋯ menu, beside the acti
 
     $menu = moreMenu(invade($page->instance())->getHeaderActions());
 
-    expect(menuNames($menu))->toBe(['delete-ticket'])
+    expect(menuNames($menu))->toBe(['close-as-duplicate', 'delete-ticket'])
         ->and($menu->isIconButton())->toBeTrue();
 });
 

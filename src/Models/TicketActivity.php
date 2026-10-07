@@ -120,6 +120,9 @@ class TicketActivity extends Model
         return Attribute::get(fn ($value) => match ($this->type) {
             ActivityType::Opened => __('padmission-tickets::activities.opened'),
             ActivityType::Closed => __('padmission-tickets::activities.closed'),
+            ActivityType::ClosedAsDuplicate => $this->duplicateNote('closed_as_duplicate'),
+            ActivityType::DuplicatedBy => $this->duplicateNote('duplicated_by'),
+            ActivityType::DuplicateRemoved => $this->duplicateNote('duplicate_removed'),
             ActivityType::Reopened => blank($this->user_id)
                 ? __('padmission-tickets::activities.reopened_unknown')
                 : __('padmission-tickets::activities.reopened', ['name' => e($this->actorName())]),
@@ -189,6 +192,20 @@ class TicketActivity extends Model
 
         return __('padmission-tickets::activities.follows_up', [
             'ticket' => $url === null ? $number : '<a href="'.e($url).'">'.$number.'</a>',
+        ]);
+    }
+
+    protected function duplicateNote(string $key): string
+    {
+        $number = '#'.(string) $this->activityData('ticket');
+        $other = $this->linkedTicket('ticket');
+
+        if ($other?->trashed()) {
+            $other = null;
+        }
+
+        return __("padmission-tickets::activities.{$key}", [
+            'ticket' => $this->ticketReference($other, $number, $other === null ? null : $this->viewUrlFor($other)),
         ]);
     }
 
