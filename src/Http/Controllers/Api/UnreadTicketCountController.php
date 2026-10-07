@@ -23,7 +23,7 @@ class UnreadTicketCountController
         $query = $ticketModel::query()
             ->where('submitter_id', $request->user()->id)
             ->withoutEscalations()
-            ->open();
+            ->when(! $request->boolean('include_closed'), fn ($query) => $query->open());
 
         resolve(CopilotTicketService::class)->withUnreadSupportResponseConstraint($query, $request->user());
 

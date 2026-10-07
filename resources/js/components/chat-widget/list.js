@@ -1,5 +1,5 @@
-import BaseElement from "../helpers/base-element";
-import render from "../helpers/render";
+import BaseElement from "../helpers/base-element.js";
+import render from "../helpers/render.js";
 import fetchJson from "../helpers/fetch-json.js";
 import config from "../helpers/config.js";
 import ticketListMarkup from "../helpers/ticket-list-markup.js";
@@ -14,9 +14,45 @@ customElements.define(
 		}
 
 		async renderedCallback() {
-			const tickets = await this.fetchTickets();
+			await this.refreshTickets();
+		}
 
-			const node = render(ticketListMarkup(tickets));
+		async toggleClosed(event) {
+			this.showClosed = String(event.currentTarget.checked);
+			this.dispatchEvent(
+				new CustomEvent("ticket-list-filter-changed", {
+					bubbles: true,
+					detail: { showClosed: this.showClosed === "true" },
+				}),
+			);
+			await this.refreshTickets();
+		}
+
+		async refreshTickets() {
+			const requestId = (this.listRequestId = (this.listRequestId || 0) + 1);
+			let data;
+			try {
+				data = await this.fetchTickets();
+			} catch (error) {
+				console.error("Failed to fetch tickets:", error);
+				return;
+			}
+
+			if (requestId !== this.listRequestId) {
+				return;
+			}
+
+			this.tickets = data.tickets || [];
+			const markup = ticketListMarkup(
+				this.tickets,
+				this.showClosed === "true",
+				data.has_closed_tickets === true,
+			);
+			if (markup === this.listMarkup) {
+				return;
+			}
+			this.listMarkup = markup;
+			const node = render(markup);
 
 			node.querySelectorAll("[data-open-ticket]").forEach((el) =>
 				el.addEventListener("click", (event) => {
@@ -28,7 +64,10 @@ customElements.define(
 				}),
 			);
 
+			const main = this.querySelector("main");
+			const scrollTop = main.scrollTop;
 			this.querySelector("[data-ticket-list]").replaceChildren(node);
+			main.scrollTop = scrollTop;
 		}
 
 		createTicket() {
@@ -48,16 +87,9 @@ customElements.define(
 		}
 
 		async fetchTickets() {
-			try {
-				const data = await fetchJson("/padmission-tickets/api/tickets");
-
-				this.tickets = data.tickets || [];
-
-				return this.tickets;
-			} catch (error) {
-				console.error("Failed to fetch tickets:", error);
-				return [];
-			}
+			return fetchJson("/padmission-tickets/api/tickets", {
+				include_closed: this.showClosed === "true" ? 1 : 0,
+			});
 		}
 
 		async render() {
@@ -106,6 +138,11 @@ customElements.define(
                         </button>
 
                         <h3>${escapeHtml(__('list.tickets_heading'))}</h3>
+
+                        <label class="ticket-list-filter">
+                            <input type="checkbox" data-show-closed @change="toggleClosed" ${this.showClosed === "true" ? 'checked' : ''}>
+                            ${escapeHtml(__('list.show_closed'))}
+                        </label>
 
                         <div data-ticket-list>
                         </div>

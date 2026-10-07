@@ -62,6 +62,8 @@ return [
         'go_to_docs' => 'Open Documentation',
         'tickets_heading' => 'Your Tickets',
         'no_tickets' => 'No tickets yet',
+        'no_open_tickets' => 'No open tickets',
+        'show_closed' => 'Show closed',
         'no_messages' => 'No messages yet',
         'needs_attention' => 'Needs attention',
     ],
