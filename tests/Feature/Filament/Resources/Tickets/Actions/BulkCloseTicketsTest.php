@@ -51,7 +51,7 @@ it('closes the open tickets the viewer may close and skips the rest, saying how 
     $alreadyClosed = Ticket::factory()->closed()->create();
     $theirOwn = Ticket::factory()->open()->create(['submitter_id' => $this->me->id]);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->removeTableFilter('open')
         ->selectTableRecords([...$open, $alreadyClosed, $theirOwn])
         ->callAction(bulkClose(), ['disposition' => 'Resolved'])
@@ -69,7 +69,7 @@ it('leaves each ticket exactly as its own Close dialog would', function () {
     Livewire::test(ViewTicket::class, ['record' => $single->id])
         ->callAction(CloseTicketAction::class, ['disposition' => TicketDisposition::query()->where('panel', 'test')->where('display_name', 'Resolved')->value('id')]);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords([$bulk])
         ->callAction(bulkClose(), ['disposition' => 'Resolved'])
         ->assertNotified('Closed 1 ticket.');
@@ -81,7 +81,7 @@ it('leaves each ticket exactly as its own Close dialog would', function () {
 it('requires a disposition, as a single close does', function () {
     $ticket = Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords([$ticket])
         ->callAction(bulkClose(), ['disposition' => null])
         ->assertHasFormErrors(['disposition' => 'required']);
@@ -93,7 +93,7 @@ it('raises one close per ticket, so each recipient hears of each ticket once', f
     Event::fake([TicketClosedEvent::class]);
     $tickets = Ticket::factory()->open()->count(3)->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords($tickets)
         ->callAction(bulkClose(), ['disposition' => 'Resolved']);
 
@@ -112,12 +112,12 @@ it('closes escalations in the panel that received them and leaves their original
     $escalations = collect([escalationFrom(), escalationFrom()]);
     $originals = $escalations->map(fn (Ticket $escalation): Ticket => Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]));
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords($escalations)
         ->mountAction(bulkClose())
         ->assertMountedActionModalSee('Each escalation is closed as it would be on its own: its original tickets stay open.');
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords($escalations)
         ->callAction(bulkClose(), ['disposition' => 'Duplicate'])
         ->assertNotified('Closed 2 tickets.');

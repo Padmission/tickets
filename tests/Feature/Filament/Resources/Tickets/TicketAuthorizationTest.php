@@ -79,12 +79,14 @@ it('does not leak another panel\'s tickets to a supporter on an invalid tab', fu
     $currentPanelTicket = Ticket::factory()->open()->create([
         'panel' => 'test',
         'submitter_id' => $submitterA->id,
+        'assignee_id' => $supporter->id,
         'status_id' => $openStatusId,
     ]);
 
     $otherPanelTicket = Ticket::factory()->open()->create([
         'panel' => 'test2',
         'submitter_id' => $submitterB->id,
+        'assignee_id' => $supporter->id,
         'status_id' => $openStatusId,
     ]);
 

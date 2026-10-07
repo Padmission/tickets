@@ -130,7 +130,7 @@ it('adds the host columns to the ticket list', function () {
 
     Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertTableColumnExists('organization')
         ->assertSee('Acme Housing');
 });

@@ -42,7 +42,7 @@ it('offers Reopen in a closed row\'s ⋯ menu only', function () {
     $closed = Ticket::factory()->closed()->create();
     $open = Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->removeTableFilter('open')
         ->assertActionHidden(TestAction::make(ReopenTicketAction::class)->table($open))
         ->callAction(TestAction::make(ReopenTicketAction::class)->table($closed))

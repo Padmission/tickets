@@ -19,6 +19,64 @@ beforeEach(function () {
     $this->travelTo(now()->setDate(2026, 10, 5)->setTime(14, 0));
 });
 
+// The test panel is the organization app; test2 receives its escalations as admin does.
+it('defaults supporters to my tickets in every panel and omits the redundant presets', function (string $panel) {
+    Filament::setCurrentPanel($panel);
+    $me = $this->login();
+    $mine = Ticket::factory()->open()->create(['panel' => $panel, 'assignee_id' => $me->id]);
+    $other = Ticket::factory()->open()->create(['panel' => $panel, 'assignee_id' => User::factory()->create()->id]);
+
+    $page = Livewire::test(ListTickets::class)
+        ->assertSet('activeTab', 'my')
+        ->assertCanSeeTableRecords([$mine])
+        ->assertCanNotSeeTableRecords([$other]);
+
+    expect($page->instance()->getDefaultActiveTab())->toBe('my')
+        ->and($page->instance()->getWidgetData()['activeTab'])->toBe('my')
+        ->and($page->instance()->getCachedTabs())->not->toHaveKey('my_open')->not->toHaveKey('open_linked');
+})->with(['app panel' => 'test', 'admin panel' => 'test2']);
+
+it('keeps the requester default on their own submissions', function () {
+    $requester = $this->login();
+    $supporter = User::factory()->create();
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($supporter->id));
+    $own = Ticket::factory()->open()->create(['submitter_id' => $requester->id, 'assignee_id' => $supporter->id]);
+    $other = Ticket::factory()->open()->create(['submitter_id' => $supporter->id]);
+
+    Livewire::test(ListTickets::class)
+        ->assertSet('activeTab', 'all')
+        ->assertCanSeeTableRecords([$own])
+        ->assertCanNotSeeTableRecords([$other]);
+});
+
+it('honors explicit tab URLs and deep links over the supporter default', function (string $parameter, string $tab) {
+    $this->login();
+
+    Livewire::withQueryParams([$parameter => $tab])->test(ListTickets::class)
+        ->assertSet('activeTab', $tab);
+})->with(['tab', 'activeTab'])->with(['all', 'needs_reply', 'linked']);
+
+it('falls back from stale tab URLs to the viewer default', function (string $panel, string $parameter, string $tab, bool $isSupporter) {
+    Filament::setCurrentPanel($panel);
+    $me = $this->login();
+    $colleague = User::factory()->create();
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($isSupporter ? [$me->id, $colleague->id] : [$colleague->id]));
+    $visible = Ticket::factory()->open()->create([
+        'panel' => $panel,
+        'submitter_id' => $me->id,
+        'assignee_id' => $isSupporter ? $me->id : $colleague->id,
+    ]);
+    $hidden = Ticket::factory()->open()->create(['panel' => $panel, 'submitter_id' => $colleague->id, 'assignee_id' => $colleague->id]);
+
+    Livewire::withQueryParams([$parameter => $tab])->test(ListTickets::class)
+        ->assertSet('activeTab', $isSupporter ? 'my' : 'all')
+        ->assertCanSeeTableRecords([$visible])
+        ->assertCanNotSeeTableRecords([$hidden]);
+})->with(['app panel' => 'test', 'admin panel' => 'test2'])
+    ->with(['tab', 'activeTab'])
+    ->with(['my_open', 'open_linked'])
+    ->with(['supporter' => true, 'requester' => false]);
+
 it('lists each preset with matching badges on both sides and keeps closed history in the original tabs', function (string $panel) {
     Filament::setCurrentPanel($panel);
     $me = $this->login();
@@ -40,7 +98,6 @@ it('lists each preset with matching badges on both sides and keeps closed histor
         'overdue' => [$mineReply],
         'unassigned' => [$unassignedReply, $unassignedWaiting],
         'waiting_on_requester' => [$mineWaiting, $unassignedWaiting],
-        'my_open' => [$mineReply, $mineWaiting],
     ];
     $all = collect([$mineReply, $mineWaiting, $otherReply, $unassignedReply, $unassignedWaiting, $closed, $foreign]);
     foreach ($expected as $tab => $tickets) {
@@ -59,19 +116,7 @@ it('lists each preset with matching badges on both sides and keeps closed histor
     Livewire::test(ListTickets::class)->set('activeTab', 'my')->removeTableFilter('open')->assertCanSeeTableRecords([$closed]);
 })->with(['organization' => 'test', 'receiving team' => 'test2']);
 
-it('uses the existing my-ticket assignee resolver for the open preset', function () {
-    $me = $this->login();
-    $alternate = User::factory()->create();
-    TicketPlugin::get()->currentUserAssigneeIds(fn (): array => [$me->id, $alternate->id]);
-    $mine = Ticket::factory()->open()->create(['assignee_id' => $alternate->id]);
-    $closed = Ticket::factory()->closed()->create(['assignee_id' => $alternate->id]);
-
-    $page = Livewire::test(ListTickets::class)->set('activeTab', 'my_open')->removeTableFilter('open');
-    $page->assertCanSeeTableRecords([$mine])->assertCanNotSeeTableRecords([$closed]);
-    expect($page->instance()->getCachedTabs()['my_open']->getBadge())->toBe('1');
-});
-
-it('extends sent escalation tabs with open and overdue subsets and preserves ownership and history', function () {
+it('extends sent escalation tabs with an overdue subset and preserves ownership and history', function () {
     $me = $this->login();
     $colleague = User::factory()->create();
     $open = escalationFrom(attributes: ['submitter_id' => $me->id, 'turn' => Turn::Supporter]);
@@ -82,12 +127,12 @@ it('extends sent escalation tabs with open and overdue subsets and preserves own
         TicketActivity::factory()->create(['ticket_id' => $ticket->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::User, 'created_at' => '2026-10-02 13:59:59']);
     }
 
-    $page = Livewire::test(ListTickets::class)->set('activeTab', 'open_linked')->removeTableFilter('open');
+    $page = Livewire::test(ListTickets::class)->set('activeTab', 'linked');
     $page->assertCanSeeTableRecords([$open, $waiting])->assertCanNotSeeTableRecords([$closed, $foreign]);
-    expect($page->instance()->getCachedTabs()['open_linked']->getBadge())->toBe('2');
+    expect($page->instance()->getCachedTabs()['linked']->getBadge())->toBe('2');
     $page->set('activeTab', 'overdue_linked')->assertCanSeeTableRecords([$open])->assertCanNotSeeTableRecords([$waiting, $closed, $foreign]);
     expect($page->instance()->getCachedTabs()['overdue_linked']->getBadge())->toBe('1');
-    $page->set('activeTab', 'linked')->assertCanSeeTableRecords([$open, $waiting, $closed]);
+    $page->set('activeTab', 'linked')->removeTableFilter('open')->assertCanSeeTableRecords([$open, $waiting, $closed]);
     $page->set('activeTab', 'my_linked')->assertCanSeeTableRecords([$open, $closed])->assertCanNotSeeTableRecords([$waiting]);
 });
 
@@ -138,14 +183,14 @@ it('updates the reply presets using the existing turn state and its history', fu
     Livewire::test(ListTickets::class)->set('activeTab', 'waiting_on_requester')->assertCanSeeTableRecords([$ticket]);
 });
 
-it('draws all five local preset badges with one SQL aggregate', function () {
+it('draws all four local preset badges with one SQL aggregate', function () {
     $this->login();
     Ticket::factory()->open()->count(3)->create();
     $page = app('livewire')->new(ListTickets::class);
     $tabs = $page->getCachedTabs();
     DB::enableQueryLog();
     DB::flushQueryLog();
-    foreach (['needs_reply', 'overdue', 'unassigned', 'waiting_on_requester', 'my_open'] as $tab) {
+    foreach (['needs_reply', 'overdue', 'unassigned', 'waiting_on_requester'] as $tab) {
         $tabs[$tab]->getBadge();
     }
     $queries = collect(DB::getQueryLog());

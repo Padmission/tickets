@@ -232,7 +232,7 @@ it('lists duplicates on the original with links and shows the original on the du
 it('adds a small Duplicate badge only on duplicate rows', function () {
     resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
 
-    $table = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $table = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
     $column = $table->instance()->getTable()->getColumn('subject');
     $column->record($this->duplicate->refresh());
     expect((string) $column->getSuffix())->toContain('Duplicate', 'fi-badge', 'pad-ti-marker');

@@ -38,6 +38,22 @@ class ListTickets extends ListRecords
 
     protected static string $resource = TicketResource::class;
 
+    public function getDefaultActiveTab(): string
+    {
+        return ConversationViewer::current()->isSupporter ? 'my' : 'all';
+    }
+
+    protected function loadDefaultActiveTab(): void
+    {
+        // Filament uses ?tab=; also accept the explicit ?activeTab= form.
+        $tab = $this->activeTab ?? request()->query('activeTab');
+        $this->activeTab = is_string($tab) ? $tab : null;
+
+        if ($this->activeTabIsInvalid()) {
+            $this->activeTab = $this->getDefaultActiveTab();
+        }
+    }
+
     /*
      * A row or bulk action can change who a ticket waits on, or remove it,
      * which moves it between the cards above the list and can change the
@@ -160,7 +176,7 @@ class ListTickets extends ListRecords
     protected ?array $presetCounts = null;
 
     /**
-     * The five local presets share one aggregate and an indexed overdue lookup.
+     * The four local presets share one aggregate and an indexed overdue lookup.
      * No tickets or activity collections are hydrated to draw the badges.
      *
      * @return array<string, int>
@@ -175,8 +191,6 @@ class ListTickets extends ListRecords
         $overdue = (clone $query)->overdue()->select($query->qualifyColumn('id'));
         $turn = $query->qualifyColumn('turn');
         $assignee = $query->qualifyColumn('assignee_id');
-        $ids = TicketPlugin::get()->getCurrentUserAssigneeIds() ?: [0];
-        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
         $counts = $query
             ->leftJoinSub($overdue, 'overdue_tickets', 'overdue_tickets.id', '=', $query->qualifyColumn('id'))
             ->toBase()
@@ -184,7 +198,6 @@ class ListTickets extends ListRecords
             ->selectRaw('count(overdue_tickets.id) as overdue')
             ->selectRaw("coalesce(sum(case when {$assignee} is null then 1 else 0 end), 0) as unassigned")
             ->selectRaw("coalesce(sum(case when {$turn} = ? then 1 else 0 end), 0) as waiting_on_requester", [Turn::User->value])
-            ->selectRaw("coalesce(sum(case when {$assignee} in ({$placeholders}) then 1 else 0 end), 0) as my_open", $ids)
             ->first();
 
         return $this->presetCounts = [
@@ -192,7 +205,6 @@ class ListTickets extends ListRecords
             'overdue' => (int) ($counts->overdue ?? 0),
             'unassigned' => (int) ($counts->unassigned ?? 0),
             'waiting_on_requester' => (int) ($counts->waiting_on_requester ?? 0),
-            'my_open' => (int) ($counts->my_open ?? 0),
         ];
     }
 
@@ -293,7 +305,6 @@ class ListTickets extends ListRecords
                 'overdue' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->overdue(),
                 'unassigned' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->open()->whereNull($query->qualifyColumn('assignee_id')),
                 'waiting_on_requester' => fn (Builder $query): Builder => TicketResource::allTicketsQuery($query)->open()->where($query->qualifyColumn('turn'), Turn::User),
-                'my_open' => fn (Builder $query): Builder => $this->ticketsInTab('my', $query)->open(),
             ];
 
             foreach ($presets as $name => $scope) {
@@ -336,15 +347,11 @@ class ListTickets extends ListRecords
                     ->where($query->qualifyColumn('submitter_id'), Filament::auth()->id()))
             ));
 
-        foreach (['open_linked', 'overdue_linked'] as $name) {
-            $tabs[$name] = Tab::make()
-                ->label(__("padmission-tickets::tickets.resources.tickets.tabs.{$name}"))
-                ->badge(fn (): int => $this->openEscalatedCounts()[$name === 'open_linked' ? 'linked' : $name])
-                ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
-                ->modifyQueryUsing(fn (Builder $query): Builder => $name === 'open_linked'
-                    ? $this->ticketsInTab('linked', $query)->open()
-                    : $this->ticketsInTab('linked', $query)->overdue());
-        }
+        $tabs['overdue_linked'] = Tab::make()
+            ->label(__('padmission-tickets::tickets.resources.tickets.tabs.overdue_linked'))
+            ->badge(fn (): int => $this->openEscalatedCounts()['overdue_linked'])
+            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $this->ticketsInTab('linked', $query)->overdue());
 
         return $tabs;
     }

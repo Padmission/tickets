@@ -36,7 +36,7 @@ describe('Waiting on for a closed ticket', function () {
             ->and($open->waitingOn())->toBe(Turn::Supporter)
             ->and($closed->refresh()->turn)->toBe(Turn::Supporter);
 
-        Livewire::test(ListTickets::class)
+        Livewire::test(ListTickets::class, ['activeTab' => 'all'])
             ->removeTableFilter('open')
             ->assertTableColumnStateSet('turn', null, $closed)
             ->assertTableColumnStateNotSet('turn', null, $open);
@@ -51,8 +51,8 @@ describe('Stat cards', function () {
     it('passes the active tab to the cards', function () {
         $this->login();
 
-        expect(Livewire::test(ListTickets::class)->instance()->getWidgetData()['activeTab'])->toBe('all')
-            ->and(Livewire::test(ListTickets::class)->set('activeTab', 'my')->instance()->getWidgetData()['activeTab'])->toBe('my');
+        expect(Livewire::test(ListTickets::class)->instance()->getWidgetData()['activeTab'])->toBe('my')
+            ->and(Livewire::test(ListTickets::class)->set('activeTab', 'all')->instance()->getWidgetData()['activeTab'])->toBe('all');
     });
 
     it('counts each tab\'s open tickets the same as its badge', function () {
@@ -108,7 +108,7 @@ describe('Stat cards', function () {
         Ticket::factory()->open()->create(['assignee_id' => $me->id, 'turn' => Turn::User]);
         Ticket::factory()->closed()->create(['assignee_id' => $me->id, 'turn' => Turn::Supporter]);
 
-        $component = Livewire::test(ListTickets::class);
+        $component = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
         $orange = collect([$mine, $unassigned])
             ->filter(fn (Ticket $ticket): bool => $component->instance()->getTableRecord((string) $ticket->id)->conversation_rank == 0);
 

@@ -29,7 +29,7 @@ it('lists open tickets whatever status they have, and hides closed ones', functi
     $openWithForeignStatus = Ticket::factory()->create(['status_id' => $foreignStatus->id, 'closed_at' => null]);
     $closed = Ticket::factory()->closed()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertCanSeeTableRecords([$openWithForeignStatus])
         ->assertCanNotSeeTableRecords([$closed])
         ->removeTableFilter('open')
@@ -154,7 +154,7 @@ it('finds a ticket by the number quoted from an email', function (string $prefix
     $wanted = Ticket::factory()->open()->create(['subject' => 'Rent question']);
     $other = Ticket::factory()->open()->create(['subject' => 'Something else']);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->searchTable($prefix.$wanted->id)
         ->assertCanSeeTableRecords([$wanted])
         ->assertCanNotSeeTableRecords([$other])
@@ -185,7 +185,7 @@ it('names each ticket\'s organization under its subject in the panel escalations
     $escalation = Ticket::factory()->open()->create();
     Ticket::factory()->open()->create(['panel' => 'test2', 'linked_ticket_id' => $escalation->id, 'submitter_id' => User::factory()->create(['name' => 'Aisha Brooks'])->id]);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertTableColumnHasDescription('subject', "Org of {$plain->id}", $plain)
         ->assertTableColumnHasDescription('subject', "Org of {$escalation->id} · About Aisha Brooks's ticket", $escalation);
 });
@@ -197,7 +197,7 @@ it('offers the ticket number as a sortable column that is off until chosen', fun
     $first = Ticket::factory()->open()->create();
     $second = Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertTableColumnExists('id', fn (TextColumn $column): bool => $column->isToggleable()
             && $column->isToggledHiddenByDefault()
             && $column->isSortable()
@@ -290,7 +290,7 @@ it('says You for a ticket assigned to the viewer and names anyone else', functio
     $mine = Ticket::factory()->open()->create(['assignee_id' => $me->id]);
     $theirs = Ticket::factory()->open()->create(['assignee_id' => $colleague->id]);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertTableColumnStateSet('assignee.name', 'You', $mine)
         ->assertTableColumnStateSet('assignee.name', 'Maria Lopez', $theirs);
 });
@@ -304,13 +304,13 @@ it('says You to whoever is signed in now, not to the first viewer', function () 
 
     $this->actingAs($first);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertTableColumnStateSet('assignee.name', 'You', $firstTicket)
         ->assertTableColumnStateSet('assignee.name', $second->name, $secondTicket);
 
     $this->actingAs($second);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertTableColumnStateSet('assignee.name', $first->name, $firstTicket)
         ->assertTableColumnStateSet('assignee.name', 'You', $secondTicket);
 });
@@ -386,7 +386,7 @@ describe('Conversations in the list', function () {
         $closed->parentTicket->forceFill(['closed_at' => now()->subDay()])->saveQuietly();
         $plain = Ticket::factory()->open()->create(['subject' => '<b>Rent</b> question']);
 
-        $component = Livewire::test(ListTickets::class);
+        $component = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
 
         expect(listCell($component, 'subject', $waitingOnTeam))->toContain('Escalated')->toContain('You handle the conversation with Platform Support. Platform Support owes the next reply there.')
             ->and(listCell($component, 'subject', $waitingOnColleague))->toContain('Escalated')->toContain('Platform Support is waiting on Maria Lopez on the escalation.')
@@ -433,7 +433,7 @@ describe('Conversations in the list', function () {
             ->and(listCell($component, 'subject', $allClosed, 'description'))->toBe('About Aisha Brooks\'s ticket, all closed')
             ->and(listCell($component, 'subject', $emptied, 'description'))->toBe('Not linked to any ticket');
 
-        expect(listCell(Livewire::test(ListTickets::class), 'subject', Ticket::factory()->open()->create(), 'description'))->toBe('');
+        expect(listCell(Livewire::test(ListTickets::class, ['activeTab' => 'all']), 'subject', Ticket::factory()->open()->create(), 'description'))->toBe('');
     });
 
     it('names each requester once however many of their tickets an escalation is about', function () {
@@ -484,7 +484,7 @@ describe('Conversations in the list', function () {
             ->create(['panel' => 'test2', 'submitter_id' => $this->me->id]);
         $original = Ticket::factory()->open()->create(['submitter_id' => $this->me->id]);
 
-        $all = Livewire::test(ListTickets::class);
+        $all = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
         $all->assertTableColumnStateSet('submitter.name', 'You', $original)
             ->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Requested by');
         expect(listCell($all, 'submitter.name', $original, 'label'))->toBe('Requested by');
@@ -497,10 +497,10 @@ describe('Conversations in the list', function () {
 
         Filament::setCurrentPanel('test2');
         $escalation->update(['submitter_id' => $this->colleague->id]);
-        $received = Livewire::test(ListTickets::class)->assertTableColumnStateSet('submitter.name', 'Maria Lopez', $escalation);
+        $received = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->assertTableColumnStateSet('submitter.name', 'Maria Lopez', $escalation);
         $received->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Contact');
         $neverEscalated = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test']);
-        $received = Livewire::test(ListTickets::class);
+        $received = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
         expect(listCell($received, 'submitter.name', $escalation, 'label'))->toBe('Contact')
             ->and(listCell($received, 'subject', $escalation, 'description'))->toStartWith('About ')
             ->and(listCell($received, 'subject', $neverEscalated, 'description'))->toBe('');
@@ -529,7 +529,7 @@ describe('Conversations in the list', function () {
         ($this->message)($myEscalation, ActivitySender::Supporter, $this->colleague->id);
         ($this->message)($theirEscalation, ActivitySender::Supporter, $this->me->id);
 
-        $all = Livewire::test(ListTickets::class);
+        $all = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
         $linked = Livewire::test(ListTickets::class, ['activeTab' => 'linked']);
 
         expect(listCell($all, 'latestMessage.created_at', $mine))->toContain('New')->toContain('New message you haven')
@@ -558,7 +558,7 @@ describe('Conversations in the list', function () {
         $replied = ($this->escalate)(['assignee_id' => $this->colleague->id]);
         ($this->message)($replied->parentTicket, ActivitySender::Supporter, $this->colleague->id);
 
-        $component = Livewire::test(ListTickets::class);
+        $component = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
 
         $ranks = collect([$requesterTurn, $colleagues, $mine, $replied])
             ->mapWithKeys(fn (Ticket $ticket): array => [$ticket->id => (int) $component->instance()->getTableRecord((string) $ticket->id)->conversation_rank]);

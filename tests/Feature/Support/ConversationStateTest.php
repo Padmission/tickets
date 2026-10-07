@@ -454,7 +454,7 @@ it('names an assignee who cannot answer tickets here, and warns that the ticket 
         ->icon()->toBe('heroicon-m-exclamation-triangle')
         ->tooltip()->toBe('Robert O\'Hale & <Sons> can\'t answer tickets here. Reassign this ticket to someone who can answer Aisha Brooks.');
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertSeeHtml('Robert O&#039;Hale &amp; &lt;Sons&gt;')
         ->assertSeeHtml("content: 'Robert O\\u0027Hale \\u0026 \\u003CSons\\u003E can\\u0027t answer tickets here.")
         ->assertDontSeeHtml('<Sons>');

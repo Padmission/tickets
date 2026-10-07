@@ -35,7 +35,7 @@ it('reassigns the ticket from the ticket list', function () {
     $teammate = User::factory()->create();
     $ticket = Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->callAction(TestAction::make(ReassignTicketAction::class)->table($ticket), ['assignee_id' => $teammate->id])
         ->assertHasNoActionErrors();
 

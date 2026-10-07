@@ -304,7 +304,7 @@ it('sends nothing when a bulk Assign gives the ticket to the person doing it', f
     forgetQueuedNotices();
     $this->login($this->previous);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->callTableBulkAction('assign', [$ticket], ['assignee_id' => $this->previous->id]);
 
     expect($ticket->refresh()->assignee_id)->toBe($this->previous->id);

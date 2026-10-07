@@ -31,7 +31,7 @@ beforeEach(function () {
 });
 
 it('assigns only the tickets the person may be assigned, as Reassign does', function () {
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->callTableBulkAction('assign', [$this->tenantA, $this->tenantB], ['assignee_id' => $this->maria->id])
         ->assertNotified(__('padmission-tickets::tickets.resources.tickets.ineligible_assignment'));
 
@@ -42,7 +42,7 @@ it('assigns only the tickets the person may be assigned, as Reassign does', func
 it('assigns none when the person may be assigned none of them', function () {
     $alsoTenantB = Ticket::factory()->open()->create(['subject' => 'Tenant B', 'assignee_id' => null]);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->callTableBulkAction('assign', [$this->tenantB, $alsoTenantB], ['assignee_id' => $this->maria->id])
         ->assertNotified(__('padmission-tickets::tickets.resources.tickets.invalid_assignee'));
 

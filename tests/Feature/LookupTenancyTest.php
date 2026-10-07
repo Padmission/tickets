@@ -142,7 +142,7 @@ describe('Assigning a lookup on a multi-organization panel', function () {
         $own = organizationTicket(1);
         $other = organizationTicket(2);
 
-        Livewire::test(ListTickets::class)
+        Livewire::test(ListTickets::class, ['activeTab' => 'all'])
             ->selectTableRecords([$own, $other])
             ->callAction(TestAction::make('close-tickets')->table()->bulk(), ['disposition' => 'Resolved'])
             ->assertNotified('Closed 2 tickets.');
@@ -159,7 +159,7 @@ describe('Assigning a lookup on a multi-organization panel', function () {
         $own = organizationTicket(1);
         $without = organizationTicket(3);
 
-        Livewire::test(ListTickets::class)
+        Livewire::test(ListTickets::class, ['activeTab' => 'all'])
             ->selectTableRecords([$own, $without])
             ->callAction(TestAction::make('close-tickets')->table()->bulk(), ['disposition' => 'Resolved'])
             ->assertNotified('Closed 1 ticket. 1 was skipped: its organization has no disposition by that name.');

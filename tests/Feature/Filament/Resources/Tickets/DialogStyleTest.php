@@ -31,7 +31,7 @@ it('asks Reopen as a centred confirm, on the page and in a row\'s ⋯ menu', fun
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertActionExists(ReopenTicketAction::class, $centredConfirm);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->removeTableFilter('open')
         ->assertActionExists(TestAction::make(ReopenTicketAction::class)->table($ticket), $centredConfirm);
 });
@@ -43,7 +43,7 @@ it('asks Reassign in a centred dialog, beside Assigned to and in a row\'s ⋯ me
     Livewire::test(ViewTicket::class, ['record' => $ticket->id])
         ->assertActionExists(TestAction::make(ReassignTicketAction::class)->schemaComponent('assignee', schema: 'form'), $centred);
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertActionExists(TestAction::make(ReassignTicketAction::class)->table($ticket), $centred);
 });
 

@@ -25,7 +25,7 @@ it('offers a status name once and matches every organization with that name', fu
     $c = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $open->id, 'closed_at' => null]);
     $d = Ticket::factory()->create(['tenant_id' => 3, 'panel' => 'test2', 'status_id' => $foreign->id, 'closed_at' => null]);
 
-    $page = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
     expect($page->instance()->getTable()->getFilter('status')->getOptions())->toBe(['Closed' => 'Closed', 'Open' => 'Open']);
 
     $page->filterTable('status', ['Closed'])
@@ -45,7 +45,7 @@ it('keeps status ids and host scoping on a single organization panel', function 
     TicketPlugin::get()->customizeTicketQuery(fn ($query) => $query->where('tickets.tenant_id', 1))
         ->modifyRelationshipScopes(fn ($relation, $model) => $model === 'status' ? $relation->where('ticket_statuses.tenant_id', 1) : $relation);
 
-    $page = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
     expect($page->instance()->getTable()->getFilter('status')->queriesRelationships())->toBeTrue()
         ->and($page->instance()->getTable()->getFilter('status')->getRelationshipQuery()->pluck('display_name', 'id')->all())->toBe([$closedA->id => 'Closed']);
 

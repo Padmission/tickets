@@ -12,7 +12,7 @@ it('lists tickets', function () {
 
     $ticket = Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertSee(__('padmission-tickets::tickets.resources.tickets.plural_model_label'))
         // Priority is hidden by default; its random name would be found only in the filter's options.
         ->assertSeeInOrder([

@@ -300,7 +300,7 @@ class YourServiceProvider {
 }
 ```
 
-The ticket list has **All Tickets** and **My Tickets** tabs. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
+The ticket list has **All Tickets** and **My Tickets** tabs. Supporters default to **My Tickets** in every panel, including the admin panel. Requesters default to **All Tickets**, showing their own submissions. Explicit tab URLs take precedence; stale or unknown tabs fall back to the viewer's default. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
 
 Supporters also get these preset tabs in both the organization panel and the panel that receives escalations:
 
@@ -308,10 +308,8 @@ Supporters also get these preset tabs in both the organization panel and the pan
 - **Overdue** - open, waiting on support past the reply threshold
 - **Unassigned** - open, with nobody assigned
 - **Waiting on Requester** - open, waiting on the requester
-- **My Open Tickets** - the open subset of **My Tickets**, using the same assignee resolver
-- **Open Escalations** - the open subset of sent **Escalations** on an organization panel, or received escalations on a receiving panel
 
-A panel that sends escalations also has **Overdue Escalations**, using the same overdue rule for the other team's replies. These extend the existing tabs; **All Tickets**, **My Tickets**, **Escalations** and **My Escalations** keep their history. Presets always exclude closed tickets even when "Open tickets only" is off. The existing **Waiting on** state drives the reply presets, including turns changed through `TurnChanged`. Requesters keep their existing tabs and access. Preset badges use request-local SQL aggregates rather than loading conversations.
+A panel that receives escalations also has **Open Escalations**, showing open escalations sent to its team. A panel that sends escalations also has **Overdue Escalations**, using the same overdue rule for the other team's replies. These extend the existing tabs; **All Tickets**, **My Tickets**, **Escalations** and **My Escalations** keep their history; the default **Open tickets only** filter controls whether closed tickets appear in these tabs. Presets always exclude closed tickets even when "Open tickets only" is off. The existing **Waiting on** state drives the reply presets, including turns changed through `TurnChanged`. Requesters keep their existing tabs and access. Preset badges use request-local SQL aggregates rather than loading conversations.
 
 ### Overdue tickets
 

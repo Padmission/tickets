@@ -28,7 +28,7 @@ it('offers a priority name once and matches every organization with that name', 
     $c = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $status->id, 'priority_id' => $low->id]);
     $d = Ticket::factory()->create(['tenant_id' => 3, 'panel' => 'test2', 'status_id' => $status->id, 'priority_id' => $foreign->id]);
 
-    $page = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
     expect($page->instance()->getTable()->getFilter('priority')->getOptions())->toBe(['High' => 'High', 'Low' => 'Low']);
 
     $page->filterTable('priority', ['High'])
@@ -49,7 +49,7 @@ it('keeps priority ids and host scoping on a single organization panel', functio
     TicketPlugin::get()->customizeTicketQuery(fn ($query) => $query->where('tickets.tenant_id', 1))
         ->modifyRelationshipScopes(fn ($relation, $model) => $model === 'priority' ? $relation->where('ticket_priorities.tenant_id', 1) : $relation);
 
-    $page = Livewire::test(ListTickets::class)->removeTableFilter('open');
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
     expect($page->instance()->getTable()->getFilter('priority')->queriesRelationships())->toBeTrue()
         ->and($page->instance()->getTable()->getFilter('priority')->getRelationshipQuery()->pluck('display_name', 'id')->all())->toBe([$highA->id => 'High']);
 

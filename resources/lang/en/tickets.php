@@ -503,9 +503,7 @@ return [
                 'overdue' => 'Overdue',
                 'unassigned' => 'Unassigned',
                 'waiting_on_requester' => 'Waiting on Requester',
-                'my_open' => 'My Open Tickets',
                 'open_escalations' => 'Open Escalations',
-                'open_linked' => 'Open Escalations',
                 'overdue_linked' => 'Overdue Escalations',
             ],
 
@@ -522,9 +520,7 @@ return [
                 'overdue' => 'Open tickets waiting on support past the reply threshold.',
                 'unassigned' => 'Open tickets with nobody assigned.',
                 'waiting_on_requester' => 'Open tickets waiting on a reply from the requester.',
-                'my_open' => 'Open tickets assigned to you.',
                 'open_escalations' => 'Open escalations sent to your team.',
-                'open_linked' => 'Open conversations with the team you escalated to.',
                 'overdue_linked' => 'Open escalations waiting on the other team past the reply threshold.',
                 'all' => 'Conversations with the people who asked for help. Tickets that need you come first.',
                 'all_submitter' => 'Tickets you submitted.',
@@ -664,17 +660,9 @@ return [
                     'heading' => 'No tickets waiting on a requester',
                     'description' => 'Open tickets appear here when the requester owes the next reply.',
                 ],
-                'my_open' => [
-                    'heading' => 'No open tickets assigned to you',
-                    'description' => 'Open tickets appear here when they are assigned to you.',
-                ],
                 'open_escalations' => [
                     'heading' => 'No open escalations',
                     'description' => 'Escalations sent to your team appear here until they close.',
-                ],
-                'open_linked' => [
-                    'heading' => 'No open escalations',
-                    'description' => 'Your team\'s escalations appear here until they close.',
                 ],
                 'overdue_linked' => [
                     'heading' => 'No overdue escalations',

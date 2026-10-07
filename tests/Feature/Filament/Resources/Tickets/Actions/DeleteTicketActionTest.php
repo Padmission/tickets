@@ -32,7 +32,7 @@ it('keeps View on the row and puts Reassign, Reopen and Delete in its unlabelled
     $this->login();
     $ticket = Ticket::factory()->open()->create();
 
-    $component = Livewire::test(ListTickets::class)
+    $component = Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->assertActionVisible(TestAction::make('view')->table($ticket))
         ->assertActionVisible(TestAction::make('reassign-ticket')->table($ticket))
         ->assertActionVisible(TestAction::make('delete-ticket')->table($ticket));
@@ -80,7 +80,7 @@ it('deletes a ticket from its row', function () {
     $this->login();
     $ticket = Ticket::factory()->open()->create();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->callAction(TestAction::make(DeleteTicketAction::class)->table($ticket))
         ->assertNotified('Ticket deleted');
 
