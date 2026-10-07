@@ -26,6 +26,7 @@ use Padmission\Tickets\Models\Observers\TicketObserver;
 use Padmission\Tickets\Support\ConversationStateQuery;
 use Padmission\Tickets\Support\ConversationViewer;
 use Padmission\Tickets\Support\OverdueTicketsQuery;
+use Padmission\Tickets\Support\TicketOrganization;
 use Padmission\Tickets\TicketPlugin;
 use Padmission\Tickets\ValueObjects\SubmitterData;
 
@@ -138,7 +139,7 @@ class Ticket extends Model
 
         $query->where($query->getModel()->qualifyColumn('panel'), $this->panel);
 
-        if (config('padmission-tickets.tenancy.enabled')) {
+        if (TicketOrganization::shouldScope($this)) {
             $query->where($query->getModel()->qualifyColumn('tenant_id'), $this->getAttribute('tenant_id'));
         }
     }

@@ -12,6 +12,7 @@ use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Concerns\HasColor;
 use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Support\TicketOrganization;
 use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketStatusObserver::class)]
@@ -79,9 +80,7 @@ class TicketStatus extends Model
             ->withoutGlobalScope(CurrentPanelScope::class)
             ->where('panel', $ticket->panel);
 
-        // The organization is the ticket's whenever it has one. The tenancy
-        // flag still limits a ticket with none to rows that have none.
-        if (filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled')) {
+        if (TicketOrganization::shouldScope($ticket)) {
             $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
         }
 

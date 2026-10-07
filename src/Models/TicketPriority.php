@@ -10,6 +10,7 @@ use Padmission\Tickets\Database\Factories\TicketPriorityFactory;
 use Padmission\Tickets\Models\Concerns\HasColor;
 use Padmission\Tickets\Models\Observers\TicketPriorityObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
+use Padmission\Tickets\Support\TicketOrganization;
 use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketPriorityObserver::class)]
@@ -41,9 +42,7 @@ class TicketPriority extends Model
             ->withoutGlobalScope(CurrentPanelScope::class)
             ->where('panel', $ticket->panel);
 
-        // The organization is the ticket's whenever it has one. The tenancy
-        // flag still limits a ticket with none to rows that have none.
-        if (filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled')) {
+        if (TicketOrganization::shouldScope($ticket)) {
             $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
         }
 

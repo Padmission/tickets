@@ -8,6 +8,7 @@ use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Support\TicketOrganization;
 use Padmission\Tickets\TicketPlugin;
 
 class TicketDuplicates
@@ -19,9 +20,7 @@ class TicketDuplicates
             ->withoutTrashed()
             ->where('tickets.panel', $ticket->panel);
 
-        // Use the ticket's organization even when the host's tenancy flag is off.
-        // With tenancy enabled, a null tenant still matches only tenant-less tickets.
-        if (filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled')) {
+        if (TicketOrganization::shouldScope($ticket)) {
             $query->where($query->getModel()->qualifyColumn('tenant_id'), $ticket->getAttribute('tenant_id'));
         }
 

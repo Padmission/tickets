@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Support\TicketOrganization;
 
 /*
  * Statuses, priorities and dispositions offered for a ticket come from its own
@@ -39,6 +40,6 @@ trait ScopesLookupsToTicket
 
     protected function lookupBelongsToTicketsOrganization(Ticket $ticket): bool
     {
-        return filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled');
+        return TicketOrganization::shouldScope($ticket);
     }
 }

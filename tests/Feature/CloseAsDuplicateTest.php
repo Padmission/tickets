@@ -492,8 +492,38 @@ describe('with tenants', function () {
         expect($this->original->duplicates->modelKeys())->toBe([$this->duplicate->id]);
     });
 
-    it('scopes a ticket without a tenant to other tickets without a tenant', function () {
+    it('keeps the existing null-tenant picker behavior for each tenancy setting', function (bool $tenancyEnabled) {
+        config()->set('padmission-tickets.tenancy.enabled', $tenancyEnabled);
         $this->duplicate->forceFill(['tenant_id' => null])->saveQuietly();
-        expect(resolve(TicketDuplicates::class)->candidates($this->duplicate)->pluck('id'))->not->toContain($this->original->id);
+        $tenantless = Ticket::factory()->open()->state(['disposition_id' => null])->create(['tenant_id' => null, 'subject' => 'The original problem']);
+        $otherTenant = Ticket::factory()->open()->state(['disposition_id' => null])->create(['tenant_id' => 2, 'subject' => 'The original problem']);
+        $expectedIds = $tenancyEnabled ? [$tenantless->id] : [$this->original->id, $tenantless->id, $otherTenant->id];
+
+        expect(resolve(TicketDuplicates::class)->candidates($this->duplicate)->orderBy('id')->pluck('id')->all())->toBe($expectedIds);
+
+        Livewire::test(ViewTicket::class, ['record' => $this->duplicate->id])
+            ->mountAction(duplicateAction())
+            ->assertFormFieldExists('original', function ($field) use ($expectedIds): bool {
+                $optionIds = array_keys($field->getOptions());
+                $searchIds = array_keys($field->getSearchResults('original'));
+                sort($optionIds);
+                sort($searchIds);
+
+                return $optionIds === $expectedIds && $searchIds === $expectedIds;
+            });
+    })->with(['tenancy on' => true, 'tenancy off' => false]);
+
+    it('keeps duplicate relations within the ticket tenant with tenancy off', function () {
+        config()->set('padmission-tickets.tenancy.enabled', false);
+        $this->duplicate->forceFill(['duplicate_of_ticket_id' => $this->original->id])->saveQuietly();
+        $foreignDuplicate = Ticket::factory()->closed()->state(['disposition_id' => null])->create(['tenant_id' => 2, 'duplicate_of_ticket_id' => $this->original->id]);
+        $foreignOriginal = Ticket::factory()->open()->state(['disposition_id' => null])->create(['tenant_id' => 2]);
+        $localDuplicateWithForeignOriginal = Ticket::factory()->closed()->state(['disposition_id' => null])->create(['tenant_id' => 1, 'duplicate_of_ticket_id' => $foreignOriginal->id]);
+
+        expect($this->original->duplicates->modelKeys())->toBe([$this->duplicate->id])
+            ->and($this->duplicate->duplicateOriginal?->id)->toBe($this->original->id)
+            ->and($foreignDuplicate->duplicateOriginal)->toBeNull()
+            ->and($localDuplicateWithForeignOriginal->duplicateOriginal)->toBeNull()
+            ->and($foreignOriginal->duplicates)->toBeEmpty();
     });
 });
