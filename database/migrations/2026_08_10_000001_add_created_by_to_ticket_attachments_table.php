@@ -8,12 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasColumn('ticket_attachments', 'created_by')) {
-            return;
+        if (! Schema::hasColumn('ticket_attachments', 'created_by')) {
+            Schema::table('ticket_attachments', function (Blueprint $table): void {
+                $table->unsignedBigInteger('created_by')->nullable()->after('activity_id');
+            });
         }
 
-        Schema::table('ticket_attachments', function (Blueprint $table) {
-            $table->unsignedBigInteger('created_by')->nullable()->after('activity_id')->index();
-        });
+        if (! Schema::hasIndex('ticket_attachments', ['created_by'])) {
+            Schema::table('ticket_attachments', function (Blueprint $table): void {
+                $table->index('created_by');
+            });
+        }
     }
 };

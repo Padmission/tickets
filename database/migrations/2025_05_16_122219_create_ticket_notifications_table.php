@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('ticket_notifications') || Schema::hasTable('ticket_last_seen') || Schema::hasTable('ticket_user_states')) {
+            return;
+        }
+
         Schema::create('ticket_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();

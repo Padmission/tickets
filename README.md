@@ -147,7 +147,7 @@ A plain `composer require padmission/tickets` installs the latest tag, which is 
 php artisan migrate
 ```
 
-The package runs its own migrations. Set `run_migrations` to `false` in the config if you'd rather publish and manage them yourself.
+Keep `run_migrations => true` in `config/padmission-tickets.php` (the default). Migrations live in the package; hosts should not publish or maintain their own copies.
 
 **Step 4:** Publish the Filament assets:
 
@@ -222,6 +222,12 @@ Statuses, priorities and dispositions are kept per panel (and per tenant when te
 - `--only=dispositions,priorities,statuses,tickets,scenarios` - seed only some types. `scenarios` runs only when named (see [Seeding Demo Scenarios](#seeding-demo-scenarios))
 - `--panel=ID` - with `scenarios`, seed that panel only
 - `--force` - seed even when rows already exist
+
+### Upgrading existing installations
+
+If your host currently sets `run_migrations` to `false`, switch it to `true`, clear any cached configuration with `php artisan config:clear`, and run `php artisan migrate`. All package migrations are safe to run against tables, columns, indexes and foreign keys already created by older host copies, and safe to run repeatedly. New package releases then receive their schema changes through the host's normal migration command. Retire host-owned copies of ticket migrations; existing entries in the migrations table can remain.
+
+The notification-state upgrades recognize `ticket_notifications`, `ticket_last_seen` and `ticket_user_states`. When an older and newer table both exist, the newer table is used and the older table and its data are left intact for manual reconciliation. Existing activity pointers are preserved; legacy rows receive the same notification/seen backfill as before.
 
 ## Configuration
 
@@ -320,7 +326,7 @@ Configure it in `config/padmission-tickets.php`:
 ],
 ```
 
-With tenancy enabled, the package reads the `timezone` column on the configured `tenancy_model` and applies each organization's local cutoff, including on panels spanning organizations. A missing column, unavailable model, missing organization, empty or invalid timezone, or ticket without an organization uses `app.timezone`. This is independent of the viewer's display timezone. Host ticket and activity scopes remain in effect. The query uses the latest requester message in SQL, with an index for this lookup; it does not load tickets to calculate their ages. Run the host's migrations to add the requester-message index. Hosts with `run_migrations` set to `false` need a host migration creating `ticket_activities_requester_age_index` on `(ticket_id, type, sender, created_at)`; the package migration does not run automatically there.
+With tenancy enabled, the package reads the `timezone` column on the configured `tenancy_model` and applies each organization's local cutoff, including on panels spanning organizations. A missing column, unavailable model, missing organization, empty or invalid timezone, or ticket without an organization uses `app.timezone`. This is independent of the viewer's display timezone. Host ticket and activity scopes remain in effect. The query uses the latest requester message in SQL, with an index for this lookup; it does not load tickets to calculate their ages. With `run_migrations => true`, run `php artisan migrate` to add the package's requester-message index on `(ticket_id, type, sender, created_at)`. An equivalent existing host index is reused.
 
 ## Widgets
 
@@ -861,7 +867,7 @@ Tickets involved in escalations are deliberately blocked, including escalations 
 
 Duplicate closure and reopening never notify the requester side, even when a host configures both recipients. Ordinary ticket closure retains the host’s explicit requester notification opt-in. Their system notes do not produce requester notification emails either. Actual messages continue to use the normal notification rules.
 
-The nullable `duplicate_of_ticket_id` foreign key uses `nullOnDelete`. The package ships the guarded, standalone migration `2026_10_06_000001_add_duplicate_of_ticket_id_to_tickets_table.php`, which upgrades existing tables as well as new installations. With `run_migrations` enabled, the host's normal `php artisan migrate` runs it. Hosts with `run_migrations` disabled must publish and run the new package migration, or add an equivalent guarded host migration before deploying the feature. An already-run create-table migration will not add this column.
+The nullable `duplicate_of_ticket_id` foreign key uses `nullOnDelete`. The package ships the guarded, standalone migration `2026_10_06_000001_add_duplicate_of_ticket_id_to_tickets_table.php`, which upgrades existing tables as well as new installations. With `run_migrations` enabled, the host's normal `php artisan migrate` runs it. Hosts upgrading from `run_migrations => false` should enable package migrations and run `php artisan migrate` before deploying the feature; an existing column or foreign key is reused. An already-run create-table migration will not add this column.
 
 ### Reopen
 

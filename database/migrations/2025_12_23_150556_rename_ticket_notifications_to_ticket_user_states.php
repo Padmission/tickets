@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Padmission\Tickets\Support\TicketMigrationSchema;
 
 return new class extends Migration
 {
@@ -23,39 +23,19 @@ return new class extends Migration
             $renamedFromLegacyTable = true;
         }
 
-        if (! Schema::hasTable('ticket_user_states')) {
-            return;
-        }
+        TicketMigrationSchema::createUserStateTable('ticket_user_states');
 
         $hasLastSeenActivityId = Schema::hasColumn('ticket_user_states', 'last_seen_activity_id');
         $hasLastNotifiedActivityId = Schema::hasColumn('ticket_user_states', 'last_notified_activity_id');
 
-        Schema::table('ticket_user_states', function (Blueprint $table) use ($hasLastNotifiedActivityId, $hasLastSeenActivityId): void {
-            if (! $hasLastSeenActivityId) {
-                $table
-                    ->foreignId('last_seen_activity_id')
-                    ->nullable()
-                    ->after('user_id')
-                    ->constrained('ticket_activities')
-                    ->nullOnDelete();
-            }
-
-            if (! $hasLastNotifiedActivityId) {
-                $table
-                    ->foreignId('last_notified_activity_id')
-                    ->nullable()
-                    ->after('last_seen_activity_id')
-                    ->constrained('ticket_activities')
-                    ->nullOnDelete();
-            }
-        });
+        TicketMigrationSchema::ensureUserStatePointers('ticket_user_states');
 
         // The v2 migration added both pointer columns to the legacy table without
         // backfilling them, so the backfill must run whenever this migration renames
         // a legacy table — not only when it creates the columns itself. Every update
         // below touches NULL pointers only, keeping the backfill idempotent and
         // preserving pointers that already carry real values.
-        if (! $renamedFromLegacyTable && $hasLastSeenActivityId) {
+        if (! $renamedFromLegacyTable && $hasLastSeenActivityId && $hasLastNotifiedActivityId) {
             return;
         }
 
@@ -66,7 +46,7 @@ return new class extends Migration
                     select max(ticket_activities.id)
                     from ticket_activities
                     where ticket_activities.ticket_id = ticket_user_states.ticket_id
-                        and ticket_activities.type != "turn-changed"
+                        and ticket_activities.type != \'turn-changed\'
                         and ticket_activities.created_at <= ticket_user_states.updated_at
                 )'),
             ]);

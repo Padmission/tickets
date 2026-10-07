@@ -6,11 +6,18 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Padmission\Tickets\Support\TicketMigrationSchema;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('tickets')) {
+            TicketMigrationSchema::ensureNullableForeignId('tickets', 'linked_ticket_id', 'tickets');
+
+            return;
+        }
+
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
 
@@ -47,6 +54,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+
+        TicketMigrationSchema::ensureNullableForeignId('tickets', 'linked_ticket_id', 'tickets');
     }
 
     public function down(): void
