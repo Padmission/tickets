@@ -23,6 +23,7 @@ use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OverdueTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketBurndownChartWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Ticket;
@@ -156,6 +157,7 @@ class TicketPlugin implements Plugin
                 OpenTicketsWidget::class,
                 OpenSupporterTickets::class,
                 TicketCloseTimeWidget::class,
+                OverdueTicketsWidget::class,
                 TicketBurndownChartWidget::class,
             ]);
         }

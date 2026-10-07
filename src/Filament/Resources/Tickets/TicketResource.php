@@ -21,6 +21,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
@@ -34,6 +35,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
+use Padmission\Tickets\Filament\Widgets\OverdueTicketsWidget;
 use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
@@ -259,7 +261,54 @@ class TicketResource extends Resource
             OpenTicketsWidget::class,
             OpenSupporterTickets::class,
             TicketCloseTimeWidget::class,
+            OverdueTicketsWidget::class,
         ];
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected static function applyOverdueFilter(Builder $query): Builder
+    {
+        return $query->overdue();
+    }
+
+    /*
+     * Keep the host's relationship scopes: only a query that actually sees
+     * several organizations needs names in place of organization-specific ids.
+     * Filtering matches every organization that uses the name. Assigning a
+     * status or priority does not; that stays on the ticket's own rows.
+     */
+    protected static function lookupFilter(string $name): SelectFilter
+    {
+        $filter = SelectFilter::make($name)->relationship($name, 'display_name');
+
+        if (! config('padmission-tickets.tenancy.enabled')) {
+            return $filter;
+        }
+
+        $lookups = Relation::noConstraints(function () use ($name): Relation {
+            $model = TicketPlugin::get()->getTicketQuery()->getModel();
+
+            return $name === 'priority' ? $model->priority() : $model->status();
+        })
+            ->getQuery()
+            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
+
+        if ((clone $lookups)->distinct()->count('tenant_id') < 2) {
+            return $filter;
+        }
+
+        return $filter
+            ->relationship(null, null)
+            ->options(fn (): array => (clone $lookups)->reorder()->orderBy('display_name')
+                ->distinct()->pluck('display_name', 'display_name')->all())
+            ->query(fn (Builder $query, array $data): Builder => $query->when(
+                filled($data['values'] ?? []),
+                fn (Builder $query): Builder => $query->whereHas($name, fn (Builder $matches): Builder => $matches
+                    ->whereIn('display_name', $data['values'])),
+            ));
     }
 
     public static function table(Table $table): Table
@@ -390,14 +439,17 @@ class TicketResource extends Resource
                     ->default()
                     ->query(fn (Builder $query): Builder => $query->whereNull($query->getModel()->qualifyColumn('closed_at'))),
 
-                SelectFilter::make('status')
-                    ->relationship('status', 'display_name')
+                Filter::make('overdue')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.filters.overdue'))
+                    ->toggle()
+                    ->query(static::applyOverdueFilter(...)),
+
+                static::lookupFilter('status')
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
 
-                SelectFilter::make('priority')
-                    ->relationship('priority', 'display_name')
+                static::lookupFilter('priority')
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->multiple()
                     ->preload(),
@@ -549,9 +601,13 @@ class TicketResource extends Resource
                 || $records->whereInstanceOf(Ticket::class)->contains(fn (Ticket $ticket): bool => $closer()->canClose($ticket)))
             ->action(function (Collection $records, array $data) use ($key, $closer): void {
                 $closed = 0;
+                $skipped = 0;
+                $missingName = 0;
 
                 foreach ($records->whereInstanceOf(Ticket::class) as $ticket) {
                     if (! $closer()->canClose($ticket)) {
+                        $skipped++;
+
                         continue;
                     }
 
@@ -561,6 +617,10 @@ class TicketResource extends Resource
                         : null;
 
                     if ($dispositionId === null && $dispositions->exists()) {
+                        // The name was chosen, but this ticket's organization has
+                        // none by it. Leave the ticket open and say so.
+                        filled($data['disposition'] ?? null) ? $missingName++ : $skipped++;
+
                         continue;
                     }
 
@@ -568,11 +628,13 @@ class TicketResource extends Resource
                     $closed++;
                 }
 
-                $skipped = $records->count() - $closed;
-
                 Notification::make()
-                    ->title(trim(trans_choice($key.'closed', $closed).' '.($skipped > 0 ? trans_choice($key.'skipped', $skipped) : '')))
-                    ->status($skipped > 0 ? 'warning' : 'success')
+                    ->title(trim(implode(' ', array_filter([
+                        trans_choice($key.'closed', $closed),
+                        $skipped > 0 ? trans_choice($key.'skipped', $skipped) : null,
+                        $missingName > 0 ? trans_choice($key.'skipped_disposition', $missingName) : null,
+                    ]))))
+                    ->status(($skipped + $missingName) > 0 ? 'warning' : 'success')
                     ->send();
             })
             ->deselectRecordsAfterCompletion();

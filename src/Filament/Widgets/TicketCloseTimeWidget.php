@@ -14,7 +14,7 @@ class TicketCloseTimeWidget extends BaseWidget
 
     protected ?string $pollingInterval = '60s';
 
-    protected int|string|array $columnSpan = 4;
+    protected int|string|array $columnSpan = 3;
 
     protected function getColumns(): int
     {

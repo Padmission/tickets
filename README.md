@@ -294,6 +294,34 @@ class YourServiceProvider {
 
 The ticket list has **All Tickets** and **My Tickets** tabs. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
 
+Supporters also get these preset tabs in both the organization panel and the panel that receives escalations:
+
+- **Needs Reply** - open, waiting on support, regardless of assignee
+- **Overdue** - open, waiting on support past the reply threshold
+- **Unassigned** - open, with nobody assigned
+- **Waiting on Requester** - open, waiting on the requester
+- **My Open Tickets** - the open subset of **My Tickets**, using the same assignee resolver
+- **Open Escalations** - the open subset of sent **Escalations** on an organization panel, or received escalations on a receiving panel
+
+A panel that sends escalations also has **Overdue Escalations**, using the same overdue rule for the other team's replies. These extend the existing tabs; **All Tickets**, **My Tickets**, **Escalations** and **My Escalations** keep their history. Presets always exclude closed tickets even when "Open tickets only" is off. The existing **Waiting on** state drives the reply presets, including turns changed through `TurnChanged`. Requesters keep their existing tabs and access. Preset badges use request-local SQL aggregates rather than loading conversations.
+
+### Overdue tickets
+
+`Ticket::query()->overdue()` finds open tickets whose current **Waiting on** is support and whose last requester message is older than the threshold. Support updates, internal notes and `TurnChanged` history do not reset that message clock. Tickets without a requester message are excluded.
+
+The default is **1 business day**, meaning 24 local weekday hours. Saturday and Sunday pause the clock; holidays and office hours are not excluded. A Friday 10 a.m. message becomes overdue after Monday 10 a.m., including across daylight-saving changes. Equality at the threshold is not overdue.
+
+Configure it in `config/padmission-tickets.php`:
+
+```php
+'overdue' => [
+    'business_days' => 1, // A positive whole number
+    'timezone' => null,  // Or a timezone such as 'America/New_York' for every ticket
+],
+```
+
+With tenancy enabled, the package reads the `timezone` column on the configured `tenancy_model` and applies each organization's local cutoff, including on panels spanning organizations. A missing column, unavailable model, missing organization, empty or invalid timezone, or ticket without an organization uses `app.timezone`. This is independent of the viewer's display timezone. Host ticket and activity scopes remain in effect. The query uses the latest requester message in SQL, with an index for this lookup; it does not load tickets to calculate their ages. Run the host's migrations to add the requester-message index. Hosts with `run_migrations` set to `false` need a host migration creating `ticket_activities_requester_age_index` on `(ticket_id, type, sender, created_at)`; the package migration does not run automatically there.
+
 ## Widgets
 
 This package comes with multiple Filament widgets that can be added to your dashboard:
@@ -301,6 +329,7 @@ This package comes with multiple Filament widgets that can be added to your dash
 - **OpenTicketsWidget** - Shows count of open tickets
 - **OpenSupporterTickets** - Shows tickets assigned to supporters
 - **TicketCloseTimeWidget** - Displays average ticket close times
+- **OverdueTicketsWidget** - Counts overdue tickets and enables the Overdue filter on the current tab
 - **TicketBurndownChartWidget** - Visualizes ticket closure trends
 
 Widgets are not registered on the panel by default. Pass `shouldRegisterWidgets: true` to add them:
@@ -311,7 +340,7 @@ TicketPlugin::make()
     ->registerResources(shouldRegisterWidgets: true)
 ```
 
-Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets` and `TicketCloseTimeWidget` in its header, to supporters only.
+Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the preset. Clicking it stays on the current tab and turns on the **Overdue** table filter, retaining other table filters and search so the list matches the card count. **Overdue** and **Overdue Escalations** remain available as preset tabs. On a dashboard, the card opens **All Tickets** with the **Overdue** filter enabled. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
 
 ### Authorization
 
@@ -768,6 +797,8 @@ TicketPlugin::make()
 ```
 
 The organization list opens with the first 50, searched and sorted by the tenant's `name` column. Without `ticketTenantsQuery()` it is empty. `startsTickets(false)` hides **New ticket** on any panel.
+
+When tenancy is enabled, a status filter whose scoped options span several organizations offers each display name once and matches that status in every organization. A panel scoped to one organization keeps its status ID filter. The host's ticket and relationship scopes still control which organizations it can see.
 
 ### Escalations
 

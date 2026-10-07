@@ -132,6 +132,7 @@ return [
             'submit' => 'Close tickets',
             'closed' => '{0} No tickets were closed.|{1} Closed 1 ticket.|[2,*] Closed :count tickets.',
             'skipped' => '{1} 1 was skipped.|[2,*] :count were skipped.',
+            'skipped_disposition' => '{1} 1 was skipped: its organization has no disposition by that name.|[2,*] :count were skipped: their organization has no disposition by that name.',
         ],
 
         'delete' => [
@@ -480,6 +481,14 @@ return [
                 'my' => 'My Tickets',
                 'linked' => 'Escalations',
                 'my_linked' => 'My Escalations',
+                'needs_reply' => 'Needs Reply',
+                'overdue' => 'Overdue',
+                'unassigned' => 'Unassigned',
+                'waiting_on_requester' => 'Waiting on Requester',
+                'my_open' => 'My Open Tickets',
+                'open_escalations' => 'Open Escalations',
+                'open_linked' => 'Open Escalations',
+                'overdue_linked' => 'Overdue Escalations',
             ],
 
             'badges' => [
@@ -491,6 +500,14 @@ return [
             ],
 
             'tab_descriptions' => [
+                'needs_reply' => 'Open tickets waiting on a reply from support.',
+                'overdue' => 'Open tickets waiting on support past the reply threshold.',
+                'unassigned' => 'Open tickets with nobody assigned.',
+                'waiting_on_requester' => 'Open tickets waiting on a reply from the requester.',
+                'my_open' => 'Open tickets assigned to you.',
+                'open_escalations' => 'Open escalations sent to your team.',
+                'open_linked' => 'Open conversations with the team you escalated to.',
+                'overdue_linked' => 'Open escalations waiting on the other team past the reply threshold.',
                 'all' => 'Conversations with the people who asked for help. Tickets that need you come first.',
                 'all_submitter' => 'Tickets you submitted.',
                 'my' => 'Tickets assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.',
@@ -609,9 +626,43 @@ return [
 
             'filters' => [
                 'open_only' => 'Open tickets only',
+                'overdue' => 'Overdue',
             ],
 
             'empty' => [
+                'needs_reply' => [
+                    'heading' => 'No tickets need a reply',
+                    'description' => 'Open tickets appear here when support owes the next reply.',
+                ],
+                'overdue' => [
+                    'heading' => 'No overdue tickets',
+                    'description' => 'Open tickets appear here when the last requester message passes the reply threshold.',
+                ],
+                'unassigned' => [
+                    'heading' => 'No unassigned tickets',
+                    'description' => 'Open tickets appear here when nobody is assigned.',
+                ],
+                'waiting_on_requester' => [
+                    'heading' => 'No tickets waiting on a requester',
+                    'description' => 'Open tickets appear here when the requester owes the next reply.',
+                ],
+                'my_open' => [
+                    'heading' => 'No open tickets assigned to you',
+                    'description' => 'Open tickets appear here when they are assigned to you.',
+                ],
+                'open_escalations' => [
+                    'heading' => 'No open escalations',
+                    'description' => 'Escalations sent to your team appear here until they close.',
+                ],
+                'open_linked' => [
+                    'heading' => 'No open escalations',
+                    'description' => 'Your team\'s escalations appear here until they close.',
+                ],
+                'overdue_linked' => [
+                    'heading' => 'No overdue escalations',
+                    'description' => 'Escalations appear here when the other team passes the reply threshold.',
+                ],
+
                 'all' => [
                     'heading' => 'No tickets',
                     'description' => 'Closed tickets are hidden while "Open tickets only" is on.',
