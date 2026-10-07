@@ -8,15 +8,23 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Padmission\Tickets\AssignmentStrategies\AssignDefaultUser;
+use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Database\Seeders\TicketPrioritySeeder;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
+use Padmission\Tickets\Enums\ActivitySender;
+use Padmission\Tickets\Enums\ActivityType;
+use Padmission\Tickets\Enums\NotificationRecipient;
+use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Notifications\TicketNotification;
 use Padmission\Tickets\Policies\TicketPolicy;
+use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
 
@@ -183,6 +191,8 @@ function expectAssigned(User $user, Ticket $ticket, int $queued): void
     expect(implode("\n", mailHtmlFor($user)))
         ->toContain('Ticket Assigned')
         ->toContain('A ticket has been assigned to you for handling.');
+    expect($user->notifications()->get()->pluck('data.body')->all())
+        ->toBe(['A ticket has been assigned to you for handling.']);
 }
 
 function expectOpened(User $user, Ticket $ticket): void
@@ -395,6 +405,13 @@ it('emails and bells whoever auto-assignment gives a new ticket to', function ()
     $this->login($this->requester);
 
     $ticket = openAssignedTicket();
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::System,
+        'user_id' => null,
+        'content' => 'We received your request.',
+    ]);
     $queued = deliverQueuedNotices();
 
     expect($ticket->refresh()->assignee_id)->toBe($this->colleague->id);
@@ -429,4 +446,95 @@ it('emails and bells whoever auto-assignment gives a ticket opened through the A
     expect($ticket->assignee_id)->toBe($this->colleague->id);
     expectAssigned($this->colleague, $ticket, $queued);
     expectOpened($this->requester, $ticket);
+});
+
+it('delivers an unassigned requester creation only to the requester', function () {
+    forgetQueuedNotices();
+    $this->login($this->requester);
+
+    $ticket = openAssignedTicket();
+    deliverQueuedNotices();
+
+    expectOpened($this->requester, $ticket);
+    expect($this->requester->notifications()->count())->toBe(1);
+    expectUntold($this->previous);
+    expectUntold($this->colleague);
+});
+
+it('delivers a support-created assignment to the colleague in both channels', function () {
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    $ticket = openAssignedTicket($this->colleague);
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::System,
+        'user_id' => null,
+        'content' => 'Support opened this ticket.',
+    ]);
+    $queued = deliverQueuedNotices();
+
+    expectAssigned($this->colleague, $ticket, $queued);
+    expectOpened($this->requester, $ticket);
+    expectUntold($this->previous);
+});
+
+it('queues and delivers nobody for a support-only creation self-assignment and does not preview assigned wording', function () {
+    TicketPlugin::get()->notificationConfiguration(
+        NotificationConfiguration::make()->on(TicketCreatedEvent::class, fn () => NotificationRecipient::Supporter)
+    );
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    $ticket = openAssignedTicket($this->previous);
+    $event = new TicketCreatedEvent($ticket, $this->previous);
+    $notification = new TicketNotification($ticket, $event);
+
+    expect($notification->shouldSend($this->previous))->toBeFalse();
+    expect($notification->toMail($this->previous)->viewData['headline'])->toBe('New Ticket');
+    expect(app(NotificationRecipientService::class)->getNotificationRecipients($event))->toBeEmpty();
+    expect(deliverQueuedNotices())->toBe(0);
+    expectUntold($this->previous);
+    expectUntold($this->requester);
+    expectUntold($this->colleague);
+});
+
+it('delivers a new escalation assignment to the target team in both channels', function () {
+    forgetQueuedNotices();
+    $this->login($this->previous);
+
+    $ticket = escalationFrom(attributes: [
+        'submitter_id' => $this->previous->id,
+        'assignee_id' => $this->padmission->id,
+    ]);
+    TicketActivity::factory()->create([
+        'ticket_id' => $ticket->id,
+        'type' => ActivityType::Message,
+        'sender' => ActivitySender::System,
+        'user_id' => null,
+        'content' => 'An escalation was opened.',
+    ]);
+    $queued = deliverQueuedNotices();
+
+    expectAssigned($this->padmission, $ticket, $queued);
+    expectUntold($this->previous);
+    expectUntold($this->requester);
+    expectUntold($this->alessa);
+});
+
+it('delivers only the requester acknowledgement when the host opts out of creation assignee notices', function () {
+    TicketPlugin::get()->notificationConfiguration(
+        NotificationConfiguration::make()->notifyAssigneeOnCreation(false)
+    );
+    TicketPlugin::get()->assignmentStrategy(new AssignDefaultUser($this->colleague->id));
+    forgetQueuedNotices();
+    $this->login($this->requester);
+
+    $ticket = openAssignedTicket();
+    deliverQueuedNotices();
+
+    expectOpened($this->requester, $ticket);
+    expectUntold($this->colleague);
+    expectUntold($this->previous);
 });

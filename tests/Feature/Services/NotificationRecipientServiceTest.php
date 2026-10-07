@@ -18,7 +18,7 @@ beforeEach(function () {
     TicketPriority::factory()->count(2)->create();
 });
 
-test('notification recipients are correctly identified', function () {
+test('creation recipients exclude the self-assigning supporter', function () {
     $assignee = User::factory()->create();
     $submitter = User::factory()->create();
     $ticket = Ticket::factory()->open()->create([
@@ -33,12 +33,7 @@ test('notification recipients are correctly identified', function () {
 
     $recipients = $recipientService->getNotificationRecipients($event);
 
-    expect($recipients)->toHaveCount(2);
-
-    // Check that both users are in the recipients by ID
-    $recipientIds = $recipients->pluck('id')->toArray();
-    expect($recipientIds)->toContain($assignee->id)
-        ->and($recipientIds)->toContain($submitter->id);
+    expect($recipients->pluck('id')->all())->toBe([$submitter->id]);
 });
 
 test('duplicate recipients are filtered out', function () {

@@ -94,11 +94,7 @@ test('ticket creation with default configuration sends notifications correctly',
         return $job->getUserId() === $this->submitter->id;
     });
 
-    Queue::assertPushed(NotificationJob::class, function ($job) {
-        return $job->getUserId() === $this->supporter->id;
-    });
-
-    Queue::assertPushed(NotificationJob::class, 2);
+    Queue::assertPushed(NotificationJob::class, 1);
 });
 
 test('ticket activity with default configuration sends notifications correctly', function () {
@@ -227,35 +223,27 @@ test('no notifications are sent when configuration disables them', function () {
     Queue::assertNothingPushed();
 });
 
-test('an unassigned ticket created by its requester notifies the requester and the supporters', function () {
-    $this->modifyPlugin(
-        fn (TicketPlugin $plugin) => $plugin->notificationConfiguration(NotificationConfiguration::make())
-    );
+test('an unassigned ticket created by its requester notifies only the requester', function () {
+    $configuration = NotificationConfiguration::make();
+    TicketPlugin::get()->notificationConfiguration($configuration);
 
-    $listener = createListener();
+    expect($configuration->getConfigurationFor(TicketCreatedEvent::class, NotificationTrigger::User))
+        ->toBe(NotificationRecipient::User);
 
     $ticket = Ticket::factory()->create([
         'submitter_id' => $this->submitter->id,
         'assignee_id' => null,
     ]);
 
-    $event = new TicketCreatedEvent($ticket, $this->submitter);
-    $listener->handle($event);
+    createListener()->handle(new TicketCreatedEvent($ticket, $this->submitter));
 
-    Queue::assertPushed(NotificationJob::class, function ($job) {
-        return $job->getUserId() === $this->submitter->id;
-    });
-
-    Queue::assertPushed(NotificationJob::class, function ($job) {
-        return $job->getUserId() === $this->supporter->id;
-    });
-
-    Queue::assertPushed(NotificationJob::class, 2);
+    Queue::assertPushed(NotificationJob::class, fn ($job) => $job->getUserId() === $this->submitter->id);
+    Queue::assertPushed(NotificationJob::class, 1);
 });
 
-test('a host that leaves supporters off a created ticket does not notify the assignee', function () {
+test('a host can disable the extra creation assignee notice without enabling the supporter pool', function () {
     TicketPlugin::get()->notificationConfiguration(
-        NotificationConfiguration::make()->on(TicketCreatedEvent::class, fn () => NotificationRecipient::User)
+        NotificationConfiguration::make()->notifyAssigneeOnCreation(false)
     );
 
     $ticket = Ticket::factory()->create([
@@ -263,10 +251,10 @@ test('a host that leaves supporters off a created ticket does not notify the ass
         'assignee_id' => $this->supporter->id,
     ]);
 
-    $recipients = (new NotificationRecipientService)->getNotificationRecipients(new TicketCreatedEvent($ticket, $this->submitter));
+    createListener()->handle(new TicketCreatedEvent($ticket, $this->submitter));
 
-    expect($recipients)->toHaveCount(1)
-        ->and($recipients->first()->id)->toBe($this->submitter->id);
+    Queue::assertPushed(NotificationJob::class, fn ($job) => $job->getUserId() === $this->submitter->id);
+    Queue::assertPushed(NotificationJob::class, 1);
 });
 
 test('actor determination works correctly without explicit actor', function () {

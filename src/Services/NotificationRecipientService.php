@@ -75,6 +75,21 @@ class NotificationRecipientService
             }
         }
 
+        // Creation can tell just the assignee without enabling the supporter
+        // pool fallback. None still disables all creation notifications.
+        if ($event instanceof TicketCreatedEvent) {
+            if ($recipientFlag !== NotificationRecipient::None->value && $configuration->shouldNotifyAssigneeOnCreation()) {
+                $recipients->push($this->getAssignee($event->ticket));
+            }
+
+            // Keep the requester's acknowledgement, but never queue a notice
+            // to someone who assigned the ticket to themselves.
+            $recipients = $recipients->reject(fn ($user): bool => $user !== null
+                && $event->actor !== null
+                && (string) $user->getKey() === (string) $event->actor->getAuthIdentifier()
+                && (string) $user->getKey() !== (string) $event->ticket->submitter_id);
+        }
+
         return $recipients->filter()->unique(fn ($user) => $user->getKey());
     }
 

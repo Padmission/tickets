@@ -201,7 +201,7 @@ class TicketNotification extends Notification
     {
         // The created notice is the requester's acknowledgement. Whoever the
         // ticket was given to reads it as an assignment.
-        if ($this->notificationType === 'created' && $this->isAssignee($notifiable) && ! $this->isSubmitter($notifiable)) {
+        if ($this->notificationType === 'created' && $this->isAssignee($notifiable) && ! $this->isSubmitter($notifiable) && ! $this->isActor($notifiable)) {
             return 'assigned';
         }
 
@@ -355,7 +355,7 @@ class TicketNotification extends Notification
 
         $body = match ($this->notificationType) {
             'handedover' => $wording['intro'],
-            'created' => ($this->openedFor()['note'] === null ? $this->bellText($this->openingActivities($notifiable, $activities)->last(), $notifiable) : null) ?? $wording['intro'],
+            'created' => ($this->wordingType($notifiable) === 'created' && $this->openedFor()['note'] === null ? $this->bellText($this->openingActivities($notifiable, $activities)->last(), $notifiable) : null) ?? $wording['intro'],
             default => $this->bellText($this->reportedActivities($notifiable, $activities)->last(), $notifiable) ?? $wording['intro'],
         };
 

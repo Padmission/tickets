@@ -15,13 +15,16 @@ final class NotificationConfiguration
 {
     protected array $config = [];
 
+    protected bool $notifyAssigneeOnCreation = true;
+
     public static function make(): static
     {
         return (new self)
             ->on(
                 TicketCreatedEvent::class,
                 fn (NotificationTrigger $trigger) => match ($trigger) {
-                    NotificationTrigger::User, NotificationTrigger::Supporter => NotificationRecipient::Both,
+                    NotificationTrigger::User => NotificationRecipient::User,
+                    default => NotificationRecipient::Both,
                 }
             )
             ->on(
@@ -50,6 +53,18 @@ final class NotificationConfiguration
                     NotificationTrigger::Supporter => NotificationRecipient::None,
                 }
             );
+    }
+
+    public function notifyAssigneeOnCreation(bool $notify = true): static
+    {
+        $this->notifyAssigneeOnCreation = $notify;
+
+        return $this;
+    }
+
+    public function shouldNotifyAssigneeOnCreation(): bool
+    {
+        return $this->notifyAssigneeOnCreation;
     }
 
     /**

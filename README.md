@@ -987,7 +987,7 @@ The notification system uses two key enums:
 - `NotificationTrigger::Supporter` - Someone with ticket management permissions performed the action
 
 **NotificationRecipient** - Who should be notified:
-- `NotificationRecipient::User` - Notify the ticket submitter only
+- `NotificationRecipient::User` - Notify the ticket submitter (creation can also notify the assignee; see below)
 - `NotificationRecipient::Supporter` - Notify the assigned supporter only. On an unassigned ticket, everyone in the ticket panel's `allSupportersQuery()` is notified instead, apart from the actor and the submitter.
 - `NotificationRecipient::Both` - Notify both user and supporter
 - `NotificationRecipient::None` - Don't send any notifications
@@ -1001,7 +1001,20 @@ When a debounced notification is finally sent, the job checks that the ticket st
 The package provides sensible defaults if no configuration is provided:
 
 **Ticket Created**
-- Either trigger: Notifies the user and the supporter. The supporter is whoever the ticket is assigned to, and that email says it was assigned to them. On an unassigned ticket, everyone in the panel's supporter query is notified instead, apart from the actor and the submitter. A host that returns `NotificationRecipient::User` for this event tells the requester only.
+- User-triggered: `NotificationRecipient::User`. An unassigned ticket notifies only the requester.
+- Supporter-triggered: `NotificationRecipient::Both`, preserving the existing supporter-pool fallback for unassigned tickets.
+- If the new ticket has an assignee, they also receive a notice unless they are the actor. Their email says “Ticket Assigned” and “A ticket has been assigned to you for handling.” The bell uses the same assigned subject and introduction. The requester still receives the creation acknowledgement. An escalation's creator receives no acknowledgement of their own escalation.
+
+The extra assignee notice defaults to on, independently of the Supporter flag, and never falls back to the supporter pool. Hosts can disable it per panel:
+
+```php
+->notificationConfiguration(
+    NotificationConfiguration::make()
+        ->notifyAssigneeOnCreation(false)
+)
+```
+
+With this option off, only the recipients selected by `on(TicketCreatedEvent::class, ...)` are notified. The default User trigger then tells only the requester, even on an assigned ticket. An explicit Supporter or Both rule still selects the assignee (or the supporter pool when unassigned); use User to keep requester acknowledgements without assignee notices. Returning `NotificationRecipient::None` suppresses all creation notifications, including the extra assignee notice.
 
 **Ticket Assigned**
 - Either trigger: Notifies supporter
