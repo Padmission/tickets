@@ -41,6 +41,13 @@ class ListTickets extends ListRecords
 
     protected static string $resource = TicketResource::class;
 
+    protected static function resolveResourcePageName(): string
+    {
+        // Every list-page replacement owns the index route. Filament's
+        // class lookup has no panel context when building a URL in a job.
+        return 'index';
+    }
+
     public function getDefaultActiveTab(): string
     {
         return ConversationViewer::current()->isSupporter ? 'my' : 'all';

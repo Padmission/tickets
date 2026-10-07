@@ -3,6 +3,7 @@
 namespace Padmission\Tickets\Filament\Resources\Tickets;
 
 use Carbon\CarbonImmutable;
+use Closure;
 use Exception;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
@@ -15,6 +16,7 @@ use Filament\Notifications\Notification;
 use Filament\Panel;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
+use Filament\Resources\ResourceConfiguration;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -690,16 +692,49 @@ class TicketResource extends Resource
         return Lang::has($key) ? __($key) : null;
     }
 
-    public static function getPages(): array
+    public static function getPages(?Panel $panel = null): array
     {
         return [
-            // Route registration visits every panel before a request selects one.
             'index' => new PageRegistration(
-                TicketPlugin::get()->getListPage(),
-                fn (Panel $panel) => TicketPlugin::get($panel->getId())->getListPage()::route('/')->registerRoute($panel),
+                static::resolveListPage($panel ?? Filament::getCurrentPanel()),
+                fn (Panel $panel) => static::resolveListPage($panel)::route('/')->registerRoute($panel),
             ),
             'view' => ViewTicket::route('/{record}/view'),
         ];
+    }
+
+    /**
+     * @return class-string<ListTickets>
+     */
+    protected static function resolveListPage(?Panel $panel): string
+    {
+        // Component discovery and console URL generation can run without a
+        // current panel, and a host need not configure a default panel at all.
+        if (! $panel?->hasPlugin(TicketPlugin::$id)) {
+            return ListTickets::class;
+        }
+
+        /** @var TicketPlugin $plugin */
+        $plugin = $panel->getPlugin(TicketPlugin::$id);
+
+        return $plugin->getListPage();
+    }
+
+    public static function registerRoutes(Panel $panel, ?Closure $registerPageRoutes = null, ?ResourceConfiguration $configuration = null): void
+    {
+        $registerPageRoutes ??= function () use ($panel, $configuration): void {
+            foreach (static::getPages($panel) as $name => $page) {
+                $route = $page->registerRoute($panel);
+
+                if ($configuration) {
+                    $route?->middleware("resource-configuration:{$configuration->getKey()}");
+                }
+
+                $route?->name($name);
+            }
+        };
+
+        parent::registerRoutes($panel, $registerPageRoutes, $configuration);
     }
 
     public static function shouldShowSourcePanel(?ListTickets $livewire = null): bool

@@ -329,6 +329,8 @@ TicketPlugin::make()
 
 The class must extend `ListTickets`; an invalid class throws `InvalidArgumentException`. `getListPage()` returns the configured class, defaulting to `ListTickets::class`. `TicketResource::getPages()` uses it for the index route, and the list's stat cards use it for their page-table queries. Configure it before the panel registers its resources. Each panel keeps its own setting.
 
+Route registration resolves the list class from the panel being registered, so hosts do not need a default panel. To inspect a panel's pages outside a request, pass that panel to `TicketResource::getPages($panel)`. With no current or explicit panel, page discovery returns the base `ListTickets` class. In queued jobs and console commands, generate URLs with an explicit panel ID, such as `SomeListTickets::getUrl(panel: 'admin')` or `TicketResource::getUrl('index', panel: 'admin')`.
+
 ### Overdue tickets
 
 `Ticket::query()->overdue()` finds open tickets whose current **Waiting on** is support and whose last requester message is older than the threshold. Support updates, internal notes and `TurnChanged` history do not reset that message clock. Tickets without a requester message are excluded.
