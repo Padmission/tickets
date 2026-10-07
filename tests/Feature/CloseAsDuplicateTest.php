@@ -458,7 +458,8 @@ describe('with tenants', function () {
         $this->duplicate->forceFill(['tenant_id' => 1])->saveQuietly();
     });
 
-    it('offers only the same tenant in options and search and rejects a forged other-tenant selection', function () {
+    it('offers only the same tenant in options and search and rejects a forged other-tenant selection', function (bool $tenancyEnabled) {
+        config()->set('padmission-tickets.tenancy.enabled', $tenancyEnabled);
         $other = Ticket::factory()->open()->state(['disposition_id' => null])->create(['tenant_id' => 2, 'subject' => 'The original problem']);
 
         Livewire::test(ViewTicket::class, ['record' => $this->duplicate->id])
@@ -471,7 +472,7 @@ describe('with tenants', function () {
             ->callMountedAction(['original' => $other->id])->assertHasActionErrors(['original']);
 
         expect($this->duplicate->refresh()->isClosed)->toBeFalse();
-    });
+    })->with(['tenancy on' => true, 'tenancy off' => false]);
 
     it('checks the root tenant too and leaves both histories untouched on refusal', function () {
         $root = Ticket::factory()->open()->state(['disposition_id' => null])->create(['tenant_id' => 2]);

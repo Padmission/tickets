@@ -19,8 +19,9 @@ class TicketDuplicates
             ->withoutTrashed()
             ->where('tickets.panel', $ticket->panel);
 
-        // Also scope a null tenant: a cross-tenant panel must never offer all tenants.
-        if (config('padmission-tickets.tenancy.enabled')) {
+        // Use the ticket's organization even when the host's tenancy flag is off.
+        // With tenancy enabled, a null tenant still matches only tenant-less tickets.
+        if (filled($ticket->getAttribute('tenant_id')) || config('padmission-tickets.tenancy.enabled')) {
             $query->where($query->getModel()->qualifyColumn('tenant_id'), $ticket->getAttribute('tenant_id'));
         }
 
