@@ -2,7 +2,10 @@
 
 namespace Padmission\Tickets\Support;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class TicketMigrationSchema
@@ -49,6 +52,27 @@ class TicketMigrationSchema
             ->contains(fn (array $key): bool => $key['columns'] === [$column]);
 
         if (! $hasForeignKey) {
+            // Separate aliases also handle self-references such as linked tickets.
+            $orphanCount = DB::table($tableName.' as foreign_key_source')
+                ->whereNotNull('foreign_key_source.'.$column)
+                ->whereNotExists(function (Builder $query) use ($column, $referencedTable): void {
+                    $query->selectRaw('1')
+                        ->from($referencedTable.' as foreign_key_target')
+                        ->whereColumn('foreign_key_target.id', 'foreign_key_source.'.$column);
+                })
+                ->count();
+
+            if ($orphanCount > 0) {
+                Log::warning("Skipping foreign key for {$tableName}.{$column}: {$orphanCount} orphaned references to {$referencedTable}.id. Existing values are unchanged. Reconcile the references and rerun the migration to add the constraint.", [
+                    'table' => $tableName,
+                    'column' => $column,
+                    'referenced_table' => $referencedTable,
+                    'orphan_count' => $orphanCount,
+                ]);
+
+                return;
+            }
+
             Schema::table($tableName, function (Blueprint $table) use ($column, $referencedTable): void {
                 $table->foreign($column)->references('id')->on($referencedTable)->nullOnDelete();
             });

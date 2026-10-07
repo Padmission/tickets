@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Padmission\Tickets\Tests\Fixtures\Migrations\HostTicketSchema;
 use Padmission\Tickets\Tests\Fixtures\Models\Tenant;
@@ -230,3 +231,80 @@ it('backfills a missing pointer column while preserving an existing activity poi
     expect($state->last_seen_activity_id)->toBe($conversation['activity'])
         ->and($state->last_notified_activity_id)->toBe($conversation['activity']);
 })->with(['last_seen_activity_id', 'last_notified_activity_id']);
+
+it('skips an orphaned foreign key with a warning, preserves the rows and adds it after reconciliation', function (string $tableName, string $column, string $referencedTable) {
+    HostTicketSchema::create('ticket_notifications', withLinked: false);
+    Schema::rename('ticket_notifications', 'ticket_user_states');
+    Schema::table('tickets', function (Blueprint $table): void {
+        $table->foreignId('linked_ticket_id')->nullable();
+        $table->foreignId('duplicate_of_ticket_id')->nullable();
+    });
+    Schema::table('ticket_user_states', function (Blueprint $table): void {
+        $table->foreignId('last_seen_activity_id')->nullable();
+        $table->foreignId('last_notified_activity_id')->nullable();
+    });
+    $conversation = ticketMigrationSeedConversation();
+    $validReference = $referencedTable === 'tickets' ? $conversation['ticket'] : $conversation['activity'];
+
+    // Count orphaned rows, including repeated references, but exclude valid and null values.
+    foreach ([null, $validReference, 999999, 999999] as $reference) {
+        if ($tableName === 'tickets') {
+            $attributes = (array) DB::table('tickets')->where('id', $conversation['ticket'])->first();
+            unset($attributes['id']);
+            DB::table('tickets')->insert([...$attributes, $column => $reference]);
+        } else {
+            DB::table($tableName)->insert([
+                'ticket_id' => $conversation['ticket'],
+                'user_id' => DB::table('users')->insertGetId([]),
+                $column => $reference,
+            ]);
+        }
+    }
+    $originalRows = DB::table($tableName)->orderBy('id')->get();
+    Log::spy();
+
+    ticketMigrationRunAll();
+    ticketMigrationRunAll();
+
+    expect(DB::table($tableName)->orderBy('id')->get())->toEqual($originalRows)
+        ->and(Schema::hasIndex($tableName, [$column]))->toBeTrue()
+        ->and(collect(Schema::getForeignKeys($tableName))->contains(fn (array $key): bool => $key['columns'] === [$column]))->toBeFalse()
+        ->and(Schema::hasColumn('ticket_attachments', 'created_by'))->toBeTrue()
+        ->and(Schema::hasIndex('ticket_activities', ['ticket_id', 'type', 'sender', 'created_at']))->toBeTrue();
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => str_contains($message, "{$tableName}.{$column}")
+        && str_contains($message, '2 orphaned references')
+        && $context === ['table' => $tableName, 'column' => $column, 'referenced_table' => $referencedTable, 'orphan_count' => 2])->twice();
+
+    // Once the host reconciles its data, the same migration can add the constraint.
+    DB::table($tableName)->where($column, 999999)->update([$column => null]);
+    ticketMigrationRunAll();
+    expect(collect(Schema::getForeignKeys($tableName))->contains(fn (array $key): bool => $key['columns'] === [$column]))->toBeTrue();
+})->with([
+    'linked ticket' => ['tickets', 'linked_ticket_id', 'tickets'],
+    'duplicate ticket' => ['tickets', 'duplicate_of_ticket_id', 'tickets'],
+    'seen activity' => ['ticket_user_states', 'last_seen_activity_id', 'ticket_activities'],
+    'notified activity' => ['ticket_user_states', 'last_notified_activity_id', 'ticket_activities'],
+]);
+
+it('does not copy an orphaned notified pointer into a newly constrained seen pointer', function () {
+    HostTicketSchema::create('ticket_notifications');
+    Schema::rename('ticket_notifications', 'ticket_user_states');
+    Schema::table('ticket_user_states', function (Blueprint $table): void {
+        $table->foreignId('last_notified_activity_id')->nullable();
+    });
+    $conversation = ticketMigrationSeedConversation();
+    DB::table('ticket_user_states')->insert([
+        'ticket_id' => $conversation['ticket'], 'user_id' => $conversation['user'],
+        'last_notified_activity_id' => 999999, 'updated_at' => '2026-01-01 11:00:00',
+    ]);
+    Log::spy();
+
+    ticketMigrationRunAll(twiceEach: true);
+
+    $state = DB::table('ticket_user_states')->first();
+    expect($state->last_notified_activity_id)->toBe(999999)
+        ->and($state->last_seen_activity_id)->toBeNull()
+        ->and(collect(Schema::getForeignKeys('ticket_user_states'))->contains(fn (array $key): bool => $key['columns'] === ['last_seen_activity_id']))->toBeTrue()
+        ->and(collect(Schema::getForeignKeys('ticket_user_states'))->contains(fn (array $key): bool => $key['columns'] === ['last_notified_activity_id']))->toBeFalse();
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => str_contains($message, 'ticket_user_states.last_notified_activity_id') && $context['orphan_count'] === 1)->twice();
+});

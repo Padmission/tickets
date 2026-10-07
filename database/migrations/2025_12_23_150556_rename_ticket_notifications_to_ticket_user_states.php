@@ -71,6 +71,13 @@ return new class extends Migration
         DB::table('ticket_user_states')
             ->whereNull('last_seen_activity_id')
             ->whereNotNull('last_notified_activity_id')
+            // A host's notified pointer can be orphaned; never copy it into
+            // a seen pointer whose foreign key was just added successfully.
+            ->whereExists(function ($query): void {
+                $query->selectRaw('1')
+                    ->from('ticket_activities')
+                    ->whereColumn('ticket_activities.id', 'ticket_user_states.last_notified_activity_id');
+            })
             ->update([
                 'last_seen_activity_id' => DB::raw('last_notified_activity_id'),
             ]);
