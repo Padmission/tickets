@@ -43,9 +43,10 @@ class NotificationRecipientService
         // A delayed close event stays silent after reopening a duplicate. A later
         // ordinary close can still use the host's explicit requester opt in.
         $duplicateClose = $event instanceof TicketClosedEvent
-            && $event->ticket->ticketActivities()
-                ->whereIn('type', [ActivityType::Closed, ActivityType::ClosedAsDuplicate])
-                ->latest('id')->value('type') === ActivityType::ClosedAsDuplicate;
+            && (filled($event->ticket->duplicate_of_ticket_id)
+                || $event->ticket->ticketActivities()
+                    ->whereIn('type', [ActivityType::Closed, ActivityType::ClosedAsDuplicate])
+                    ->latest('id')->value('type') === ActivityType::ClosedAsDuplicate);
 
         $isRequesterSilent = $event instanceof TicketClosedEvent || $event instanceof TicketReopenedEvent || $event instanceof TicketAssignedEvent
             || ($event instanceof TicketActivityEvent && in_array($event->activityType, [ActivityType::Closed->value, ActivityType::Reopened->value, ActivityType::AssigneeChanged->value, ActivityType::ClosedAsDuplicate->value, ActivityType::DuplicatedBy->value, ActivityType::DuplicateRemoved->value], true));

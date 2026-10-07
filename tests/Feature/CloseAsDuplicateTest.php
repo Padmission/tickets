@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -269,6 +270,12 @@ it('never notifies the requester of duplicate closure or reopening even with Bot
             ->on(TicketClosedEvent::class, fn () => NotificationRecipient::Both)
             ->on(TicketReopenedEvent::class, fn () => NotificationRecipient::Both)
     );
+    // The close event fires before the ClosedAsDuplicate history note is written.
+    Event::listen(TicketClosedEvent::class, function (TicketClosedEvent $event) {
+        expect(resolve(NotificationRecipientService::class)->getNotificationRecipients($event)->pluck('id'))
+            ->not->toContain($this->requester->id);
+    });
+
     resolve(TicketDuplicates::class)->close($this->duplicate, $this->original->id);
     $this->duplicate->reopen();
     $service = resolve(NotificationRecipientService::class);
