@@ -12,6 +12,8 @@ use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
+use Filament\Panel;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
@@ -691,7 +693,11 @@ class TicketResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListTickets::route('/'),
+            // Route registration visits every panel before a request selects one.
+            'index' => new PageRegistration(
+                TicketPlugin::get()->getListPage(),
+                fn (Panel $panel) => TicketPlugin::get($panel->getId())->getListPage()::route('/')->registerRoute($panel),
+            ),
             'view' => ViewTicket::route('/{record}/view'),
         ];
     }

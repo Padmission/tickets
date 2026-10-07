@@ -15,11 +15,13 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 use Padmission\Tickets\AssignmentStrategies\AssignmentStrategy;
 use Padmission\Tickets\ConfigurationManagers\NotificationConfiguration;
 use Padmission\Tickets\Filament\Resources\Dispositions\DispositionResource;
 use Padmission\Tickets\Filament\Resources\Priorities\PriorityResource;
 use Padmission\Tickets\Filament\Resources\Statuses\StatusResource;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\OpenSupporterTickets;
 use Padmission\Tickets\Filament\Widgets\OpenTicketsWidget;
@@ -58,6 +60,9 @@ class TicketPlugin implements Plugin
     protected ?Panel $panel = null;
 
     protected bool $shouldRegisterResources = false;
+
+    /** @var class-string<ListTickets> */
+    protected string $listPage = ListTickets::class;
 
     protected bool $shouldRegisterWidgets = false;
 
@@ -144,6 +149,8 @@ class TicketPlugin implements Plugin
         $this->panel = $panel;
 
         if ($this->shouldRegisterResources()) {
+            $panel->livewireComponents([$this->getListPage()]);
+
             $panel->resources([
                 TicketResource::class,
                 StatusResource::class,
@@ -251,6 +258,28 @@ class TicketPlugin implements Plugin
     }
 
     /* Configuration options */
+    /**
+     * @param  class-string<ListTickets>  $page
+     */
+    public function listPage(string $page): static
+    {
+        if (! is_a($page, ListTickets::class, true)) {
+            throw new InvalidArgumentException('The ticket list page must extend '.ListTickets::class.'.');
+        }
+
+        $this->listPage = $page;
+
+        return $this;
+    }
+
+    /**
+     * @return class-string<ListTickets>
+     */
+    public function getListPage(): string
+    {
+        return $this->listPage;
+    }
+
     public function dateTimeDisplayFormat(string $format): self
     {
         $this->dateTimeDisplayFormat = $format;

@@ -127,18 +127,7 @@ describe('The first choice', function () {
         'Escalations' => ['linked', StartTicketAction::ESCALATION],
         'My Escalations' => ['my_linked', StartTicketAction::ESCALATION],
         'empty tab falls back to My Tickets' => ['', StartTicketAction::ORGANIZATION],
-        'Needs reply' => ['needs_reply', null],
     ]);
-
-    it('asks for the choice before anything else', function () {
-        Livewire::test(ListTickets::class)
-            ->set('activeTab', 'needs_reply')
-            ->mountAction(startTicket())
-            ->assertMountedActionModalSee(['For someone in your organization', 'A question for Platform Support'])
-            ->assertMountedActionModalDontSee('Requested by')
-            ->callMountedAction()
-            ->assertHasActionErrors(['kind' => 'required']);
-    });
 
     it('names each side\'s submit button', function () {
         $page = Livewire::test(ListTickets::class)

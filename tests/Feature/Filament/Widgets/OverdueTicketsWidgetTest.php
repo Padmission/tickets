@@ -81,7 +81,7 @@ it('keeps sent escalation cards on the current tab and enables the overdue filte
         ->assertSet('activeTab', $tab)
         ->assertSet('tableFilters.overdue.isActive', true)
         ->assertCanSeeTableRecords([$mine])->assertCanNotSeeTableRecords([$other]);
-})->with(['linked', 'my_linked', 'overdue_linked']);
+})->with(['linked', 'my_linked']);
 
 it('shows zero in gray and refreshes as the weekday deadline passes', function () {
     $this->login();
@@ -117,15 +117,15 @@ it('keeps the overdue card off the list for requesters', function () {
     expect(Livewire::test(ListTickets::class)->instance()->getVisibleHeaderWidgets())->toBe([]);
 });
 
-it('counts accessible panel tickets on a dashboard and uses the same configurable scope as the preset', function () {
+it('counts accessible panel tickets on a dashboard and uses the configurable overdue scope', function () {
     $this->login();
     $ticket = overdueCardTicket();
     overdueCardTicket(['panel' => 'test2']);
     TicketPlugin::get()->customizeTicketQuery(fn ($query) => $query->whereKey($ticket->id));
     expect(Livewire::test(OverdueTicketsWidget::class)->instance()->getStats()[0]->getValue())->toBe(1);
     config()->set('padmission-tickets.overdue.business_days', 2);
-    expect(Livewire::test(OverdueTicketsWidget::class)->instance()->getStats()[0]->getValue())->toBe(0)
-        ->and(Livewire::test(ListTickets::class)->set('activeTab', 'overdue')->instance()->getCachedTabs()['overdue']->getBadge())->toBe('0');
+    expect(Livewire::test(OverdueTicketsWidget::class)->instance()->getStats()[0]->getValue())->toBe(0);
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])->filterTable('overdue')->assertCountTableRecords(0);
 });
 
 it('opens exactly the overdue intersection of the current tab while preserving filters and search', function (string $panel, string $tab, int $expectedCount) {
@@ -166,7 +166,7 @@ it('opens exactly the overdue intersection of the current tab while preserving f
     parse_str(parse_url($card->getUrl(), PHP_URL_QUERY), $parameters);
 
     // Follow the URL before checking its parameters: dropping a tab constraint
-    // must fail on the actual rows, even if the broader overdue tab is valid.
+    // must fail on the actual rows.
     $destination = Livewire::withQueryParams($parameters)->test(ListTickets::class);
     $destination->assertCountTableRecords($card->getValue())
         ->assertSet('activeTab', $tab)
@@ -177,16 +177,11 @@ it('opens exactly the overdue intersection of the current tab while preserving f
         ->and((bool) $destination->instance()->tableFilters['open']['isActive'])->toBeFalse();
 })->with([
     'My Tickets' => ['test', 'my', 1],
-    'Unassigned' => ['test', 'unassigned', 1],
-    'Waiting on Requester' => ['test', 'waiting_on_requester', 0],
     'My Escalations' => ['test', 'my_linked', 1],
     'received My Tickets' => ['test2', 'my', 2],
-    'received Unassigned' => ['test2', 'unassigned', 1],
-    'received Waiting on Requester' => ['test2', 'waiting_on_requester', 0],
-    'received Open Escalations' => ['test2', 'open_escalations', 2],
 ]);
 
-it('toggles the overdue scope independently of the preset and can be cleared', function () {
+it('toggles the overdue filter and can clear it', function () {
     $this->login();
     $old = overdueCardTicket();
     $waiting = overdueCardTicket(['turn' => Turn::User]);
@@ -199,7 +194,6 @@ it('toggles the overdue scope independently of the preset and can be cleared', f
         ->filterTable('overdue')->assertCanSeeTableRecords([$old])
         ->assertCanNotSeeTableRecords([$waiting, $fresh])
         ->removeTableFilter('overdue')->assertCanSeeTableRecords([$old, $waiting, $fresh]);
-    $page->set('activeTab', 'overdue')->assertCanSeeTableRecords([$old])->assertCanNotSeeTableRecords([$waiting, $fresh]);
 });
 
 it('opens the overdue filtered all tab from a dashboard', function () {

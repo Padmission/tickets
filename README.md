@@ -302,14 +302,32 @@ class YourServiceProvider {
 
 The ticket list has **All Tickets** and **My Tickets** tabs. Supporters default to **My Tickets** in every panel, including the admin panel. Requesters default to **All Tickets**, showing their own submissions. Explicit tab URLs take precedence; stale or unknown tabs fall back to the viewer's default. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
 
-Supporters also get these preset tabs in both the organization panel and the panel that receives escalations:
+### Custom list page
 
-- **Needs Reply** - open, waiting on support, regardless of assignee
-- **Overdue** - open, waiting on support past the reply threshold
-- **Unassigned** - open, with nobody assigned
-- **Waiting on Requester** - open, waiting on the requester
+Hosts and companion packages can replace the ticket list page on each panel:
 
-A panel that receives escalations also has **Open Escalations**, showing open escalations sent to its team. A panel that sends escalations also has **Overdue Escalations**, using the same overdue rule for the other team's replies. These extend the existing tabs; **All Tickets**, **My Tickets**, **Escalations** and **My Escalations** keep their history; the default **Open tickets only** filter controls whether closed tickets appear in these tabs. Presets always exclude closed tickets even when "Open tickets only" is off. The existing **Waiting on** state drives the reply presets, including turns changed through `TurnChanged`. Requesters keep their existing tabs and access. Preset badges use request-local SQL aggregates rather than loading conversations.
+```php
+namespace App\Filament\Pages;
+
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
+
+class SomeListTickets extends ListTickets
+{
+    // Customize the list here.
+}
+```
+
+```php
+use App\Filament\Pages\SomeListTickets;
+use Padmission\Tickets\TicketPlugin;
+
+TicketPlugin::make()
+    ->allSupportersQuery(fn () => User::role('support'))
+    ->listPage(SomeListTickets::class)
+    ->registerResources();
+```
+
+The class must extend `ListTickets`; an invalid class throws `InvalidArgumentException`. `getListPage()` returns the configured class, defaulting to `ListTickets::class`. `TicketResource::getPages()` uses it for the index route, and the list's stat cards use it for their page-table queries. Configure it before the panel registers its resources. Each panel keeps its own setting.
 
 ### Overdue tickets
 
@@ -346,7 +364,7 @@ TicketPlugin::make()
     ->registerResources(shouldRegisterWidgets: true)
 ```
 
-Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the preset. Clicking it stays on the current tab and turns on the **Overdue** table filter, retaining other table filters and search so the list matches the card count. **Overdue** and **Overdue Escalations** remain available as preset tabs. On a dashboard, the card opens **All Tickets** with the **Overdue** filter enabled. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
+Independently of that, the `ListTickets` page shows `OpenTicketsWidget`, `OpenSupporterTickets`, `TicketCloseTimeWidget` and `OverdueTicketsWidget` in its header, to supporters only. All four cards follow the active tab, applied table filters and search through Filament's page-table integration. The overdue card uses the same `overdue()` scope as the table filter. Clicking it stays on the current tab and turns on the **Overdue** table filter, retaining other table filters and search so the list matches the card count. On a dashboard, the card opens **All Tickets** with the **Overdue** filter enabled. Away from the list, the overdue card counts the current panel's accessible tickets. It polls every 60 seconds like the other cards.
 
 ### Authorization
 
