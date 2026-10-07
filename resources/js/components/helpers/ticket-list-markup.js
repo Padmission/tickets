@@ -1,9 +1,9 @@
 import escapeHtml from "./escape-html.js";
 import __ from "./trans.js";
 
-export default function ticketListMarkup(tickets) {
+export default function ticketListMarkup(tickets, showClosed = true) {
 	if (tickets.length === 0) {
-		return `<p class="ticket-list-empty">${__("list.no_tickets")}</p>`;
+		return `<p class="ticket-list-empty">${escapeHtml(__(showClosed ? "list.no_tickets" : "list.no_open_tickets"))}</p>`;
 	}
 
 	// biome-ignore format: preserve template formatting

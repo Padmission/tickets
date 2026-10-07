@@ -3,6 +3,7 @@ import render from "./helpers/render.js";
 import config from "./helpers/config.js";
 import escapeHtml from "./helpers/escape-html.js";
 import __ from "./helpers/trans.js";
+import fetchJson from "./helpers/fetch-json.js";
 
 import "./chat-component.js";
 
@@ -14,6 +15,8 @@ import "./chat-widget/otp-verify.js";
 customElements.define(
 	"chat-widget",
 	class extends BaseElement {
+		showClosed = false;
+
 		get stylesheet() {
 			return "/css/padmission/tickets/chat-widget.css";
 		}
@@ -22,6 +25,14 @@ customElements.define(
 		}
 
 		renderedCallback() {
+			this.shadowRoot.addEventListener(
+				"ticket-list-filter-changed",
+				(event) => {
+					this.showClosed = event.detail.showClosed;
+					this.updateUnreadBadge();
+				},
+			);
+
 			this.shadowRoot
 				.querySelector("button")
 				.addEventListener("click", (event) => {
@@ -80,6 +91,10 @@ customElements.define(
 		changeView(viewName, attributes = {}) {
 			const view = document.createElement(viewName);
 
+			if (viewName === "chat-list-tickets") {
+				view.setAttribute("show-closed", String(this.showClosed));
+			}
+
 			for (const [key, value] of Object.entries(attributes)) {
 				const kebabCaseKey = key
 					.replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -99,22 +114,18 @@ customElements.define(
 			}
 
 			try {
-				const response = await fetch(
+				const showClosed = this.showClosed;
+				const data = await fetchJson(
 					"/padmission-tickets/api/tickets/unread-count",
 					{
-						headers: {
-							"X-CSRF-TOKEN": document
-								.querySelector('meta[name="csrf-token"]')
-								.getAttribute("content"),
-						},
+						include_closed: showClosed ? 1 : 0,
 					},
 				);
 
-				if (!response.ok) {
+				if (showClosed !== this.showClosed) {
 					return;
 				}
 
-				const data = await response.json();
 				const badge = this.shadowRoot.querySelector("[data-unread-badge]");
 
 				if (data.unread_count > 0) {

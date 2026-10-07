@@ -295,6 +295,18 @@ button {
 	font-size: 0.875rem;
 }
 
+.ticket-list-filter {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	cursor: pointer;
+
+	input {
+		accent-color: var(--color-primary);
+	}
+}
+
 .ticket {
 	position: relative;
 	display: flex;

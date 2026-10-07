@@ -24,6 +24,7 @@ class ListTicketsController
             ->with(['latestMessage', 'ticketUserStates', 'ticketActivities'])
             ->where('submitter_id', $request->user()->id)
             ->withoutEscalations()
+            ->when(! $request->boolean('include_closed'), fn ($query) => $query->open())
             ->orderBy('updated_at', 'desc')
             ->get();
 

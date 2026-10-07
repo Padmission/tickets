@@ -1,5 +1,5 @@
-import BaseElement from "../helpers/base-element";
-import render from "../helpers/render";
+import BaseElement from "../helpers/base-element.js";
+import render from "../helpers/render.js";
 import fetchJson from "../helpers/fetch-json.js";
 import config from "../helpers/config.js";
 import ticketListMarkup from "../helpers/ticket-list-markup.js";
@@ -14,9 +14,32 @@ customElements.define(
 		}
 
 		async renderedCallback() {
+			await this.refreshTickets();
+		}
+
+		async toggleClosed(event) {
+			this.showClosed = String(event.currentTarget.checked);
+			this.dispatchEvent(
+				new CustomEvent("ticket-list-filter-changed", {
+					bubbles: true,
+					detail: { showClosed: this.showClosed === "true" },
+				}),
+			);
+			await this.refreshTickets();
+		}
+
+		async refreshTickets() {
+			const requestId = (this.listRequestId = (this.listRequestId || 0) + 1);
 			const tickets = await this.fetchTickets();
 
-			const node = render(ticketListMarkup(tickets));
+			if (requestId !== this.listRequestId) {
+				return;
+			}
+
+			this.tickets = tickets;
+			const node = render(
+				ticketListMarkup(tickets, this.showClosed === "true"),
+			);
 
 			node.querySelectorAll("[data-open-ticket]").forEach((el) =>
 				el.addEventListener("click", (event) => {
@@ -49,11 +72,11 @@ customElements.define(
 
 		async fetchTickets() {
 			try {
-				const data = await fetchJson("/padmission-tickets/api/tickets");
+				const data = await fetchJson("/padmission-tickets/api/tickets", {
+					include_closed: this.showClosed === "true" ? 1 : 0,
+				});
 
-				this.tickets = data.tickets || [];
-
-				return this.tickets;
+				return data.tickets || [];
 			} catch (error) {
 				console.error("Failed to fetch tickets:", error);
 				return [];
@@ -106,6 +129,11 @@ customElements.define(
                         </button>
 
                         <h3>${escapeHtml(__('list.tickets_heading'))}</h3>
+
+                        <label class="ticket-list-filter">
+                            <input type="checkbox" data-show-closed @change="toggleClosed" ${this.showClosed === "true" ? 'checked' : ''}>
+                            ${escapeHtml(__('list.show_closed'))}
+                        </label>
 
                         <div data-ticket-list>
                         </div>
