@@ -292,7 +292,7 @@ it('links the escalation page even where the receiving panel has no tickets plug
         ->and($padmission['actionUrl'])->toBe(url("/test2/tickets/{$this->escalation->id}/view"));
 });
 
-it('shows the previous owner this hand over and the unread messages, not earlier hand overs', function () {
+it('shows the new owner only this hand over while leaving unread messages for their reply notice', function () {
     TicketActivity::factory()->create(['ticket_id' => $this->escalation->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::System, 'type' => ActivityType::HandedOver, 'data' => ['from' => $this->owner->id, 'to' => $this->colleague->id]]);
     TicketActivity::factory()->create(['ticket_id' => $this->escalation->id, 'user_id' => $this->owner->id, 'sender' => ActivitySender::System, 'type' => ActivityType::HandedOver, 'data' => ['from' => $this->colleague->id, 'to' => $this->owner->id]]);
     padmissionReply($this->escalation, $this->padmission, 'Which household?');
@@ -301,17 +301,20 @@ it('shows the previous owner this hand over and the unread messages, not earlier
 
     $mail = (new TicketNotification($this->escalation, new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id)))->toMail($this->colleague);
 
-    expect($mail->viewData['activities']->pluck('id')->all())->toBe([
-        $this->escalation->ticketActivities()->where('content', 'Which household?')->value('id'),
-        $line->id,
-    ]);
+    expect($mail->viewData['activities']->pluck('id')->all())->toBe([$line->id]);
+    $reply = new TicketNotification($this->escalation, new TicketActivityEvent($this->escalation, ActivityType::Message));
+    expect($reply->shouldSend($this->colleague))->toBeTrue()
+        ->and($reply->toMail($this->colleague)->viewData['activities']->pluck('content')->all())->toContain('Which household?')
+        ->and($reply->toMail($this->colleague)->viewData['activities']->pluck('id')->all())->not->toContain($line->id);
 });
 
-it('names the team for its messages in a hand-over email too', function () {
+it('names the team in the reply notice that follows an immediate hand over', function () {
     padmissionReply($this->escalation, $this->padmission)->forceFill(['user_id' => null])->save();
     $this->escalation->update(['submitter_id' => $this->colleague->id]);
 
-    $html = (string) (new TicketNotification($this->escalation, new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id)))->toMail($this->colleague)->render();
+    $handOver = (new TicketNotification($this->escalation, new TicketHandedOverEvent($this->escalation, $this->owner, $this->owner->id, $this->colleague->id)))->toMail($this->colleague);
+    expect($handOver->viewData['activities'])->toBeEmpty();
+    $html = (string) (new TicketNotification($this->escalation, new TicketActivityEvent($this->escalation, ActivityType::Message)))->toMail($this->colleague)->render();
 
     expect($html)->not->toMatch('/>\s*Support\s*</')
         ->and($html)->toMatch('/>\s*Padmission\s*</');

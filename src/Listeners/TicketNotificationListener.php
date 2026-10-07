@@ -52,13 +52,24 @@ class TicketNotificationListener implements ShouldHandleEventsAfterCommit
 
     protected function sendNotificationToUser(Authenticatable $user, $event): void
     {
-        $strategy = $this->recipientService->getUserNotificationStrategy($user);
-
-        if ($strategy === NotificationStrategy::Immediate) {
+        if ($this->isAssignmentRecipient($user, $event)
+            || $this->recipientService->getUserNotificationStrategy($user) === NotificationStrategy::Immediate) {
             $this->dispatchNotificationJob($user, $event->ticket, $event);
         } else {
             $this->dispatchDebouncedNotification($user, $event->ticket, $event);
         }
+    }
+
+    protected function isAssignmentRecipient(Authenticatable $user, $event): bool
+    {
+        if ($event instanceof TicketHandedOverEvent) {
+            return (string) $user->getKey() === (string) $event->toId;
+        }
+
+        return ($event instanceof TicketAssignedEvent || $event instanceof TicketCreatedEvent)
+            && filled($event->ticket->assignee_id)
+            && (string) $user->getKey() === (string) $event->ticket->assignee_id
+            && ! $event->ticket->isSubmittedBy($user);
     }
 
     protected function dispatchNotificationJob(Authenticatable $user, Ticket $ticket, $event): void

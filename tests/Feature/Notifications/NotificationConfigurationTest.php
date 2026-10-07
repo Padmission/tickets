@@ -109,6 +109,8 @@ test('ticket activity with default configuration sends notifications correctly',
         'assignee_id' => $this->supporter->id,
     ]);
 
+    Queue::fake();
+
     $this->actingAs($this->submitter);
     $event = new TicketActivityEvent($ticket, ActivityType::Message, null, $this->submitter);
     $listener->handle($event);
@@ -144,6 +146,8 @@ test('ticket assignment with default configuration sends notifications correctly
         'submitter_id' => $this->submitter->id,
         'assignee_id' => $this->supporter->id,
     ]);
+
+    Queue::fake();
 
     $this->actingAs($this->supporter);
     $event = new TicketAssignedEvent($ticket, $this->supporter);
@@ -268,6 +272,8 @@ test('actor determination works correctly without explicit actor', function () {
         'submitter_id' => $this->submitter->id,
         'assignee_id' => $this->supporter->id,
     ]);
+
+    Queue::fake();
 
     $event = new TicketActivityEvent($ticket, ActivityType::Message, null, null);
     $listener->handle($event);

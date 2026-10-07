@@ -148,7 +148,7 @@ class TicketEscalationLinks
             $escalation->update(['submitter_id' => $toUserId]);
             $escalation->unsetRelation('submitter');
 
-            $this->addActivity($escalation, ActivityType::HandedOver, ['from' => $locked->submitter_id, 'to' => $toUserId]);
+            $this->addActivity($escalation, ActivityType::HandedOver, ['from' => $locked->submitter_id, 'to' => $toUserId, 'recipient_notified' => false]);
 
             return $locked->submitter_id;
         });

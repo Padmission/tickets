@@ -142,7 +142,7 @@ it('lets the owner hand the escalation to a colleague from Handled by', function
     expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id)
         ->and($activity->sender)->toBe(ActivitySender::System)
         ->and($activity->user_id)->toBe($this->owner->id)
-        ->and($activity->data)->toBe(['from' => $this->owner->id, 'to' => $this->colleague->id])
+        ->and($activity->data)->toBe(['from' => $this->owner->id, 'to' => $this->colleague->id, 'recipient_notified' => false])
         ->and($activity->content)->toBe('Test Admin handed this escalation to Maria Lopez')
         ->and($this->original->refresh()->assignee_id)->toBe($this->owner->id);
 

@@ -1103,7 +1103,9 @@ The host needs Laravel's `notifications` table and `->databaseNotifications()` o
 
 #### Delivery Strategy
 
-By default notifications are debounced: activity on a ticket is gathered for `notification-debounce` seconds (10 minutes) and sent as one notification of at most `notification-max-events` activities. Change the default with `default-notification-strategy`, or per user with a `ticketNotificationStrategy()` method on the user model:
+Assignment notifications to the new assignee or handover recipient are always queued with no delay, including assignment at creation, reassignment, auto-assignment and escalation auto-assignment. This overrides a user's `ticketNotificationStrategy()` returning `Debounced`. Self-assignment stays silent, creation assignee opt-outs and recipient rules still apply, and delivery still checks that the ticket concerns the recipient. Assignment notices do not consume pending replies or repeat in a later activity batch.
+
+Other notifications, including replies, status and priority changes, close/reopen and the notice to a former handover owner, keep their delivery strategy. By default they are debounced: activity on a ticket is gathered for `notification-debounce` seconds (10 minutes) and sent as one notification of at most `notification-max-events` activities. Change the default with `default-notification-strategy`, or per user with a `ticketNotificationStrategy()` method on the user model:
 
 ```php
 use Padmission\Tickets\Enums\NotificationStrategy;

@@ -675,7 +675,7 @@ class TicketScenarios
         $this->updateTicket($escalation, ['submitter_id' => $to->getKey()]);
         $escalation->unsetRelation('submitter');
 
-        $this->write($escalation, ActivityType::HandedOver, ActivitySender::System, $by, data: ['from' => $from, 'to' => $to->getKey()]);
+        $this->write($escalation, ActivityType::HandedOver, ActivitySender::System, $by, data: ['from' => $from, 'to' => $to->getKey(), 'recipient_notified' => false]);
     }
 
     /**

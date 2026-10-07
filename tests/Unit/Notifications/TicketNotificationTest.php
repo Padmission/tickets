@@ -554,7 +554,7 @@ test('the closed email quotes support\'s last reply to whoever asked, never to s
         ->and($mail($supporter)->viewData['lastSupporterMessage'])->toBeNull();
 });
 
-test('the one email a reassignment and the requester\'s messages share tells the new assignee it is theirs, whichever goes first', function (bool $activityFirst) {
+test('a reassignment and pending requester messages keep separate notices whichever renders first', function (bool $activityFirst) {
     Queue::fake();
     $requester = User::factory()->create();
     $admin = User::factory()->create(['name' => 'Test Admin']);
@@ -575,11 +575,17 @@ test('the one email a reassignment and the requester\'s messages share tells the
 
     foreach ($activityFirst ? $notifications : array_reverse($notifications) as $notification) {
         if ($notification->shouldSend($maria)) {
-            $sent[] = $notification->toMail($maria)->subject;
+            $mail = $notification->toMail($maria);
+            $sent[] = $mail->subject;
+            if ($notification->notificationType === 'assigned') {
+                expect($mail->viewData['activities']->pluck('type')->all())->not->toContain(ActivityType::Message);
+            } else {
+                expect($mail->viewData['activities']->pluck('content')->all())->toContain('The rent is wrong.');
+            }
         }
     }
 
-    expect($sent)->toBe(["Ticket #{$ticket->id} assigned to you – Rent question"]);
+    expect($sent)->toHaveCount(2)->toContain("Ticket #{$ticket->id} assigned to you – Rent question", "Ticket updated #{$ticket->id} – Rent question");
 })->with(['the messages\' notice first' => true, 'the assignment\'s first' => false]);
 
 test('an activity email about someone else\'s assignment keeps its own wording', function () {

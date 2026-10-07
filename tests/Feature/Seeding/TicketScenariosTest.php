@@ -283,7 +283,7 @@ it('seeds an escalation handed over to a colleague', function () {
 
     expect($escalation->submitter_id)->toBe($this->colleague->id)
         ->and($handOver->user_id)->toBe($this->supporter->id)
-        ->and($handOver->data)->toBe(['from' => $this->supporter->id, 'to' => $this->colleague->id])
+        ->and($handOver->data)->toBe(['from' => $this->supporter->id, 'to' => $this->colleague->id, 'recipient_notified' => false])
         ->and($escalation->latestMessage->user_id)->toBe($this->colleague->id)
         ->and($escalation->turn)->toBe(Turn::Supporter);
 

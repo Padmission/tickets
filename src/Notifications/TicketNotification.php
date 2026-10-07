@@ -118,6 +118,10 @@ class TicketNotification extends Notification
             return $this->decideHandOver($notifiable);
         }
 
+        if ($this->notificationType === 'assigned' && $this->isAssignee($notifiable)) {
+            return true;
+        }
+
         // An opted-in close email carries the reply, so avoid a second reply notice.
         if ($this->notificationType === 'activity' && $this->closeTellsThem($notifiable)) {
             return false;
@@ -151,9 +155,8 @@ class TicketNotification extends Notification
     }
 
     /*
-     * Worked out from the history rather than from which email went first,
-     * since both can fall due together: the "handed to you" email went out
-     * only if they still held the escalation when it was due.
+     * New hand overs record actual delivery. Older history uses the previous
+     * debounce rule to decide whether they were told while they still held it.
      */
     protected function wasToldTheyHeldIt($notifiable): bool
     {
@@ -167,6 +170,10 @@ class TicketNotification extends Notification
         // Held from the start, or taken over by themselves.
         if ($gained === null || (string) $gained->user_id === $key) {
             return true;
+        }
+
+        if (array_key_exists('recipient_notified', $gained->data ?? [])) {
+            return (bool) $gained->data['recipient_notified'];
         }
 
         if (resolve(NotificationRecipientService::class)->getUserNotificationStrategy($notifiable) === NotificationStrategy::Immediate) {
@@ -194,9 +201,8 @@ class TicketNotification extends Notification
     }
 
     /*
-     * An assignment and other activity can fall due together. Whichever
-     * notice goes first carries every unread activity and leaves the other
-     * nothing to send, so one carrying their assignment reads as it.
+     * Assignment has its own immediate notice; activity batches keep their
+     * reply/reopen wording and never repeat the assignment.
      */
     protected function wordingType($notifiable): string
     {
@@ -214,11 +220,7 @@ class TicketNotification extends Notification
             return 'reopened';
         }
 
-        $assignedToThem = $this->reportedActivities($notifiable, $this->getUnreadActivities($notifiable))
-            ->contains(fn (TicketActivity $activity): bool => $activity->type === ActivityType::AssigneeChanged
-                && (string) ($activity->data['to'] ?? '') === (string) $notifiable->getKey());
-
-        return $assignedToThem ? 'assigned' : $this->notificationType;
+        return $this->notificationType;
     }
 
     /*
@@ -723,23 +725,44 @@ class TicketNotification extends Notification
 
     protected function getUnreadActivities($notifiable): Collection
     {
-        return $this->unreadActivities[$notifiable->getKey()] ??= resolve(TicketActivityService::class)->getUnreadActivities(
+        $activities = $this->unreadActivities[$notifiable->getKey()] ??= resolve(TicketActivityService::class)->getUnreadActivities(
             $this->ticket,
             $notifiable,
             config('padmission-tickets.notification-max-events', 10),
         );
+
+        if ($this->notificationType === 'assigned' && $this->isAssignee($notifiable)) {
+            return $activities->filter(fn (TicketActivity $activity): bool => $activity->type === ActivityType::AssigneeChanged
+                && (string) ($activity->data['to'] ?? '') === (string) $notifiable->getKey())->values();
+        }
+
+        return $activities;
     }
 
     /*
-     * A hand over shows the unread messages as background, but they are still
-     * owed their own notification: a reply that lands while the hand over is
-     * pending would otherwise never be sent. A created notification tells of
+     * Assignment and hand over leave reply pointers alone so replies keep
+     * their own notification. A created notification tells of
      * the ticket's opening only, so a reply already written to the recipient,
      * such as the one sent while escalating, keeps its own notification.
      */
     protected function markActivitiesAsSent($notifiable, Collection $activities): void
     {
         if ($this->notificationType === 'handedover') {
+            if ($this->isSubmitter($notifiable)) {
+                $activity = $this->ticket->ticketActivities()
+                    ->where('type', ActivityType::HandedOver)
+                    ->where('data->to', $this->event->toId)
+                    ->where('data->from', $this->event->fromId)
+                    ->latest('id')->first();
+
+                $activity?->forceFill(['data' => [...$activity->data, 'recipient_notified' => true]])->saveQuietly();
+            }
+
+            return;
+        }
+
+        // An immediate assignment must not consume a reply still awaiting debounce.
+        if ($this->notificationType === 'assigned' && $this->isAssignee($notifiable)) {
             return;
         }
 
@@ -793,6 +816,9 @@ class TicketNotification extends Notification
         return $activities
             ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
                 || in_array($activity->getKey(), $toldWhenCreated, false)
+                || ($this->notificationType === 'activity'
+                    && in_array($activity->type, [ActivityType::AssigneeChanged, ActivityType::HandedOver], true)
+                    && (string) ($activity->data['to'] ?? '') === (string) $notifiable->getKey())
                 || ($requester && in_array($activity->type, [ActivityType::Closed, ActivityType::Reopened, ActivityType::AssigneeChanged, ActivityType::ClosedAsDuplicate, ActivityType::DuplicatedBy, ActivityType::DuplicateRemoved], true))
                 || ($requester && $panelClosedStatusId !== null && $activity->type === ActivityType::StatusChanged
                     && in_array($panelClosedStatusId, [$activity->data['from'] ?? null, $activity->data['to'] ?? null], false))
@@ -802,8 +828,7 @@ class TicketNotification extends Notification
     }
 
     /**
-     * The line for this hand over and the unread messages, without the notes
-     * of earlier hand overs that were never marked as notified.
+     * Only this hand over: replies retain their own debounced notification.
      *
      * @param  Collection<int, TicketActivity>  $activities
      * @return Collection<int, TicketActivity>
@@ -814,7 +839,7 @@ class TicketNotification extends Notification
             && (string) ($activity->data['to'] ?? '') === (string) $this->event->toId);
 
         return $activities
-            ->filter(fn (TicketActivity $activity): bool => $activity->type === ActivityType::Message || $activity === $line)
+            ->filter(fn (TicketActivity $activity): bool => $activity === $line)
             ->values();
     }
 

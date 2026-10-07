@@ -308,3 +308,26 @@ test('ticket created event dispatches a notification job to the submitter', func
             && $job->getUserId() === $ticket->submitter_id;
     });
 });
+
+test('assignment bypasses a user method returning debounced but their replies still wait', function () {
+    $assignee = User::factory()->create();
+    $user = new class extends User
+    {
+        public function ticketNotificationStrategy(): NotificationStrategy
+        {
+            return NotificationStrategy::Debounced;
+        }
+    };
+    $user->forceFill(['id' => $assignee->id]);
+    $ticket = Ticket::factory()->open()->create(['assignee_id' => $user->id]);
+    Queue::fake();
+    $service = app(NotificationRecipientService::class);
+    expect($service->getUserNotificationStrategy($user))->toBe(NotificationStrategy::Debounced);
+    $listener = new TicketNotificationListener($service);
+    invade($listener)->sendNotificationToUser($user, new TicketAssignedEvent($ticket));
+
+    Queue::assertPushed(NotificationJob::class, fn (NotificationJob $job): bool => $job->getUserId() === $user->id && $job->delay === null);
+    Queue::fake();
+    invade($listener)->sendNotificationToUser($user, new TicketActivityEvent($ticket, ActivityType::Message));
+    Queue::assertNotPushed(NotificationJob::class);
+});
