@@ -33,7 +33,7 @@ return [
 
     'overdue' => [
         'label' => 'Overdue',
-        'description' => 'Waiting on support past the reply threshold',
+        'description' => 'Reply overdue',
     ],
 
     'close_time' => [
