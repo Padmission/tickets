@@ -52,6 +52,7 @@ it('counts the current filtered list and enables the overdue filter with its fil
     $card = $stat();
     expect($card->getValue())->toBe(1)
         ->and($card->getLabel())->toBe('Overdue')
+        ->and($card->getDescription())->toBe('Reply overdue')
         ->and($card->getColor())->toBe('danger')
         ->and($card->getDescriptionIcon())->toBeNull();
 
