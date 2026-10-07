@@ -77,6 +77,30 @@ it('falls back from stale tab URLs to the viewer default', function (string $pan
     ->with(['my_open', 'open_linked'])
     ->with(['supporter' => true, 'requester' => false]);
 
+it('falls back from invalid Livewire tab updates to the viewer default', function (string $panel, string $tab, bool $isSupporter) {
+    Filament::setCurrentPanel($panel);
+    $me = $this->login();
+    $colleague = User::factory()->create();
+    TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($isSupporter ? [$me->id, $colleague->id] : [$colleague->id]));
+    $visible = Ticket::factory()->open()->create([
+        'panel' => $panel,
+        'submitter_id' => $me->id,
+        'assignee_id' => $isSupporter ? $me->id : $colleague->id,
+    ]);
+    $hidden = Ticket::factory()->open()->create(['panel' => $panel, 'submitter_id' => $colleague->id, 'assignee_id' => $colleague->id]);
+    $foreign = Ticket::factory()->open()->create(['panel' => $panel === 'test' ? 'test2' : 'test', 'submitter_id' => $me->id, 'assignee_id' => $me->id]);
+
+    $page = Livewire::test(ListTickets::class, ['activeTab' => $isSupporter ? 'all' : 'my'])
+        ->set('activeTab', $tab)
+        ->assertSet('activeTab', $isSupporter ? 'my' : 'all')
+        ->assertDispatched('refresh-page')
+        ->assertCanSeeTableRecords([$visible])
+        ->assertCanNotSeeTableRecords([$hidden, $foreign]);
+    expect($page->instance()->getWidgetData()['activeTab'])->toBe($isSupporter ? 'my' : 'all');
+})->with(['app panel' => 'test', 'admin panel' => 'test2'])
+    ->with(['my_open', 'open_linked', 'unknown_tab'])
+    ->with(['supporter' => true, 'requester' => false]);
+
 it('lists each preset with matching badges on both sides and keeps closed history in the original tabs', function (string $panel) {
     Filament::setCurrentPanel($panel);
     $me = $this->login();

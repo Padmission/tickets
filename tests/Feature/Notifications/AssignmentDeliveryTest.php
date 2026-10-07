@@ -15,6 +15,7 @@ use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Enums\NotificationRecipient;
 use Padmission\Tickets\Enums\NotificationStrategy;
+use Padmission\Tickets\Events\TicketClosedEvent;
 use Padmission\Tickets\Events\TicketCreatedEvent;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
@@ -579,7 +580,7 @@ it('keeps replies debounced even when an assignment is delivered with their batc
     expectUntold($this->previous);
 });
 
-it('does not repeat an assignment in an activity-only pending batch', function () {
+it('does not send another notice when a pending activity batch contains only the assignment', function () {
     $ticket = openAssignedTicket($this->previous);
     forgetQueuedNotices();
     // With no actor, the assignment history also schedules a supporter activity notice.
@@ -592,6 +593,42 @@ it('does not repeat an assignment in an activity-only pending batch', function (
     expect(noticesFor($this->colleague)['mail'])->toHaveCount(1)
         ->and(noticesFor($this->colleague)['bells'])->toHaveCount(1);
 });
+
+it('keeps the immediate assignment out of a later close or reopen notification history', function (string $batch) {
+    TicketPlugin::get()->notificationConfiguration(
+        NotificationConfiguration::make()->on(TicketClosedEvent::class, fn () => NotificationRecipient::Supporter)
+    );
+    $this->login($this->previous);
+    $ticket = openAssignedTicket($this->previous);
+
+    if ($batch === 'reopened') {
+        $ticket->close();
+    }
+
+    forgetQueuedNotices();
+    $ticket->update(['assignee_id' => $this->colleague->id]);
+    if ($batch === 'reopened') {
+        $ticket->reopen();
+    } else {
+        $ticket->close();
+    }
+
+    $queued = deliverQueuedNotices(waitForDebounce: false);
+    expectTold($this->colleague, "Ticket #{$ticket->id} assigned to you", $queued);
+    expect(mailHtmlFor($this->colleague))->toHaveCount(1)
+        ->and(mailHtmlFor($this->colleague)[0])->toContain('handed this ticket to you');
+
+    deliverQueuedNotices();
+    $notices = noticesFor($this->colleague);
+    expect($notices['mail'])->toHaveCount(2)
+        ->and($notices['bells'])->toHaveCount(2)
+        ->and($notices['mail'][1])->toContain("Ticket {$batch}")
+        ->and(mailHtmlFor($this->colleague)[1])->not->toContain('handed this ticket to you');
+    $laterBells = $this->colleague->notifications()->get()
+        ->filter(fn ($notice): bool => str_contains($notice->data['title'], "Ticket {$batch}"));
+    expect($laterBells)->toHaveCount(1)
+        ->and($laterBells->pluck('data.body')->implode("\n"))->not->toContain('handed');
+})->with(['reopened', 'closed']);
 
 it('queues an escalation auto-assignment without delaying either channel', function () {
     $original = openAssignedTicket($this->previous);

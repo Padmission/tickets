@@ -149,10 +149,10 @@ describe('Tab badges', function () {
 
 it('finds a ticket by the number quoted from an email', function (string $prefix) {
     (new TicketStatusSeeder)->run();
-    $this->login();
+    $me = $this->login(User::factory()->create(['name' => 'Tess Support']));
 
-    $wanted = Ticket::factory()->open()->create(['subject' => 'Rent question']);
-    $other = Ticket::factory()->open()->create(['subject' => 'Something else']);
+    $wanted = Ticket::factory()->open()->create(['subject' => 'Rent question', 'submitter_id' => $me->id, 'assignee_id' => $me->id]);
+    $other = Ticket::factory()->open()->create(['subject' => 'Something else', 'submitter_id' => $me->id, 'assignee_id' => $me->id]);
 
     Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->searchTable($prefix.$wanted->id)

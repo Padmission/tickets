@@ -32,6 +32,10 @@ class ListTickets extends ListRecords
 
     public function updatedActiveTab(): void
     {
+        if ($this->activeTabIsInvalid()) {
+            $this->activeTab = $this->getDefaultActiveTab();
+        }
+
         // Refresh the page so that showing/hiding filters works properly.
         $this->dispatch('refresh-page');
     }

@@ -816,7 +816,7 @@ class TicketNotification extends Notification
         return $activities
             ->reject(fn (TicketActivity $activity): bool => (filled($activity->user_id) && (string) $activity->user_id === (string) $notifiable->getKey())
                 || in_array($activity->getKey(), $toldWhenCreated, false)
-                || ($this->notificationType === 'activity'
+                || (! in_array($this->notificationType, ['assigned', 'created', 'handedover'], true)
                     && in_array($activity->type, [ActivityType::AssigneeChanged, ActivityType::HandedOver], true)
                     && (string) ($activity->data['to'] ?? '') === (string) $notifiable->getKey())
                 || ($requester && in_array($activity->type, [ActivityType::Closed, ActivityType::Reopened, ActivityType::AssigneeChanged, ActivityType::ClosedAsDuplicate, ActivityType::DuplicatedBy, ActivityType::DuplicateRemoved], true))
