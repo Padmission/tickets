@@ -4,9 +4,9 @@ namespace Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Padmission\Tickets\Models\Concerns\IsTicketLookup;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
-use Padmission\Tickets\Support\TicketOrganization;
 
 /*
  * Statuses, priorities and dispositions offered for a ticket come from its own
@@ -27,19 +27,21 @@ trait ScopesLookupsToTicket
     {
         $query->withoutGlobalScope(CurrentPanelScope::class);
 
-        if ($ticket instanceof Ticket && filled($ticket->panel)) {
-            $query->where($query->getModel()->qualifyColumn('panel'), $ticket->panel);
+        if (! $ticket instanceof Ticket) {
+            return $query;
         }
 
-        if ($ticket instanceof Ticket && $this->lookupBelongsToTicketsOrganization($ticket)) {
-            $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
+        $model = $query->getModel();
+        $lookup = $model::class;
+
+        if (! in_array(IsTicketLookup::class, class_uses_recursive($lookup), true)) {
+            return $query;
         }
 
-        return $query;
-    }
+        // The field keeps the builder it was handed, so the ticket's own option
+        // set is applied to it rather than used in its place.
+        $key = $model->getQualifiedKeyName();
 
-    protected function lookupBelongsToTicketsOrganization(Ticket $ticket): bool
-    {
-        return TicketOrganization::shouldScope($ticket);
+        return $query->whereIn($key, $lookup::optionsForTicket($ticket)->select($key));
     }
 }

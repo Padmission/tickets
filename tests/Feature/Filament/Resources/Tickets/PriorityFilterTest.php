@@ -50,8 +50,7 @@ it('keeps priority ids and host scoping on a single organization panel', functio
         ->modifyRelationshipScopes(fn ($relation, $model) => $model === 'priority' ? $relation->where('ticket_priorities.tenant_id', 1) : $relation);
 
     $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
-    expect($page->instance()->getTable()->getFilter('priority')->queriesRelationships())->toBeTrue()
-        ->and($page->instance()->getTable()->getFilter('priority')->getRelationshipQuery()->pluck('display_name', 'id')->all())->toBe([$highA->id => 'High']);
+    expect($page->instance()->getTable()->getFilter('priority')->getOptions())->toBe([$highA->id => 'High']);
 
     $page->filterTable('priority', [$highA->id])->assertCanSeeTableRecords([$a])->assertCanNotSeeTableRecords([$b]);
 });
@@ -113,19 +112,17 @@ it('offers only the current panel\'s priorities when one organization keeps a se
     config()->set('padmission-tickets.tenancy.enabled', false);
 
     $status = TicketStatus::factory()->create(['panel' => 'test']);
-    $high = TicketPriority::factory()->create(['panel' => 'test', 'display_name' => 'High']);
-    $low = TicketPriority::factory()->create(['panel' => 'test', 'display_name' => 'Low']);
-    TicketPriority::factory()->create(['panel' => 'test2', 'display_name' => 'High']);
-    TicketPriority::factory()->create(['panel' => 'test2', 'display_name' => 'Low']);
+    $low = TicketPriority::factory()->create(['panel' => 'test', 'order' => 1, 'display_name' => 'Low']);
+    $high = TicketPriority::factory()->create(['panel' => 'test', 'order' => 2, 'display_name' => 'High']);
+    TicketPriority::factory()->create(['panel' => 'test2', 'order' => 1, 'display_name' => 'Low']);
+    TicketPriority::factory()->create(['panel' => 'test2', 'order' => 2, 'display_name' => 'High']);
 
     $urgent = Ticket::factory()->create(['panel' => 'test', 'status_id' => $status->id, 'priority_id' => $high->id]);
     $calm = Ticket::factory()->create(['panel' => 'test', 'status_id' => $status->id, 'priority_id' => $low->id]);
 
     $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
-    $filter = $page->instance()->getTable()->getFilter('priority');
-
-    expect($filter->getRelationshipQuery()->pluck('display_name', 'id')->all())
-        ->toBe([$high->id => 'High', $low->id => 'Low']);
+    expect($page->instance()->getTable()->getFilter('priority')->getOptions())
+        ->toBe([$low->id => 'Low', $high->id => 'High']);
 
     $page->filterTable('priority', [$high->id])
         ->assertCanSeeTableRecords([$urgent])

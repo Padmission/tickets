@@ -4,12 +4,12 @@ namespace Padmission\Tickets\Services;
 
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Validation\ValidationException;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\ScopesLookupsToTicket;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\TicketPlugin;
 
 /*
  * One close, whether from a ticket's own Close dialog or from the list's
@@ -27,15 +27,18 @@ class TicketCloser
     }
 
     /**
-     * The relation keeps deleted dispositions, so a closed ticket still shows
-     * its own, but a deleted one is never offered.
+     * A deleted disposition is never offered, though a closed ticket still
+     * shows its own through the relation that keeps them.
      *
+     * @param  Builder<TicketDisposition>|null  $query  The field's own builder, which has to stay the one it was given.
      * @return Builder<TicketDisposition>
      */
     public function dispositionsFor(Ticket $ticket, ?Builder $query = null): Builder
     {
-        /** @var Builder<TicketDisposition> $query */
-        $query ??= Relation::noConstraints(fn (): Relation => $ticket->disposition())->getQuery();
+        if ($query === null) {
+            /** @var Builder<TicketDisposition> */
+            return TicketPlugin::resolveModelClass(TicketDisposition::class)::optionsForTicket($ticket)->withoutTrashed();
+        }
 
         return $this->scopeLookupToTicket($query, $ticket)->withoutTrashed();
     }

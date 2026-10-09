@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketDispositionFactory;
 use Padmission\Tickets\Models\Concerns\HasColor;
+use Padmission\Tickets\Models\Concerns\IsTicketLookup;
 use Padmission\Tickets\Models\Observers\TicketDispositionObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 
@@ -16,6 +17,7 @@ class TicketDisposition extends Model
 {
     use HasColor;
     use HasFactory;
+    use IsTicketLookup;
     use SoftDeletes;
 
     protected $table = 'ticket_dispositions';
@@ -27,5 +29,10 @@ class TicketDisposition extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new CurrentPanelScope);
+    }
+
+    protected static function lookupName(): string
+    {
+        return 'disposition';
     }
 }

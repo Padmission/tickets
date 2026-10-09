@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Actions;
 
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
@@ -23,11 +22,7 @@ class GetDefaultStatusForPanel
                 'tenant_id' => $tenantId,
             ]));
         } else {
-            $defaultStatus = $statusModel::query()
-                ->withoutGlobalScope(CurrentPanelScope::class)
-                ->where('panel', $panelId)
-                ->orderBy('order', 'asc')
-                ->first();
+            $defaultStatus = $statusModel::optionsForPanel($panelId)->orderBy('order', 'asc')->first();
         }
 
         if (! $defaultStatus) {

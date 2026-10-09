@@ -47,8 +47,7 @@ it('keeps status ids and host scoping on a single organization panel', function 
         ->modifyRelationshipScopes(fn ($relation, $model) => $model === 'status' ? $relation->where('ticket_statuses.tenant_id', 1) : $relation);
 
     $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
-    expect($page->instance()->getTable()->getFilter('status')->queriesRelationships())->toBeTrue()
-        ->and($page->instance()->getTable()->getFilter('status')->getRelationshipQuery()->pluck('display_name', 'id')->all())->toBe([$closedA->id => 'Closed']);
+    expect($page->instance()->getTable()->getFilter('status')->getOptions())->toBe([$closedA->id => 'Closed']);
 
     $page->filterTable('status', [$closedA->id])->assertCanSeeTableRecords([$a])->assertCanNotSeeTableRecords([$b]);
 });
@@ -107,19 +106,17 @@ it('offers a status name once on a multi-organization panel with tenancy off', f
 it('offers only the current panel\'s statuses when one organization keeps a set per panel', function () {
     config()->set('padmission-tickets.tenancy.enabled', false);
 
-    $open = TicketStatus::factory()->create(['panel' => 'test', 'display_name' => 'Open']);
-    $closed = TicketStatus::factory()->create(['panel' => 'test', 'display_name' => 'Closed']);
-    TicketStatus::factory()->create(['panel' => 'test2', 'display_name' => 'Open']);
-    TicketStatus::factory()->create(['panel' => 'test2', 'display_name' => 'Closed']);
+    $open = TicketStatus::factory()->create(['panel' => 'test', 'order' => 1, 'display_name' => 'Open']);
+    $closed = TicketStatus::factory()->create(['panel' => 'test', 'order' => 2, 'display_name' => 'Closed']);
+    TicketStatus::factory()->create(['panel' => 'test2', 'order' => 1, 'display_name' => 'Open']);
+    TicketStatus::factory()->create(['panel' => 'test2', 'order' => 2, 'display_name' => 'Closed']);
 
     $mine = Ticket::factory()->create(['panel' => 'test', 'status_id' => $open->id, 'closed_at' => null]);
     $shut = Ticket::factory()->create(['panel' => 'test', 'status_id' => $closed->id, 'closed_at' => now()]);
 
     $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
-    $filter = $page->instance()->getTable()->getFilter('status');
-
-    expect($filter->getRelationshipQuery()->pluck('display_name', 'id')->all())
-        ->toBe([$closed->id => 'Closed', $open->id => 'Open']);
+    expect($page->instance()->getTable()->getFilter('status')->getOptions())
+        ->toBe([$open->id => 'Open', $closed->id => 'Closed']);
 
     $page->filterTable('status', [$open->id])
         ->assertCanSeeTableRecords([$mine])

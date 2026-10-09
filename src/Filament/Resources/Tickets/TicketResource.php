@@ -25,7 +25,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
@@ -44,6 +43,8 @@ use Padmission\Tickets\Filament\Widgets\TicketCloseTimeWidget;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketActivity;
+use Padmission\Tickets\Models\TicketPriority;
+use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\EscalationSummary;
 use Padmission\Tickets\Services\TicketCloser;
 use Padmission\Tickets\Services\TicketReassignment;
@@ -279,7 +280,7 @@ class TicketResource extends Resource
     }
 
     /**
-     * @param  Builder<Model>  $lookups
+     * @param  Builder<covariant Model>  $lookups
      */
     protected static function spansOrganizations(Builder $lookups): bool
     {
@@ -309,29 +310,23 @@ class TicketResource extends Resource
     protected static function lookupFilter(string $name): SelectFilter
     {
         $panel = Filament::getCurrentOrDefaultPanel()->getId();
+        $lookupModel = TicketPlugin::resolveModelClass($name === 'priority' ? TicketPriority::class : TicketStatus::class);
+        $lookups = fn (): Builder => $lookupModel::optionsForPanel($panel);
 
-        // The relation lifts the current panel scope, so a ticket keeps the
-        // status another panel gave it. Only this panel's own rows are worth
-        // filtering by, or each name returns once per panel that keeps it.
         $filter = SelectFilter::make($name)
-            ->relationship($name, 'display_name', fn (Builder $query): Builder => $query
-                ->where($query->getModel()->qualifyColumn('panel'), $panel));
+            ->options(fn (): array => $lookups()->reorder()->orderBy('order')->pluck('display_name', 'id')->all())
+            ->query(fn (Builder $query, array $data): Builder => $query->when(
+                filled($data['values'] ?? []),
+                fn (Builder $query): Builder => $query->whereHas($name, fn (Builder $matches): Builder => $matches
+                    ->whereKey($data['values'])),
+            ));
 
-        $lookups = Relation::noConstraints(function () use ($name): Relation {
-            $model = TicketPlugin::get()->getTicketQuery()->getModel();
-
-            return $name === 'priority' ? $model->priority() : $model->status();
-        })
-            ->getQuery()
-            ->where('panel', $panel);
-
-        if (! static::spansOrganizations($lookups)) {
+        if (! static::spansOrganizations($lookups())) {
             return $filter;
         }
 
         return $filter
-            ->relationship(null, null)
-            ->options(fn (): array => (clone $lookups)->reorder()->orderBy('display_name')
+            ->options(fn (): array => $lookups()->reorder()->orderBy('display_name')
                 ->distinct()->pluck('display_name', 'display_name')->all())
             ->query(fn (Builder $query, array $data): Builder => $query->when(
                 filled($data['values'] ?? []),

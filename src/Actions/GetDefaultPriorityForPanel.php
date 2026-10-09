@@ -2,7 +2,6 @@
 
 namespace Padmission\Tickets\Actions;
 
-use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\TicketPlugin;
@@ -21,11 +20,7 @@ class GetDefaultPriorityForPanel
                 'tenant_id' => $tenantId,
             ]));
         } else {
-            $defaultPriority = $priorityModel::query()
-                ->withoutGlobalScope(CurrentPanelScope::class)
-                ->where('panel', $panelId)
-                ->orderBy('order', 'asc')
-                ->first();
+            $defaultPriority = $priorityModel::optionsForPanel($panelId)->orderBy('order', 'asc')->first();
         }
 
         if (! $defaultPriority) {

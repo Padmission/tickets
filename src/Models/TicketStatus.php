@@ -3,23 +3,22 @@
 namespace Padmission\Tickets\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Padmission\Tickets\Database\Factories\TicketStatusFactory;
 use Padmission\Tickets\Models\Concerns\HasColor;
+use Padmission\Tickets\Models\Concerns\IsTicketLookup;
 use Padmission\Tickets\Models\Observers\TicketStatusObserver;
 use Padmission\Tickets\Models\Scopes\CurrentPanelScope;
-use Padmission\Tickets\Support\TicketOrganization;
-use Padmission\Tickets\TicketPlugin;
 
 #[ObservedBy(TicketStatusObserver::class)]
 class TicketStatus extends Model
 {
     use HasColor;
     use HasFactory;
+    use IsTicketLookup;
     use SoftDeletes;
 
     protected $table = 'ticket_statuses';
@@ -58,7 +57,7 @@ class TicketStatus extends Model
     public static function getClosedStatusFor(Ticket $ticket): ?static
     {
         /** @var ?static */
-        return static::statusesFor($ticket)->orderBy('order', 'desc')->first();
+        return static::optionsForTicket($ticket)->orderBy('order', 'desc')->first();
     }
 
     /*
@@ -68,28 +67,11 @@ class TicketStatus extends Model
     public static function getOpenStatusFor(Ticket $ticket): ?static
     {
         /** @var ?static */
-        return static::statusesFor($ticket)->orderBy('order')->first();
+        return static::optionsForTicket($ticket)->orderBy('order')->first();
     }
 
-    /**
-     * @return Builder<static>
-     */
-    protected static function statusesFor(Ticket $ticket): Builder
+    protected static function lookupName(): string
     {
-        $query = static::query()
-            ->withoutGlobalScope(CurrentPanelScope::class)
-            ->where('panel', $ticket->panel);
-
-        if (TicketOrganization::shouldScope($ticket)) {
-            $query->where('tenant_id', $ticket->getAttribute('tenant_id'));
-        }
-
-        $modifier = TicketPlugin::find($ticket->panel)?->getRelationshipScopeModifier();
-
-        if ($modifier) {
-            app()->call($modifier, ['relation' => $query, 'model' => 'status']);
-        }
-
-        return $query;
+        return 'status';
     }
 }
