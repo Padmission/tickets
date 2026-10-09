@@ -74,3 +74,26 @@ it('offers a status name once when one organization shares the panel with a glob
         ->assertCanSeeTableRecords([$shared, $own])
         ->assertCanNotSeeTableRecords([$closed]);
 });
+
+/*
+ * A panel serving several organizations has lifted the host's viewer scope
+ * whether or not the host turned tenancy on, so the names repeated there too.
+ */
+it('offers a status name once on a multi-organization panel with tenancy off', function () {
+    config()->set('padmission-tickets.tenancy.enabled', false);
+
+    $openA = TicketStatus::factory()->create(['tenant_id' => 1, 'display_name' => 'Open']);
+    $openB = TicketStatus::factory()->create(['tenant_id' => 2, 'display_name' => 'Open']);
+    $closed = TicketStatus::factory()->create(['tenant_id' => 2, 'display_name' => 'Closed']);
+
+    $a = Ticket::factory()->create(['tenant_id' => 1, 'status_id' => $openA->id, 'closed_at' => null]);
+    $b = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $openB->id, 'closed_at' => null]);
+    $c = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $closed->id, 'closed_at' => now()]);
+
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+    expect($page->instance()->getTable()->getFilter('status')->getOptions())->toBe(['Closed' => 'Closed', 'Open' => 'Open']);
+
+    $page->filterTable('status', ['Open'])
+        ->assertCanSeeTableRecords([$a, $b])
+        ->assertCanNotSeeTableRecords([$c]);
+});

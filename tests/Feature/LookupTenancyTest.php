@@ -5,9 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseAsDuplicateAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CloseTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\EditTicketAction;
+use Padmission\Tickets\Filament\Resources\Tickets\Actions\ReassignTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Livewire\CopilotTicketPanel;
@@ -16,6 +18,7 @@ use Padmission\Tickets\Models\TicketDisposition;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\Services\TicketCloser;
+use Padmission\Tickets\Services\TicketDuplicates;
 use Padmission\Tickets\Services\TicketStarter;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
@@ -170,6 +173,112 @@ describe('Assigning a lookup on a multi-organization panel', function () {
             ->and($without->refresh())
             ->isClosed->toBeFalse()
             ->disposition_id->toBeNull();
+    });
+
+    it('offers each disposition name once when a bulk close spans organizations', function () {
+        $own = organizationTicket(1);
+        $other = organizationTicket(2);
+
+        Livewire::test(ListTickets::class, ['activeTab' => 'all'])
+            ->selectTableRecords([$own, $other])
+            ->mountAction(TestAction::make('close-tickets')->table()->bulk())
+            ->assertFormFieldExists('disposition', function ($field): bool {
+                expect(array_keys($field->getOptions()))->toBe(['Duplicate', 'Resolved']);
+
+                return true;
+            });
+    });
+
+    it('offers only the ticket\'s own organization\'s dispositions when closing it as a duplicate', function () {
+        $original = organizationTicket(1);
+        $dispositions = sortedIds([$this->disposition[1]['resolved']->id, $this->disposition[1]['duplicate']->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
+            ->mountAction(CloseAsDuplicateAction::class)
+            ->assertFormFieldExists('disposition', function ($field) use ($dispositions): bool {
+                expect(lookupTenancyOptionIds($field))->toBe($dispositions);
+
+                return true;
+            })
+            ->assertFormFieldExists('original', function ($field) use ($original): bool {
+                expect(array_keys($field->getOptions()))->toBe([$original->id]);
+
+                return true;
+            });
+    });
+
+    it('keeps the duplicate candidates to the ticket\'s own organization', function () {
+        $own = organizationTicket(1);
+        organizationTicket(2);
+
+        expect(resolve(TicketDuplicates::class)->candidates($this->ticket)->pluck('id')->all())
+            ->toBe([$own->id]);
+    });
+
+    it('offers each supporter the host allows for that ticket, once', function () {
+        $mine = User::factory()->create(['tenant_id' => 1, 'name' => 'Ana Reyes']);
+        $theirs = User::factory()->create(['tenant_id' => 2, 'name' => 'Ana Reyes']);
+        $colleague = User::factory()->create(['tenant_id' => 1, 'name' => 'Bo Lane']);
+
+        TicketPlugin::get()->allSupportersQuery(fn (?Ticket $ticket = null) => User::query()
+            ->when($ticket !== null, fn ($query) => $query->where('users.tenant_id', $ticket->getAttribute('tenant_id'))));
+
+        $this->ticket->update(['assignee_id' => $mine->id]);
+
+        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
+            ->mountAction(TestAction::make(ReassignTicketAction::class)->schemaComponent('assignee', schema: 'form'))
+            ->assertFormFieldExists('assignee_id', function ($field) use ($colleague, $theirs): bool {
+                $ids = array_keys($field->getOptions());
+
+                expect($ids)->toContain($colleague->id);
+                expect(in_array($theirs->id, $ids, true))->toBeFalse();
+
+                return true;
+            });
+
+        // Edit also keeps whoever the ticket is already assigned to, so the field
+        // can show them, which Reassign has no reason to offer.
+        Livewire::test(ViewTicket::class, ['record' => $this->ticket->id])
+            ->mountAction(EditTicketAction::class)
+            ->assertFormFieldExists('assignee_id', function ($field) use ($mine, $theirs): bool {
+                $ids = array_keys($field->getOptions());
+
+                expect($ids)->toContain($mine->id)
+                    ->toContain($this->ticket->assignee_id);
+                expect(in_array($theirs->id, $ids, true))->toBeFalse();
+
+                return true;
+            });
+    });
+
+    it('lists an assignee filter option for each supporter rather than each organization', function () {
+        $supporter = User::factory()->create(['tenant_id' => 1, 'name' => 'Ana Reyes']);
+        organizationTicket(1, ['assignee_id' => $supporter->id]);
+
+        TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereKey($supporter->id));
+
+        $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+
+        expect($page->instance()->getTable()->getFilter('assignee')->getRelationshipQuery()->pluck('name', 'id')->all())
+            ->toBe([$supporter->id => 'Ana Reyes']);
+    });
+
+    /*
+     * Two people of the same name in different organizations are two people, so
+     * the filter keeps one option each: merging them would filter the wrong
+     * tickets. The organization is not named here, which is worth knowing.
+     */
+    it('keeps a submitter option per person when two share a name', function () {
+        $mine = User::factory()->create(['tenant_id' => 1, 'name' => 'Dana Whitaker']);
+        $theirs = User::factory()->create(['tenant_id' => 2, 'name' => 'Dana Whitaker']);
+        organizationTicket(1, ['submitter_id' => $mine->id]);
+        organizationTicket(2, ['submitter_id' => $theirs->id]);
+
+        $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+        $options = $page->instance()->getTable()->getFilter('submitter')->getRelationshipQuery()
+            ->whereIn('id', [$mine->id, $theirs->id])->pluck('name', 'id')->all();
+
+        expect($options)->toBe([$mine->id => 'Dana Whitaker', $theirs->id => 'Dana Whitaker']);
     });
 
     it('resolves a ticket onto its own organization\'s closed status', function () {
