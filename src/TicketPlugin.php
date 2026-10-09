@@ -66,6 +66,8 @@ class TicketPlugin implements Plugin
 
     protected bool $shouldRegisterWidgets = false;
 
+    protected bool $shouldRegisterConfigurationResources = true;
+
     protected bool $shouldEnableLinkedTickets = false;
 
     public ?array $linkTicketsToPanels = null;
@@ -153,9 +155,11 @@ class TicketPlugin implements Plugin
 
             $panel->resources([
                 TicketResource::class,
-                StatusResource::class,
-                DispositionResource::class,
-                PriorityResource::class,
+                ...($this->shouldRegisterConfigurationResources() ? [
+                    StatusResource::class,
+                    DispositionResource::class,
+                    PriorityResource::class,
+                ] : []),
             ]);
         }
 
@@ -354,6 +358,24 @@ class TicketPlugin implements Plugin
     public function shouldRegisterResources(): bool
     {
         return $this->shouldRegisterResources;
+    }
+
+    /*
+     * Each organization configures its own statuses, priorities and dispositions
+     * on its own panel. A panel that only answers other panels' tickets has no
+     * organization of its own to configure, and a host clusters these elsewhere,
+     * so it turns them off rather than route to a cluster it never registered.
+     */
+    public function registerConfigurationResources(bool $shouldRegister = true): static
+    {
+        $this->shouldRegisterConfigurationResources = $shouldRegister;
+
+        return $this;
+    }
+
+    public function shouldRegisterConfigurationResources(): bool
+    {
+        return $this->shouldRegisterConfigurationResources;
     }
 
     public function shouldRegisterWidgets(): bool

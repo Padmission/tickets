@@ -279,6 +279,14 @@ This registers the following resources:
 - **DispositionResource** - Manage ticket dispositions
 - **PriorityResource** - Manage ticket priorities
 
+The last three configure the organization whose panel this is. A panel that only answers other panels' tickets has none of its own to configure, and a host that clusters these screens must register that cluster on every panel offering them, so leave them off there:
+
+```php
+TicketPlugin::make()
+    ->registerResources()
+    ->registerConfigurationResources(false)
+```
+
 For each resource you can easily overwrite its label, navigation group, sort, navigation icon, parent item, sub-navigation position and cluster:
 
 ```php
