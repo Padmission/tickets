@@ -155,7 +155,7 @@ it('keeps the original and its duplicate links when row deletion cleanup fails',
     $unrelated = Ticket::factory()->closed()->create(['duplicate_of_ticket_id' => $otherOriginal->id]);
     failDuplicateCleanup();
 
-    expect(fn () => Livewire::test(ListTickets::class)
+    expect(fn () => Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->callAction(TestAction::make(DeleteTicketAction::class)->table($original)))
         ->toThrow(QueryException::class);
 
@@ -173,7 +173,7 @@ it('keeps an original and its duplicate links when bulk deletion cleanup fails, 
     $withoutDuplicates = Ticket::factory()->open()->create();
     failDuplicateCleanup();
 
-    Livewire::test(ListTickets::class)
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
         ->selectTableRecords([$original->id, $withoutDuplicates->id])
         ->callAction(TestAction::make('delete')->table()->bulk());
 
