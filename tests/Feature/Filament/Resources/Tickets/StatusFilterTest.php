@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
+use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
 use Padmission\Tickets\TicketPlugin;
 
@@ -96,4 +97,60 @@ it('offers a status name once on a multi-organization panel with tenancy off', f
     $page->filterTable('status', ['Open'])
         ->assertCanSeeTableRecords([$a, $b])
         ->assertCanNotSeeTableRecords([$c]);
+});
+
+/*
+ * The status relation lifts the current panel scope, so a ticket keeps the
+ * status another panel gave it. The filter still belongs to one panel: without
+ * its own limit it offered every panel's row, repeating each name.
+ */
+it('offers only the current panel\'s statuses when one organization keeps a set per panel', function () {
+    config()->set('padmission-tickets.tenancy.enabled', false);
+
+    $open = TicketStatus::factory()->create(['panel' => 'test', 'display_name' => 'Open']);
+    $closed = TicketStatus::factory()->create(['panel' => 'test', 'display_name' => 'Closed']);
+    TicketStatus::factory()->create(['panel' => 'test2', 'display_name' => 'Open']);
+    TicketStatus::factory()->create(['panel' => 'test2', 'display_name' => 'Closed']);
+
+    $mine = Ticket::factory()->create(['panel' => 'test', 'status_id' => $open->id, 'closed_at' => null]);
+    $shut = Ticket::factory()->create(['panel' => 'test', 'status_id' => $closed->id, 'closed_at' => now()]);
+
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+    $filter = $page->instance()->getTable()->getFilter('status');
+
+    expect($filter->getRelationshipQuery()->pluck('display_name', 'id')->all())
+        ->toBe([$closed->id => 'Closed', $open->id => 'Open']);
+
+    $page->filterTable('status', [$open->id])
+        ->assertCanSeeTableRecords([$mine])
+        ->assertCanNotSeeTableRecords([$shut]);
+});
+
+/*
+ * The filter offers only this panel's rows, which is safe because a ticket is
+ * never given another panel's: every path that writes one reads it from the
+ * ticket's own panel. A ticket the filter could not reach would be invisible
+ * to it, so this holds the invariant the restriction above depends on.
+ */
+it('gives a ticket a status and priority from its own panel on every path that writes one', function () {
+    TicketStatus::factory()->create(['panel' => 'test2', 'order' => 0, 'display_name' => 'Open']);
+    TicketStatus::factory()->create(['panel' => 'test2', 'order' => 9, 'display_name' => 'Closed']);
+    TicketPriority::factory()->create(['panel' => 'test2', 'order' => 0, 'display_name' => 'Normal']);
+
+    $open = TicketStatus::factory()->create(['panel' => 'test', 'order' => 1, 'display_name' => 'Open']);
+    TicketStatus::factory()->create(['panel' => 'test', 'order' => 2, 'display_name' => 'Closed']);
+    TicketPriority::factory()->create(['panel' => 'test', 'order' => 1, 'display_name' => 'Normal']);
+
+    $ticket = Ticket::factory()->create(['panel' => 'test', 'status_id' => $open->id]);
+
+    $panelOf = fn (Ticket $record): array => [
+        $record->status()->withoutGlobalScopes()->value('panel'),
+        $record->priority()->withoutGlobalScopes()->value('panel'),
+    ];
+
+    $ticket->close();
+    expect($panelOf($ticket->refresh()))->toBe(['test', 'test']);
+
+    $ticket->reopen();
+    expect($panelOf($ticket->refresh()))->toBe(['test', 'test']);
 });

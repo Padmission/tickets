@@ -308,7 +308,14 @@ class TicketResource extends Resource
      */
     protected static function lookupFilter(string $name): SelectFilter
     {
-        $filter = SelectFilter::make($name)->relationship($name, 'display_name');
+        $panel = Filament::getCurrentOrDefaultPanel()->getId();
+
+        // The relation lifts the current panel scope, so a ticket keeps the
+        // status another panel gave it. Only this panel's own rows are worth
+        // filtering by, or each name returns once per panel that keeps it.
+        $filter = SelectFilter::make($name)
+            ->relationship($name, 'display_name', fn (Builder $query): Builder => $query
+                ->where($query->getModel()->qualifyColumn('panel'), $panel));
 
         $lookups = Relation::noConstraints(function () use ($name): Relation {
             $model = TicketPlugin::get()->getTicketQuery()->getModel();
@@ -316,7 +323,7 @@ class TicketResource extends Resource
             return $name === 'priority' ? $model->priority() : $model->status();
         })
             ->getQuery()
-            ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
+            ->where('panel', $panel);
 
         if (! static::spansOrganizations($lookups)) {
             return $filter;
