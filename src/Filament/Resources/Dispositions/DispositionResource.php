@@ -21,6 +21,7 @@ use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Filament\Resources\Dispositions\Pages\ListDispositions;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketDisposition;
+use Padmission\Tickets\Support\LookupOrganizations;
 use Padmission\Tickets\TicketPlugin;
 
 class DispositionResource extends Resource
@@ -69,7 +70,10 @@ class DispositionResource extends Resource
 
                 TextColumn::make('display_name')
                     ->label(__('padmission-tickets::tickets.resources.dispositions.display_name')),
+
+                ...(static::spansOrganizations() ? [LookupOrganizations::column()] : []),
             ])
+            ->filters(static::spansOrganizations() ? [LookupOrganizations::filter()] : [])
             ->recordActions([
                 EditAction::make()->slideOver()->modalWidth(Width::Medium),
                 DeleteAction::make(),
@@ -79,6 +83,11 @@ class DispositionResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    protected static function spansOrganizations(): bool
+    {
+        return LookupOrganizations::spanned(static::getEloquentQuery());
     }
 
     public static function getPages(): array
