@@ -830,8 +830,6 @@ The organization list opens with the first 50, searched and sorted by the tenant
 
 A status or priority filter whose scoped options span several organizations offers each display name once and matches that status or priority in every organization, whether or not tenancy is enabled. One shared set of organization-less lookups alongside an organization's own counts as spanning them. A panel scoped to one organization keeps its ID filter, as does a host with no organization column. The host's ticket and relationship scopes still control which organizations it can see.
 
-The Statuses, Priorities and Dispositions lists keep one row per organization, since each is edited on its own. Where those rows span several organizations, the list names each row's organization in a column and offers a filter for it, so the repeated display names can be told apart. The organizations are named by `ticketTenantsQuery()`, falling back to the configured tenancy model. A panel serving one organization shows neither.
-
 ### Escalations
 
 An organization's panel can escalate a ticket to a central support panel. The escalation is a new ticket in the support panel, linked to the organization's ticket (the "original"). The organization's supporter talks to the support team on the escalation, and to their requester on the original.

@@ -404,8 +404,6 @@ return [
 
     'resources' => [
         'navigation_group' => 'Tickets',
-        'organization' => 'Organization',
-        'shared_organization' => 'All organizations',
 
         'tickets' => [
             'model_label' => 'Ticket',
