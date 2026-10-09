@@ -412,6 +412,10 @@ Users can create tickets via a chat widget. The widget provides a modern, real-t
 - **File attachments** and **screenshots** (when configured)
 - **Keyboard shortcuts** for power users
 
+The widget's ticket list shows only open tickets, so what still needs an answer is not buried under everything already resolved. A **Show closed** checkbox (`list.show_closed`) above the list brings the closed ones back, and the choice is kept while the widget is open, including the unread badge's count and the list the badge poll refreshes. When the filter is the only reason the list looks empty, it says **No open tickets** (`list.no_open_tickets`) rather than the `list.no_tickets` it shows to someone who has never opened one. A link straight to a closed ticket still opens it with the filter left alone.
+
+Both chat API endpoints behind the list take an `include_closed` parameter, off by default: `/padmission-tickets/api/tickets` and `/padmission-tickets/api/tickets/unread-count`. The list endpoint also returns `has_closed_tickets`, which is what lets an empty list tell those two cases apart.
+
 To enable the widget in a panel, use the `->showChatWidget()` method:
 
 ```php

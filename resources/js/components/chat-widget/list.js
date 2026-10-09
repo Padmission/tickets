@@ -29,7 +29,8 @@ customElements.define(
 		}
 
 		async refreshTickets() {
-			const requestId = (this.listRequestId = (this.listRequestId || 0) + 1);
+			this.listRequestId = (this.listRequestId || 0) + 1;
+			const requestId = this.listRequestId;
 			let data;
 			try {
 				data = await this.fetchTickets();
@@ -64,10 +65,20 @@ customElements.define(
 				}),
 			);
 
+			const list = this.querySelector("[data-ticket-list]");
+
+			if (!list) {
+				return;
+			}
+
+			// Polling refreshes the list under the reader, so their place is kept.
 			const main = this.querySelector("main");
-			const scrollTop = main.scrollTop;
-			this.querySelector("[data-ticket-list]").replaceChildren(node);
-			main.scrollTop = scrollTop;
+			const scrollTop = main?.scrollTop;
+			list.replaceChildren(node);
+
+			if (main) {
+				main.scrollTop = scrollTop;
+			}
 		}
 
 		createTicket() {
@@ -75,9 +86,14 @@ customElements.define(
 		}
 
 		openTicket(ticketId) {
-			const ticket = this.tickets.find(
+			// A refresh can drop a ticket between rendering its row and the click.
+			const ticket = this.tickets?.find(
 				(ticket) => ticket.id === Number.parseInt(ticketId),
 			);
+
+			if (!ticket) {
+				return;
+			}
 
 			this.changeView("chat-view-ticket", {
 				ticketId: ticket.id,

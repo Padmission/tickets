@@ -353,6 +353,9 @@ it('clears every incoming duplicate link through model deletion without changing
     $otherPanel = Ticket::factory()->closed()->state(['disposition_id' => null])->create([
         'panel' => 'test2', 'duplicate_of_ticket_id' => $this->original->id,
     ]);
+    $otherOriginal = Ticket::factory()->open()->state(['disposition_id' => null])->create();
+    $unrelated = Ticket::factory()->open()->state(['disposition_id' => null])->create();
+    resolve(TicketDuplicates::class)->close($unrelated, $otherOriginal->id);
     $closedAt = $this->duplicate->closed_at;
     $history = $this->duplicate->ticketActivities()->pluck('data', 'id')->all();
 
@@ -363,6 +366,8 @@ it('clears every incoming duplicate link through model deletion without changing
     foreach ([$this->duplicate, $trashedDuplicate, $otherPanel] as $duplicate) {
         expect($duplicate->refresh()->duplicate_of_ticket_id)->toBeNull();
     }
+
+    expect($unrelated->refresh()->duplicate_of_ticket_id)->toBe($otherOriginal->id);
 
     Filament::setCurrentPanel('test');
     expect($this->duplicate->isClosed)->toBeTrue()

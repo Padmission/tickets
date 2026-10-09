@@ -3,6 +3,8 @@
 use Filament\Actions\ActionGroup;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
@@ -130,4 +132,53 @@ it('says what deleting an escalation leaves behind', function () {
     Livewire::test(ViewTicket::class, ['record' => $escalation->id])
         ->mountAction(DeleteTicketAction::class)
         ->assertMountedActionModalSee('It is removed from every list with its conversation, and the team that escalated it can no longer open it. The original tickets stay open and can be escalated again.');
+});
+
+/*
+ * Breaks only the observer's cleanup of an existing link, leaving the
+ * soft-delete update itself to succeed, as a lock timeout there would.
+ */
+function failDuplicateCleanup(): void
+{
+    DB::statement(<<<'SQL'
+        CREATE TRIGGER fail_duplicate_cleanup BEFORE UPDATE OF duplicate_of_ticket_id ON tickets
+        WHEN OLD.duplicate_of_ticket_id IS NOT NULL AND NEW.duplicate_of_ticket_id IS NULL
+        BEGIN SELECT RAISE(ABORT, 'cleanup failed'); END
+    SQL);
+}
+
+it('keeps the original and its duplicate links when row deletion cleanup fails', function () {
+    $this->login();
+    $original = Ticket::factory()->open()->create();
+    $duplicate = Ticket::factory()->closed()->create(['duplicate_of_ticket_id' => $original->id]);
+    $otherOriginal = Ticket::factory()->open()->create();
+    $unrelated = Ticket::factory()->closed()->create(['duplicate_of_ticket_id' => $otherOriginal->id]);
+    failDuplicateCleanup();
+
+    expect(fn () => Livewire::test(ListTickets::class)
+        ->callAction(TestAction::make(DeleteTicketAction::class)->table($original)))
+        ->toThrow(QueryException::class);
+
+    expect(Ticket::withTrashed()->find($original->id)->trashed())->toBeFalse()
+        ->and($duplicate->refresh()->duplicate_of_ticket_id)->toBe($original->id)
+        ->and($unrelated->refresh()->duplicate_of_ticket_id)->toBe($otherOriginal->id);
+});
+
+it('keeps an original and its duplicate links when bulk deletion cleanup fails, still deleting the rest', function () {
+    $this->login();
+    $original = Ticket::factory()->open()->create();
+    $duplicate = Ticket::factory()->closed()->create(['duplicate_of_ticket_id' => $original->id]);
+    $otherOriginal = Ticket::factory()->open()->create();
+    $unrelated = Ticket::factory()->closed()->create(['duplicate_of_ticket_id' => $otherOriginal->id]);
+    $withoutDuplicates = Ticket::factory()->open()->create();
+    failDuplicateCleanup();
+
+    Livewire::test(ListTickets::class)
+        ->selectTableRecords([$original->id, $withoutDuplicates->id])
+        ->callAction(TestAction::make('delete')->table()->bulk());
+
+    expect(Ticket::withTrashed()->find($original->id)->trashed())->toBeFalse()
+        ->and($duplicate->refresh()->duplicate_of_ticket_id)->toBe($original->id)
+        ->and($unrelated->refresh()->duplicate_of_ticket_id)->toBe($otherOriginal->id)
+        ->and(Ticket::withTrashed()->find($withoutDuplicates->id)->trashed())->toBeTrue();
 });
