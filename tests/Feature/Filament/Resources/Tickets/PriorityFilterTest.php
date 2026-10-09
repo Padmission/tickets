@@ -55,3 +55,51 @@ it('keeps priority ids and host scoping on a single organization panel', functio
 
     $page->filterTable('priority', [$highA->id])->assertCanSeeTableRecords([$a])->assertCanNotSeeTableRecords([$b]);
 });
+
+/*
+ * A host that keeps one shared set of lookups alongside an organization's own
+ * still spans organizations, but a count of distinct organizations skips the
+ * shared rows' empty one, so the names were offered once per row.
+ */
+it('offers a priority name once when one organization shares the panel with a global set', function () {
+    $status = TicketStatus::factory()->create(['tenant_id' => null]);
+    $sharedHigh = TicketPriority::factory()->create(['tenant_id' => null, 'display_name' => 'High']);
+    $sharedLow = TicketPriority::factory()->create(['tenant_id' => null, 'display_name' => 'Low']);
+    $ownHigh = TicketPriority::factory()->create(['tenant_id' => 1, 'display_name' => 'High']);
+    TicketPriority::factory()->create(['tenant_id' => 1, 'display_name' => 'Low']);
+
+    $shared = Ticket::factory()->create(['tenant_id' => null, 'status_id' => $status->id, 'priority_id' => $sharedHigh->id]);
+    $own = Ticket::factory()->create(['tenant_id' => 1, 'status_id' => $status->id, 'priority_id' => $ownHigh->id]);
+    $low = Ticket::factory()->create(['tenant_id' => null, 'status_id' => $status->id, 'priority_id' => $sharedLow->id]);
+
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+    expect($page->instance()->getTable()->getFilter('priority')->getOptions())->toBe(['High' => 'High', 'Low' => 'Low']);
+
+    $page->filterTable('priority', ['High'])
+        ->assertCanSeeTableRecords([$shared, $own])
+        ->assertCanNotSeeTableRecords([$low]);
+});
+
+/*
+ * A panel serving several organizations has lifted the host's viewer scope
+ * whether or not the host turned tenancy on, so the names repeated there too.
+ */
+it('offers a priority name once on a multi-organization panel with tenancy off', function () {
+    config()->set('padmission-tickets.tenancy.enabled', false);
+
+    $status = TicketStatus::factory()->create(['tenant_id' => 1]);
+    $highA = TicketPriority::factory()->create(['tenant_id' => 1, 'display_name' => 'High']);
+    $highB = TicketPriority::factory()->create(['tenant_id' => 2, 'display_name' => 'High']);
+    $low = TicketPriority::factory()->create(['tenant_id' => 2, 'display_name' => 'Low']);
+
+    $a = Ticket::factory()->create(['tenant_id' => 1, 'status_id' => $status->id, 'priority_id' => $highA->id]);
+    $b = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $status->id, 'priority_id' => $highB->id]);
+    $c = Ticket::factory()->create(['tenant_id' => 2, 'status_id' => $status->id, 'priority_id' => $low->id]);
+
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+    expect($page->instance()->getTable()->getFilter('priority')->getOptions())->toBe(['High' => 'High', 'Low' => 'Low']);
+
+    $page->filterTable('priority', ['High'])
+        ->assertCanSeeTableRecords([$a, $b])
+        ->assertCanNotSeeTableRecords([$c]);
+});

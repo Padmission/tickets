@@ -51,3 +51,26 @@ it('keeps status ids and host scoping on a single organization panel', function 
 
     $page->filterTable('status', [$closedA->id])->assertCanSeeTableRecords([$a])->assertCanNotSeeTableRecords([$b]);
 });
+
+/*
+ * A host that keeps one shared set of lookups alongside an organization's own
+ * still spans organizations, but a count of distinct organizations skips the
+ * shared rows' empty one, so the names were offered once per row.
+ */
+it('offers a status name once when one organization shares the panel with a global set', function () {
+    $sharedOpen = TicketStatus::factory()->create(['tenant_id' => null, 'display_name' => 'Open']);
+    $sharedClosed = TicketStatus::factory()->create(['tenant_id' => null, 'display_name' => 'Closed']);
+    $ownOpen = TicketStatus::factory()->create(['tenant_id' => 1, 'display_name' => 'Open']);
+    TicketStatus::factory()->create(['tenant_id' => 1, 'display_name' => 'Closed']);
+
+    $shared = Ticket::factory()->create(['tenant_id' => null, 'status_id' => $sharedOpen->id, 'closed_at' => null]);
+    $own = Ticket::factory()->create(['tenant_id' => 1, 'status_id' => $ownOpen->id, 'closed_at' => null]);
+    $closed = Ticket::factory()->create(['tenant_id' => null, 'status_id' => $sharedClosed->id, 'closed_at' => now()]);
+
+    $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
+    expect($page->instance()->getTable()->getFilter('status')->getOptions())->toBe(['Closed' => 'Closed', 'Open' => 'Open']);
+
+    $page->filterTable('status', ['Open'])
+        ->assertCanSeeTableRecords([$shared, $own])
+        ->assertCanNotSeeTableRecords([$closed]);
+});

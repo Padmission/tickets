@@ -828,7 +828,7 @@ TicketPlugin::make()
 
 The organization list opens with the first 50, searched and sorted by the tenant's `name` column. Without `ticketTenantsQuery()` it is empty. `startsTickets(false)` hides **New ticket** on any panel.
 
-When tenancy is enabled, a status filter whose scoped options span several organizations offers each display name once and matches that status in every organization. A panel scoped to one organization keeps its status ID filter. The host's ticket and relationship scopes still control which organizations it can see.
+A status or priority filter whose scoped options span several organizations offers each display name once and matches that status or priority in every organization, whether or not tenancy is enabled. One shared set of organization-less lookups alongside an organization's own counts as spanning them. A panel scoped to one organization keeps its ID filter, as does a host with no organization column. The host's ticket and relationship scopes still control which organizations it can see.
 
 ### Escalations
 

@@ -278,6 +278,28 @@ class TicketResource extends Resource
         return $query->overdue();
     }
 
+    /**
+     * @param  Builder<Model>  $lookups
+     */
+    protected static function spansOrganizations(Builder $lookups): bool
+    {
+        $model = $lookups->getModel();
+
+        // A host owns the organization column, so a single-organization one has
+        // none. Counting distinct values would also skip a shared, organization-less
+        // set's empty one, leaving a host that pairs it with an organization's own
+        // set looking single-organization.
+        if (! $model->getConnection()->getSchemaBuilder()->hasColumn($model->getTable(), 'tenant_id')) {
+            return false;
+        }
+
+        $first = (clone $lookups)->reorder()->value('tenant_id');
+
+        return (clone $lookups)->where(fn (Builder $other): Builder => $first === null
+            ? $other->whereNotNull('tenant_id')
+            : $other->whereNull('tenant_id')->orWhere('tenant_id', '!=', $first))->exists();
+    }
+
     /*
      * Keep the host's relationship scopes: only a query that actually sees
      * several organizations needs names in place of organization-specific ids.
@@ -288,10 +310,6 @@ class TicketResource extends Resource
     {
         $filter = SelectFilter::make($name)->relationship($name, 'display_name');
 
-        if (! config('padmission-tickets.tenancy.enabled')) {
-            return $filter;
-        }
-
         $lookups = Relation::noConstraints(function () use ($name): Relation {
             $model = TicketPlugin::get()->getTicketQuery()->getModel();
 
@@ -300,7 +318,7 @@ class TicketResource extends Resource
             ->getQuery()
             ->where('panel', Filament::getCurrentOrDefaultPanel()->getId());
 
-        if ((clone $lookups)->distinct()->count('tenant_id') < 2) {
+        if (! static::spansOrganizations($lookups)) {
             return $filter;
         }
 
