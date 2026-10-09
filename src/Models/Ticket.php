@@ -294,6 +294,17 @@ class Ticket extends Model
         return parent::refresh();
     }
 
+    /*
+     * The observer clears duplicate links after the row is deleted, so a
+     * cleanup failure would otherwise leave this ticket deleted behind
+     * dangling links, hidden from the list that could retry the delete.
+     * Per-record, so each stays atomic before a bulk action catches it.
+     */
+    public function delete()
+    {
+        return $this->getConnection()->transaction(fn () => parent::delete());
+    }
+
     public function isEscalationFrom(string $panelId): bool
     {
         if (! $this->isEscalation()) {
