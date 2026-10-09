@@ -147,7 +147,7 @@ A plain `composer require padmission/tickets` installs the latest tag, which is 
 php artisan migrate
 ```
 
-Keep `run_migrations => true` in `config/padmission-tickets.php` (the default). Migrations live in the package; hosts should not publish or maintain their own copies.
+`run_migrations => true` in `config/padmission-tickets.php` (the default) lets the package run its own migrations, which suits a new install whose `users.id` and tenancy key are `bigint` like the package's own `foreignId` columns. A host whose key types differ, or that manages the ticket schema itself through a squashed or hand-maintained set of migrations, should set it to `false` and own those migrations; the package does not require it to be `true`.
 
 **Step 4:** Publish the Filament assets:
 
@@ -225,7 +225,7 @@ Statuses, priorities and dispositions are kept per panel (and per tenant when te
 
 ### Upgrading existing installations
 
-If your host currently sets `run_migrations` to `false`, switch it to `true`, clear any cached configuration with `php artisan config:clear`, and run `php artisan migrate`. Package migrations reuse existing tables, columns, indexes and foreign keys created by older host copies, and can be run repeatedly. New package releases then receive their schema changes through the host's normal migration command. Retire host-owned copies of ticket migrations; existing entries in the migrations table can remain.
+Letting the package own its migrations is optional, and only appropriate where the host's key types match the package's: its foreign keys are `foreignId` (`bigint unsigned`), so a host whose `users.id` or tenancy key is a narrower integer type must keep `run_migrations => false` and apply the schema changes itself, as must a host that squashes its schema. Where the types do match and you choose to hand migrations to the package, set `run_migrations` to `true`, clear any cached configuration with `php artisan config:clear`, and run `php artisan migrate`. Package migrations reuse existing tables, columns, indexes and foreign keys created by older host copies, and can be run repeatedly. New package releases then receive their schema changes through the host's normal migration command. Retire host-owned copies of ticket migrations; existing entries in the migrations table can remain.
 
 Before adding a missing foreign key for `linked_ticket_id`, `duplicate_of_ticket_id`, `last_seen_activity_id` or `last_notified_activity_id`, the migration checks existing non-null values for references to missing rows. If any exist, it skips that column's constraint and writes a warning to the Laravel log naming the table, column and number of orphaned references. Those values are left untouched, and the remaining schema changes continue. The pointer backfill also excludes orphaned notified pointers when filling a missing seen pointer. Reconcile the references separately, then rerun the affected package migration to add the skipped constraint; `php artisan migrate` alone will not rerun a migration already recorded as completed.
 
@@ -891,7 +891,7 @@ Tickets involved in escalations are deliberately blocked, including escalations 
 
 Duplicate closure and reopening never notify the requester side, even when a host configures both recipients. Ordinary ticket closure retains the host’s explicit requester notification opt-in. Their system notes do not produce requester notification emails either. Actual messages continue to use the normal notification rules.
 
-The nullable `duplicate_of_ticket_id` foreign key uses `nullOnDelete`. The package ships the guarded, standalone migration `2026_10_06_000001_add_duplicate_of_ticket_id_to_tickets_table.php`, which upgrades existing tables as well as new installations. With `run_migrations` enabled, the host's normal `php artisan migrate` runs it. Hosts upgrading from `run_migrations => false` should enable package migrations and run `php artisan migrate` before deploying the feature; an existing column or foreign key is reused. An already-run create-table migration will not add this column.
+The nullable `duplicate_of_ticket_id` foreign key uses `nullOnDelete`. The package ships the guarded, standalone migration `2026_10_06_000001_add_duplicate_of_ticket_id_to_tickets_table.php`, which upgrades existing tables as well as new installations. With `run_migrations` enabled, the host's normal `php artisan migrate` runs it. A host keeping `run_migrations => false` needs the equivalent column and foreign key in its own migrations before deploying the feature; an existing column or foreign key is reused. An already-run create-table migration will not add this column.
 
 ### Reopen
 
