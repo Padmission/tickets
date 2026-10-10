@@ -32,10 +32,6 @@ function escalationFrom(string $sourcePanel = 'test', array $attributes = [], st
     return $escalation;
 }
 
-/*
- * A question the source panel asked another panel directly, with no original
- * ticket behind it.
- */
 function directQuestionFrom(string $sourcePanel = 'test', array $attributes = [], string $state = 'open'): Ticket
 {
     $question = Ticket::factory()->{$state}()->create(['panel' => 'test2', 'source_panel' => $sourcePanel, ...$attributes]);

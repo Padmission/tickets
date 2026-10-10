@@ -24,7 +24,7 @@ use Padmission\Tickets\TicketPlugin;
 /*
  * The owner hands the escalation to a colleague, and anyone else on the team
  * takes it over. Either way the other team's replies, access to the
- * escalation and My Escalations all follow its submitter.
+ * escalation and the viewer's direct questions all follow its submitter.
  */
 class HandOverEscalationAction extends Action
 {

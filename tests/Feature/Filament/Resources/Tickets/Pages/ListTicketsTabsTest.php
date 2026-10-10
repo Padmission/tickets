@@ -243,5 +243,6 @@ describe('Empty state', function () {
     })->with([
         'a filter' => [fn ($page) => $page->set('tableFilters.overdue.isActive', true)],
         'the search' => [fn ($page) => $page->searchTable('Parking')],
+        'a filter whose choice no longer exists' => [fn ($page) => $page->set('tableFilters.status.values', [999999])],
     ]);
 });

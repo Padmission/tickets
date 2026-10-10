@@ -20,7 +20,6 @@ use Filament\Resources\Resource;
 use Filament\Resources\ResourceConfiguration;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -28,6 +27,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
@@ -829,9 +829,11 @@ class TicketResource extends Resource
     protected static function isNarrowedBeyondOpen(ListTickets $livewire): bool
     {
         return filled($livewire->tableSearch)
-            || collect($livewire->getTable()->getFilters())
+            || collect(Arr::only($livewire->tableFilters, array_keys($livewire->getTable()->getFilters())))
                 ->except('open')
-                ->contains(fn (BaseFilter $filter): bool => $filter->getIndicators() !== []);
+                ->flatten()
+                ->filter()
+                ->isNotEmpty();
     }
 
     public static function getPages(?Panel $panel = null): array
