@@ -184,6 +184,7 @@ class Ticket extends Model
             ->whereNotExists(fn (QueryBuilder $sub): QueryBuilder => $sub
                 ->selectRaw('1')
                 ->from($this->getTable(), 'direct_originals')
+                ->whereNull('direct_originals.'.$this->getDeletedAtColumn())
                 ->whereColumn('direct_originals.linked_ticket_id', $id))
             ->whereExists((clone $activities)->whereColumn('ticket_id', $id)->where('type', ActivityType::AskedDirectly)->selectRaw('1'))
             ->whereNotExists((clone $activities)->whereColumn('ticket_id', $id)->where('type', ActivityType::OriginalAdded)->selectRaw('1')));
@@ -208,6 +209,7 @@ class Ticket extends Model
                 ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
                     ->selectRaw('1')
                     ->from($this->getTable(), 'panel_originals')
+                    ->whereNull('panel_originals.'.$this->getDeletedAtColumn())
                     ->whereColumn('panel_originals.linked_ticket_id', $id)
                     ->where('panel_originals.panel', $panelId))
                 ->orWhere(fn (Builder $query): Builder => $this->whereEscalation($query
@@ -227,6 +229,7 @@ class Ticket extends Model
             ->whereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
                 ->selectRaw('1')
                 ->from($this->getTable(), 'escalation_originals')
+                ->whereNull('escalation_originals.'.$this->getDeletedAtColumn())
                 ->whereColumn('escalation_originals.linked_ticket_id', $id))
             ->orWhereExists(fn (QueryBuilder $sub): QueryBuilder => $sub
                 ->selectRaw('1')
@@ -255,7 +258,7 @@ class Ticket extends Model
         }
 
         // A list row that already loaded its originals needs no query per row.
-        if ($this->isEscalation === null && $this->relationLoaded('childTickets') && $this->childTickets->isNotEmpty()) {
+        if ($this->isEscalation === null && $this->relationLoaded('childTickets') && $this->childTickets->contains(fn (Ticket $original): bool => ! $original->trashed())) {
             return $this->isEscalation = true;
         }
 
@@ -263,7 +266,7 @@ class Ticket extends Model
             return $this->isEscalation = (bool) $this->attributes['conversation_is_escalation'];
         }
 
-        return $this->isEscalation ??= $this->newQueryWithoutScopes()->where('linked_ticket_id', $this->getKey())->exists()
+        return $this->isEscalation ??= $this->activeOriginalsQuery()->exists()
             || TicketPlugin::resolveModelClass(TicketActivity::class)::query()
                 ->withoutGlobalScopes()
                 ->where('ticket_id', $this->getKey())
@@ -282,7 +285,7 @@ class Ticket extends Model
             return $this->isDirectQuestion;
         }
 
-        if (! $this->isEscalation() || ($this->relationLoaded('childTickets') && $this->childTickets->isNotEmpty())) {
+        if (! $this->isEscalation() || $this->activeOriginalsQuery()->exists()) {
             return $this->isDirectQuestion = false;
         }
 
@@ -294,6 +297,18 @@ class Ticket extends Model
             ->pluck('type');
 
         return $this->isDirectQuestion = $markers->contains(ActivityType::AskedDirectly) && ! $markers->contains(ActivityType::OriginalAdded);
+    }
+
+    /**
+     * Ignore host scopes, as the SQL scopes do, but never count deleted originals.
+     *
+     * @return Builder<Ticket>
+     */
+    protected function activeOriginalsQuery(): Builder
+    {
+        return $this->newQueryWithoutScopes()
+            ->whereNull($this->getQualifiedDeletedAtColumn())
+            ->where('linked_ticket_id', $this->getKey());
     }
 
     public function forgetIsEscalation(): void
@@ -331,8 +346,7 @@ class Ticket extends Model
         }
 
         return $this->source_panel === $panelId
-            || $this->newQueryWithoutScopes()
-                ->where('linked_ticket_id', $this->getKey())
+            || $this->activeOriginalsQuery()
                 ->where('panel', $panelId)
                 ->exists();
     }
@@ -348,8 +362,7 @@ class Ticket extends Model
             return $this->source_panel;
         }
 
-        return $this->newQueryWithoutScopes()
-            ->where('linked_ticket_id', $this->getKey())
+        return $this->activeOriginalsQuery()
             ->orderBy('id')
             ->value('panel');
     }

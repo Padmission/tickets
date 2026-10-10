@@ -116,7 +116,7 @@ it('finds in SQL exactly the escalations isEscalationFrom() names', function (Cl
     'by an original in the panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => null]), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])), true],
     'by source, its original in another panel and no history note' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test3', 'linked_ticket_id' => $escalation->id])), true],
     'by source, its originals all removed' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']), fn (Ticket $escalation) => $escalation->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System)), true],
-    'by a deleted original in the panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => null]), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])->delete()), true],
+    'by a deleted original in the panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => null]), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])->delete()), false],
     'a widget ticket filed from the panel' => [fn () => Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']), false],
     'from another panel' => [fn () => tap(Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test3']), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test3', 'linked_ticket_id' => $escalation->id])), false],
     'in a panel the panel cannot escalate to' => [fn () => tap(Ticket::factory()->create(['panel' => 'test3', 'source_panel' => 'test']), fn (Ticket $escalation) => Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id])), false],
@@ -135,6 +135,59 @@ it('takes a list row\'s escalation identity from its conversation state', functi
         ->and($rows[$plain->id]->isEscalation())->toBeFalse()
         ->and(DB::getQueryLog())->toBeEmpty();
 });
+
+it('ignores deleted originals in model, SQL and conversation identity, including eager loaded originals', function (bool $history) {
+    $escalation = Ticket::factory()->create(['panel' => 'test2', 'source_panel' => null]);
+    if ($history) {
+        $escalation->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System);
+    }
+    $original = Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $escalation->id]);
+    $original->delete();
+
+    foreach ([false, true] as $eager) {
+        $row = $escalation->fresh();
+        if ($eager) {
+            $row->load(['childTickets' => fn ($query) => $query->withTrashed()]);
+        }
+        expectEscalation($row, $history);
+        expect($row->isEscalationFrom('test'))->toBeFalse()
+            ->and($row->escalationSourcePanel())->toBeNull();
+    }
+    $row = Ticket::query()->withConversationState()->findOrFail($escalation->id);
+    expect($row->isEscalation())->toBe($history)
+        ->and(Ticket::query()->escalationsFrom('test')->whereKey($escalation->id)->exists())->toBeFalse()
+        ->and(resolve(TicketEscalationLinks::class)->linkedOriginalsQuery($escalation->id)->exists())->toBeFalse();
+
+    $original->restore();
+    expectEscalation($escalation->fresh(), true);
+    expect($escalation->fresh()->isEscalationFrom('test'))->toBeTrue()
+        ->and(Ticket::query()->escalationsFrom('test')->whereKey($escalation->id)->exists())->toBeTrue();
+})->with(['without history' => false, 'with original history' => true]);
+
+it('keeps direct question model checks and scopes consistent for live, deleted and restored originals', function (bool $history) {
+    $question = Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']);
+    $question->addTicketActivity(ActivityType::AskedDirectly, ActivitySender::System);
+    if ($history) {
+        $question->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System);
+    }
+    $original = Ticket::factory()->create(['panel' => 'test', 'linked_ticket_id' => $question->id]);
+    $check = function (bool $expected) use ($question) {
+        foreach ([false, true] as $eager) {
+            $row = $question->fresh();
+            if ($eager) {
+                $row->load(['childTickets' => fn ($query) => $query->withTrashed()]);
+            }
+            expect($row->isDirectQuestion())->toBe($expected)
+                ->and(Ticket::query()->directQuestions()->whereKey($row->id)->exists())->toBe($expected);
+        }
+    };
+
+    $check(false);
+    $original->delete();
+    $check(! $history);
+    $original->restore();
+    $check(false);
+})->with(['asked directly only' => false, 'original previously added' => true]);
 
 it('lets a panel\'s scope modifier change a lookup in place, returning nothing', function () {
     $person = User::factory()->create(['name' => 'Kevin McKee']);

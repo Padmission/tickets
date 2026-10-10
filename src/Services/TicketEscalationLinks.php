@@ -219,7 +219,10 @@ class TicketEscalationLinks
      */
     public function linkedOriginalsQuery(int|string $escalationId): Builder
     {
-        return static::query()->withoutGlobalScopes()->where('linked_ticket_id', $escalationId);
+        $query = static::query()->withoutGlobalScopes();
+
+        return $query->whereNull($query->getModel()->getQualifiedDeletedAtColumn())
+            ->where('linked_ticket_id', $escalationId);
     }
 
     protected function link(Ticket $original, Ticket $escalation, bool $started = false): void

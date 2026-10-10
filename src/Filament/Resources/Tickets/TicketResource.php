@@ -26,6 +26,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
@@ -289,8 +290,10 @@ class TicketResource extends Resource
     protected static function applyKindFilter(Builder $query, array $data): Builder
     {
         return match ($data['value'] ?? null) {
-            'direct' => static::applyDirectQuestionFilter($query),
-            'escalation' => $query->escalations()->whereNot(static::applyDirectQuestionFilter(...)),
+            // Type partitions the inbox. Ordinary submissions belong with the
+            // explicitly asked questions; only tickets about originals are escalations.
+            'direct' => $query->whereNot(static::applyEscalationKindFilter(...)),
+            'escalation' => static::applyEscalationKindFilter($query),
             default => $query,
         };
     }
@@ -299,9 +302,24 @@ class TicketResource extends Resource
      * @param  Builder<Ticket>  $query
      * @return Builder<Ticket>
      */
-    protected static function applyDirectQuestionFilter(Builder $query): Builder
+    protected static function applyEscalationKindFilter(Builder $query): Builder
     {
-        return $query->directQuestions();
+        return $query->escalations()->whereNot(fn (Builder $query): Builder => $query->directQuestions());
+    }
+
+    /**
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    protected static function applyEscalatedFilter(Builder $query): Builder
+    {
+        $ticket = $query->getModel();
+
+        return $query->whereExists(fn (QueryBuilder $escalation): QueryBuilder => $escalation
+            ->selectRaw('1')
+            ->from($ticket->getTable(), 'escalated_ticket')
+            ->whereColumn('escalated_ticket.'.$ticket->getKeyName(), $query->qualifyColumn('linked_ticket_id'))
+            ->whereNull('escalated_ticket.'.$ticket->getDeletedAtColumn()));
     }
 
     /**
@@ -548,7 +566,7 @@ class TicketResource extends Resource
                     ->visible(fn (ListTickets $livewire): bool => ConversationViewer::current()->isSupporter
                         && count(ConversationViewer::current()->parentPanelIds) > 0
                         && ! static::isEscalatedTab($livewire))
-                    ->query(fn (Builder $query): Builder => $query->whereNotNull($query->qualifyColumn('linked_ticket_id'))),
+                    ->query(static::applyEscalatedFilter(...)),
 
                 SelectFilter::make('kind')
                     ->label(__('padmission-tickets::tickets.resources.tickets.filters.kind'))
