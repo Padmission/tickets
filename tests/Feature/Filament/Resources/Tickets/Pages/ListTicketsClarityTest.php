@@ -485,20 +485,17 @@ describe('Conversations in the list', function () {
         $original = Ticket::factory()->open()->create(['submitter_id' => $this->me->id]);
 
         $all = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
-        $all->assertTableColumnStateSet('submitter.name', 'You', $original)
-            ->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Requested by');
+        $all->assertTableColumnStateSet('submitter.name', 'You', $original);
         expect(listCell($all, 'submitter.name', $original, 'label'))->toBe('Requested by');
 
         $linked = Livewire::test(ListTickets::class, ['activeTab' => 'linked']);
-        $linked->assertTableColumnStateSet('submitter.name', 'You', $escalation)
-            ->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Handled by');
+        $linked->assertTableColumnStateSet('submitter.name', 'You', $escalation);
         expect(listCell($linked, 'submitter.name', $escalation, 'label'))->toBe('Handled by')
             ->and(listCell($linked, 'assignee.name', $escalation, 'label'))->toBe('Assigned to');
 
         Filament::setCurrentPanel('test2');
         $escalation->update(['submitter_id' => $this->colleague->id]);
         $received = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->assertTableColumnStateSet('submitter.name', 'Maria Lopez', $escalation);
-        $received->assertTableFilterExists('submitter', fn ($filter): bool => $filter->getLabel() === 'Contact');
         $neverEscalated = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test']);
         $received = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
         expect(listCell($received, 'submitter.name', $escalation, 'label'))->toBe('Contact')
@@ -665,4 +662,20 @@ describe('Assigned to on the Escalations tab', function () {
             ->sortTable('assignee.name', 'desc')
             ->assertCanSeeTableRecords([$byKevin, $byAaron], inOrder: true);
     })->after(fn () => User::clearBootedModels());
+});
+
+it('finds a ticket by searching its submitter\'s name', function () {
+    (new TicketStatusSeeder)->run();
+    $this->login();
+
+    $kevin = User::factory()->create(['name' => 'Kevin McKee']);
+    $aaron = User::factory()->create(['name' => 'Aaron Abbott']);
+
+    $byKevin = Ticket::factory()->open()->create(['submitter_id' => $kevin->id]);
+    $byAaron = Ticket::factory()->open()->create(['submitter_id' => $aaron->id]);
+
+    Livewire::test(ListTickets::class, ['activeTab' => 'all'])
+        ->searchTable('Kevin')
+        ->assertCanSeeTableRecords([$byKevin])
+        ->assertCanNotSeeTableRecords([$byAaron]);
 });

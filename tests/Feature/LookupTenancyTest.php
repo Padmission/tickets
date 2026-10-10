@@ -263,22 +263,17 @@ describe('Assigning a lookup on a multi-organization panel', function () {
             ->toBe([$supporter->id => 'Ana Reyes']);
     });
 
-    /*
-     * Two people of the same name in different organizations are two people, so
-     * the filter keeps one option each: merging them would filter the wrong
-     * tickets. The organization is not named here, which is worth knowing.
-     */
-    it('keeps a submitter option per person when two share a name', function () {
+    it('finds a submitter\'s own ticket by name search, even when another organization has a same-named submitter', function () {
         $mine = User::factory()->create(['tenant_id' => 1, 'name' => 'Dana Whitaker']);
         $theirs = User::factory()->create(['tenant_id' => 2, 'name' => 'Dana Whitaker']);
-        organizationTicket(1, ['submitter_id' => $mine->id]);
-        organizationTicket(2, ['submitter_id' => $theirs->id]);
+        $myTicket = organizationTicket(1, ['submitter_id' => $mine->id]);
+        $theirTicket = organizationTicket(2, ['submitter_id' => $theirs->id]);
 
-        $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])->removeTableFilter('open');
-        $options = $page->instance()->getTable()->getFilter('submitter')->getRelationshipQuery()
-            ->whereIn('id', [$mine->id, $theirs->id])->pluck('name', 'id')->all();
+        $page = Livewire::test(ListTickets::class, ['activeTab' => 'all'])
+            ->removeTableFilter('open')
+            ->searchTable('Dana Whitaker');
 
-        expect($options)->toBe([$mine->id => 'Dana Whitaker', $theirs->id => 'Dana Whitaker']);
+        $page->assertCanSeeTableRecords([$myTicket, $theirTicket]);
     });
 
     it('resolves a ticket onto its own organization\'s closed status', function () {

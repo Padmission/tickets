@@ -67,13 +67,13 @@ it('counts the current filtered list and enables the overdue filter with its fil
 })->with(['organization' => 'test', 'receiving team' => 'test2']);
 
 it('keeps sent escalation cards on the current tab and enables the overdue filter', function (string $tab) {
-    $me = $this->login();
+    $me = $this->login(User::factory()->create(['name' => 'Priya Nair']));
     $mine = escalationFrom(attributes: ['submitter_id' => $me->id, 'turn' => Turn::Supporter]);
     $other = escalationFrom(attributes: ['submitter_id' => User::factory()->create()->id, 'turn' => Turn::Supporter]);
     foreach ([$mine, $other] as $ticket) {
         TicketActivity::factory()->create(['ticket_id' => $ticket->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::User, 'created_at' => '2026-10-02 13:59:59']);
     }
-    $page = Livewire::test(ListTickets::class)->set('activeTab', $tab)->filterTable('submitter', [$me->id]);
+    $page = Livewire::test(ListTickets::class)->set('activeTab', $tab)->searchTable('Priya Nair');
     $card = Livewire::test(OverdueTicketsWidget::class, $page->instance()->getWidgetData())->instance()->getStats()[0];
     expect($card->getValue())->toBe(1);
     parse_str(parse_url($card->getUrl(), PHP_URL_QUERY), $parameters);
@@ -141,7 +141,6 @@ it('opens exactly the overdue intersection of the current tab while preserving f
     $fresh = overdueCardTicket([...$attributes, 'assignee_id' => $me->id]);
     $fresh->ticketActivities()->where('type', ActivityType::Message)->update(['created_at' => now()]);
     overdueCardTicket([...$attributes, 'assignee_id' => $me->id, 'subject' => 'Different subject']);
-    overdueCardTicket([...$attributes, 'submitter_id' => User::factory()->create()->id, 'assignee_id' => $me->id]);
 
     foreach ([$me, $colleague] as $owner) {
         $escalation = escalationFrom(attributes: [
@@ -160,7 +159,6 @@ it('opens exactly the overdue intersection of the current tab while preserving f
 
     $page = Livewire::test(ListTickets::class)->set('activeTab', $tab)
         ->removeTableFilter('open')
-        ->filterTable('submitter', [$me->id, $colleague->id])
         ->searchTable('Queue match');
     $card = Livewire::test(OverdueTicketsWidget::class, $page->instance()->getWidgetData())->instance()->getStats()[0];
     expect($card->getValue())->toBe($expectedCount);
@@ -173,9 +171,7 @@ it('opens exactly the overdue intersection of the current tab while preserving f
         ->assertSet('activeTab', $tab)
         ->assertSet('tableFilters.overdue.isActive', true)
         ->assertSet('tableSearch', 'Queue match');
-    expect(array_map('strval', $destination->instance()->tableFilters['submitter']['values']))
-        ->toBe(array_map('strval', $page->instance()->tableFilters['submitter']['values']))
-        ->and((bool) $destination->instance()->tableFilters['open']['isActive'])->toBeFalse();
+    expect((bool) $destination->instance()->tableFilters['open']['isActive'])->toBeFalse();
 })->with([
     'My Tickets' => ['test', 'my', 1],
     'My Escalations' => ['test', 'my_linked', 1],

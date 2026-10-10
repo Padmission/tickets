@@ -418,7 +418,10 @@ class TicketResource extends Resource
                         ? __('padmission-tickets::tickets.side_you')
                         : $record->submitter?->getAttribute('name'))
                     ->wrap()
-                    ->searchable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIn(
+                        $query->qualifyColumn('submitter_id'),
+                        static::assigneeNames()->where('name', 'like', "%{$search}%")->select(static::assigneeNames()->getModel()->getQualifiedKeyName()),
+                    ))
                     ->sortable(),
 
                 TextColumn::make('assignee.name')
@@ -495,13 +498,6 @@ class TicketResource extends Resource
                     })
                     ->hidden(fn (ListTickets $livewire) => str_contains($livewire->activeTab, 'linked'))
                     ->searchable()
-                    ->preload(),
-
-                SelectFilter::make('submitter')
-                    ->label(fn (ListTickets $livewire): string => static::submitterLabel($livewire))
-                    ->relationship('submitter', 'name')
-                    ->searchable()
-                    ->multiple()
                     ->preload(),
             ])
             ->emptyStateHeading(fn (ListTickets $livewire): ?string => static::tabText($livewire, 'heading'))
