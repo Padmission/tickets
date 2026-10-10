@@ -24,16 +24,18 @@ it('shows escalation tabs only to supporters in panels that escalate', function 
     $page = Livewire::test(ListTickets::class);
     $visible = array_filter($page->instance()->getCachedTabs(), fn ($tab): bool => $tab->isVisible());
     $expected = $panel === 'test' && $supporter && $escalates
-        ? ['all', 'my', 'linked', 'my_linked']
-        : ['all', 'my'];
+        ? ['all', 'my', 'linked']
+        : ($supporter ? ['all', 'my'] : []);
     expect(array_keys($page->instance()->getCachedTabs()))->toBe($expected)
-        ->and(array_keys($visible))->toBe($expected)
-        ->and($visible['all']->getLabel())->toBe('All Tickets')
-        ->and($visible['my']->getLabel())->toBe('My Tickets');
+        ->and(array_keys($visible))->toBe($expected);
 
-    if (count($expected) === 4) {
-        expect($visible['linked']->getLabel())->toBe('Escalations')
-            ->and($visible['my_linked']->getLabel())->toBe('My Escalations');
+    if ($supporter) {
+        expect($visible['all']->getLabel())->toBe('All Tickets')
+            ->and($visible['my']->getLabel())->toBe('My Tickets');
+    }
+
+    if (count($expected) === 3) {
+        expect($visible['linked']->getLabel())->toBe('Escalations');
     }
 
     $document = new DOMDocument;

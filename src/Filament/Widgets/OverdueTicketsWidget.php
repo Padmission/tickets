@@ -6,6 +6,7 @@ use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Widgets\Concerns\DescribesTicketListTab;
+use Padmission\Tickets\TicketPlugin;
 
 class OverdueTicketsWidget extends BaseWidget
 {
@@ -24,14 +25,11 @@ class OverdueTicketsWidget extends BaseWidget
     {
         $query = $this->ticketsInActiveTab() ?? TicketResource::allTicketsQuery();
         $count = $query->overdue()->count();
-        $parameters = [
-            'tab' => $this->activeTab ?? 'all',
-            'filters' => [
-                ...($this->tableFilters ?? []),
-                'overdue' => ['isActive' => true],
-            ],
-            'search' => $this->tableSearch,
-        ];
+        $parameters = TicketPlugin::get()->getListPage()::overdueUrlParameters(
+            $this->activeTab,
+            $this->tableFilters ?? [],
+            $this->tableSearch,
+        );
 
         return [
             Stat::make(__('padmission-tickets::widgets.overdue.label'), $count)

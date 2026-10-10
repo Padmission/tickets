@@ -130,11 +130,8 @@ final readonly class ConversationState
         $team = $this->escalationTeamName();
 
         return match ($this->marker) {
-            'escalated' => __(self::MARKER.'.escalated'),
-            // Short enough to fit a list cell; the tooltip says what to do with it.
-            'replied' => $this->ownerIsViewer() || $this->handlerName() === null
-                ? TicketPlugin::teamText(self::MARKER.'.replied', $team)
-                : TicketPlugin::teamText(self::MARKER.'.replied_other', $team, ['name' => $this->handlerName()]),
+            'escalated' => TicketPlugin::teamText(self::MARKER.'.escalated', $team),
+            'replied' => TicketPlugin::teamText(self::MARKER.'.replied', $team),
             'closed' => __(self::MARKER.'.closed'),
             default => null,
         };
@@ -142,7 +139,11 @@ final readonly class ConversationState
 
     public function markerColor(): string
     {
-        return $this->marker === 'replied' && $this->ownerIsViewer() ? 'warning' : 'gray';
+        return match ($this->marker) {
+            'escalated' => 'info',
+            'replied' => $this->ownerIsViewer() ? 'warning' : 'gray',
+            default => 'gray',
+        };
     }
 
     public function markerTooltip(): ?string

@@ -125,7 +125,7 @@ describe('The first choice', function () {
         'All Tickets' => ['all', StartTicketAction::ORGANIZATION],
         'My Tickets' => ['my', StartTicketAction::ORGANIZATION],
         'Escalations' => ['linked', StartTicketAction::ESCALATION],
-        'My Escalations' => ['my_linked', StartTicketAction::ESCALATION],
+        'removed My Escalations falls back to My Tickets' => ['my_linked', StartTicketAction::ORGANIZATION],
         'empty tab falls back to My Tickets' => ['', StartTicketAction::ORGANIZATION],
     ]);
 

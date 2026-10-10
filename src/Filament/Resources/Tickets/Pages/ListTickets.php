@@ -48,9 +48,22 @@ class ListTickets extends ListRecords
         return 'index';
     }
 
-    public function getDefaultActiveTab(): string
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public static function overdueUrlParameters(?string $tab, array $filters, ?string $search): array
     {
-        return ConversationViewer::current()->isSupporter ? 'my' : 'all';
+        return [
+            'tab' => $tab ?? 'all',
+            'filters' => [...$filters, 'overdue' => ['isActive' => true]],
+            'search' => $search,
+        ];
+    }
+
+    public function getDefaultActiveTab(): ?string
+    {
+        return ConversationViewer::current()->isSupporter ? 'my' : null;
     }
 
     protected function loadDefaultActiveTab(): void
@@ -145,40 +158,6 @@ class ListTickets extends ListRecords
     }
 
     /**
-     * @var array{linked: int, my_linked: int}|null
-     */
-    protected ?array $openEscalatedCounts = null;
-
-    /**
-     * The escalated tabs are counted in one query from the linked tab's own
-     * query, so the badges match the lists. The result lives on this request's
-     * component instance, so it is never stale on the next one.
-     *
-     * @return array{linked: int, my_linked: int}
-     */
-    protected function openEscalatedCounts(): array
-    {
-        if ($this->openEscalatedCounts !== null) {
-            return $this->openEscalatedCounts;
-        }
-
-        $query = $this->getCachedTabs()['linked']
-            ->modifyQuery(TicketResource::getEloquentQuery())
-            ->open();
-
-        $counts = $query
-            ->toBase()
-            ->selectRaw('count(*) as linked')
-            ->selectRaw('coalesce(sum(case when '.$query->qualifyColumn('submitter_id').' = ? then 1 else 0 end), 0) as my_linked', [Filament::auth()->id()])
-            ->first();
-
-        return $this->openEscalatedCounts = [
-            'linked' => (int) ($counts->linked ?? 0),
-            'my_linked' => (int) ($counts->my_linked ?? 0),
-        ];
-    }
-
-    /**
      * @param  Builder<Ticket>|null  $query
      * @return Builder<Ticket>
      */
@@ -186,7 +165,11 @@ class ListTickets extends ListRecords
     {
         $tabs = $this->getCachedTabs();
 
-        return ($tabs[$tab] ?? $tabs['all'])->modifyQuery($query ?? TicketResource::getEloquentQuery());
+        if ($tabs === []) {
+            return TicketResource::allTicketsQuery($query);
+        }
+
+        return ($tabs[$tab] ?? $tabs[$this->getDefaultActiveTab()])->modifyQuery($query ?? TicketResource::getEloquentQuery());
     }
 
     public function openTicketCount(string $tab): int
@@ -249,6 +232,10 @@ class ListTickets extends ListRecords
 
     public function getTabs(): array
     {
+        if (! ConversationViewer::current()->isSupporter) {
+            return [];
+        }
+
         $tabs = [
             'all' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.all'))
@@ -269,25 +256,16 @@ class ListTickets extends ListRecords
 
         // Only a panel that escalates has tickets of its own linked elsewhere, and
         // escalating is the organization's business, never its requesters'.
-        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0 || ! ConversationViewer::current()->isSupporter) {
+        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0) {
             return $tabs;
         }
 
         $tabs['linked'] = Tab::make()
             ->label(__('padmission-tickets::tickets.resources.tickets.tabs.linked'))
-            ->badge(fn (): int => $this->openEscalatedCounts()['linked'])
+            ->badge(fn (): int => $this->openTicketCount('linked'))
             ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
             ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
                 static::withEscalationAssignees(static::escalationsFromThisPanel($query))
-            ));
-
-        $tabs['my_linked'] = Tab::make()
-            ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my_linked'))
-            ->badge(fn (): int => $this->openEscalatedCounts()['my_linked'])
-            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
-            ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                static::withEscalationAssignees(static::escalationsFromThisPanel($query)
-                    ->where($query->qualifyColumn('submitter_id'), Filament::auth()->id()))
             ));
 
         return $tabs;

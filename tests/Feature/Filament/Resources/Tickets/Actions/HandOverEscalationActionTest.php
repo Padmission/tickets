@@ -303,14 +303,14 @@ it('refuses a hand over once the escalation closed or changed hands', function (
         ->and($this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->exists())->toBeFalse();
 });
 
-it('moves access, replies, My Escalations and notifications to the new owner', function () {
+it('moves access, replies and notifications to the new owner while keeping the shared Escalations list', function () {
     $this->login($this->owner);
     resolve(TicketEscalationLinks::class)->handOver($this->escalation, $this->colleague->id, $this->owner->id);
 
     Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])->assertForbidden();
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'my_linked'])
-        ->assertCanNotSeeTableRecords([$this->escalation]);
+    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
+        ->assertCanSeeTableRecords([$this->escalation]);
 
     expect(resolve(TicketAuth::class)->canReply($this->escalation->refresh(), $this->owner))->toBeFalse()
         ->and(resolve(TicketAuth::class)->canReply($this->escalation, $this->colleague))->toBeTrue();
@@ -320,7 +320,7 @@ it('moves access, replies, My Escalations and notifications to the new owner', f
     Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
         ->assertSuccessful();
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'my_linked'])
+    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
         ->assertCanSeeTableRecords([$this->escalation]);
 
     $this->login($this->padmission);

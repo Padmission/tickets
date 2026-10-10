@@ -543,8 +543,11 @@ return [
                 'turn' => 'Who owes the next message in this conversation. It switches each time someone replies.',
             ],
 
+            'escalation' => 'Escalation',
+
             'escalation_marker' => [
-                'escalated' => 'Escalated',
+                'escalated' => 'With the escalation team',
+                'escalated_to' => 'With :team',
                 'replied' => 'Reply on the escalation',
                 'replied_to' => ':team replied',
                 'replied_other' => 'Reply to :name on the escalation',
@@ -627,6 +630,9 @@ return [
             ],
 
             'filters' => [
+                'escalated' => 'Escalated',
+                'kind' => 'Type',
+                'direct' => 'Direct question',
                 'open_only' => 'Open tickets only',
                 'overdue' => 'Overdue',
             ],

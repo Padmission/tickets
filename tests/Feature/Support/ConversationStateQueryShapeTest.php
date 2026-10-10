@@ -45,9 +45,6 @@ it('lists an escalation from this panel whose original moved to another panel', 
     Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
         ->assertCanSeeTableRecords([$escalation->id]);
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'my_linked'])
-        ->assertCanSeeTableRecords([$escalation->id]);
-
     expect(LinkedTicketCandidates::openEscalations(Ticket::query(), $original)->pluck('id')->all())->toContain($escalation->id)
         ->and(Ticket::query()->withConversationState()->find($escalation->id)->conversation_waiting_on)->toBe('you_owner');
 });

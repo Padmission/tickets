@@ -69,7 +69,7 @@ describe('Stat cards', function () {
         $stat = fn (string $widget, string $tab) => Livewire::test($widget, ['activeTab' => $tab])->instance()->getStats()[0];
 
         // All counts the escalation's original too, which lives in this panel.
-        foreach (['all' => 4, 'my' => 2, 'linked' => 1, 'my_linked' => 1] as $tab => $open) {
+        foreach (['all' => 4, 'my' => 2, 'linked' => 1] as $tab => $open) {
             expect($tabs[$tab]->getBadge())->toBe((string) $open)
                 ->and($stat(OpenTicketsWidget::class, $tab))
                 ->getValue()->toBe($open)
@@ -164,7 +164,6 @@ describe('Stat cards', function () {
         'all' => ['test', 'all'],
         'my' => ['test', 'my'],
         'escalations' => ['test', 'linked'],
-        'my escalations' => ['test', 'my_linked'],
         'receiving panel' => ['test2', 'all'],
     ]);
 

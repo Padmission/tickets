@@ -82,7 +82,7 @@ it('keeps sent escalation cards on the current tab and enables the overdue filte
         ->assertSet('activeTab', $tab)
         ->assertSet('tableFilters.overdue.isActive', true)
         ->assertCanSeeTableRecords([$mine])->assertCanNotSeeTableRecords([$other]);
-})->with(['linked', 'my_linked']);
+})->with(['linked']);
 
 it('shows zero in gray and refreshes as the weekday deadline passes', function () {
     $this->login();
@@ -174,7 +174,6 @@ it('opens exactly the overdue intersection of the current tab while preserving f
     expect((bool) $destination->instance()->tableFilters['open']['isActive'])->toBeFalse();
 })->with([
     'My Tickets' => ['test', 'my', 1],
-    'My Escalations' => ['test', 'my_linked', 1],
     'received My Tickets' => ['test2', 'my', 2],
 ]);
 

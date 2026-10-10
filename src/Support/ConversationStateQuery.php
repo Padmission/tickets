@@ -148,7 +148,8 @@ final class ConversationStateQuery
         }
 
         return $this->sql(
-            'case when %s then case when %s in (%s, %s, %s) then %s else %s end end',
+            'case when %s then case when %s and %s in (%s, %s, %s) then %s else %s end end',
+            $this->inCurrentPanel(),
             $this->openInCurrentPanel(),
             $this->escalationState(),
             $this->literal('relay_mine'),

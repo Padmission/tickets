@@ -219,7 +219,7 @@ describe('What is opened', function () {
         $this->login($this->contact);
 
         Livewire::test(ListTickets::class)
-            ->set('activeTab', 'my_linked')
+            ->set('activeTab', 'linked')
             ->assertCanSeeTableRecords([$question])
             ->assertSee('Padmission');
     });

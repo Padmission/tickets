@@ -44,7 +44,7 @@ it('only offers escalated tabs in a panel that escalates', function () {
     $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
 
     expect(TicketPlugin::get()->hasLinkedTickets())->toBeTrue()
-        ->and($tabs)->not->toHaveKeys(['linked', 'my_linked']);
+        ->and($tabs)->not->toHaveKeys(['linked']);
 });
 
 it('keeps the escalated tabs from someone who only submits tickets', function () {
@@ -54,11 +54,11 @@ it('keeps the escalated tabs from someone who only submits tickets', function ()
 
     $this->login(User::factory()->create());
 
-    expect(Livewire::test(ListTickets::class)->instance()->getTabs())->not->toHaveKeys(['linked', 'my_linked']);
+    expect(Livewire::test(ListTickets::class)->instance()->getTabs())->not->toHaveKeys(['linked']);
 
     $this->login($supporter);
 
-    expect(Livewire::test(ListTickets::class)->instance()->getTabs())->toHaveKeys(['linked', 'my_linked']);
+    expect(Livewire::test(ListTickets::class)->instance()->getTabs())->toHaveKeys(['linked']);
 });
 
 it('explains the active tab', function (string $tab, string $key) {
@@ -124,7 +124,6 @@ describe('Tab badges', function () {
         expect($tabs['all']->getBadge())->toBe('0')
             ->and($tabs['my']->getBadge())->toBe('0')
             ->and($tabs['linked']->getBadge())->toBe('0')
-            ->and($tabs['my_linked']->getBadge())->toBe('0')
             ->and(TicketResource::getNavigationBadge())->toBeNull();
     });
 
@@ -142,8 +141,7 @@ describe('Tab badges', function () {
 
         $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
 
-        expect($tabs['linked']->getBadge())->toBe('2')
-            ->and($tabs['my_linked']->getBadge())->toBe('1');
+        expect($tabs['linked']->getBadge())->toBe('2');
     });
 });
 
@@ -337,6 +335,8 @@ function listCell(Testable $component, string $name, Ticket $record, string $par
     return (string) match ($part) {
         'description' => $column->getDescriptionBelow(),
         'label' => $column->getLabel(),
+        'color' => $column->getColor($column->getState()),
+        'tooltip' => $column->getTooltip(),
         default => $column->formatState($column->getState()),
     };
 }
@@ -374,7 +374,7 @@ describe('Conversations in the list', function () {
         ]);
     });
 
-    it('marks an escalated original after its subject, for supporters only', function () {
+    it('shows escalation badges in a dedicated column, keeping subjects plain', function () {
         $waitingOnTeam = ($this->escalate)([]);
         $waitingOnColleague = ($this->escalate)(['assignee_id' => $this->colleague->id], ['submitter_id' => $this->colleague->id, 'turn' => Turn::User]);
         $replied = ($this->escalate)([]);
@@ -385,19 +385,38 @@ describe('Conversations in the list', function () {
         $closed->parentTicket->close(closedById: $this->colleague->id);
         $closed->parentTicket->forceFill(['closed_at' => now()->subDay()])->saveQuietly();
         $plain = Ticket::factory()->open()->create(['subject' => '<b>Rent</b> question']);
+        $closedOriginal = ($this->escalate)(['closed_at' => now()]);
+        $closedOriginal->parentTicket->close(closedById: $this->colleague->id);
+        $duplicate = Ticket::factory()->closed()->create(['duplicate_of_ticket_id' => $plain->id]);
 
         $component = Livewire::test(ListTickets::class, ['activeTab' => 'all']);
 
-        expect(listCell($component, 'subject', $waitingOnTeam))->toContain('Escalated')->toContain('You handle the conversation with Platform Support. Platform Support owes the next reply there.')
-            ->and(listCell($component, 'subject', $waitingOnColleague))->toContain('Escalated')->toContain('Platform Support is waiting on Maria Lopez on the escalation.')
-            ->and(listCell($component, 'subject', $replied))->toContain('Platform Support replied')->toContain('fi-color-warning')
-            ->toContain('Platform Support replied on the escalation after your team last wrote. Read it, then answer Platform Support there or pass the answer on to Aisha Brooks on their ticket.')
-            ->and(listCell($component, 'subject', $repliedToOther))->toMatch('/>\s*Platform Support replied to Maria Lopez\s*</')->toContain('pad-ti-marker')->not->toContain('fi-color-warning')
-            ->toContain('Platform Support replied to Maria Lopez on the escalation after your team last wrote. Maria Lopez passes the answer on to Aisha Brooks.')
-            ->and(listCell($component, 'subject', $closed))->toContain('Escalation closed')->toContain('The escalation was closed 1 day ago.')
-            ->and(listCell($component, 'subject', $plain))->toBe('<b>Rent</b> question');
+        expect(listCell($component, 'escalation', $waitingOnTeam))->toBe('With Platform Support')
+            ->and(listCell($component, 'escalation', $waitingOnTeam, 'color'))->toBe('info')
+            ->and(listCell($component, 'escalation', $waitingOnTeam, 'tooltip'))->toBe('You handle the conversation with Platform Support. Platform Support owes the next reply there.')
+            ->and(listCell($component, 'escalation', $waitingOnColleague))->toBe('With Platform Support')
+            ->and(listCell($component, 'escalation', $waitingOnColleague, 'color'))->toBe('info')
+            ->and(listCell($component, 'escalation', $replied))->toBe('Platform Support replied')
+            ->and(listCell($component, 'escalation', $replied, 'color'))->toBe('warning')
+            ->and(listCell($component, 'escalation', $repliedToOther))->toBe('Platform Support replied')
+            ->and(listCell($component, 'escalation', $repliedToOther, 'color'))->toBe('gray')
+            ->and(listCell($component, 'escalation', $repliedToOther, 'tooltip'))->toBe('Platform Support replied to Maria Lopez on the escalation after your team last wrote. Maria Lopez passes the answer on to Aisha Brooks.')
+            ->and(listCell($component, 'escalation', $closed))->toBe('Escalation closed')
+            ->and(listCell($component, 'escalation', $closed, 'color'))->toBe('gray')
+            ->and(listCell($component, 'escalation', $plain))->toBe('')
+            ->and(listCell($component, 'subject', $plain))->toBe('<b>Rent</b> question')
+            ->and(listCell($component, 'subject', $replied))->toBe($replied->subject);
 
-        $component->assertSee('&lt;b&gt;Rent&lt;/b&gt; question', escape: false);
+        $component->assertSee('&lt;b&gt;Rent&lt;/b&gt; question', escape: false)
+            ->removeTableFilter('open');
+        expect(listCell($component, 'escalation', $closedOriginal))->toBe('Escalation closed')
+            ->and(listCell($component, 'escalation', $closedOriginal, 'color'))->toBe('gray');
+        $subject = $component->instance()->getTable()->getColumn('subject');
+        $subject->record($duplicate);
+        expect((string) $subject->getSuffix())->toContain('Duplicate')
+            ->and($component->instance()->getTable()->getColumn('escalation')->isSortable())->toBeTrue();
+        $component->sortTable('escalation')
+            ->assertCanSeeTableRecords([$closed, $waitingOnTeam, $replied], inOrder: true);
     });
 
     it('never marks an escalation for the person who asked', function () {
@@ -541,7 +560,7 @@ describe('Conversations in the list', function () {
 
         Livewire::test(ListTickets::class)->assertTableBulkActionVisible('assign');
 
-        foreach (['linked', 'my_linked'] as $tab) {
+        foreach (['linked'] as $tab) {
             $component = Livewire::test(ListTickets::class, ['activeTab' => $tab]);
 
             expect($component->instance()->getTable()->isSelectionEnabled())->toBeFalse();

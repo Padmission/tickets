@@ -114,7 +114,7 @@ it('puts an assignee on hold while a colleague owes the relay, and names who the
     expect($row->conversation_waiting_on)->toBe('you_on_hold')
         ->and((int) $row->conversation_rank)->toBe(1)
         ->and($state->color())->toBe('gray')
-        ->and($state->markerLabel())->toBe('Padmission replied to Test Admin')
+        ->and($state->markerLabel())->toBe('Padmission replied')
         ->and($state->markerColor())->toBe('gray');
 
     writeMessage($this->original, ActivitySender::User, $this->requester, 'Any news?');

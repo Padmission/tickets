@@ -175,6 +175,20 @@ class Ticket extends Model
         return $query->where(fn (Builder $query): Builder => $this->whereEscalation($query));
     }
 
+    public function scopeDirectQuestions(Builder $query): Builder
+    {
+        $id = $query->qualifyColumn($this->getKeyName());
+        $activities = TicketPlugin::resolveModelClass(TicketActivity::class)::query()->withoutGlobalScopes();
+
+        return $query->where(fn (Builder $query): Builder => $query
+            ->whereNotExists(fn (QueryBuilder $sub): QueryBuilder => $sub
+                ->selectRaw('1')
+                ->from($this->getTable(), 'direct_originals')
+                ->whereColumn('direct_originals.linked_ticket_id', $id))
+            ->whereExists((clone $activities)->whereColumn('ticket_id', $id)->where('type', ActivityType::AskedDirectly)->selectRaw('1'))
+            ->whereNotExists((clone $activities)->whereColumn('ticket_id', $id)->where('type', ActivityType::OriginalAdded)->selectRaw('1')));
+    }
+
     public function scopeWithoutEscalations(Builder $query): Builder
     {
         return $query->whereNot(fn (Builder $query): Builder => $this->whereEscalation($query));
