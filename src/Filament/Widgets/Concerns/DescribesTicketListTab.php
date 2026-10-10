@@ -5,12 +5,13 @@ namespace Padmission\Tickets\Filament\Widgets\Concerns;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\On;
-use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
 
 /*
- * List cards use Filament's filtered page query. Without a page tab, widgets
- * keep their panel-wide dashboard metrics.
+ * List cards use Filament's filtered page query, built on the package's own
+ * list page so a host page's view and column preferences are never touched.
+ * Without a page tab, widgets keep their panel-wide dashboard metrics.
  */
 trait DescribesTicketListTab
 {
@@ -18,7 +19,7 @@ trait DescribesTicketListTab
 
     protected function getTablePage(): string
     {
-        return TicketResource::getPages()['index']->getPage();
+        return ListTickets::class;
     }
 
     #[On('refresh-ticket-stats')]

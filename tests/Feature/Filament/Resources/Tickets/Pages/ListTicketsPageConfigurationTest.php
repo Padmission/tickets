@@ -60,7 +60,7 @@ it('registers routes with the target panels list page even when another panel is
         ->toBe(ListTickets::class);
 });
 
-it('uses the custom list query for the overdue card and its filtered destination', function () {
+it('counts the overdue card on the package list query, and leaves the custom list query to the page and its filtered destination', function () {
     (new TicketStatusSeeder)->run();
     $this->travelTo(now()->setDate(2026, 10, 5)->setTime(14, 0));
     $me = $this->login();
@@ -86,13 +86,13 @@ it('uses the custom list query for the overdue card and its filtered destination
         ->assertCanNotSeeTableRecords([$tickets[1]]);
     $card = Livewire::test(OverdueTicketsWidget::class, $page->instance()->getWidgetData())->instance()->getStats()[0];
 
-    expect($card->getValue())->toBe(1);
+    expect($card->getValue())->toBe(2);
 
     parse_str(parse_url($card->getUrl(), PHP_URL_QUERY), $parameters);
     Livewire::withQueryParams($parameters)->test(TicketResource::getPages()['index']->getPage())
         ->assertSet('activeTab', 'my')
         ->assertSet('tableFilters.overdue.isActive', true)
-        ->assertCountTableRecords($card->getValue())
+        ->assertCountTableRecords(1)
         ->assertCanSeeTableRecords([$tickets[0]])
         ->assertCanNotSeeTableRecords([$tickets[1]]);
 });

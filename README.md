@@ -335,7 +335,7 @@ TicketPlugin::make()
     ->registerResources();
 ```
 
-The class must extend `ListTickets`; an invalid class throws `InvalidArgumentException`. `getListPage()` returns the configured class, defaulting to `ListTickets::class`. `TicketResource::getPages()` uses it for the index route, and the list's stat cards use it for their page-table queries. Configure it before the panel registers its resources. Each panel keeps its own setting.
+The class must extend `ListTickets`; an invalid class throws `InvalidArgumentException`. `getListPage()` returns the configured class, defaulting to `ListTickets::class`. `TicketResource::getPages()` uses it for the index route and the Overdue card links to it. The stat cards build their queries on `ListTickets` itself, from the page's filters, tab and search, so a custom `getTableQuery()` narrows the list but not the cards. Configure it before the panel registers its resources. Each panel keeps its own setting.
 
 Route registration resolves the list class from the panel being registered, so hosts do not need a default panel. To inspect a panel's pages outside a request, pass that panel to `TicketResource::getPages($panel)`. With no current or explicit panel, page discovery returns the base `ListTickets` class. In queued jobs and console commands, generate URLs with an explicit panel ID, such as `SomeListTickets::getUrl(panel: 'admin')` or `TicketResource::getUrl('index', panel: 'admin')`.
 
