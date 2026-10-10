@@ -398,7 +398,8 @@ Besides `viewAny`, `view`, `create`, `update` and `delete`, the ticket UI checks
 | `openTicketFromList` | The **New ticket** button on the ticket list |
 | `manage` | Assigning and closing, one ticket or in bulk |
 | `reply` | Replying as a supporter |
-| `handOver` | **Hand over** / **Take over** of an escalation |
+| `handOver` | **Hand over** / **Take over** of an open escalation |
+| `readEscalation` | Reading an escalation, open or closed, from the team that sent it; without it only whoever handles it can |
 | `escalate` | Escalating a ticket |
 | `reopen` | **Reopen**, and reopening by replying |
 
@@ -869,7 +870,7 @@ What the organization's panel gets:
 - **Remove from escalation** on an original, to unlink it.
 - A **Direct questions** filter, listing the questions the organization asked the other team directly (under **My Tickets**, the viewer's own), and an **Escalated** filter for the organization's tickets that were escalated. Opening an escalated ticket leads to its conversation with the other team.
 - On an escalation, a list of its originals that says who owes whom a reply, with `+` to link another and `×` to take one out.
-- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies, access to the escalation and the viewer's own direct questions all follow the new owner. Only the two people it moved between are notified.
+- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies and the viewer's own direct questions follow the new owner, while the whole team can read the escalation. Only the two people it moved between are notified.
 - **Close escalation** on the viewer's own escalation, without a disposition, once the other team's part is done.
 
 What the support panel gets:
