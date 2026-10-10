@@ -631,6 +631,7 @@ return [
 
             'filters' => [
                 'escalated' => 'Escalated',
+                'organization' => 'Organization',
                 'kind' => 'Type',
                 'direct' => 'Direct question',
                 'open_only' => 'Open tickets only',

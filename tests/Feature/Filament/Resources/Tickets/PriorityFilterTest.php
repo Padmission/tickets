@@ -7,6 +7,7 @@ use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketPriority;
 use Padmission\Tickets\Models\TicketStatus;
+use Padmission\Tickets\Tests\Fixtures\Models\Tenant;
 use Padmission\Tickets\TicketPlugin;
 
 beforeEach(function () {
@@ -14,7 +15,11 @@ beforeEach(function () {
     Schema::table('tickets', fn (Blueprint $table) => $table->unsignedBigInteger('tenant_id')->nullable());
     Schema::table('ticket_statuses', fn (Blueprint $table) => $table->unsignedBigInteger('tenant_id')->nullable());
     Schema::table('ticket_priorities', fn (Blueprint $table) => $table->unsignedBigInteger('tenant_id')->nullable());
-    config()->set('padmission-tickets.tenancy.enabled', true);
+    Schema::create('tenants', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+    });
+    config()->set('padmission-tickets.tenancy', ['enabled' => true, 'tenancy_model' => Tenant::class]);
 });
 
 it('offers a priority name once and matches every organization with that name', function () {

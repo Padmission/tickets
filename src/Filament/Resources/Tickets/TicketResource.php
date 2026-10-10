@@ -12,6 +12,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
+use Filament\Models\Contracts\HasName;
 use Filament\Notifications\Notification;
 use Filament\Panel;
 use Filament\Resources\Pages\PageRegistration;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Padmission\Tickets\Filament\Resources\Concerns\HasResourceConfiguration;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\DeleteTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\HandOverEscalationAction;
@@ -358,6 +360,35 @@ class TicketResource extends Resource
             ));
     }
 
+    protected static function canSearchOrganizations(): bool
+    {
+        return config('padmission-tickets.tenancy.enabled')
+            && static::spansOrganizations(static::allTicketsQuery());
+    }
+
+    /**
+     * Only organizations represented in this panel's accessible tickets. Keep
+     * the host's scopes, independently of the active tab and table filters.
+     *
+     * @return array<int|string, string>
+     */
+    protected static function organizationOptions(): array
+    {
+        $model = config('padmission-tickets.tenancy.tenancy_model');
+        $tickets = static::allTicketsQuery();
+
+        return $model::query()
+            ->whereIn((new $model)->getQualifiedKeyName(), $tickets->reorder()->select($tickets->qualifyColumn('tenant_id')))
+            ->get()
+            ->mapWithKeys(fn (Model $organization): array => [
+                $organization->getKey() => $organization instanceof HasName
+                    ? $organization->getFilamentName()
+                    : $organization->getAttribute('name'),
+            ])
+            ->sort()
+            ->all();
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -431,7 +462,11 @@ class TicketResource extends Resource
                     // so "1842" or "#1842" still finds the ticket.
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query
                         ->whereLike($query->qualifyColumn('subject'), "%{$search}%")
-                        ->when(static::ticketNumberFromSearch($search), fn (Builder $query, int $id): Builder => $query->orWhere($query->getModel()->getQualifiedKeyName(), $id))),
+                        ->when(static::ticketNumberFromSearch($search), fn (Builder $query, int $id): Builder => $query->orWhere($query->getModel()->getQualifiedKeyName(), $id))
+                        ->when(static::canSearchOrganizations(), fn (Builder $query): Builder => $query->orWhereIn(
+                            $query->qualifyColumn('tenant_id'),
+                            array_keys(array_filter(static::organizationOptions(), fn (string $name): bool => Str::contains($name, $search, ignoreCase: true))),
+                        ))),
 
                 TextColumn::make('escalation')
                     ->label(__('padmission-tickets::tickets.resources.tickets.escalation'))
@@ -523,6 +558,18 @@ class TicketResource extends Resource
                     ])
                     ->visible(fn (): bool => ConversationViewer::current()->isSupporter && ConversationViewer::current()->receivesEscalations)
                     ->query(static::applyKindFilter(...)),
+
+                SelectFilter::make('organization')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.filters.organization'))
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->visible(static::canSearchOrganizations(...))
+                    ->options(fn (): array => static::canSearchOrganizations() ? static::organizationOptions() : [])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        filled($data['values'] ?? []),
+                        fn (Builder $query): Builder => $query->whereIn($query->qualifyColumn('tenant_id'), $data['values']),
+                    )),
 
                 static::lookupFilter('status')
                     ->hidden(fn (ListTickets $livewire) => str_contains((string) $livewire->activeTab, 'linked'))
