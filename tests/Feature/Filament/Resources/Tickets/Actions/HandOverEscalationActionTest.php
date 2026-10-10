@@ -53,6 +53,11 @@ beforeEach(function () {
         'assignee_id' => $this->owner->id,
         'turn' => Turn::Supporter,
     ]);
+    $this->question = directQuestionFrom(attributes: [
+        'submitter_id' => $this->owner->id,
+        'assignee_id' => $this->padmission->id,
+        'turn' => Turn::Supporter,
+    ]);
 });
 
 function handOverHint(): TestAction
@@ -65,7 +70,7 @@ function takeOverInBox(): TestAction
     return TestAction::make('take-over-escalation')->schemaComponent('escalationActions', schema: 'form');
 }
 
-it('draws the dialog it opened as, not the other one, once the escalation has moved', function (string $who, Closure $page, Closure $action, array $data, string $shown, string $other) {
+it('draws the dialog it opened as, not the other one, once the escalation has moved', function (string $who, Closure $page, Closure $action, array $data, string $shown, string $other, string $ticket) {
     Event::fake([TicketHandedOverEvent::class]);
     $this->login($who === 'owner' ? $this->owner : $this->colleague);
 
@@ -77,7 +82,7 @@ it('draws the dialog it opened as, not the other one, once the escalation has mo
 
     $component->callMountedAction()->assertHasNoFormErrors();
 
-    expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id);
+    expect($this->{$ticket}->refresh()->submitter_id)->toBe($this->colleague->id);
 
     $drawn = json_encode($component->effects['partials'] ?? []);
 
@@ -87,9 +92,9 @@ it('draws the dialog it opened as, not the other one, once the escalation has mo
         expect($drawn)->toContain($shown)->toContain('Maria Lopez');
     }
 })->with([
-    'a hand over on the escalation, which leaves for the list' => ['owner', fn () => Livewire::test(ViewTicket::class, ['record' => test()->escalation->id]), fn () => handOverHint(), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?'],
-    'a hand over from the list' => ['owner', fn () => Livewire::test(ListTickets::class, ['activeTab' => 'linked']), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->escalation), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?'],
-    'a colleague\'s take over from the Escalation box on the original' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox(), [], 'Take over this escalation?', 'Hand over this escalation'],
+    'a hand over on the escalation, which leaves for the list' => ['owner', fn () => Livewire::test(ViewTicket::class, ['record' => test()->escalation->id]), fn () => handOverHint(), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?', 'escalation'],
+    'a hand over from the Direct questions list' => ['owner', fn () => listDirectQuestions(), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->question), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?', 'question'],
+    'a colleague\'s take over from the Escalation box on the original' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox(), [], 'Take over this escalation?', 'Hand over this escalation', 'escalation'],
 ]);
 
 it('keeps the owner\'s leaving hand over from being closed or resubmitted once sent, and the page from asking again', function () {
@@ -116,7 +121,7 @@ it('lets a Take over and a hand over from the list close as usual, since they do
     expect($page()->mountAction($action())->instance()->getMountedAction()->getExtraModalWindowAttributes())->not->toHaveKey('x-on:click.capture');
 })->with([
     'a colleague\'s take over' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox()],
-    'the owner\'s hand over from the list' => ['owner', fn () => Livewire::test(ListTickets::class, ['activeTab' => 'linked']), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->escalation)],
+    'the owner\'s hand over from the Direct questions list' => ['owner', fn () => listDirectQuestions(), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->question)],
 ]);
 
 it('lets the owner hand the escalation to a colleague from Handled by', function () {
@@ -135,7 +140,7 @@ it('lets the owner hand the escalation to a colleague from Handled by', function
         ->callMountedAction()
         ->assertHasNoFormErrors()
         ->assertNotified('Escalation handed to Maria Lopez')
-        ->assertRedirect(TicketResource::getUrl('index', ['tab' => 'linked']));
+        ->assertRedirect(TicketResource::getUrl('index'));
 
     $activity = $this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->sole();
 
@@ -160,7 +165,7 @@ it('leaves the dialog as it was while the browser leaves an escalation its owner
         ->mountAction(handOverHint())
         ->fillForm(['new_owner' => $this->colleague->id])
         ->callMountedAction()
-        ->assertRedirect(TicketResource::getUrl('index', ['tab' => 'linked']))
+        ->assertRedirect(TicketResource::getUrl('index'))
         ->assertActionMounted(handOverHint())
         ->assertSchemaStateSet(['new_owner' => $this->colleague->id], 'mountedActionSchema0');
 
@@ -251,19 +256,19 @@ it('says nothing changed when a Take over left open meets an escalation that was
     expect($this->escalation->refresh()->submitter_id)->toBe($this->owner->id);
 });
 
-it('shows Hand over or Take over on the Escalations tab rows', function () {
+it('shows Hand over or Take over on the Direct questions rows', function () {
     $this->login($this->colleague);
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-        ->assertCanSeeTableRecords([$this->escalation])
+    listDirectQuestions()
+        ->assertCanSeeTableRecords([$this->question])
         ->assertSee('Take over')
-        ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->escalation), 'Take over')
-        ->assertActionHidden(TestAction::make('view')->table($this->escalation))
-        ->callAction(TestAction::make(HandOverEscalationAction::class)->table($this->escalation))
-        ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->escalation), 'Hand over')
-        ->assertActionVisible(TestAction::make('view')->table($this->escalation));
+        ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->question), 'Take over')
+        ->assertActionHidden(TestAction::make('view')->table($this->question))
+        ->callAction(TestAction::make(HandOverEscalationAction::class)->table($this->question))
+        ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->question), 'Hand over')
+        ->assertActionVisible(TestAction::make('view')->table($this->question));
 
-    expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id);
+    expect($this->question->refresh()->submitter_id)->toBe($this->colleague->id);
 });
 
 it('is not offered on originals, closed escalations or where the escalation was sent', function () {
@@ -303,34 +308,34 @@ it('refuses a hand over once the escalation closed or changed hands', function (
         ->and($this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->exists())->toBeFalse();
 });
 
-it('moves access, replies and notifications to the new owner while keeping the shared Escalations list', function () {
+it('moves access, replies and notifications to the new owner while keeping the shared Direct questions list', function () {
     $this->login($this->owner);
-    resolve(TicketEscalationLinks::class)->handOver($this->escalation, $this->colleague->id, $this->owner->id);
+    resolve(TicketEscalationLinks::class)->handOver($this->question, $this->colleague->id, $this->owner->id);
 
-    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])->assertForbidden();
+    Livewire::test(ViewTicket::class, ['record' => $this->question->id])->assertForbidden();
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-        ->assertCanSeeTableRecords([$this->escalation]);
+    listDirectQuestions()
+        ->assertCanSeeTableRecords([$this->question]);
 
-    expect(resolve(TicketAuth::class)->canReply($this->escalation->refresh(), $this->owner))->toBeFalse()
-        ->and(resolve(TicketAuth::class)->canReply($this->escalation, $this->colleague))->toBeTrue();
+    expect(resolve(TicketAuth::class)->canReply($this->question->refresh(), $this->owner))->toBeFalse()
+        ->and(resolve(TicketAuth::class)->canReply($this->question, $this->colleague))->toBeTrue();
 
     $this->login($this->colleague);
 
-    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+    Livewire::test(ViewTicket::class, ['record' => $this->question->id])
         ->assertSuccessful();
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-        ->assertCanSeeTableRecords([$this->escalation]);
+    listDirectQuestions()
+        ->assertCanSeeTableRecords([$this->question]);
 
     $this->login($this->padmission);
     $recipients = resolve(NotificationRecipientService::class)
-        ->getNotificationRecipients(new TicketActivityEvent($this->escalation, ActivityType::Message, null, $this->padmission));
+        ->getNotificationRecipients(new TicketActivityEvent($this->question, ActivityType::Message, null, $this->padmission));
 
     expect($recipients->map->getKey()->all())->toBe([$this->colleague->id])
-        ->and(resolve(TicketActivityService::class)->getActivityTypesForSender($this->escalation, ActivitySender::User, $this->colleague))
+        ->and(resolve(TicketActivityService::class)->getActivityTypesForSender($this->question, ActivitySender::User, $this->colleague))
         ->toContain(ActivityType::HandedOver)
-        ->and($this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->sole()->content)
+        ->and($this->question->ticketActivities()->where('type', ActivityType::HandedOver)->sole()->content)
         ->toBe('Test Admin handed this escalation to Maria Lopez');
 });
 
@@ -360,7 +365,7 @@ it('asks the escalating team\'s pool once per request, however many rows it offe
     $count = function () use (&$calls): int {
         $calls = 0;
         Once::flush();
-        Livewire::test(ListTickets::class, ['activeTab' => 'linked'])->assertSee('Take over');
+        listDirectQuestions()->assertSee('Take over');
 
         return $calls;
     };
@@ -368,8 +373,7 @@ it('asks the escalating team\'s pool once per request, however many rows it offe
     $one = $count();
 
     foreach (range(1, 3) as $ignored) {
-        $escalation = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $this->owner->id]);
-        Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+        directQuestionFrom(attributes: ['submitter_id' => $this->owner->id]);
     }
 
     expect($count())->toBe($one);

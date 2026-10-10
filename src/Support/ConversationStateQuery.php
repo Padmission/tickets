@@ -102,6 +102,7 @@ final class ConversationStateQuery
             'conversation_owner_id' => $this->subquery($this->escalationQuery()->select('cs_e.submitter_id')),
             'conversation_escalation_open' => $this->sql('case when %s then 1 else 0 end', $this->escalationExists(fn (QueryBuilder $query) => $query->whereNull('cs_e.closed_at'))),
             'conversation_is_escalation' => $this->sql('case when %s then 1 else 0 end', $this->condition($this->ticket->newQueryWithoutScopes()->escalations())),
+            'conversation_is_direct_question' => $this->sql('case when %s then 1 else 0 end', $this->condition($this->ticket->newQueryWithoutScopes()->directQuestions())),
         ];
     }
 

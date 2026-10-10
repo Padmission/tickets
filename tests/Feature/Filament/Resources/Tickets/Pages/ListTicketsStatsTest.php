@@ -60,21 +60,19 @@ describe('Stat cards', function () {
 
         Ticket::factory()->open()->count(2)->create(['assignee_id' => $user->id, 'turn' => Turn::Supporter]);
         Ticket::factory()->open()->create(['assignee_id' => User::factory()->create()->id, 'turn' => Turn::User]);
-        Ticket::factory()->open()
-            ->has(Ticket::factory()->open()->state(['panel' => 'test', 'assignee_id' => null, 'turn' => Turn::User]), 'childTickets')
-            ->create(['panel' => 'test2', 'submitter_id' => $user->id, 'turn' => Turn::Supporter]);
+        directQuestionFrom(attributes: ['submitter_id' => $user->id, 'turn' => Turn::Supporter]);
 
-        $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
+        $direct = ['direct_questions' => ['isActive' => true]];
+        $stat = fn (string $widget, string $tab, array $filters = []) => Livewire::test($widget, ['activeTab' => $tab, 'tableFilters' => $filters])->instance()->getStats()[0];
 
-        $stat = fn (string $widget, string $tab) => Livewire::test($widget, ['activeTab' => $tab])->instance()->getStats()[0];
+        foreach ([['all', false, 3], ['my', false, 2], ['all', true, 1], ['my', true, 1]] as [$tab, $isDirect, $open]) {
+            $tabs = ($isDirect ? listDirectQuestions($tab) : Livewire::test(ListTickets::class))->instance()->getTabs();
 
-        // All counts the escalation's original too, which lives in this panel.
-        foreach (['all' => 4, 'my' => 2, 'linked' => 1] as $tab => $open) {
             expect($tabs[$tab]->getBadge())->toBe((string) $open)
-                ->and($stat(OpenTicketsWidget::class, $tab))
+                ->and($stat(OpenTicketsWidget::class, $tab, $isDirect ? $direct : []))
                 ->getValue()->toBe($open)
                 ->getColor()->toBe('gray')
-                ->getDescription()->toBe(str_contains($tab, 'linked') ? 'Escalations not yet closed' : 'Tickets not yet closed');
+                ->getDescription()->toBe($isDirect ? 'Direct questions not yet closed' : 'Tickets not yet closed');
         }
 
         expect($stat(OpenSupporterTickets::class, 'all'))
@@ -82,10 +80,10 @@ describe('Stat cards', function () {
             ->getColor()->toBe('warning')
             ->getDescription()->toBe('Needs a reply or an assignee')
             ->getValue()->toBe(2)
-            ->and($stat(OpenSupporterTickets::class, 'linked'))
+            ->and($stat(OpenSupporterTickets::class, 'all', $direct))
             ->getLabel()->toBe('Waiting on Platform Support')
             ->getColor()->toBe('gray')
-            ->getDescription()->toBe('Escalations Platform Support owes a reply on')
+            ->getDescription()->toBe('Direct questions Platform Support owes a reply on')
             ->getValue()->toBe(1);
     });
 
@@ -149,22 +147,22 @@ describe('Stat cards', function () {
     });
 
     // An icon beside a description that wrapped floated to the card's far edge, so the cards have none.
-    it('draws no description icons, on any tab or panel', function (string $panel, string $tab) {
+    it('draws no description icons, on any tab or panel', function (string $panel, string $tab, array $filters) {
         $this->login();
         Filament::setCurrentPanel($panel);
 
         foreach ([OpenTicketsWidget::class, OpenSupporterTickets::class, TicketCloseTimeWidget::class] as $widget) {
-            expect(Livewire::test($widget, ['activeTab' => $tab])->instance()->getStats()[0])
+            expect(Livewire::test($widget, ['activeTab' => $tab, 'tableFilters' => $filters])->instance()->getStats()[0])
                 ->getDescription()->not->toBeEmpty()
                 ->getDescriptionIcon()->toBeNull();
         }
 
         expect(Livewire::test(OpenSupporterTickets::class)->instance()->getStats()[0]->getDescriptionIcon())->toBeNull();
     })->with([
-        'all' => ['test', 'all'],
-        'my' => ['test', 'my'],
-        'escalations' => ['test', 'linked'],
-        'receiving panel' => ['test2', 'all'],
+        'all' => ['test', 'all', []],
+        'my' => ['test', 'my', []],
+        'direct questions' => ['test', 'all', ['direct_questions' => ['isActive' => true]]],
+        'receiving panel' => ['test2', 'all', []],
     ]);
 
     it('averages close time over the tab\'s own closed tickets', function () {

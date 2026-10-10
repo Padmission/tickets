@@ -308,7 +308,7 @@ class YourServiceProvider {
 }
 ```
 
-The ticket list has **All Tickets** and **My Tickets** tabs. Supporters default to **My Tickets** in every panel, including the admin panel. Requesters default to **All Tickets**, showing their own submissions. Explicit tab URLs take precedence; stale or unknown tabs fall back to the viewer's default. A panel that escalates to another team (see [Escalations](#escalations)) also shows its supporters **Escalations** and **My Escalations**.
+The ticket list has **All Tickets** and **My Tickets** tabs. Supporters default to **My Tickets** in every panel, including the admin panel. Requesters default to **All Tickets**, showing their own submissions. Explicit tab URLs take precedence; stale or unknown tabs fall back to the viewer's default. A panel that escalates to another team (see [Escalations](#escalations)) also offers its supporters a **Direct questions** filter, which lists the questions the team asked the other team directly, narrowed by the active tab.
 
 ### Custom list page
 
@@ -867,9 +867,9 @@ What the organization's panel gets:
 - **Escalate Ticket** (or **Escalate to _team_**) on an open ticket, which opens the escalation with a subject and message for the other team. Once the escalation closes, the same action escalates again.
 - **Add to escalation** on an open ticket, to link it to an escalation the organization already has open instead of opening another. It only shows when there is one.
 - **Remove from escalation** on an original, to unlink it.
-- **Escalations** and **My Escalations** tabs, listing the organization's escalations and the viewer's own.
+- A **Direct questions** filter, listing the questions the organization asked the other team directly (under **My Tickets**, the viewer's own), and an **Escalated** filter for the organization's tickets that were escalated. Opening an escalated ticket leads to its conversation with the other team.
 - On an escalation, a list of its originals that says who owes whom a reply, with `+` to link another and `×` to take one out.
-- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies, access to the escalation and **My Escalations** all follow the new owner. Only the two people it moved between are notified.
+- **Hand over** on an escalation the viewer owns, to give it to a colleague, and **Take over** for anyone else on the team. The other team's replies, access to the escalation and the viewer's own direct questions all follow the new owner. Only the two people it moved between are notified.
 - **Close escalation** on the viewer's own escalation, without a disposition, once the other team's part is done.
 
 What the support panel gets:
@@ -925,7 +925,7 @@ The ticket list's bulk actions are:
 - **Close** - close each selected ticket as its own Close dialog would, skipping those already closed or that the viewer may not close. The disposition is picked by name, since the selection can span organizations that each keep their own.
 - **Delete** - soft-deletes the tickets the viewer may `delete`.
 
-They're hidden on the Escalations tabs.
+They're hidden in the Direct questions view.
 
 A single open ticket on its own panel also has **Edit** (subject, assignee, status and priority), **Assign** / **Reassign**, **Close** and **Delete** (a soft delete).
 

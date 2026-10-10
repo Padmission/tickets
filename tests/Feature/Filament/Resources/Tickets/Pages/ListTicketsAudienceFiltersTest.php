@@ -6,6 +6,7 @@ use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\ActivitySender;
 use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Tests\User;
 use Padmission\Tickets\TicketPlugin;
@@ -21,18 +22,24 @@ it('shows escalation controls only to the appropriate supporters and tabs', func
     if (! $supporter) {
         TicketPlugin::get()->allSupportersQuery(fn () => User::query()->whereRaw('1 = 0'));
     }
-    $page = Livewire::test(ListTickets::class, ['activeTab' => $tab]);
-    $sending = $supporter && $panel === 'test' && $tab !== 'linked';
+    $page = Livewire::test(ListTickets::class, ['activeTab' => $tab === 'direct' ? 'all' : $tab]);
+
+    if ($tab === 'direct') {
+        $page->set('tableFilters.direct_questions.isActive', true);
+    }
+
+    $sending = $supporter && $panel === 'test' && $tab !== 'direct';
     $receiving = $supporter && $panel === 'test2';
 
     expect($page->instance()->getTable()->getColumn('escalation')->isVisible())->toBe($sending)
         ->and($page->instance()->getTable()->getFilter('escalated', withHidden: true)->isVisible())->toBe($sending)
+        ->and($page->instance()->getTable()->getFilter('direct_questions', withHidden: true)->isVisible())->toBe($supporter && $panel === 'test')
         ->and($page->instance()->getTable()->getFilter('kind', withHidden: true)->isVisible())->toBe($receiving)
         ->and($page->instance()->getTable()->getFilter('escalated', withHidden: true)->getLabel())->toBe('Escalated')
         ->and($page->instance()->getTable()->getFilter('kind', withHidden: true)->getLabel())->toBe('Type')
         ->and($page->instance()->getTable()->getFilter('kind', withHidden: true)->getOptions())->toBe(['escalation' => 'Escalation', 'direct' => 'Direct question'])
         ->and($page->instance()->tableFilters['open']['isActive'])->toBeTrue();
-})->with(['test', 'test2'])->with([true, false])->with(['all', 'my', 'linked']);
+})->with(['test', 'test2'])->with([true, false])->with(['all', 'my', 'direct']);
 
 it('hides escalation controls in a panel that does not escalate or receive escalations', function () {
     TicketPlugin::get()->allowLinkedTicketsTo([]);
@@ -40,6 +47,7 @@ it('hides escalation controls in a panel that does not escalate or receive escal
     Livewire::test(ListTickets::class)
         ->assertTableColumnHidden('escalation')
         ->assertTableFilterHidden('escalated')
+        ->assertTableFilterHidden('direct_questions')
         ->assertTableFilterHidden('kind');
 });
 
@@ -140,3 +148,15 @@ it('ignores a deleted escalation in both the sending badge and Escalated filter'
     $row = $page->instance()->getTableRecords()->first();
     expect($page->instance()->getTable()->getColumn('escalation')->record($row)->getState())->not->toBeNull();
 })->with(['all', 'my']);
+
+it('leads from an Escalated row to its conversation with the other team', function () {
+    $me = $this->login();
+    $escalation = Ticket::factory()->open()->create(['panel' => 'test2']);
+    $original = Ticket::factory()->open()->create(['assignee_id' => $me->id, 'linked_ticket_id' => $escalation->id]);
+
+    Livewire::test(ListTickets::class, ['activeTab' => 'my'])->filterTable('escalated')
+        ->assertCanSeeTableRecords([$original]);
+
+    Livewire::test(ViewTicket::class, ['record' => $original->id])->callAction('show-linked')
+        ->assertSeeHtml('href="'.e(ViewTicket::getUrl(['record' => $escalation, 'linked' => $original->id])).'"');
+});

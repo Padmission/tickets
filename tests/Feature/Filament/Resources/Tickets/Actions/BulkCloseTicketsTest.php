@@ -126,11 +126,9 @@ it('closes escalations in the panel that received them and leaves their original
         ->and($originals->every(fn (Ticket $original): bool => ! $original->refresh()->isClosed))->toBeTrue();
 });
 
-it('offers no bulk actions on the organization\'s escalation tabs', function () {
+it('offers no bulk actions in the organization\'s Direct questions view', function () {
     TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
-    $escalation = escalationFrom(attributes: ['submitter_id' => $this->me->id]);
-    Ticket::factory()->open()->create(['linked_ticket_id' => $escalation->id]);
+    directQuestionFrom(attributes: ['submitter_id' => $this->me->id]);
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-        ->assertActionHidden(bulkClose());
+    listDirectQuestions()->assertActionHidden(bulkClose());
 });

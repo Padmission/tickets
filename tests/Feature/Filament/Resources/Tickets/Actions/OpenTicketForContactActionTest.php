@@ -206,7 +206,7 @@ describe('What is opened', function () {
             ->assertActionVisible(TestAction::make(AddToEscalationAction::class)->schemaComponent('escalationActions', schema: 'form'));
     });
 
-    it('is listed under the organization\'s Escalations as waiting on the other team, and under the other team\'s tickets as its own', function () {
+    it('is listed under the organization\'s Direct questions as waiting on the other team, and under the other team\'s tickets as its own', function () {
         Livewire::test(ListTickets::class)->callAction(openForContact(), contactQuestion($this->contact));
         $question = Ticket::query()->withoutGlobalScopes()->sole();
 
@@ -218,8 +218,7 @@ describe('What is opened', function () {
         Filament::setCurrentPanel('test');
         $this->login($this->contact);
 
-        Livewire::test(ListTickets::class)
-            ->set('activeTab', 'linked')
+        listDirectQuestions()
             ->assertCanSeeTableRecords([$question])
             ->assertSee('Padmission');
     });

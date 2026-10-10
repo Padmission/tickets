@@ -212,7 +212,7 @@ class HandOverEscalationAction extends Action
 
         // The previous owner can no longer open the escalation.
         if ($isOwner && ! $livewire instanceof ListTickets) {
-            $this->redirect(TicketResource::getUrl('index', ['tab' => 'linked']));
+            $this->redirect(TicketResource::getUrl('index'));
 
             // Unmounting the dialog would empty its owner field, which then asks
             // this page for a label before the browser leaves, as someone the

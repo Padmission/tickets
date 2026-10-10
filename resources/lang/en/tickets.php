@@ -497,8 +497,6 @@ return [
             'tabs' => [
                 'all' => 'All Tickets',
                 'my' => 'My Tickets',
-                'linked' => 'Escalations',
-                'my_linked' => 'My Escalations',
             ],
 
             'badges' => [
@@ -506,19 +504,19 @@ return [
                 'needs_you' => 'Tickets that need you: waiting on your reply, with nobody assigned, or with a reply to pass on from the team you escalated to',
                 'needs_you_to' => 'Tickets that need you: waiting on your reply, with nobody assigned, or with a reply from :team to pass on',
                 'needs_you_received' => 'Tickets that need you: waiting on your reply or with nobody assigned',
-                'tab' => 'Open tickets in this tab',
+                'tab' => 'Tickets in this tab that match your filters',
             ],
 
             'tab_descriptions' => [
-                'all' => 'Conversations with the people who asked for help. Tickets that need you come first.',
+                'all' => 'Every ticket your team handles.',
                 'all_submitter' => 'Tickets you submitted.',
-                'my' => 'Tickets assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.',
-                'linked' => 'Your team\'s conversations with the team you escalated to. Answer the requesters on their own tickets, under All Tickets.',
-                'linked_to' => 'Your team\'s conversations with :team. Answer the requesters on their own tickets, under All Tickets.',
-                'my_linked' => 'Your conversations with the team you escalated to. Use Hand over when a colleague should take one.',
-                'my_linked_to' => 'Your conversations with :team. Use Hand over when a colleague should take one.',
-                'all_received' => 'Escalations sent to your team, one conversation per escalation. Tickets that need you come first.',
-                'my_received' => 'Escalations assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.',
+                'my' => 'Tickets assigned to you.',
+                'all_received' => 'Escalations and direct questions sent to your team.',
+                'my_received' => 'Escalations and direct questions assigned to you.',
+                'all_direct' => 'Direct questions your team asked the team you escalate to.',
+                'all_direct_to' => 'Direct questions your team asked :team.',
+                'my_direct' => 'Direct questions you asked the team you escalate to.',
+                'my_direct_to' => 'Direct questions you asked :team.',
             ],
 
             'field_help' => [
@@ -634,6 +632,7 @@ return [
                 'organization' => 'Organization',
                 'kind' => 'Type',
                 'direct' => 'Direct question',
+                'direct_questions' => 'Direct questions',
                 'open_only' => 'Open tickets only',
                 'overdue' => 'Overdue',
             ],
@@ -647,13 +646,9 @@ return [
                     'heading' => 'Nothing assigned to you',
                     'description' => 'Tickets appear here when they are assigned to you.',
                 ],
-                'linked' => [
-                    'heading' => 'No escalations',
-                    'description' => 'When your team escalates a ticket, the conversation about it appears here.',
-                ],
-                'my_linked' => [
-                    'heading' => 'You have no escalations',
-                    'description' => 'Escalations you start or take over appear here.',
+                'filtered' => [
+                    'heading' => 'No tickets match the current filters',
+                    'description' => 'Clear a filter or the search to see more tickets.',
                 ],
             ],
         ],

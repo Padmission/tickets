@@ -14,7 +14,6 @@ use Padmission\Tickets\Filament\Resources\Tickets\Actions\AddToEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\CreateLinkedTicketAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\RemoveFromEscalationAction;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\ViewOriginalConversationAction;
-use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ViewTicket;
 use Padmission\Tickets\Filament\Tables\LinkedTicketCandidates;
 use Padmission\Tickets\Models\Ticket;
@@ -341,14 +340,14 @@ describe('Escalated tabs in a cross-tenant panel', function () {
 
     afterEach(fn () => CustomTicket::clearBootedModels());
 
-    it('lists escalations whose originals belong to another tenant', function () {
-        $escalation = CustomTicket::factory()->open()->create(['panel' => 'test2', 'tenant_id' => 2]);
-        CustomTicket::factory()->create(['tenant_id' => 2, 'linked_ticket_id' => $escalation->id]);
+    it('lists direct questions that belong to another tenant', function () {
+        $question = CustomTicket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'tenant_id' => 2]);
+        $question->addTicketActivity(ActivityType::AskedDirectly, ActivitySender::System);
 
-        $tab = Livewire::test(ListTickets::class)->instance()->getTabs()['linked'];
+        $tab = listDirectQuestions()->instance()->getTabs()['all'];
 
         expect($tab->modifyQuery(CustomTicket::query()->withoutGlobalScope('viewer-tenant'))->pluck('id'))
-            ->toContain($escalation->id);
+            ->toContain($question->id);
     });
 });
 

@@ -255,7 +255,7 @@ it('sends the previous owner to their team\'s escalations when no original is op
     $wording = wordingFor($this->escalation, $event, $this->owner);
 
     expect($wording['actionLabel'])->toBe("View your team's escalations")
-        ->and($wording['actionUrl'])->toBe(url('/test/tickets?tab=linked'));
+        ->and($wording['actionUrl'])->toBe(url('/test/tickets'));
 });
 
 it('names the originals and their requesters past host scopes, leaving out deleted originals and other tenants', function () {

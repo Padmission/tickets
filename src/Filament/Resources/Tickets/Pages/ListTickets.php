@@ -117,7 +117,7 @@ class ListTickets extends ListRecords
     {
         $tenant = config('padmission-tickets.tenancy.enabled') ? ',tenant_id' : '';
 
-        if (str_contains((string) $this->activeTab, 'linked') || $viewer->receivesEscalations) {
+        if ($this->showsDirectQuestions() || $viewer->receivesEscalations) {
             return $query->with([
                 "childTickets:id,linked_ticket_id,submitter_id,submitter_data,closed_at,panel{$tenant}",
                 'childTickets.submitter',
@@ -172,31 +172,34 @@ class ListTickets extends ListRecords
         return ($tabs[$tab] ?? $tabs[$this->getDefaultActiveTab()])->modifyQuery($query ?? TicketResource::getEloquentQuery());
     }
 
-    public function openTicketCount(string $tab): int
+    public function filteredTicketCount(string $tab): int
     {
-        return $this->ticketsInTab($tab)->open()->count();
+        return $this->filterTableQuery($this->ticketsInTab($tab))->count();
+    }
+
+    /*
+     * The questions this team asked another team directly live in that team's
+     * panel, so the view swaps the tab's panel for the escalations sent from
+     * here.
+     */
+    public function showsDirectQuestions(): bool
+    {
+        return TicketResource::asksDirectQuestions()
+            && (bool) data_get($this->tableFilters, 'direct_questions.isActive');
     }
 
     /**
-     * An escalation stays listed after all its originals were removed, through
-     * the history note written when the first was added, so its owner does not
-     * lose it.
-     *
      * @param  Builder<Ticket>  $query
      * @return Builder<Ticket>
      */
-    protected static function escalationsFromThisPanel(Builder $query): Builder
+    protected function directQuestionsQuery(Builder $query): Builder
     {
-        return $query->escalationsFrom(Filament::getCurrentOrDefaultPanel()->getId());
-    }
-
-    /**
-     * @param  Builder<Ticket>  $query
-     * @return Builder<Ticket>
-     */
-    protected static function withEscalationAssignees(Builder $query): Builder
-    {
-        return TicketAssignee::eagerLoadForForeignPanels($query, array_keys(TicketPlugin::get()->getLinkedTicketParentPanels()));
+        return TicketResource::scopeListQueryToSupporterOrSubmitter(
+            TicketAssignee::eagerLoadForForeignPanels(
+                $query->escalationsFrom(Filament::getCurrentOrDefaultPanel()->getId())->directQuestions(),
+                array_keys(TicketPlugin::get()->getLinkedTicketParentPanels()),
+            )
+        );
     }
 
     public function getSubheading(): ?string
@@ -207,7 +210,9 @@ class ListTickets extends ListRecords
 
         if ($tab === 'all' && ! $viewer->isSupporter) {
             $tab = 'all_submitter';
-        } elseif (in_array($tab, ['all', 'my'], true) && $viewer->receivesEscalations) {
+        } elseif ($this->showsDirectQuestions()) {
+            $tab = "{$tab}_direct";
+        } elseif ($viewer->receivesEscalations) {
             $tab = "{$tab}_received";
         }
 
@@ -236,38 +241,26 @@ class ListTickets extends ListRecords
             return [];
         }
 
-        $tabs = [
+        return [
             'all' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.all'))
-                ->badge(fn (): int => $this->openTicketCount('all'))
+                ->badge(fn (): int => $this->filteredTicketCount('all'))
                 ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
-                ->modifyQueryUsing(fn (Builder $query) => TicketResource::allTicketsQuery($query)),
+                ->modifyQueryUsing(fn (Builder $query) => $this->showsDirectQuestions()
+                    ? $this->directQuestionsQuery($query)
+                    : TicketResource::allTicketsQuery($query)),
 
             'my' => Tab::make()
                 ->label(__('padmission-tickets::tickets.resources.tickets.tabs.my'))
-                ->badge(fn (): int => $this->openTicketCount('my'))
+                ->badge(fn (): int => $this->filteredTicketCount('my'))
                 ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
-                ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                    $query
-                        ->tap(new CurrentPanelScope)
-                        ->whereIn('assignee_id', TicketPlugin::get()->getCurrentUserAssigneeIds() ?: [0])
-                )),
+                ->modifyQueryUsing(fn (Builder $query) => $this->showsDirectQuestions()
+                    ? $this->directQuestionsQuery($query)->where($query->qualifyColumn('submitter_id'), ConversationViewer::current()->userId)
+                    : TicketResource::scopeListQueryToSupporterOrSubmitter(
+                        $query
+                            ->tap(new CurrentPanelScope)
+                            ->whereIn('assignee_id', TicketPlugin::get()->getCurrentUserAssigneeIds() ?: [0])
+                    )),
         ];
-
-        // Only a panel that escalates has tickets of its own linked elsewhere, and
-        // escalating is the organization's business, never its requesters'.
-        if (count(TicketPlugin::get()->getLinkedTicketParentPanels()) === 0) {
-            return $tabs;
-        }
-
-        $tabs['linked'] = Tab::make()
-            ->label(__('padmission-tickets::tickets.resources.tickets.tabs.linked'))
-            ->badge(fn (): int => $this->openTicketCount('linked'))
-            ->badgeTooltip(__('padmission-tickets::tickets.resources.tickets.badges.tab'))
-            ->modifyQueryUsing(fn (Builder $query) => TicketResource::scopeListQueryToSupporterOrSubmitter(
-                static::withEscalationAssignees(static::escalationsFromThisPanel($query))
-            ));
-
-        return $tabs;
     }
 }

@@ -66,14 +66,14 @@ it('counts the current filtered list and enables the overdue filter with its fil
         ->assertCanNotSeeTableRecords([$other]);
 })->with(['organization' => 'test', 'receiving team' => 'test2']);
 
-it('keeps sent escalation cards on the current tab and enables the overdue filter', function (string $tab) {
+it('keeps the Direct questions view and the current tab when the overdue card is followed', function (string $tab) {
     $me = $this->login(User::factory()->create(['name' => 'Priya Nair']));
-    $mine = escalationFrom(attributes: ['submitter_id' => $me->id, 'turn' => Turn::Supporter]);
-    $other = escalationFrom(attributes: ['submitter_id' => User::factory()->create()->id, 'turn' => Turn::Supporter]);
+    $mine = directQuestionFrom(attributes: ['submitter_id' => $me->id, 'turn' => Turn::Supporter]);
+    $other = directQuestionFrom(attributes: ['submitter_id' => User::factory()->create()->id, 'turn' => Turn::Supporter]);
     foreach ([$mine, $other] as $ticket) {
         TicketActivity::factory()->create(['ticket_id' => $ticket->id, 'type' => ActivityType::Message, 'sender' => ActivitySender::User, 'created_at' => '2026-10-02 13:59:59']);
     }
-    $page = Livewire::test(ListTickets::class)->set('activeTab', $tab)->searchTable('Priya Nair');
+    $page = listDirectQuestions($tab)->searchTable('Priya Nair');
     $card = Livewire::test(OverdueTicketsWidget::class, $page->instance()->getWidgetData())->instance()->getStats()[0];
     expect($card->getValue())->toBe(1);
     parse_str(parse_url($card->getUrl(), PHP_URL_QUERY), $parameters);
@@ -81,8 +81,9 @@ it('keeps sent escalation cards on the current tab and enables the overdue filte
     Livewire::withQueryParams($parameters)->test(ListTickets::class)
         ->assertSet('activeTab', $tab)
         ->assertSet('tableFilters.overdue.isActive', true)
+        ->assertSet('tableFilters.direct_questions.isActive', true)
         ->assertCanSeeTableRecords([$mine])->assertCanNotSeeTableRecords([$other]);
-})->with(['linked']);
+})->with(['all', 'my']);
 
 it('shows zero in gray and refreshes as the weekday deadline passes', function () {
     $this->login();

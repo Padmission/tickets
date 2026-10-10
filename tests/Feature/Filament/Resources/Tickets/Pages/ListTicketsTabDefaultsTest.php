@@ -15,7 +15,7 @@ beforeEach(function () {
 });
 
 // The test panel is the organization app; test2 receives its escalations as admin does.
-it('defaults supporters to my tickets with only the original tabs in every panel', function (string $panel) {
+it('defaults supporters to my tickets with only the two tabs in every panel', function (string $panel) {
     Filament::setCurrentPanel($panel);
     $me = $this->login();
     $mine = Ticket::factory()->open()->create(['panel' => $panel, 'assignee_id' => $me->id]);
@@ -28,7 +28,7 @@ it('defaults supporters to my tickets with only the original tabs in every panel
 
     expect($page->instance()->getDefaultActiveTab())->toBe('my')
         ->and($page->instance()->getWidgetData()['activeTab'])->toBe('my')
-        ->and(array_keys($page->instance()->getCachedTabs()))->toBe($panel === 'test' ? ['all', 'my', 'linked'] : ['all', 'my']);
+        ->and(array_keys($page->instance()->getCachedTabs()))->toBe(['all', 'my']);
 })->with(['app panel' => 'test', 'admin panel' => 'test2']);
 
 it('keeps the requester default on their own submissions', function () {
@@ -52,7 +52,7 @@ it('honors explicit tab URLs and deep links over the supporter default', functio
 
     Livewire::withQueryParams([$parameter => $tab])->test(ListTickets::class)
         ->assertSet('activeTab', $tab);
-})->with(['tab', 'activeTab'])->with(['all', 'my', 'linked']);
+})->with(['tab', 'activeTab'])->with(['all', 'my']);
 
 it('falls back from stale tab URLs to the viewer default', function (string $panel, string $parameter, string $tab, bool $isSupporter) {
     Filament::setCurrentPanel($panel);
@@ -72,7 +72,7 @@ it('falls back from stale tab URLs to the viewer default', function (string $pan
         ->assertCanNotSeeTableRecords([$hidden]);
 })->with(['app panel' => 'test', 'admin panel' => 'test2'])
     ->with(['tab', 'activeTab'])
-    ->with(['my_linked', 'my_open', 'open_linked', 'needs_reply', 'overdue', 'unassigned', 'waiting_on_requester', 'open_escalations', 'overdue_linked'])
+    ->with(['linked', 'my_linked', 'my_open', 'open_linked', 'needs_reply', 'overdue', 'unassigned', 'waiting_on_requester', 'open_escalations', 'overdue_linked'])
     ->with(['supporter' => true, 'requester' => false]);
 
 it('falls back from invalid Livewire tab updates to the viewer default', function (string $panel, string $tab, bool $isSupporter) {
@@ -96,5 +96,5 @@ it('falls back from invalid Livewire tab updates to the viewer default', functio
         ->assertCanNotSeeTableRecords([$hidden, $foreign]);
     expect($page->instance()->getWidgetData()['activeTab'])->toBe($isSupporter ? 'my' : null);
 })->with(['app panel' => 'test', 'admin panel' => 'test2'])
-    ->with(['my_linked', 'my_open', 'open_linked', 'unknown_tab', 'needs_reply', 'overdue', 'unassigned', 'waiting_on_requester', 'open_escalations', 'overdue_linked'])
+    ->with(['linked', 'my_linked', 'my_open', 'open_linked', 'unknown_tab', 'needs_reply', 'overdue', 'unassigned', 'waiting_on_requester', 'open_escalations', 'overdue_linked'])
     ->with(['supporter' => true, 'requester' => false]);

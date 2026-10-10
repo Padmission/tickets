@@ -1,10 +1,8 @@
 <?php
 
 use Filament\Facades\Filament;
-use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
 use Padmission\Tickets\Enums\Turn;
-use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Filament\Tables\LinkedTicketCandidates;
 use Padmission\Tickets\Models\Ticket;
@@ -34,7 +32,7 @@ it('checks relay and hold once per row, not once per branch', function () {
     $selects = strtolower(ConversationStateQuery::apply(Ticket::query(), $viewer)->toSql());
 
     expect(substr_count(strtolower($rank), '(select'))->toBeLessThanOrEqual(9)
-        ->and(substr_count($selects, '(select'))->toBeLessThanOrEqual(35);
+        ->and(substr_count($selects, '(select'))->toBeLessThanOrEqual(38);
 });
 
 it('lists an escalation from this panel whose original moved to another panel', function () {
@@ -42,10 +40,8 @@ it('lists an escalation from this panel whose original moved to another panel', 
     Ticket::factory()->open()->create(['panel' => 'test3', 'linked_ticket_id' => $escalation->id]);
     $original = Ticket::factory()->open()->create(['panel' => 'test']);
 
-    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-        ->assertCanSeeTableRecords([$escalation->id]);
-
-    expect(LinkedTicketCandidates::openEscalations(Ticket::query(), $original)->pluck('id')->all())->toContain($escalation->id)
+    expect(Ticket::query()->escalationsFrom('test')->pluck('id')->all())->toContain($escalation->id)
+        ->and(LinkedTicketCandidates::openEscalations(Ticket::query(), $original)->pluck('id')->all())->toContain($escalation->id)
         ->and(Ticket::query()->withConversationState()->find($escalation->id)->conversation_waiting_on)->toBe('you_owner');
 });
 

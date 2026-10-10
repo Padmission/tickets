@@ -3,8 +3,6 @@
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Padmission\Tickets\Database\Seeders\TicketStatusSeeder;
-use Padmission\Tickets\Enums\ActivitySender;
-use Padmission\Tickets\Enums\ActivityType;
 use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Models\TicketStatus;
@@ -101,76 +99,86 @@ it('shows my tickets tab filtered by assignee', function () {
         ->assertCanSeeTableRecords([$tickets->first()->id]);
 });
 
-it('hides linked tickets tabs when feature disabled', function () {
+it('offers no Direct questions filter when feature disabled', function () {
     $this->login();
 
     $component = Livewire::test(ListTickets::class);
-    $tabs = $component->instance()->getTabs();
 
-    expect($tabs)->toHaveKeys(['all', 'my']);
-    expect($tabs)->not->toHaveKeys(['linked', 'my_linked']);
+    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my']);
+    $component->assertTableFilterHidden('direct_questions');
 });
 
-it('shows linked tickets tabs when feature enabled', function () {
-    TicketPlugin::get()->allowLinkedTicketsTo(['test']);
+it('keeps the two tabs and offers the Direct questions filter when feature enabled', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
 
     $this->login();
 
     $component = Livewire::test(ListTickets::class);
-    $tabs = $component->instance()->getTabs();
 
-    expect($tabs)->toHaveKeys(['all', 'my', 'linked']);
-
-    expect($tabs['linked']->getLabel())->toBe(__('padmission-tickets::tickets.resources.tickets.tabs.linked'));
-    expect($tabs)->not->toHaveKey('my_linked');
+    expect(array_keys($component->instance()->getTabs()))->toBe(['all', 'my']);
+    $component->assertTableFilterVisible('direct_questions');
 });
 
-it('linked tickets only shows tickets that have a child ticket from the current panel', function () {
+it('lists only the questions this panel asked directly in the Direct questions view', function () {
     TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
 
     (new TicketStatusSeeder)->run();
 
     $this->login();
 
-    $ticketModel = TicketPlugin::resolveModelClass(Ticket::class);
-    $currentPanel = Filament::getCurrentPanel();
+    $asked = directQuestionFrom();
+    $fromElsewhere = directQuestionFrom('other-panel');
+    $escalation = escalationFrom();
+    $filedThere = Ticket::factory()->create(['panel' => 'test2', 'source_panel' => 'test']);
+    $own = Ticket::factory()->create();
 
-    $linkedTicket = $ticketModel::factory()
-        ->has(Ticket::factory(['panel' => $currentPanel->getId()]), 'childTickets')
-        ->create(['panel' => 'test2']);
-
-    $ticketModel::factory()
-        ->has(Ticket::factory(['panel' => 'other-panel']), 'childTickets')
-        ->create(['panel' => 'test2']);
-
-    $ticketModel::factory()->create();
-
-    Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
+    listDirectQuestions()
         ->assertTableColumnHidden('panel')
         ->assertTableColumnHidden('source_panel')
         ->assertCountTableRecords(1)
-        ->assertCanSeeTableRecords([$linkedTicket->id]);
+        ->assertCanSeeTableRecords([$asked])
+        ->assertCanNotSeeTableRecords([$fromElsewhere, $escalation, $filedThere, $own]);
 });
 
-describe('Escalations tabs', function () {
+it('limits My Tickets in the Direct questions view to the ones the viewer asked', function () {
+    TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
+
+    (new TicketStatusSeeder)->run();
+
+    $user = $this->login();
+
+    $mine = directQuestionFrom(attributes: ['submitter_id' => $user->id]);
+    $colleagues = directQuestionFrom(attributes: ['submitter_id' => User::factory()->create()->id]);
+
+    listDirectQuestions('my')
+        ->assertCanSeeTableRecords([$mine])
+        ->assertCanNotSeeTableRecords([$colleagues]);
+
+    listDirectQuestions('all')->assertCanSeeTableRecords([$mine, $colleagues]);
+});
+
+describe('Direct questions view', function () {
     beforeEach(function () {
         (new TicketStatusSeeder)->run();
         TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
         TicketPlugin::get('test2')->supportTeamName('Platform Support');
     });
 
-    it('calls the escalated tabs Escalations and explains each tab', function (string $tab, string $subheading) {
+    it('explains each tab and view in a line', function (string $tab, bool $direct, string $subheading) {
         $this->login();
 
         $component = Livewire::test(ListTickets::class, ['activeTab' => $tab]);
 
-        expect($component->instance()->getTabs()['linked']->getLabel())->toBe('Escalations')
+        if ($direct) {
+            $component->set('tableFilters.direct_questions.isActive', true);
+        }
 
-            ->and($component->instance()->getSubheading())->toBe($subheading);
+        expect($component->instance()->getSubheading())->toBe($subheading);
     })->with([
-        'all' => ['all', 'Conversations with the people who asked for help. Tickets that need you come first.'],
-        'my' => ['my', 'Tickets assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.'],
-        'linked' => ['linked', 'Your team\'s conversations with Platform Support. Answer the requesters on their own tickets, under All Tickets.'],
+        'all' => ['all', false, 'Every ticket your team handles.'],
+        'my' => ['my', false, 'Tickets assigned to you.'],
+        'all direct' => ['all', true, 'Direct questions your team asked Platform Support.'],
+        'my direct' => ['my', true, 'Direct questions you asked Platform Support.'],
     ]);
 
     it('explains the tabs of a panel that receives escalations', function (string $tab, string $subheading) {
@@ -179,55 +187,61 @@ describe('Escalations tabs', function () {
 
         expect(Livewire::test(ListTickets::class, ['activeTab' => $tab])->instance()->getSubheading())->toBe($subheading);
     })->with([
-        'all' => ['all', 'Escalations sent to your team, one conversation per escalation. Tickets that need you come first.'],
-        'my' => ['my', 'Escalations assigned to you. Tickets that need you come first. Use Reassign to hand one to a teammate.'],
+        'all' => ['all', 'Escalations and direct questions sent to your team.'],
+        'my' => ['my', 'Escalations and direct questions assigned to you.'],
     ]);
 
-    it('keeps listing an escalation whose originals were all removed, but not a ticket that was never one', function () {
-        $user = $this->login();
-
-        $emptied = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $user->id]);
-        $emptied->addTicketActivity(ActivityType::OriginalAdded, ActivitySender::System, $user->id);
-        $filedThere = Ticket::factory()->open()->create(['panel' => 'test2', 'source_panel' => 'test', 'submitter_id' => $user->id]);
-
-        foreach (['linked'] as $tab) {
-            Livewire::test(ListTickets::class, ['activeTab' => $tab])
-                ->assertCanSeeTableRecords([$emptied])
-                ->assertCanNotSeeTableRecords([$filedThere]);
-        }
-
-        $tabs = Livewire::test(ListTickets::class)->instance()->getTabs();
-
-        expect($tabs['linked']->getBadge())->toBe('1');
-    });
-
-    it('shows only open escalations by default, as many as the badge counts', function () {
+    it('shows only open direct questions by default, as many as the tab badges count', function () {
         $this->login();
 
-        $escalate = fn ($factory) => $factory
-            ->has(Ticket::factory(['panel' => 'test']), 'childTickets')
-            ->create(['panel' => 'test2']);
+        $open = [directQuestionFrom(), directQuestionFrom()];
+        $closed = directQuestionFrom(state: 'closed');
 
-        $open = $escalate(Ticket::factory()->open()->count(2));
-        $closed = $escalate(Ticket::factory()->closed());
-
-        $component = Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
+        $component = listDirectQuestions()
             ->assertTableFilterVisible('open')
             ->assertCanSeeTableRecords($open)
             ->assertCanNotSeeTableRecords([$closed])
-            ->assertCountTableRecords((int) Livewire::test(ListTickets::class)->instance()->getTabs()['linked']->getBadge())
-            ->removeTableFilter('open')
-            ->assertCanSeeTableRecords([$closed]);
+            ->assertCountTableRecords(2);
 
-        expect($component->instance()->getTabs()['linked']->getBadge())->toBe('2');
+        expect($component->instance()->getTabs()['all']->getBadge())->toBe('2');
+
+        $component->removeTableFilter('open')->assertCanSeeTableRecords([$closed]);
+
+        expect($component->instance()->getTabs()['all']->getBadge())->toBe('3');
     });
 
-    it('says there are no escalations when there are none', function () {
+    it('says no tickets match when the view is empty', function () {
         $this->login();
 
-        Livewire::test(ListTickets::class, ['activeTab' => 'linked'])
-            ->assertSee('No escalations')
-            ->assertSee('When your team escalates a ticket, the conversation about it appears here.');
-
+        listDirectQuestions()
+            ->assertSee('No tickets match the current filters')
+            ->assertSee('Clear a filter or the search to see more tickets.');
     });
+});
+
+describe('Empty state', function () {
+    beforeEach(function () {
+        (new TicketStatusSeeder)->run();
+    });
+
+    it('says nothing is assigned only when no filter is hiding anything', function () {
+        $this->login();
+
+        Livewire::test(ListTickets::class, ['activeTab' => 'my'])
+            ->assertSee('Nothing assigned to you')
+            ->assertDontSee('No tickets match the current filters');
+    });
+
+    it('says no tickets match when a filter or the search hides records', function (Closure $narrow) {
+        $user = $this->login();
+        Ticket::factory()->open()->create(['assignee_id' => $user->id, 'subject' => 'Rent question']);
+
+        $narrow(Livewire::test(ListTickets::class, ['activeTab' => 'my']))
+            ->assertCountTableRecords(0)
+            ->assertSee('No tickets match the current filters')
+            ->assertDontSee('Nothing assigned to you');
+    })->with([
+        'a filter' => [fn ($page) => $page->set('tableFilters.overdue.isActive', true)],
+        'the search' => [fn ($page) => $page->searchTable('Parking')],
+    ]);
 });

@@ -13,7 +13,7 @@ beforeEach(function () {
     TicketPlugin::get()->allowLinkedTicketsTo(['test2']);
 });
 
-it('shows escalation tabs only to supporters in panels that escalate', function (string $panel, bool $supporter, bool $escalates) {
+it('shows tabs only to supporters, and the Direct questions filter only where they escalate', function (string $panel, bool $supporter, bool $escalates) {
     TicketPlugin::get('test')->allowLinkedTicketsTo($escalates ? ['test2'] : []);
     Filament::setCurrentPanel($panel);
     $me = $this->login();
@@ -23,9 +23,7 @@ it('shows escalation tabs only to supporters in panels that escalate', function 
 
     $page = Livewire::test(ListTickets::class);
     $visible = array_filter($page->instance()->getCachedTabs(), fn ($tab): bool => $tab->isVisible());
-    $expected = $panel === 'test' && $supporter && $escalates
-        ? ['all', 'my', 'linked']
-        : ($supporter ? ['all', 'my'] : []);
+    $expected = $supporter ? ['all', 'my'] : [];
     expect(array_keys($page->instance()->getCachedTabs()))->toBe($expected)
         ->and(array_keys($visible))->toBe($expected);
 
@@ -34,9 +32,7 @@ it('shows escalation tabs only to supporters in panels that escalate', function 
             ->and($visible['my']->getLabel())->toBe('My Tickets');
     }
 
-    if (count($expected) === 3) {
-        expect($visible['linked']->getLabel())->toBe('Escalations');
-    }
+    expect($page->instance()->getTable()->getFilter('direct_questions', withHidden: true)->isVisible())->toBe($panel === 'test' && $supporter && $escalates);
 
     $document = new DOMDocument;
     @$document->loadHTML($page->html());

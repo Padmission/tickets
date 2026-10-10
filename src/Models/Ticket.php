@@ -285,6 +285,10 @@ class Ticket extends Model
             return $this->isDirectQuestion;
         }
 
+        if (array_key_exists('conversation_is_direct_question', $this->attributes)) {
+            return $this->isDirectQuestion = (bool) $this->attributes['conversation_is_direct_question'];
+        }
+
         if (! $this->isEscalation() || $this->activeOriginalsQuery()->exists()) {
             return $this->isDirectQuestion = false;
         }

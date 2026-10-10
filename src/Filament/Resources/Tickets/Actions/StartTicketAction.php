@@ -23,6 +23,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Padmission\Tickets\Exceptions\ReplyDisabledException;
 use Padmission\Tickets\Filament\Forms\Components\TicketSubjectInput;
 use Padmission\Tickets\Filament\Resources\Tickets\Actions\Concerns\StartsTickets;
+use Padmission\Tickets\Filament\Resources\Tickets\Pages\ListTickets;
 use Padmission\Tickets\Filament\Resources\Tickets\TicketResource;
 use Padmission\Tickets\Models\Ticket;
 use Padmission\Tickets\Rules\MessageFitsColumn;
@@ -72,7 +73,7 @@ class StartTicketAction extends Action
                 ? static::teamText('submit_team')
                 : __(self::KEY.'submit'))
             ->fillForm(fn (Component $livewire): array => [
-                'kind' => static::kindForTab(property_exists($livewire, 'activeTab') ? $livewire->activeTab : null),
+                'kind' => static::kindForList($livewire),
                 'assign' => 'me',
             ])
             ->schema([
@@ -299,11 +300,12 @@ class StartTicketAction extends Action
         return in_array($kind, [self::ORGANIZATION, self::ESCALATION], true) ? $kind : null;
     }
 
-    protected static function kindForTab(?string $tab): ?string
+    protected static function kindForList(Component $livewire): ?string
     {
-        return match ($tab) {
-            'all', 'my' => self::ORGANIZATION,
-            'linked', 'my_linked' => static::canAsk() ? self::ESCALATION : null,
+        return match (true) {
+            ! $livewire instanceof ListTickets => null,
+            $livewire->showsDirectQuestions() => self::ESCALATION,
+            in_array($livewire->activeTab, ['all', 'my'], true) => self::ORGANIZATION,
             default => null,
         };
     }

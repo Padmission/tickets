@@ -29,7 +29,7 @@ class OpenTicketsWidget extends BaseWidget
 
         return [
             Stat::make(__('padmission-tickets::widgets.open_tickets.label'), $count)
-                ->description($this->isOnEscalatedTab()
+                ->description($this->isOnDirectQuestions()
                     ? __('padmission-tickets::widgets.open_tickets.description_escalations')
                     : __('padmission-tickets::widgets.open_tickets.description'))
                 ->color('gray'),

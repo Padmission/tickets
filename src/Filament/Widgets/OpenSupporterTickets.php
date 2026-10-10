@@ -41,7 +41,7 @@ class OpenSupporterTickets extends BaseWidget
         // the team reading the list.
         $team = TicketPlugin::get()->getEscalationTargetName();
 
-        if ($this->isOnEscalatedTab()) {
+        if ($this->isOnDirectQuestions()) {
             return [
                 Stat::make(
                     TicketPlugin::teamText('padmission-tickets::widgets.escalations_waiting.label', $team),

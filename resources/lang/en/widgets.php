@@ -10,7 +10,7 @@ return [
     'open_tickets' => [
         'label' => 'Open Tickets',
         'description' => 'Tickets not yet closed',
-        'description_escalations' => 'Escalations not yet closed',
+        'description_escalations' => 'Direct questions not yet closed',
     ],
 
     'open_support_tickets' => [
@@ -27,8 +27,8 @@ return [
     'escalations_waiting' => [
         'label' => 'Waiting on the Other Team',
         'label_to' => 'Waiting on :team',
-        'description' => 'Escalations the other team owes a reply on',
-        'description_to' => 'Escalations :team owes a reply on',
+        'description' => 'Direct questions the other team owes a reply on',
+        'description_to' => 'Direct questions :team owes a reply on',
     ],
 
     'overdue' => [

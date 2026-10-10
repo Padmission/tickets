@@ -116,17 +116,22 @@ describe('Who may start one', function () {
 });
 
 describe('The first choice', function () {
-    it('preselects the side of the tab it was opened from', function (string $tab, ?string $kind) {
-        Livewire::test(ListTickets::class)
-            ->set('activeTab', $tab)
-            ->mountAction(startTicket())
-            ->assertSchemaStateSet(['kind' => $kind], 'mountedActionSchema0');
+    it('preselects the side of the view it was opened from', function (string $tab, bool $direct, ?string $kind) {
+        $page = Livewire::test(ListTickets::class)->set('activeTab', $tab);
+
+        if ($direct) {
+            $page->set('tableFilters.direct_questions.isActive', true);
+        }
+
+        $page->mountAction(startTicket())->assertSchemaStateSet(['kind' => $kind], 'mountedActionSchema0');
     })->with([
-        'All Tickets' => ['all', StartTicketAction::ORGANIZATION],
-        'My Tickets' => ['my', StartTicketAction::ORGANIZATION],
-        'Escalations' => ['linked', StartTicketAction::ESCALATION],
-        'removed My Escalations falls back to My Tickets' => ['my_linked', StartTicketAction::ORGANIZATION],
-        'empty tab falls back to My Tickets' => ['', StartTicketAction::ORGANIZATION],
+        'All Tickets' => ['all', false, StartTicketAction::ORGANIZATION],
+        'My Tickets' => ['my', false, StartTicketAction::ORGANIZATION],
+        'Direct questions on All Tickets' => ['all', true, StartTicketAction::ESCALATION],
+        'Direct questions on My Tickets' => ['my', true, StartTicketAction::ESCALATION],
+        'removed Escalations falls back to My Tickets' => ['linked', false, StartTicketAction::ORGANIZATION],
+        'removed My Escalations falls back to My Tickets' => ['my_linked', false, StartTicketAction::ORGANIZATION],
+        'empty tab falls back to My Tickets' => ['', false, StartTicketAction::ORGANIZATION],
     ]);
 
     it('names each side\'s submit button', function () {
@@ -337,8 +342,7 @@ describe('Telling the requester', function () {
 
 describe('A question for the team the panel escalates to', function () {
     it('opens an escalation with no originals, owned by the supporter and waiting on the other team', function () {
-        $page = Livewire::test(ListTickets::class)
-            ->set('activeTab', 'linked')
+        $page = listDirectQuestions()
             ->callAction(startTicket(), question())
             ->assertHasNoActionErrors()
             ->assertNotified('Sent to Platform Support');
@@ -405,12 +409,11 @@ describe('A question for the team the panel escalates to', function () {
             ->assertSee(__('padmission-tickets::tickets.resources.tickets.linked_tickets_description.escalated_to_you_to', ['team' => 'Platform Support']));
     });
 
-    it('is listed under Escalations as waiting on the other team', function () {
+    it('is listed under Direct questions as waiting on the other team', function () {
         Livewire::test(ListTickets::class)->callAction(startTicket(), question());
         $question = Ticket::query()->withoutGlobalScopes()->sole();
 
-        Livewire::test(ListTickets::class)
-            ->set('activeTab', 'linked')
+        listDirectQuestions()
             ->assertCanSeeTableRecords([$question])
             ->assertSee(['Platform Support', 'Direct question, not about a ticket'])
             ->assertDontSee('Not linked to any ticket');

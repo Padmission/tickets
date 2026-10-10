@@ -39,8 +39,8 @@ trait DescribesTicketListTab
         return $query->reorder();
     }
 
-    protected function isOnEscalatedTab(): bool
+    protected function isOnDirectQuestions(): bool
     {
-        return str_contains((string) $this->activeTab, 'linked');
+        return (bool) data_get($this->tableFilters, 'direct_questions.isActive');
     }
 }

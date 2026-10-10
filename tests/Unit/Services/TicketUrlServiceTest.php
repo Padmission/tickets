@@ -96,7 +96,7 @@ describe('work page', function () {
         $this->openOriginal->close(closedById: $this->owner->id);
 
         expect($this->service->workPageUrl($this->escalation, $this->colleague))
-            ->toBe(url('/test/tickets?tab=linked'));
+            ->toBe(url('/test/tickets'));
     });
 
     it('links an escalation with no source panel or originals from the panel that escalates to its panel', function () {

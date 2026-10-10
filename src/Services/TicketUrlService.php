@@ -76,7 +76,7 @@ class TicketUrlService
             return $this->originalUrl($original);
         }
 
-        return $this->panelUrl($this->escalatingPanel($escalation), '/tickets?tab=linked');
+        return $this->panelUrl($this->escalatingPanel($escalation), '/tickets');
     }
 
     /*

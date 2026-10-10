@@ -20,6 +20,7 @@ use Filament\Resources\Resource;
 use Filament\Resources\ResourceConfiguration;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -430,8 +431,8 @@ class TicketResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // With a single team to escalate to, every row on the escalated tabs
-                // would repeat the same name, so the column only appears when there
+                // With a single team to escalate to, every row in the direct questions
+                // view would repeat the same name, so the column only appears when there
                 // is a choice.
                 TextColumn::make('panel')
                     ->label(__('padmission-tickets::tickets.resources.tickets.panel'))
@@ -439,7 +440,7 @@ class TicketResource extends Resource
                     ->formatStateUsing(fn (?string $state): string => $state === null
                         ? '-'
                         : (TicketPlugin::find($state)?->getSupportTeamName() ?? ucfirst($state)))
-                    ->visible(fn (ListTickets $livewire): bool => str_contains((string) $livewire->activeTab, 'linked')
+                    ->visible(fn (ListTickets $livewire): bool => $livewire->showsDirectQuestions()
                         && count(TicketPlugin::get()->getLinkedTicketParentPanels()) > 1)
                     ->sortable(),
 
@@ -495,7 +496,7 @@ class TicketResource extends Resource
                     ->tooltip(fn (Ticket $record): ?string => ConversationState::fromRow($record)->markerTooltip())
                     ->visible(fn (ListTickets $livewire): bool => ConversationViewer::current()->isSupporter
                         && count(ConversationViewer::current()->parentPanelIds) > 0
-                        && in_array($livewire->activeTab, ['all', 'my'], true)),
+                        && ! $livewire->showsDirectQuestions()),
 
                 ...TicketPlugin::get()->getAdditionalTableColumns(),
 
@@ -515,7 +516,7 @@ class TicketResource extends Resource
                     ->label(__('padmission-tickets::tickets.resources.tickets.assignee'))
                     ->state(fn (Ticket $record): ?string => static::assigneeLabel($record))
                     ->wrap()
-                    ->tooltip(fn (ListTickets $livewire): ?string => static::isEscalatedTab($livewire)
+                    ->tooltip(fn (ListTickets $livewire): ?string => $livewire->showsDirectQuestions()
                         ? TicketPlugin::teamText('padmission-tickets::tickets.resources.tickets.hints.assignee_elsewhere', TicketPlugin::get()->getEscalationTargetName())
                         : null)
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIn(
@@ -565,8 +566,13 @@ class TicketResource extends Resource
                     ->toggle()
                     ->visible(fn (ListTickets $livewire): bool => ConversationViewer::current()->isSupporter
                         && count(ConversationViewer::current()->parentPanelIds) > 0
-                        && ! static::isEscalatedTab($livewire))
+                        && ! $livewire->showsDirectQuestions())
                     ->query(static::applyEscalatedFilter(...)),
+
+                Filter::make('direct_questions')
+                    ->label(__('padmission-tickets::tickets.resources.tickets.filters.direct_questions'))
+                    ->toggle()
+                    ->visible(static::asksDirectQuestions(...)),
 
                 SelectFilter::make('kind')
                     ->label(__('padmission-tickets::tickets.resources.tickets.filters.kind'))
@@ -590,12 +596,12 @@ class TicketResource extends Resource
                     )),
 
                 static::lookupFilter('status')
-                    ->hidden(fn (ListTickets $livewire) => str_contains((string) $livewire->activeTab, 'linked'))
+                    ->hidden(fn (ListTickets $livewire) => $livewire->showsDirectQuestions())
                     ->multiple()
                     ->preload(),
 
                 static::lookupFilter('priority')
-                    ->hidden(fn (ListTickets $livewire) => str_contains((string) $livewire->activeTab, 'linked'))
+                    ->hidden(fn (ListTickets $livewire) => $livewire->showsDirectQuestions())
                     ->multiple()
                     ->preload(),
 
@@ -612,12 +618,12 @@ class TicketResource extends Resource
 
                         return $query;
                     })
-                    ->hidden(fn (ListTickets $livewire) => str_contains((string) $livewire->activeTab, 'linked'))
+                    ->hidden(fn (ListTickets $livewire) => $livewire->showsDirectQuestions())
                     ->searchable()
                     ->preload(),
             ])
-            ->emptyStateHeading(fn (ListTickets $livewire): ?string => static::tabText($livewire, 'heading'))
-            ->emptyStateDescription(fn (ListTickets $livewire): ?string => static::tabText($livewire, 'description'))
+            ->emptyStateHeading(fn (ListTickets $livewire): ?string => static::emptyText($livewire, 'heading'))
+            ->emptyStateDescription(fn (ListTickets $livewire): ?string => static::emptyText($livewire, 'description'))
             ->recordActions([
                 ViewAction::make(),
                 HandOverEscalationAction::make()
@@ -696,7 +702,7 @@ class TicketResource extends Resource
                     DeleteBulkAction::make()
                         ->authorizeIndividualRecords('delete'),
                 ])
-                    ->hidden(fn (ListTickets $livewire): bool => static::isEscalatedTab($livewire)),
+                    ->hidden(fn (ListTickets $livewire): bool => $livewire->showsDirectQuestions()),
             ]);
     }
 
@@ -787,15 +793,17 @@ class TicketResource extends Resource
         return ConversationStateQuery::orderByRank($query, ConversationViewer::current(), $direction);
     }
 
-    public static function isEscalatedTab(ListTickets $livewire): bool
+    public static function asksDirectQuestions(): bool
     {
-        return str_contains((string) $livewire->activeTab, 'linked');
+        $viewer = ConversationViewer::current();
+
+        return $viewer->isSupporter && ! $viewer->receivesEscalations && $viewer->parentPanelIds !== [];
     }
 
     public static function submitterLabel(ListTickets $livewire): string
     {
         return match (true) {
-            static::isEscalatedTab($livewire) => __('padmission-tickets::tickets.resources.tickets.handled_by'),
+            $livewire->showsDirectQuestions() => __('padmission-tickets::tickets.resources.tickets.handled_by'),
             ConversationViewer::current()->receivesEscalations => __('padmission-tickets::tickets.resources.tickets.contact'),
             default => __('padmission-tickets::tickets.resources.tickets.submitter'),
         };
@@ -809,11 +817,21 @@ class TicketResource extends Resource
         ));
     }
 
-    protected static function tabText(ListTickets $livewire, string $part): ?string
+    protected static function emptyText(ListTickets $livewire, string $part): ?string
     {
-        $key = "padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.{$part}";
+        $key = static::isNarrowedBeyondOpen($livewire)
+            ? "padmission-tickets::tickets.resources.tickets.empty.filtered.{$part}"
+            : "padmission-tickets::tickets.resources.tickets.empty.{$livewire->activeTab}.{$part}";
 
         return Lang::has($key) ? __($key) : null;
+    }
+
+    protected static function isNarrowedBeyondOpen(ListTickets $livewire): bool
+    {
+        return filled($livewire->tableSearch)
+            || collect($livewire->getTable()->getFilters())
+                ->except('open')
+                ->contains(fn (BaseFilter $filter): bool => $filter->getIndicators() !== []);
     }
 
     public static function getPages(?Panel $panel = null): array
@@ -863,7 +881,7 @@ class TicketResource extends Resource
 
     public static function shouldShowSourcePanel(?ListTickets $livewire = null): bool
     {
-        if (str_contains((string) $livewire?->activeTab, 'linked')) {
+        if ($livewire?->showsDirectQuestions()) {
             return false;
         }
 
