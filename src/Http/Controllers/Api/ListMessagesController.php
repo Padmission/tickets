@@ -9,6 +9,7 @@ use Padmission\Tickets\Http\DataMappers\TicketActivityMapper;
 use Padmission\Tickets\Services\ApiTicketResolver;
 use Padmission\Tickets\Services\TicketActivityService;
 use Padmission\Tickets\Services\TicketAuth;
+use Padmission\Tickets\Services\TicketConversationContext;
 use Padmission\Tickets\Services\TicketReopening;
 use Padmission\Tickets\TicketPlugin;
 
@@ -27,7 +28,7 @@ class ListMessagesController
 
         $messages = $activityService->getActivities($ticket, $request->integer('offset'));
 
-        return [
+        $response = [
             'ticket' => [
                 'subject' => $ticket->subject,
                 'status' => $ticket->status->display_name,
@@ -39,5 +40,12 @@ class ListMessagesController
             ],
             'messages' => $messages->values()->map(fn ($message) => TicketActivityMapper::map($message)),
         ];
+
+        // Background that does not change while the chat is open, so only the first load asks for it.
+        if ($request->boolean('context')) {
+            $response['context'] = resolve(TicketConversationContext::class)->sectionsFor($ticket, $request->user());
+        }
+
+        return $response;
     }
 }

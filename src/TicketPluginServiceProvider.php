@@ -18,6 +18,7 @@ use Padmission\Tickets\Livewire\CopilotTicketPanel;
 use Padmission\Tickets\Services\CopilotTicketService;
 use Padmission\Tickets\Services\NotificationRecipientService;
 use Padmission\Tickets\Services\TicketActivityService;
+use Padmission\Tickets\Services\TicketConversationContext;
 use Padmission\Tickets\Services\TicketUrlService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -89,6 +90,7 @@ class TicketPluginServiceProvider extends PackageServiceProvider
         $this->app->singleton(CopilotTicketService::class);
         $this->app->singleton(TicketActivityService::class);
         $this->app->singleton(TicketUrlService::class);
+        $this->app->singleton(TicketConversationContext::class);
         $this->app->singleton(NotificationRecipientService::class);
     }
 

@@ -13,6 +13,7 @@ import ticketSubject from "./helpers/ticket-subject.js";
 import escapeHtml from "./helpers/escape-html.js";
 import lockScrollWhileOpen from "./helpers/scroll-lock.js";
 import messageHtml, { pendingAttachmentHtml } from "./helpers/message-html.js";
+import contextHtml from "./helpers/context-html.js";
 import acceptAttribute from "./helpers/accept-attribute.js";
 import isComposerShown from "./helpers/composer-shown.js";
 import replyBox, { errorMessageOf } from "./helpers/reply-box.js";
@@ -41,6 +42,7 @@ customElements.define(
 			this.ticket = null;
 			this.seenOpen = false;
 			this.loadedSubject = null;
+			this.contextLoaded = false;
 
 			this.reopenChoices = [];
 			this.reopenWindowDays = 30;
@@ -99,6 +101,7 @@ customElements.define(
 		}
 
 		afterRender(node) {
+			this.contextElement = node.querySelector("[data-chat-context]");
 			this.messagesElement = node.querySelector("[data-chat-messages]");
 			this.editorElement = node.querySelector("[data-chat-input]");
 			this.sendButtonElement = node.querySelector("[data-chat-submit]");
@@ -222,8 +225,14 @@ customElements.define(
 					`/padmission-tickets/api/tickets/${this.ticketId}/messages`,
 					{
 						offset: this.lastMessageId,
+						...(this.contextLoaded ? {} : { context: 1 }),
 					},
 				);
+
+				if (!this.contextLoaded) {
+					this.contextLoaded = true;
+					this.contextElement.innerHTML = contextHtml(data.context ?? []);
+				}
 
 				const ticket = data.ticket;
 				const messages = data.messages;
@@ -507,6 +516,8 @@ customElements.define(
 			this.lastTimestamp = null;
 			this.seenOpen = false;
 			this.loadedSubject = null;
+			this.contextLoaded = false;
+			this.contextElement.replaceChildren();
 			this.messagesElement.replaceChildren();
 			this.showTicketState(null);
 
@@ -1094,6 +1105,8 @@ customElements.define(
                     >
                         <span>${escapeHtml(__('chat.droparea'))}</span>
                     </div>
+
+                    <div class="context-list" data-chat-context></div>
 
                     <div class="message-list" data-chat-messages>
 
