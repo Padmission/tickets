@@ -89,13 +89,18 @@ describe('work page', function () {
             ->and($this->service->workPageUrl($this->openOriginal, $this->owner))->toBe(url("/test/tickets/{$this->openOriginal->id}/view"));
     });
 
-    it('never links an escalation to someone who cannot open it', function () {
+    it('opens an escalation for a colleague of the team that sent it, in the panel that sent it', function () {
         expect($this->service->workPageUrl($this->escalation, $this->colleague))
+            ->toBe(url("/test/tickets/{$this->escalation->id}/view?linked={$this->openOriginal->id}"));
+    });
+
+    it('never links an escalation to someone who cannot open it', function () {
+        expect($this->service->workPageUrl($this->escalation, $this->requester))
             ->toBe(url("/test/tickets/{$this->openOriginal->id}/view"));
 
         $this->openOriginal->close(closedById: $this->owner->id);
 
-        expect($this->service->workPageUrl($this->escalation, $this->colleague))
+        expect($this->service->workPageUrl($this->escalation, $this->requester))
             ->toBe(url('/test/tickets'));
     });
 
@@ -104,7 +109,7 @@ describe('work page', function () {
         $this->escalation->update(['submitter_id' => $this->colleague->id]);
 
         expect($this->service->workPageUrl($escalation, $this->owner))->toBe(url("/test/tickets/{$escalation->id}/view"))
-            ->and($this->service->workPageUrl($this->escalation, $this->owner))->toBe(url("/test/tickets/{$this->openOriginal->id}/view"));
+            ->and($this->service->workPageUrl($this->escalation, $this->owner))->toBe(url("/test/tickets/{$this->escalation->id}/view?linked={$this->openOriginal->id}"));
     });
 
     it('gives no link for an escalation no panel escalates to, rather than a requester\'s link', function () {

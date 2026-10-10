@@ -45,6 +45,7 @@ beforeEach(function () {
 });
 
 it('answers 404 to another tenant\'s supporter on an escalated original', function () {
+    Filament::setCurrentPanel(null);
     $this->actingAs($this->aSupporter);
 
     $this->getJson(route('padmission-tickets::api.messages.index', ['ticket' => $this->original]))->assertNotFound();

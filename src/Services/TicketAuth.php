@@ -29,9 +29,14 @@ class TicketAuth
             return true;
         }
 
-        return $user !== null
-            && Gate::forUser($user)->allows('view', $ticket)
-            && Gate::forUser($user)->allows('manage', $ticket);
+        if ($user === null) {
+            return false;
+        }
+
+        $gate = Gate::forUser($user);
+
+        return $gate->allows('view', $ticket)
+            && ($gate->allows('manage', $ticket) || $gate->allows('readEscalation', $ticket));
     }
 
     public function authorizeReply(Ticket $ticket, ?Authenticatable $user): void

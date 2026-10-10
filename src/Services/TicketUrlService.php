@@ -39,9 +39,15 @@ class TicketUrlService
             return $ticket->isEscalation() ? $this->escalationUrl($ticket) : null;
         }
 
-        // Whoever it was handed away from can no longer open it.
-        if ($ticket->isEscalation() && Gate::forUser($recipient)->denies('view', $ticket)) {
-            return $this->unviewableEscalationUrl($ticket);
+        if ($ticket->isEscalation()) {
+            // The team that escalated it reads it from its own panel, whoever handles it now.
+            if (Gate::forUser($recipient)->allows('readEscalation', $ticket)) {
+                return $this->escalationUrl($ticket);
+            }
+
+            if (Gate::forUser($recipient)->denies('view', $ticket)) {
+                return $this->unviewableEscalationUrl($ticket);
+            }
         }
 
         return $this->viewUrl($ticket->panel, $ticket->getKey());

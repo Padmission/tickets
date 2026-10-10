@@ -358,8 +358,8 @@ it('sends the person taking over an escalation nothing, since they took it thems
     forgetQueuedNotices();
     $this->login($this->colleague);
 
-    Livewire::test(ViewTicket::class, ['record' => $original->id])
-        ->callAction(TestAction::make('take-over-escalation')->schemaComponent('escalationActions', schema: 'form'))
+    Livewire::test(ViewTicket::class, ['record' => $escalation->id])
+        ->callAction(TestAction::make(HandOverEscalationAction::class)->schemaComponent('submitter', schema: 'form'))
         ->assertHasNoActionErrors();
 
     expect($escalation->refresh()->submitter_id)->toBe($this->colleague->id);

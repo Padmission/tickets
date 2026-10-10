@@ -302,16 +302,17 @@ class ViewTicket extends EditRecord
     }
 
     /*
-     * Another panel's ticket is opened here only by its submitter. The team
-     * an original was escalated to reads it beside its own escalation, where
-     * it cannot write to the requester.
+     * Another panel's ticket is opened here by its submitter and by an
+     * escalation sent from this panel, which the policy lets the team read.
+     * The team an original was escalated to reads it beside its own
+     * escalation, where it cannot write to the requester.
      */
     protected function authorizeAccess(): void
     {
         /** @var Ticket $record */
         $record = $this->getRecord();
 
-        if ($record->isNotInCurrentPanel() && ! $record->isSubmittedBy(Filament::auth()->id())) {
+        if ($record->isNotInCurrentPanel() && ! $record->isSubmittedBy(Filament::auth()->id()) && ! $record->isEscalationFrom(Filament::getCurrentPanel()->getId())) {
             $escalation = resolve(TicketEscalationLinks::class)->escalationOf($record);
 
             abort_unless($escalation?->isInCurrentPanel() === true && static::getResource()::canView($escalation), 403);

@@ -23,7 +23,7 @@ class TicketPolicy
             return true;
         }
 
-        return $this->isSupporter($user, $ticket);
+        return $this->isSupporter($user, $ticket) || $this->readEscalation($user, $ticket);
     }
 
     public function create($user): bool
@@ -70,7 +70,17 @@ class TicketPolicy
      */
     public function handOver($user, Ticket $ticket): bool
     {
-        if ($ticket->isClosed || ! $ticket->isEscalation()) {
+        return ! $ticket->isClosed && $this->readEscalation($user, $ticket);
+    }
+
+    /*
+     * The team that escalated a ticket reads the whole conversation with the
+     * team it was sent to, closed or not, though only the person handling it
+     * writes there. Asked apart from manage, which the chat needs to read.
+     */
+    public function readEscalation($user, Ticket $ticket): bool
+    {
+        if (! $ticket->isEscalation()) {
             return false;
         }
 
@@ -81,8 +91,8 @@ class TicketPolicy
         $sourcePanel = $ticket->escalationSourcePanel();
         $viewer = ConversationViewer::current();
 
-        // The page's own pool, resolved once per request, rather than a query per list row.
-        if ($sourcePanel === $viewer->panelId && (string) $viewer->userId === (string) $user->getAuthIdentifier()) {
+        // The page's own pool, resolved once per request, rather than a query per list row. Outside a panel, as the chat's API runs, it is the signed-in tenant's, not the ticket's.
+        if (Filament::getCurrentPanel() !== null && $sourcePanel === $viewer->panelId && (string) $viewer->userId === (string) $user->getAuthIdentifier()) {
             return $viewer->isSupporter;
         }
 

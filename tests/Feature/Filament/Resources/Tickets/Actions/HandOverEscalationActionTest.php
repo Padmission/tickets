@@ -65,11 +65,6 @@ function handOverHint(): TestAction
     return TestAction::make(HandOverEscalationAction::class)->schemaComponent('submitter', schema: 'form');
 }
 
-function takeOverInBox(): TestAction
-{
-    return TestAction::make('take-over-escalation')->schemaComponent('escalationActions', schema: 'form');
-}
-
 it('draws the dialog it opened as, not the other one, once the escalation has moved', function (string $who, Closure $page, Closure $action, array $data, string $shown, string $other, string $ticket) {
     Event::fake([TicketHandedOverEvent::class]);
     $this->login($who === 'owner' ? $this->owner : $this->colleague);
@@ -94,7 +89,7 @@ it('draws the dialog it opened as, not the other one, once the escalation has mo
 })->with([
     'a hand over on the escalation, which leaves for the list' => ['owner', fn () => Livewire::test(ViewTicket::class, ['record' => test()->escalation->id]), fn () => handOverHint(), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?', 'escalation'],
     'a hand over from the Direct questions list' => ['owner', fn () => listDirectQuestions(), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->question), ['new_owner' => 'colleague'], 'Hand over this escalation', 'Take over this escalation?', 'question'],
-    'a colleague\'s take over from the Escalation box on the original' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox(), [], 'Take over this escalation?', 'Hand over this escalation', 'escalation'],
+    'a colleague\'s take over on the escalation' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->escalation->id]), fn () => handOverHint(), [], 'Take over this escalation?', 'Hand over this escalation', 'escalation'],
 ]);
 
 it('keeps the owner\'s leaving hand over from being closed or resubmitted once sent, and the page from asking again', function () {
@@ -120,7 +115,7 @@ it('lets a Take over and a hand over from the list close as usual, since they do
 
     expect($page()->mountAction($action())->instance()->getMountedAction()->getExtraModalWindowAttributes())->not->toHaveKey('x-on:click.capture');
 })->with([
-    'a colleague\'s take over' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->original->id]), fn () => takeOverInBox()],
+    'a colleague\'s take over' => ['colleague', fn () => Livewire::test(ViewTicket::class, ['record' => test()->escalation->id]), fn () => handOverHint()],
     'the owner\'s hand over from the Direct questions list' => ['owner', fn () => listDirectQuestions(), fn () => TestAction::make(HandOverEscalationAction::class)->table(test()->question)],
 ]);
 
@@ -157,7 +152,7 @@ it('lets the owner hand the escalation to a colleague from Handled by', function
         && $event->toId === $this->colleague->id);
 });
 
-it('leaves the dialog as it was while the browser leaves an escalation its owner handed over, since the page now refuses them', function () {
+it('leaves the dialog as it was while the browser leaves an escalation its owner handed over', function () {
     Event::fake([TicketHandedOverEvent::class]);
     $this->login($this->owner);
 
@@ -171,8 +166,8 @@ it('leaves the dialog as it was while the browser leaves an escalation its owner
 
     expect($this->escalation->refresh()->submitter_id)->toBe($this->colleague->id);
 
-    // What emptying the owner field asked for: the page's next request is refused.
-    $page->call('$refresh')->assertForbidden();
+    // The former owner is a colleague now, who still reads the page.
+    $page->call('$refresh')->assertSuccessful();
 });
 
 it('offers only the escalating team, without the owner, and refuses anyone else', function () {
@@ -200,20 +195,24 @@ it('explains when nobody else can take the escalation', function () {
         ->assertMountedActionModalSee(['Nobody else can take this escalation.', 'Give a teammate the Ticket Support role.']);
 });
 
-it('lets a colleague take over from the original\'s Escalation box', function () {
+it('lets a colleague take over from the escalation they read', function () {
     $this->login($this->colleague);
 
     Livewire::test(ViewTicket::class, ['record' => $this->original->id])
         ->assertSee('Test Admin handles the conversation with Padmission.')
-        ->assertDontSee('Open the escalation')
-        ->assertActionHasLabel(takeOverInBox(), 'Take over')
-        ->mountAction(takeOverInBox())
+        ->assertSee('Open the escalation');
+
+    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->assertActionHasLabel(handOverHint(), 'Take over')
+        ->mountAction(handOverHint())
         ->assertMountedActionModalSee([
             'Take over this escalation?',
             'Padmission\'s replies will come to you. Test Admin is told.',
         ])
         ->callMountedAction()
-        ->assertNotified('You now handle this escalation')
+        ->assertNotified('You now handle this escalation');
+
+    Livewire::test(ViewTicket::class, ['record' => $this->original->id])
         ->assertSee('You handle the conversation with Padmission.');
 
     $activity = $this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->sole();
@@ -263,10 +262,9 @@ it('shows Hand over or Take over on the Direct questions rows', function () {
         ->assertCanSeeTableRecords([$this->question])
         ->assertSee('Take over')
         ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->question), 'Take over')
-        ->assertActionHidden(TestAction::make('view')->table($this->question))
+        ->assertActionVisible(TestAction::make('view')->table($this->question))
         ->callAction(TestAction::make(HandOverEscalationAction::class)->table($this->question))
-        ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->question), 'Hand over')
-        ->assertActionVisible(TestAction::make('view')->table($this->question));
+        ->assertActionHasLabel(TestAction::make(HandOverEscalationAction::class)->table($this->question), 'Hand over');
 
     expect($this->question->refresh()->submitter_id)->toBe($this->colleague->id);
 });
@@ -308,11 +306,11 @@ it('refuses a hand over once the escalation closed or changed hands', function (
         ->and($this->escalation->ticketActivities()->where('type', ActivityType::HandedOver)->exists())->toBeFalse();
 });
 
-it('moves access, replies and notifications to the new owner while keeping the shared Direct questions list', function () {
+it('moves replies and notifications to the new owner while keeping the shared Direct questions list', function () {
     $this->login($this->owner);
     resolve(TicketEscalationLinks::class)->handOver($this->question, $this->colleague->id, $this->owner->id);
 
-    Livewire::test(ViewTicket::class, ['record' => $this->question->id])->assertForbidden();
+    Livewire::test(ViewTicket::class, ['record' => $this->question->id])->assertSuccessful();
 
     listDirectQuestions()
         ->assertCanSeeTableRecords([$this->question]);
@@ -344,8 +342,8 @@ it('asks Take over as a centred confirm and Hand over in a centred dialog, whate
 
     $this->login($this->colleague);
 
-    Livewire::test(ViewTicket::class, ['record' => $this->original->id])
-        ->assertActionExists(takeOverInBox(), fn (HandOverEscalationAction $action): bool => ! $action->isModalSlideOver() && $action->isConfirmationRequired());
+    Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->assertActionExists(handOverHint(), fn (HandOverEscalationAction $action): bool => ! $action->isModalSlideOver() && $action->isConfirmationRequired());
 
     $this->login($this->owner);
 
@@ -382,8 +380,8 @@ it('asks the escalating team\'s pool once per request, however many rows it offe
 it('closes a stale Take over dialog when the escalation changed hands meanwhile', function () {
     $this->login($this->colleague);
 
-    $component = Livewire::test(ViewTicket::class, ['record' => $this->original->id])
-        ->mountAction(takeOverInBox());
+    $component = Livewire::test(ViewTicket::class, ['record' => $this->escalation->id])
+        ->mountAction(handOverHint());
 
     $this->escalation->forceFill(['submitter_id' => $this->padmission->id])->save();
 
